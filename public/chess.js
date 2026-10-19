@@ -21,8 +21,13 @@
     state: null, history: [], moves: [], lastMove: null,
     me: 'w', picked: null, targets: [], hintMove: null,
     thinking: false, ended: null, suggestions: 0, overShown: null,
-    room: null, es: null, snap: null
+    room: null, es: null, snap: null,
+    lastPlayed: null,   // the last move with who made it, for the words above the board
+    animating: false
   };
+  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const PIECE_NAME = { p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen', k: 'king' };
+  const cap = s => s[0].toUpperCase() + s.slice(1);
 
   // ---- the computer, in a worker ---------------------------------------------
 
@@ -97,6 +102,7 @@
     S.overShown = null;
     S.suggestions = 0;
     S.localBottom = null;
+    S.lastPlayed = null;
     S.me = S.mode === 'ai' ? color : 'w';
     clearPick();
     show('game');
@@ -105,16 +111,26 @@
     if (S.mode === 'ai' && S.state.turn !== S.me) computerMove();
   }
 
-  function playHere(move) {
-    S.history.push({ state: E.clone(S.state), moves: S.moves.slice(), lastMove: S.lastMove });
+  async function playHere(move) {
+    S.history.push({ state: E.clone(S.state), moves: S.moves.slice(), lastMove: S.lastMove, lastPlayed: S.lastPlayed });
+    const mover = S.state.turn;
     const played = E.play(S.state, move);
     if (!played) return false;
     S.moves.push(played.san);
     S.lastMove = { from: played.from, to: played.to };
-    moveSound(played);
+    S.lastPlayed = { ...played, by: mover };
     clearPick();
     const s = E.status(S.state);
     if (s.over) S.ended = s;
+    // The other side's moves glide slowly enough to follow; yours just snap in.
+    const theirs = S.mode === 'ai' ? mover !== S.me : S.mode === 'local';
+    S.animating = true;
+    render();
+    moveSound(played);
+    await animateMove(played, theirs ? 520 : 200);
+    S.animating = false;
+    // Pass and play turns the board around only after the move has landed.
+    if (S.mode === 'local' && !S.ended) await new Promise(r => setTimeout(r, 350));
     render();
     if (S.ended) setTimeout(showOver, 600);
     else if (S.mode === 'ai' && S.state.turn !== S.me) computerMove();
@@ -127,7 +143,7 @@
     const started = Date.now();
     const move = await askEngine(S.level);
     // A beat of "thinking" even when it's instant, so you see your move land.
-    await new Promise(r => setTimeout(r, Math.max(0, 450 - (Date.now() - started))));
+    await new Promise(r => setTimeout(r, Math.max(0, 650 - (Date.now() - started))));
     S.thinking = false;
     if (move && S.state && !S.ended) playHere(move);
     else render();
@@ -143,6 +159,7 @@
     S.state = snap.state;
     S.moves = snap.moves;
     S.lastMove = snap.lastMove;
+    S.lastPlayed = snap.lastPlayed;
     S.ended = null;
     clearPick();
     render();
@@ -199,6 +216,18 @@
   function applySnap(snap) {
     const fresh = !S.snap || snap.moves.length < S.snap.moves.length;
     const prevLen = S.snap ? S.snap.moves.length : 0;
+    // One new move since last time: find it in the old position so we know
+    // the piece, what it took, and can animate it.
+    let played = null;
+    if (S.snap && S.state && snap.moves.length === prevLen + 1 && snap.lastMove) {
+      const san = snap.moves[snap.moves.length - 1];
+      const promo = (san.match(/=([QRBN])/) || [])[1];
+      const m = E.legalMoves(S.state).find(x => x.from === snap.lastMove.from && x.to === snap.lastMove.to &&
+        (!x.promo || x.promo.toLowerCase() === (promo || 'q').toLowerCase()));
+      if (m) played = { ...m, san, by: S.state.turn };
+    }
+    if (fresh) S.lastPlayed = null;
+    if (played) S.lastPlayed = played;
     S.snap = snap;
     S.me = snap.you;
     S.state = E.fromFen(snap.fen);
@@ -209,13 +238,13 @@
     show('game');
     // A new game after a rematch: clear the results.
     if (!snap.ended && fresh) { S.overShown = null; $('overView').classList.add('hidden'); }
-    if (snap.moves.length > prevLen && snap.lastMove) {
-      moveSound({ captured: /x/.test(snap.moves[snap.moves.length - 1]) });
-    }
     $('drawOfferView').classList.toggle('hidden', !(snap.drawOffer && snap.drawOffer !== snap.you && !snap.ended));
     clearPick();
     render();
-    if (snap.ended) showOver();
+    if (played) {
+      moveSound(played);
+      animateMove(played, played.by === S.me ? 200 : 520).then(() => { if (snap.ended) showOver(); });
+    } else if (snap.ended) showOver();
   }
 
   async function roomAct(action) {
@@ -236,7 +265,7 @@
   // ---- input -------------------------------------------------------------------------
 
   function myTurn() {
-    if (!S.state || S.ended || S.thinking) return false;
+    if (!S.state || S.ended || S.thinking || S.animating) return false;
     if (S.mode === 'local') return true;
     if (S.mode === 'room') return !!(S.snap && S.snap.players.w && S.snap.players.b && S.state.turn === S.me);
     return S.state.turn === S.me;
@@ -297,7 +326,7 @@
   function bottomColor() {
     if (S.mode === 'local') {
       // The board turns to face whoever's move it is, and stays put once it's over.
-      if (!S.ended) S.localBottom = S.state.turn;
+      if (!S.ended && !S.animating) S.localBottom = S.state.turn;
       return S.localBottom || 'w';
     }
     return S.me || 'w';
@@ -334,9 +363,106 @@
       board.appendChild(btn);
     }
     renderBars(bottom);
+    renderLastMove();
     renderStatus();
     renderMoves();
     renderButtons();
+  }
+
+  // "🤖 Computer: Knight takes your Bishop on c4", with the pieces drawn in.
+  function renderLastMove() {
+    const box = $('lastMove');
+    const m = S.lastPlayed;
+    box.classList.remove('capture');
+    if (!m) { box.innerHTML = ''; box.dataset.key = ''; return; }
+    const key = `${S.moves.length}`;
+    const fresh = box.dataset.key !== key;
+    box.dataset.key = key;
+    const who = S.mode === 'ai' ? (m.by === S.me ? 'You' : '🤖 Computer')
+      : S.mode === 'room' ? (m.by === S.me ? 'You' : stripTags(seatName(m.by)).trim())
+        : COLOR_NAME[m.by];
+    const pieceHtml = (p, c) => `<span class="g ${c}">${glyph(p)}</span>`;
+    const kind = m.piece.toLowerCase();
+    const victimColor = m.by === 'w' ? 'b' : 'w';
+    const whose = (S.mode === 'local' || victimColor !== S.me) ? (S.mode === 'local' ? `${COLOR_NAME[victimColor]}'s ` : 'the ') : 'your ';
+    let text;
+    if (m.flag === 'castle') {
+      text = `Castled ${m.to > m.from ? 'kingside' : 'queenside'} (king and rook swapped sides)`;
+    } else if (m.captured) {
+      const victim = m.captured.toLowerCase();
+      text = `${cap(PIECE_NAME[kind])} takes <span class="taken">${whose}${pieceHtml(m.captured, victimColor)} ${PIECE_NAME[victim]}</span> on <b>${E.name(m.to)}</b>` +
+        (m.flag === 'ep' ? ' (en passant)' : '');
+      box.classList.add('capture');
+    } else {
+      text = `${cap(PIECE_NAME[kind])} <b>${E.name(m.from)}</b> → <b>${E.name(m.to)}</b>`;
+    }
+    if (m.promo) text += ` and becomes a ${PIECE_NAME[m.promo.toLowerCase()]}!`;
+    if (/#$/.test(m.san)) text += ' <b>Checkmate!</b>';
+    else if (/\+$/.test(m.san)) text += ' <b>Check!</b>';
+    box.innerHTML = `${pieceHtml(m.piece, m.by)}<span><b>${who}:</b> ${text}</span>`;
+    if (fresh) { box.classList.remove('fresh'); void box.offsetWidth; box.classList.add('fresh'); }
+  }
+
+  // Slides the piece that just moved from its old square to its new one. If
+  // something was taken, it flashes red and pops off the board on arrival.
+  function animateMove(m, ms) {
+    if (reducedMotion) return Promise.resolve();
+    const wrap = $('boardWrap');
+    const sqEl = sq => $('board').querySelector(`.sq[aria-label="${E.name(sq)}"]`);
+    const wrapBox = wrap.getBoundingClientRect();
+    const boxOf = el => { const b = el.getBoundingClientRect(); return { x: b.left - wrapBox.left, y: b.top - wrapBox.top, w: b.width, h: b.height }; };
+    const ghosts = [];
+    const makeGhost = (piece, at) => {
+      const g = document.createElement('span');
+      g.className = `glide pc ${E.colorOf(piece)}`;
+      g.textContent = glyph(piece);
+      const b = boxOf(at);
+      Object.assign(g.style, { left: b.x + 'px', top: b.y + 'px', width: b.w + 'px', height: b.h + 'px', fontSize: getComputedStyle(at).fontSize });
+      wrap.appendChild(g);
+      ghosts.push(g);
+      return g;
+    };
+    const slide = (piece, fromSq, toSq) => {
+      const from = sqEl(fromSq), to = sqEl(toSq);
+      if (!from || !to) return;
+      const landed = to.querySelector('.pc');
+      if (landed) landed.style.visibility = 'hidden';
+      const g = makeGhost(piece, from);
+      g.classList.add('moving');
+      const a = boxOf(from), b = boxOf(to);
+      g.getBoundingClientRect();
+      g.style.transition = `transform ${ms}ms cubic-bezier(.3,.75,.3,1)`;
+      g.style.transform = `translate(${b.x - a.x}px, ${b.y - a.y}px)`;
+      from.classList.add('from-ring');
+      setTimeout(() => {
+        if (landed) landed.style.visibility = '';
+        from.classList.remove('from-ring');
+        to.classList.add('arrive');
+        g.remove();
+      }, ms);
+    };
+    // What got taken sits on its square until the attacker arrives.
+    if (m.captured) {
+      const capSq = m.flag === 'ep' ? m.to + (m.by === 'w' ? 8 : -8) : m.to;
+      const at = sqEl(capSq);
+      if (at) {
+        const g = makeGhost(m.captured, at);
+        setTimeout(() => {
+          g.classList.add('taken');
+          Blip.tone(180, 0.18, { type: 'sawtooth', volume: 0.07 });
+          const bar = (m.by === bottomColor()) ? 'bottomTaken' : 'topTaken';
+          $(bar).classList.remove('bump'); void $(bar).offsetWidth; $(bar).classList.add('bump');
+        }, Math.max(0, ms - 60));
+        setTimeout(() => g.remove(), ms + 600);
+      }
+    }
+    slide(m.promo ? (m.by === 'w' ? 'P' : 'p') : m.piece, m.from, m.to);
+    if (m.flag === 'castle') {
+      const kingSide = m.to > m.from;
+      const rook = m.by === 'w' ? 'R' : 'r';
+      slide(rook, kingSide ? m.from + 3 : m.from - 4, kingSide ? m.from + 1 : m.from - 1);
+    }
+    return new Promise(r => setTimeout(r, ms + 120));
   }
 
   function seatName(color) {
