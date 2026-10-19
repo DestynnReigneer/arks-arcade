@@ -85,13 +85,12 @@ No duplicates. Keep every word family-friendly.`;
         </div>
         ${r.note ? `<div class="req-note">"${escapeHtml(r.note)}"</div>` : ''}
         <div class="req-actions">
-          <button data-action="copy">📋 Copy Prompt</button>
-          <button data-action="fulfill">✅ Fulfill</button>
+          <button data-action="copy">📋 1. Copy prompt</button>
           <button data-action="dismiss">✕ Dismiss</button>
         </div>
-        <div class="req-fulfill-box">
-          <textarea rows="5" placeholder="Paste theme JSON here"></textarea>
-          <button data-action="create-and-fulfill" class="primary-btn" style="border:none;border-radius:6px;padding:8px 14px;font-weight:700;cursor:pointer;">Create Theme &amp; Fulfill</button>
+        <div class="req-fulfill-box open">
+          <textarea rows="4" placeholder="2. Paste the AI's answer here"></textarea>
+          <button data-action="create-and-fulfill" class="primary-btn" style="border:none;border-radius:6px;padding:8px 14px;font-weight:700;cursor:pointer;">3. Create theme</button>
           <div class="status-msg"></div>
         </div>
       `;
@@ -113,10 +112,6 @@ No duplicates. Keep every word family-friendly.`;
         }
       });
 
-      card.querySelector('[data-action="fulfill"]').addEventListener('click', () => {
-        card.querySelector('.req-fulfill-box').classList.toggle('open');
-      });
-
       card.querySelector('[data-action="create-and-fulfill"]').addEventListener('click', async () => {
         const box = card.querySelector('.req-fulfill-box');
         const statusEl = box.querySelector('.status-msg');
@@ -131,8 +126,8 @@ No duplicates. Keep every word family-friendly.`;
           return;
         }
         try {
-          const newTheme = await apiPost('/api/themes', parsed);
-          await apiPost(`/api/theme-requests/${r.id}/fulfill`, { themeId: newTheme.id });
+          // Passing the request id marks it done in the same step.
+          await apiPost('/api/themes', { ...parsed, requestId: r.id });
           await loadRequests();
           await loadThemes();
         } catch (err) {

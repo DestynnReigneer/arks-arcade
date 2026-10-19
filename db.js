@@ -207,6 +207,35 @@ ensureColumn('rambler_scores', 'player_id', 'TEXT');
 // Which season a score belongs to, so a board can be rebuilt after the fact.
 ensureColumn('rambler_scores', 'season_id', 'INTEGER');
 
+// ---- Comm Center ----
+// Posts are what the home page shows: the admin's announcements plus the ones
+// the arcade writes itself (a new theme, a new top score). Feedback is the
+// other direction -- players writing to the admin.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS comm_posts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    kind TEXT NOT NULL,
+    emoji TEXT NOT NULL DEFAULT '📣',
+    title TEXT NOT NULL,
+    body TEXT NOT NULL DEFAULT '',
+    game TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_comm_posts_created ON comm_posts (created_at DESC);
+
+  CREATE TABLE IF NOT EXISTS comm_feedback (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    kind TEXT NOT NULL,
+    message TEXT NOT NULL,
+    from_name TEXT NOT NULL DEFAULT '',
+    game TEXT,
+    status TEXT NOT NULL DEFAULT 'new',
+    admin_note TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+`);
+
 // Wordless difficulty. Scores from before it existed were all the old
 // any-length game, which is closest to Normal.
 ensureColumn('scores', 'difficulty', "TEXT NOT NULL DEFAULT 'normal'");
@@ -243,29 +272,54 @@ const BUILTIN_THEMES = [
   {
     id: 'simpsons', label: 'The Simpsons', subject: 'Simpsons character or thing', emoji: '🍩',
     accent: '#facc15', bg: '#171203', font: FONT_STACKS.comic,
+    // Grouped by length so every difficulty has enough to pick from.
     words: [
-      "homer","marge","bart","lisa","maggie","krusty","milhouse","nelson","skinner",
-      "wiggum","burns","smithers","flanders","barney","patty","selma","comic","ralph",
-      "edna","willie","duffman","bobo","maude","lenny","carl","cletus","frink",
-      "hibbert","apu","moe","otto","troy","itchy","kang","kodos","duff","springfield"
+      // 3-4: Easy
+      "bart","lisa","moe","apu","otto","edna","carl","duff","kang","troy","bobo","abe",
+      "kirk","todd","rod","lou","gil","hans","mona","doh","plow","nuke","lard","cow",
+      // 5-6: Normal
+      "homer","marge","maggie","krusty","nelson","burns","patty","selma","ralph","lenny",
+      "frink","maude","itchy","kodos","snake","jimbo","dolph","sherri","terri","agnes",
+      "cletus","willie","martin","quimby","wiggum","barney","gumble","donut","donuts",
+      "jasper","comic","helen","mapple",
+      // 7-8: Hard
+      "skinner","hibbert","duffman","lovejoy","kearney","moleman","mcclure","lardlad",
+      "milhouse","smithers","flanders","chalmers","sideshow","scratchy","squishee",
+      "monorail","simpsons","spuckler","embiggen",
+      // 9-10: Ludicrous
+      "krabappel","vanhouten","evergreen","plutonium","bumblebee","sprinkles","cromulent",
+      "lunchlady","doughnuts","kwikemart","embiggens","saxophone","treehouse","powerplant"
     ]
   },
   {
     id: 'dune', label: 'Dune', subject: 'Dune name or term', emoji: '🏜️',
     accent: '#e0813f', bg: '#140f0a', font: FONT_STACKS.serif,
     words: [
-      "paul","leto","chani","duncan","stilgar","gurney","baron","feyd","fremen",
-      "arrakis","kynes","irulan","alia","thufir","hawat","yueh","piter","spice",
-      "sietch","worm","sandworm","mentat","shield","desert","house","shaddam",
-      "corrino","caladan","giedi","atreides","bene","gesserit","navigator","guild"
+      // 3-4: Easy
+      "paul","leto","feyd","alia","yueh","worm","sand","dune","duke","suk","liet","naib",
+      "pyon","shai","crys","usul","gom","dew","bene",
+      // 5-6: Normal
+      "chani","duncan","gurney","baron","fremen","kynes","irulan","thufir","hawat","piter",
+      "spice","sietch","shield","desert","house","guild","jamis","harah","ghola","maker",
+      "rabban","mentat","jabbar","giedi",
+      // 7-8: Hard
+      "stilgar","arrakis","sandworm","shaddam","corrino","caladan","atreides","gesserit",
+      "ghanima","muaddib","thopter","jessica","tleilax","fedaykin","emperor","melange",
+      "kwisatz","haderach","chakobsa","imperium","padishah","weirding","secundus",
+      // 9-10: Ludicrous
+      "navigator","harkonnen","sardaukar","crysknife","stillsuit","shaihulud","heighliner",
+      "sayyadina","landsraad","guildsman","deathstill","giediprime","mindkiller"
     ]
   }
 ];
 
+// Built-in word lists are refreshed on every start, so an expanded list in a
+// new release reaches databases that were seeded with the old one.
 function seedBuiltinThemes() {
   const insert = db.prepare(`
-    INSERT OR IGNORE INTO themes (id, label, subject, emoji, accent, bg, font, words, builtin)
+    INSERT INTO themes (id, label, subject, emoji, accent, bg, font, words, builtin)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
+    ON CONFLICT(id) DO UPDATE SET words = excluded.words WHERE themes.builtin = 1
   `);
   for (const t of BUILTIN_THEMES) {
     insert.run(t.id, t.label, t.subject, t.emoji, t.accent, t.bg, t.font, JSON.stringify(t.words));
@@ -996,6 +1050,8 @@ function listDaily(day) {
 }
 
 module.exports = {
+  // The raw handle, for small arcade-wide modules (arcade/) that own their tables.
+  db,
   FONT_STACKS,
   listThemes,
   getTheme,
@@ -1005,6 +1061,7 @@ module.exports = {
   insertScore,
   listLeaderboard,
   createThemeRequest,
+  getThemeRequest,
   listThemeRequests,
   dismissThemeRequest,
   fulfillThemeRequest,

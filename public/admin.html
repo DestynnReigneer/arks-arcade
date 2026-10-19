@@ -65,7 +65,7 @@
     border-radius: 7px; padding: 8px 9px; font-family: inherit; font-size: 13px;
   }
   .field-row input[type="number"] { width: 74px; }
-  .board-tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+  .board-tabs { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
   .board-tabs button {
     padding: 7px 12px; border-radius: 8px; font-size: 12px; cursor: pointer;
     background: #10121a; border: 1px solid var(--tile-border); color: var(--text); font-family: inherit;
@@ -76,6 +76,33 @@
     border: 1px solid var(--tile-border); border-radius: 20px; padding: 3px 9px; margin: 0 5px 5px 0;
   }
   .badge-chip.gold { border-color: #d4a02a; color: #ffd76a; }
+  .field-row .grow { flex: 1; min-width: 180px; }
+  .admin-textarea {
+    width: 100%; background: #10121a; border: 1px solid var(--tile-border); color: var(--text);
+    border-radius: 7px; padding: 8px 9px; font-family: inherit; font-size: 13px; resize: vertical;
+  }
+  .admin-note { font-size: 12px; opacity: 0.7; margin: 0 0 8px; line-height: 1.5; }
+  .quick-posts { display: flex; gap: 6px; flex-wrap: wrap; }
+  .quick-posts button {
+    padding: 5px 10px; border-radius: 20px; font-size: 12px; cursor: pointer;
+    background: #10121a; border: 1px solid var(--tile-border); color: var(--text); font-family: inherit;
+  }
+  .quick-posts button:hover { border-color: var(--accent); }
+  .fb-card { border: 1px solid var(--tile-border); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; }
+  .fb-head { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; font-size: 11px; opacity: 0.75; }
+  .fb-kind { font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; opacity: 1; }
+  .fb-msg { margin: 6px 0 8px; font-size: 13.5px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .fb-controls { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .fb-controls select, .fb-controls input {
+    background: #10121a; border: 1px solid var(--tile-border); color: var(--text);
+    border-radius: 6px; padding: 5px 7px; font-family: inherit; font-size: 12px;
+  }
+  .fb-controls input { flex: 1; min-width: 140px; }
+  .fb-controls button {
+    background: var(--key-bg); border: 1px solid var(--tile-border); color: var(--text);
+    border-radius: 6px; padding: 5px 9px; font-size: 11.5px; cursor: pointer;
+  }
+  .fb-controls button.danger { border-color: #7a2a2a; color: #ff9a9a; }
   .danger-zone { border-color: #4a2020; }
   .danger-zone h2 { color: #ff9a9a; }
   .req-card {
@@ -142,7 +169,7 @@
   <div class="admin-header">
     <div class="back-row"><a href="index.html" class="back-link">← Back to arcade</a></div>
     <h1>🛠️ Arcade Admin</h1>
-    <div style="opacity:0.5; font-size:12px;">Theme requests · theme management</div>
+    <div style="opacity:0.5; font-size:12px;">Comm Center · games · settings</div>
   </div>
 
   <div id="lockScreen" class="admin-section">
@@ -155,11 +182,72 @@
   <div id="adminContent" class="hidden">
 
   <div class="tabs">
-    <button id="tabRambler" aria-pressed="true">🎲 Rambler</button>
+    <button id="tabArcade" aria-pressed="true">📡 Arcade</button>
+    <button id="tabRambler" aria-pressed="false">🎲 Rambler</button>
     <button id="tabWordless" aria-pressed="false">🔤 Wordless</button>
   </div>
 
-  <div id="ramblerPanel">
+  <div id="arcadePanel">
+    <div class="admin-section">
+      <h2>📡 Comm Center inbox</h2>
+      <div class="board-tabs" id="feedbackTabs"></div>
+      <div id="feedbackList">Loading…</div>
+      <div id="feedbackMsg" class="admin-msg"></div>
+    </div>
+
+    <div class="admin-section">
+      <h2>📣 Post an announcement</h2>
+      <div class="quick-posts" id="quickPosts"></div>
+      <div class="field-row">
+        <div>
+          <label for="postEmoji">Emoji</label>
+          <input type="text" id="postEmoji" maxlength="8" value="📣" style="width:64px">
+        </div>
+        <div class="grow">
+          <label for="postTitle">Title</label>
+          <input type="text" id="postTitle" maxlength="80" placeholder="e.g. Good luck, have fun!" style="width:100%">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="grow">
+          <label for="postBody">Details (shown when someone opens it)</label>
+          <textarea id="postBody" rows="3" maxlength="1000" class="admin-textarea"></textarea>
+        </div>
+      </div>
+      <div class="field-row">
+        <div>
+          <label for="postGame">"Play" button goes to</label>
+          <select id="postGame">
+            <option value="">No button</option>
+            <option value="wordless">Wordless</option>
+            <option value="rambler">Rambler</option>
+          </select>
+        </div>
+        <button class="small-btn" id="postBtn">Post to home page</button>
+      </div>
+      <div id="postMsg" class="admin-msg"></div>
+      <h2 style="margin-top:18px">On the home page now</h2>
+      <div id="postList"></div>
+    </div>
+
+    <div class="admin-section">
+      <h2>🔞 Adult PIN</h2>
+      <p class="admin-note">Locks every adult option in the arcade (Rambler's unfiltered words, and adult modes added later).
+        Changing it here overrides <code>ADULT_PIN</code> in <code>.env</code>.</p>
+      <div id="pinStatus" class="admin-note">Loading…</div>
+      <div class="field-row">
+        <div>
+          <label for="pinInput">New PIN (4–8 digits)</label>
+          <input type="password" id="pinInput" inputmode="numeric" maxlength="8" autocomplete="new-password" style="width:140px">
+        </div>
+        <button class="small-btn" id="savePinBtn">Save PIN</button>
+        <button class="small-btn" id="clearPinBtn">Remove PIN</button>
+      </div>
+      <div id="pinMsg" class="admin-msg"></div>
+    </div>
+  </div>
+
+  <div id="ramblerPanel" class="hidden">
     <div class="admin-section">
       <h2>🏆 Season</h2>
       <div id="seasonBox">Loading…</div>
@@ -317,5 +405,6 @@
 
 <script src="admin.js"></script>
 <script src="admin-rambler.js"></script>
+<script src="admin-arcade.js"></script>
 </body>
 </html>
