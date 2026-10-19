@@ -106,13 +106,27 @@ app.get('/healthz', (req, res) => {
   }
 });
 
+// ---- Short Fuse ----
+app.use('/api/shortfuse', require('./shortfuse/routes'));
+
 // ---- Comm Center (home page message board) ----
 app.use('/api/comm/admin', comm.adminRouter(requireAdmin));
 app.use('/api/comm', comm.router);
 
 // The arcade's name for the hub page, from ARCADE_NAME in .env.
 app.get('/api/arcade-info', (req, res) => {
-  res.json({ name: String(process.env.ARCADE_NAME || '').trim().slice(0, 30) });
+  res.json({
+    name: String(process.env.ARCADE_NAME || '').trim().slice(0, 30),
+    adultRequiresPin: adultPin.status().set
+  });
+});
+
+// Adult-only Wordless themes (and their scores) show up only when the page
+// asks for them with ?adult=1 and the adult PIN, or with no PIN set at all.
+const adultUnlocked = req => req.query.adult === '1' && adultPin.matches(req.get('X-Adult-Pin'));
+
+app.post('/api/adult-check', (req, res) => {
+  res.json({ ok: adultPin.matches((req.body || {}).pin) });
 });
 
 // ---- Themes (read: public, write: admin-only) ----
@@ -141,7 +155,12 @@ function getClassicExtras() {
 }
 
 app.get('/api/themes', (req, res) => {
-  res.json(db.listThemes().map(t => t.id === 'classic'
+  if (req.query.adult === '1' && !adultUnlocked(req)) {
+    return res.status(403).json({ error: 'That PIN is not right.' });
+  }
+  // The admin page lists every theme, so adult ones can be deleted too.
+  const isAdmin = !!ADMIN_TOKEN && req.get('X-Admin-Token') === ADMIN_TOKEN;
+  res.json(db.listThemes({ includeAdult: isAdmin || adultUnlocked(req) }).map(t => t.id === 'classic'
     ? { ...t, words: [...new Set([...t.words, ...getClassicExtras()])] }
     : t));
 });
@@ -168,7 +187,8 @@ app.post('/api/themes', requireAdmin, (req, res) => {
     return res.status(400).json({ error: 'Need at least 5 valid words (letters only, 3-10 letters each).' });
   }
 
-  const theme = db.createTheme({ label, subject, emoji, accent, bg, fontKey, words });
+  const adult = body.adult === true;
+  const theme = db.createTheme({ label, subject, emoji, accent, bg, fontKey, words, adult });
 
   // Made from a kid's suggestion? Close the request in the same step -- there
   // is nothing left to decide once the theme exists.
@@ -176,13 +196,16 @@ app.post('/api/themes', requireAdmin, (req, res) => {
   const request = requestId ? db.getThemeRequest(requestId) : null;
   if (request && request.status === 'pending') db.fulfillThemeRequest(requestId, theme.id);
 
-  comm.safePost({
-    kind: 'theme', emoji, game: 'wordless',
-    title: `New Wordless theme: ${label}`,
-    body: request && request.requestedBy
-      ? `${label} is ready to play, thanks to ${request.requestedBy} for the idea!`
-      : `${label} is ready to play. Pick it from the Theme menu in Wordless.`
-  });
+  // The home page is the kids' front door too, so adult themes stay quiet.
+  if (!adult) {
+    comm.safePost({
+      kind: 'theme', emoji, game: 'wordless',
+      title: `New Wordless theme: ${label}`,
+      body: request && request.requestedBy
+        ? `${label} is ready to play, thanks to ${request.requestedBy} for the idea!`
+        : `${label} is ready to play. Pick it from the Theme menu in Wordless.`
+    });
+  }
   res.status(201).json(theme);
 });
 
@@ -230,7 +253,10 @@ app.post('/api/theme-requests/:id/fulfill', requireAdmin, (req, res) => {
 
 // ---- Leaderboard ----
 app.get('/api/leaderboard', (req, res) => {
-  res.json(db.listLeaderboard({ themeId: req.query.theme, difficulty: req.query.difficulty, limit: req.query.limit }));
+  res.json(db.listLeaderboard({
+    themeId: req.query.theme, difficulty: req.query.difficulty, limit: req.query.limit,
+    includeAdult: adultUnlocked(req)
+  }));
 });
 
 app.post('/api/leaderboard', leaderboardLimiter, (req, res) => {
@@ -247,12 +273,13 @@ app.post('/api/leaderboard', leaderboardLimiter, (req, res) => {
   if (!INITIALS_RE.test(initials)) {
     return res.status(400).json({ error: 'Initials must be 1-3 letters or numbers.' });
   }
-  if (!db.getTheme(themeId)) {
+  const theme = db.getTheme(themeId);
+  if (!theme) {
     return res.status(400).json({ error: 'Unknown theme.' });
   }
 
   const result = db.insertScore({ initials, themeId, won, guesses, hintsUsed, word, elapsedMs, difficulty });
-  if (won && result.rank === 1) {
+  if (won && result.rank === 1 && !theme.adult) {
     const level = difficulty[0].toUpperCase() + difficulty.slice(1);
     comm.safePost({
       kind: 'highscore', emoji: '🏆', game: 'wordless',

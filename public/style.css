@@ -333,6 +333,12 @@ header h1 span#titleSuffix { color: var(--accent); }
 }
 
 .difficulty-title { margin: 0 0 14px; font-size: 20px; }
+.pin-box {
+  width: 100%; text-align: center; letter-spacing: 8px; font-size: 22px; font-weight: 700;
+  background: var(--key-bg); color: var(--text); border: 1px solid var(--tile-border);
+  border-radius: 8px; padding: 10px; margin-bottom: 8px;
+}
+#adultBtn.on { border-color: #ff4fa3; color: #ff4fa3; }
 .difficulty-choices { display: flex; flex-direction: column; gap: 8px; }
 .difficulty-choice {
   display: flex; align-items: center; gap: 12px; text-align: left;

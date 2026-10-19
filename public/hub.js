@@ -7,7 +7,8 @@
   const $ = id => document.getElementById(id);
   const GAMES = {
     wordless: { label: 'Wordless', href: 'wordless.html' },
-    rambler: { label: 'Rambler', href: 'rambler.html' }
+    rambler: { label: 'Rambler', href: 'rambler.html' },
+    shortfuse: { label: 'Short Fuse', href: 'shortfuse.html' }
   };
 
   // ---- the arcade's name --------------------------------------------------
