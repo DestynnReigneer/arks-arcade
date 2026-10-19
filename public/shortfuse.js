@@ -255,6 +255,7 @@ function applyRoom(snap) {
 function renderLobby(snap) {
   screen('lobby');
   $('lobbyCode').textContent = snap.code;
+  if ($('joinQr').dataset.code !== snap.code) { $('joinQr').dataset.code = snap.code; ArcadeQR.forGame($('joinQr'), 'shortfuse.html', snap.code, $('joinLink')); }
   $('lobbyCount').textContent = `(${snap.players.length}/${snap.maxPlayers})`;
   const list = $('lobbyPlayers');
   list.innerHTML = '';

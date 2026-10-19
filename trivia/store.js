@@ -3,11 +3,10 @@
 // Where Know-It-All's questions live: the built-in bank, packs made from the
 // admin page, and questions downloaded from Open Trivia DB (opentdb.com,
 // CC BY-SA 4.0) when the server has internet. Downloads are saved here so
-// the game keeps working offline afterwards.
+// the game keeps working offline afterward.
 
 const crypto = require('node:crypto');
 const db = require('../db');
-const dictionary = require('../rambler/dictionary');
 const bank = require('./bank');
 
 db.db.exec(`
@@ -51,11 +50,8 @@ const rowToQuestion = r => ({
 });
 
 // ---- checking a question ------------------------------------------------------------
-
-// American English only: a question or answer with a British spelling is skipped.
-function hasBritish(text) {
-  return String(text).split(/[^A-Za-z]+/).some(w => w.length > 2 && dictionary.isBritish(w.toUpperCase()));
-}
+// Trivia is about facts, not spelling, so titles and names are kept exactly
+// as they are ("Fifty Shades of Grey" stays Grey).
 
 const clean = (v, max) => String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, max);
 
@@ -69,7 +65,6 @@ function checkQuestion(raw) {
   if (wrong.length < 1 || wrong.length > 3) return { error: 'needs 1 to 3 wrong answers' };
   const all = [correct, ...wrong].map(a => a.toLowerCase());
   if (new Set(all).size !== all.length) return { error: 'duplicate answers' };
-  if (hasBritish([question, correct, ...wrong].join(' '))) return { error: 'British spelling' };
   return { question: { question, correct, wrong, difficulty } };
 }
 
@@ -227,7 +222,6 @@ async function syncOpenTdb({ force = false } = {}) {
         const question = d(r.question);
         const correct = d(r.correct_answer);
         const wrong = r.incorrect_answers.map(d);
-        if (hasBritish([question, correct, ...wrong].join(' '))) { sync.skipped++; continue; }
         const genre = OTDB_GENRES[d(r.category)] || 'General';
         const ext = crypto.createHash('sha1').update(question + correct).digest('hex');
         const info = insert.run(ext, genre, DIFFICULTIES.includes(r.difficulty) ? r.difficulty : 'medium', question, correct, JSON.stringify(wrong));

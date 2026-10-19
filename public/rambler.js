@@ -1423,6 +1423,7 @@ function renderPlayRoster(snap) {
 
 function renderLobby(snap) {
   $('roomCode').textContent = snap.code;
+  if ($('joinQr').dataset.code !== snap.code) { $('joinQr').dataset.code = snap.code; ArcadeQR.forGame($('joinQr'), 'rambler.html', snap.code, $('joinLink')); }
   const roster = $('lobbyRoster');
   roster.innerHTML = '';
   for (const p of snap.players) {
@@ -2136,6 +2137,16 @@ async function boot() {
   renderSeasonStrip();
   renderSetup();
   refreshDailyCard();
+
+  // A link like rambler.html?join=ABCD (from a QR code or the arcade's
+  // "Join a game" list) lands on Own Phones with the code filled in.
+  const joinParam = new URLSearchParams(location.search).get('join');
+  if (joinParam) {
+    S.mode = 'room';
+    renderSetup();
+    $('joinCodeInput').value = joinParam.toUpperCase().slice(0, 4);
+    $('joinCodeInput').scrollIntoView({ block: 'center' });
+  }
 
   // First visit with profiles already on the server and none chosen: ask who
   // is playing rather than silently banking nothing.

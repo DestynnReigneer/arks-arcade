@@ -45,7 +45,7 @@ Write 40 to 60 questions about ${topic}. Rules:
 - Keep questions under 200 characters and answers short
 - "difficulty" is easy, medium or hard: ${mix}
 - No duplicates, no "all of the above", no trick questions
-- Use American English spelling
+- Use American English spelling in your own wording, but keep real titles and names exactly as they are
 
 Tone: ${TONE[level]} No slurs or hateful terms.`;
   }

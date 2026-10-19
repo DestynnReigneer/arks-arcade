@@ -862,10 +862,10 @@ async function run({ base, root }) {
       { question: 'Broken?', correct: 'A', wrong: ['A'] }
     ]
   });
-  ok('a pack is made from pasted questions', tpack.status === 201 && tpack.data.pack.count === 5, JSON.stringify(tpack.data));
-  ok('…skipping British spelling and broken ones', tpack.data.skipped.length === 2);
+  ok('a pack is made from pasted questions', tpack.status === 201 && tpack.data.pack.count === 6, JSON.stringify(tpack.data));
+  ok('…skipping broken ones (trivia keeps titles and spellings as they are)', tpack.data.skipped.length === 1);
   ok('…and it is announced', (await wl('/comm/posts')).data.some(p => p.title.includes('Know-It-All questions: Space')));
-  ok('you can play just that pack', (await wl(`/trivia/questions?pack=${tpack.data.pack.id}&count=10`)).data.questions.length === 5);
+  ok('you can play just that pack', (await wl(`/trivia/questions?pack=${tpack.data.pack.id}&count=10`)).data.questions.length === 6);
 
   // A room game from start to finish
   const th = (await wl('/trivia/rooms', 'POST', { name: 'Sam', settings: { level: 'kids', count: 5, seconds: 30 } })).data;
@@ -892,6 +892,27 @@ async function run({ base, root }) {
   }
   snapT = await troom(tg);
   ok('after the last question the game is over with standings', snapT.phase === 'over' && snapT.finale.standings.length === 2);
+
+  // ---- join-a-game lobby and QR codes ---------------------------------------------
+  const lobbyHost = (await wl('/trivia/rooms', 'POST', { name: 'Robin', settings: { level: 'kids', count: 5 } })).data;
+  const adultRoom = await fetch(base + '/api/trivia/rooms', {
+    method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Adult-Pin': '2468' },
+    body: JSON.stringify({ name: 'Grown', settings: { level: 'filthy' } })
+  }).then(r => r.json());
+  let lobbyNow = (await wl('/lobby')).data;
+  const robin = lobbyNow.rooms.find(r => r.code === lobbyHost.code);
+  ok('a hosted game shows on the lobby, open to join', !!robin && robin.status === 'open' && robin.href === `trivia.html?join=${lobbyHost.code}` && robin.host === 'Robin');
+  ok('adult games stay off the public lobby', !lobbyNow.rooms.some(r => r.code === adultRoom.code));
+  ok('the lobby says where phones should go', /^https?:\/\//.test(lobbyNow.publicUrl));
+  await wl(`/trivia/rooms/${lobbyHost.code}/start`, 'POST', { playerId: lobbyHost.playerId, token: lobbyHost.token });
+  lobbyNow = (await wl('/lobby')).data;
+  ok('a game that has started shows as playing', lobbyNow.rooms.find(r => r.code === lobbyHost.code).status === 'playing');
+  const chessFull = (await wl('/chess/rooms', 'POST', { name: 'A' })).data;
+  await wl(`/chess/rooms/${chessFull.code}/join`, 'POST', { name: 'B' });
+  ok('a chess game with two players shows as full', (await wl('/lobby')).data.rooms.find(r => r.code === chessFull.code).status === 'full');
+  const qrRes = await fetch(base + '/api/qr?text=' + encodeURIComponent(base + '/trivia.html?join=ABCD'));
+  ok('QR codes come back as SVG for arcade links', qrRes.status === 200 && (await qrRes.text()).includes('<svg'));
+  ok('QR codes for other websites are refused', (await fetch(base + '/api/qr?text=' + encodeURIComponent('https://example.com/'))).status === 400);
 
   // ---- Short Fuse -----------------------------------------------------------------
   const SF = base + '/api/shortfuse';

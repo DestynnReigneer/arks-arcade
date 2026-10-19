@@ -189,6 +189,7 @@
     S.ended = null;
     S.overShown = null;
     $('lobbyCode').textContent = r.code;
+    ArcadeQR.forGame($('joinQr'), 'chess.html', r.code, $('joinLink'));
     show('lobby');
     connect();
   }

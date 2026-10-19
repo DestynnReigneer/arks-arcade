@@ -124,7 +124,7 @@ const RAW = {
     ['Dirty Minds', 'e', 'What does "Netflix and chill" really mean?', 'Hooking up', 'Watching a movie', 'Taking a nap', 'Ordering pizza'],
     ['Dirty Minds', 'm', 'A "cougar" is slang for what?', 'An older woman dating younger men', 'A sports car', 'A dance move', 'A cocktail'],
     ['Dirty Minds', 'h', 'Which 1700s Venetian wrote memoirs about seducing more than 100 women?', 'Casanova', 'Don Juan', 'Romeo', 'Valentino'],
-    ['Dirty Minds', 'm', 'In the "Fifty Shades" books, what is Christian\'s playroom called?', 'The Red Room', 'The Black Room', 'The Dungeon', 'The Velvet Room'],
+    ['Dirty Minds', 'm', 'In "Fifty Shades of Grey", what is Christian\'s playroom called?', 'The Red Room', 'The Black Room', 'The Dungeon', 'The Velvet Room'],
     ['Booze', 'm', 'About how many 1.5-ounce shots are in a 750 ml bottle?', 'About 17', 'About 5', 'About 30', 'About 10'],
     ['Booze', 'e', 'What does BAC measure?', 'Blood alcohol content', 'Beer and cocktails', 'Bar alcohol count', 'Booze absorption chart'],
     ['Booze', 'e', 'In beer pong, how many cups does each side usually start with?', '10', '6', '12', '8'],
