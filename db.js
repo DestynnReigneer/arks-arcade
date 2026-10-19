@@ -239,6 +239,9 @@ db.exec(`
 // Adult-only Wordless themes, hidden until the adult PIN is entered.
 ensureColumn('themes', 'adult', 'INTEGER NOT NULL DEFAULT 0');
 
+// Wordless clue hints for a custom theme: { word: { category?, clue } }.
+ensureColumn('themes', 'clues', "TEXT NOT NULL DEFAULT '{}'");
+
 // Wordless difficulty. Scores from before it existed were all the old
 // any-length game, which is closest to Normal.
 ensureColumn('scores', 'difficulty', "TEXT NOT NULL DEFAULT 'normal'");
@@ -344,7 +347,8 @@ function rowToTheme(row) {
     font: row.font,
     words: JSON.parse(row.words),
     builtin: !!row.builtin,
-    adult: !!row.adult
+    adult: !!row.adult,
+    clues: JSON.parse(row.clues || '{}')
   };
 }
 
@@ -367,7 +371,7 @@ function slugify(text) {
     .slice(0, 24) || 'theme';
 }
 
-function createTheme({ label, subject, emoji, accent, bg, fontKey, words, adult = false }) {
+function createTheme({ label, subject, emoji, accent, bg, fontKey, words, adult = false, clues = {} }) {
   const base = slugify(label);
   let id = base;
   let n = 1;
@@ -376,9 +380,17 @@ function createTheme({ label, subject, emoji, accent, bg, fontKey, words, adult 
   }
   const font = FONT_STACKS[fontKey] || FONT_STACKS.sans;
   db.prepare(`
-    INSERT INTO themes (id, label, subject, emoji, accent, bg, font, words, builtin, adult)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
-  `).run(id, label, subject, emoji, accent, bg, font, JSON.stringify(words), adult ? 1 : 0);
+    INSERT INTO themes (id, label, subject, emoji, accent, bg, font, words, builtin, adult, clues)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)
+  `).run(id, label, subject, emoji, accent, bg, font, JSON.stringify(words), adult ? 1 : 0, JSON.stringify(clues));
+  return getTheme(id);
+}
+
+// Merges new clues into a theme's existing ones.
+function setThemeClues(id, clues) {
+  const theme = getTheme(id);
+  if (!theme) return null;
+  db.prepare('UPDATE themes SET clues = ? WHERE id = ?').run(JSON.stringify({ ...theme.clues, ...clues }), id);
   return getTheme(id);
 }
 
@@ -1067,6 +1079,7 @@ module.exports = {
   listThemes,
   getTheme,
   createTheme,
+  setThemeClues,
   deleteTheme,
   computeScore,
   insertScore,

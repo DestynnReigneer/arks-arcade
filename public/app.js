@@ -53,6 +53,9 @@
   let revealedLetters = [];
   let hintsRemaining = MAX_HINTS;
   let hintsUsed = 0;
+  // The puzzle's category and hint ladder, fetched when a word is picked.
+  let puzzle = { category: null, clue: null, endsLike: null };
+  let puzzleToken = 0;
   let gameOver = false;
   let startTime = 0;
   let lastResult = null;
@@ -68,6 +71,9 @@
   const titleEmojiEl = document.getElementById('titleEmoji');
   const hintBtn = document.getElementById('hintBtn');
   const hintCountEl = document.getElementById('hintCount');
+  const puzzleTitleEl = document.getElementById('puzzleTitle');
+  const puzzleCategoryEl = document.getElementById('puzzleCategory');
+  const hintListEl = document.getElementById('hintList');
   const leaderboardBtn = document.getElementById('leaderboardBtn');
 
   const initialsOverlay = document.getElementById('initialsOverlay');
@@ -275,7 +281,15 @@
     const available = Math.min(window.innerWidth - 24, 600);
     const gap = 6;
     const size = Math.floor((available - (cols - 1) * gap) / cols);
-    return Math.max(30, Math.min(60, size));
+    // Tall enough for the hints and the keyboard too, so nothing scrolls away.
+    const top = board.getBoundingClientRect().top + window.scrollY;
+    const keys = keyboardEl.offsetHeight || 170;
+    const byHeight = Math.floor((window.innerHeight - top - keys - 24 - (MAX_GUESSES - 1) * gap) / MAX_GUESSES);
+    return Math.max(30, Math.min(60, size, byHeight));
+  }
+
+  function fitBoard() {
+    if (wordLen) board.style.setProperty('--tile-size', computeTileSize(wordLen) + 'px');
   }
 
   function buildBoard() {
@@ -297,10 +311,7 @@
     }
   }
 
-  window.addEventListener('resize', () => {
-    if (!wordLen) return;
-    board.style.setProperty('--tile-size', computeTileSize(wordLen) + 'px');
-  });
+  window.addEventListener('resize', fitBoard);
 
   function buildKeyboard() {
     keyboardEl.innerHTML = "";
@@ -344,8 +355,52 @@
     initialsOverlay.classList.add('hidden');
     buildBoard();
     buildKeyboard();
+    fitBoard();
     updateRowDisplay(0);
+    loadPuzzle();
     updateHintUI();
+  }
+
+  // The title shows straight away (it's free); clue and ends-like wait in the
+  // ladder until a hint is spent.
+  async function loadPuzzle() {
+    const token = ++puzzleToken;
+    puzzle = { category: currentTheme.subject || 'Word', clue: null, endsLike: null };
+    hintListEl.innerHTML = '';
+    showPuzzleTitle();
+    try {
+      const data = await apiGet(`/api/wordless/hints?theme=${encodeURIComponent(currentTheme.id)}&word=${encodeURIComponent(answer)}` +
+        adultQuery('&'), adultHeaders());
+      if (token !== puzzleToken) return;
+      puzzle = { category: data.category || puzzle.category, clue: data.clue, endsLike: data.endsLike };
+      showPuzzleTitle();
+      updateHintUI();
+    } catch (e) { /* offline: the title stays the theme's subject, hints fall back to letters */ }
+  }
+
+  function showPuzzleTitle() {
+    const base = currentTheme.id === 'classic' ? '' : `${currentTheme.emoji} ${currentTheme.label} · `;
+    const same = puzzle.category && currentTheme.subject &&
+      puzzle.category.toLowerCase() === currentTheme.subject.toLowerCase();
+    puzzleCategoryEl.textContent = same ? `${currentTheme.emoji} ${puzzle.category}` : base + (puzzle.category || 'Word');
+    puzzleTitleEl.classList.remove('hidden');
+  }
+
+  // Hints get stronger as you go: the meaning, then the sound, then letters.
+  function nextHintKind() {
+    const ladder = [];
+    if (puzzle.clue) ladder.push('clue');
+    if (puzzle.endsLike) ladder.push('ends');
+    return ladder[hintsUsed] || 'letter';
+  }
+
+  function addHintLine(icon, html) {
+    const li = document.createElement('li');
+    li.innerHTML = `<span></span><span></span>`;
+    li.firstChild.textContent = icon;
+    li.lastChild.innerHTML = html;
+    hintListEl.appendChild(li);
+    fitBoard();
   }
 
   function showMessage(msg, persist) {
@@ -413,12 +468,21 @@
 
   function updateHintUI() {
     hintCountEl.textContent = hintsRemaining;
-    const noCandidates = revealedSlots.every(Boolean);
+    const noCandidates = nextHintKind() === 'letter' && revealedSlots.every(Boolean);
     hintBtn.disabled = gameOver || hintsRemaining <= 0 || noCandidates;
   }
 
   function useHint() {
     if (gameOver || hintsRemaining <= 0) return;
+    const kind = nextHintKind();
+    if (kind === 'clue' || kind === 'ends') {
+      hintsRemaining--;
+      hintsUsed++;
+      if (kind === 'clue') addHintLine('🗣️', escapeHtml(puzzle.clue));
+      else addHintLine('🎵', `Ends the same way as <b>${escapeHtml(puzzle.endsLike)}</b>`);
+      updateHintUI();
+      return;
+    }
     const candidates = [];
     for (let i = 0; i < wordLen; i++) if (!revealedSlots[i]) candidates.push(i);
     if (candidates.length === 0) return;
@@ -430,7 +494,7 @@
     hintsUsed++;
     updateRowDisplay(guesses.length);
     updateHintUI();
-    showMessage(`Hint: letter ${idx + 1} is ${answer[idx].toUpperCase()}`);
+    addHintLine('🔤', `Letter ${idx + 1} is <b>${answer[idx].toUpperCase()}</b>`);
   }
 
   function submitGuess() {
@@ -604,6 +668,10 @@
 
   function populateDifficultyFilter(selected) {
     leaderboardDifficultyFilter.innerHTML = "";
+    const all = document.createElement('option');
+    all.value = 'all';
+    all.textContent = '🎚️ All difficulties';
+    leaderboardDifficultyFilter.appendChild(all);
     Object.entries(DIFFICULTIES).forEach(([id, d]) => {
       const opt = document.createElement('option');
       opt.value = id;

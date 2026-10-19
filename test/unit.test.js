@@ -243,6 +243,29 @@ async function run() {
   }
   ok('300 random games all reach a winner', finished === 300, problem);
 
+  console.log('\n-- wordless hints --');
+  const hints = require(path.join(ROOT, 'arcade/wordless-hints.js'));
+  const common = dictionary.load().common;
+  const leaks = [];
+  for (const [themeId, words] of Object.entries(hints.BUILTIN)) {
+    for (const [w, [, clue]] of Object.entries(words)) if (clue.toLowerCase().includes(w)) leaks.push(`${themeId}:${w}`);
+  }
+  ok('no built-in clue contains its own word', leaks.length === 0, leaks.join(', '));
+  const classic = { id: 'classic', subject: 'word' };
+  const apple = hints.hintsFor(classic, 'apple', common);
+  ok('Classic words get a dictionary clue', /fruit/i.test(apple.clue || ''), apple.clue);
+  ok('…and a kid-friendly category', apple.category === 'Thing');
+  const ends = hints.endsLike('bottle', common);
+  ok('ends-like finds a word with the same ending', !!ends && ends.endsWith('TLE') && ends !== 'BOTTLE', ends);
+  ok('…that does not share the first letter', ends && ends[0] !== 'B');
+  const bart = hints.hintsFor({ id: 'simpsons', subject: 'Simpsons character or thing' }, 'bart', common);
+  ok('built-in themes have hand-written clues', bart.category === 'Character' && /skateboard/.test(bart.clue));
+  const mine = hints.hintsFor({ id: 'minecraft', subject: 'Minecraft thing', clues: {} }, 'creeper', common);
+  ok('custom themes never borrow dictionary clues', mine.clue === null && mine.category === 'Minecraft thing');
+  const cleaned = hints.cleanClues({ creeper: 'Green and explodes', zombie: 'Not in the theme', sheep: 'A sheep, baa' }, ['creeper', 'sheep']);
+  ok('pasted clues keep only theme words that do not give the word away',
+    Object.keys(cleaned).join() === 'creeper', JSON.stringify(cleaned));
+
   console.log(`\n  ${pass} passed, ${fail} failed`);
   return { pass, fail };
 }
