@@ -121,7 +121,8 @@ app.use('/api/comm', comm.router);
 app.get('/api/arcade-info', (req, res) => {
   res.json({
     name: String(process.env.ARCADE_NAME || '').trim().slice(0, 30),
-    adultRequiresPin: adultPin.status().set
+    adultRequiresPin: adultPin.status().set,
+    games: require('./arcade/home-games').get()
   });
 });
 
@@ -160,7 +161,8 @@ function getClassicExtras() {
 
 // An AI-written adult theme only ever has a handful of 3-4 letter words, and
 // some of those are tame, so adult Easy ended up feeling like the kids game.
-// Every adult theme gets these on top, so Easy always has plenty of rude ones.
+// Adult themes short on Easy words get these on top, so Easy always has plenty
+// of rude ones. Themes with their own short words (the built-ins) keep to them.
 const ADULT_SHORT_WORDS = `
   ass butt boob tit tits dick cock cum jizz sex sexy nude nip nips porn lust
   kink lewd milf lube anal oral bang bone hump wang dong pube perv whip lick
@@ -199,7 +201,8 @@ app.get('/api/themes', (req, res) => {
   const isAdmin = !!ADMIN_TOKEN && req.get('X-Admin-Token') === ADMIN_TOKEN;
   res.json(db.listThemes({ includeAdult: isAdmin || adultUnlocked(req) }).map(t =>
     t.id === 'classic' ? { ...t, words: [...new Set([...t.words, ...getClassicExtras()])] }
-      : t.adult && !isAdmin ? { ...t, words: [...new Set([...t.words, ...ADULT_SHORT_WORDS])] }
+      : t.adult && !isAdmin && t.words.filter(w => w.length <= 4).length < 10
+        ? { ...t, words: [...new Set([...t.words, ...ADULT_SHORT_WORDS])] }
         : t));
 });
 

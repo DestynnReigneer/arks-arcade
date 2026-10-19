@@ -20,6 +20,16 @@
     const name = (info.name || '').trim();
     $('arcadeName').textContent = name ? name + ' ' : '';
     document.title = name ? `${name} Arcade` : 'Arcade';
+    // The admin page decides the order of the games, and which ones show.
+    const list = document.querySelector('.games');
+    if (info.games && list) {
+      for (const id of info.games.order) {
+        const card = list.querySelector(`.game.${id}`);
+        if (!card) continue;
+        list.appendChild(card);
+        card.classList.toggle('hidden', info.games.hidden.includes(id));
+      }
+    }
   }).catch(() => {});
 
   // ---- Comm Center ----------------------------------------------------------

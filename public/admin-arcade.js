@@ -212,11 +212,68 @@
     } catch (e) { say($('pinMsg'), e.message, false); }
   }
 
+  // ---- home page games -------------------------------------------------------
+
+  const GAME_EMOJI = { wordless: '🔤', rambler: '🎲', shortfuse: '💣', spinsolve: '🎡', chess: '♞', dino: '🦖' };
+  let home = null;
+
+  async function loadHomeGames() {
+    try { home = await api('/home-games'); renderHomeGames(); } catch (e) { $('homeGames').textContent = e.message; }
+  }
+
+  function renderHomeGames() {
+    const box = $('homeGames');
+    box.innerHTML = '';
+    home.order.forEach((id, i) => {
+      const hidden = home.hidden.includes(id);
+      const row = document.createElement('div');
+      row.className = 'theme-row';
+      row.style.opacity = hidden ? '0.5' : '1';
+      row.innerHTML = `<span></span>
+        <span style="display:flex;gap:6px">
+          <button class="small-btn" data-act="up" title="Move up">▲</button>
+          <button class="small-btn" data-act="down" title="Move down">▼</button>
+          <button class="small-btn" data-act="hide"></button>
+        </span>`;
+      row.firstChild.textContent = `${i + 1}. ${GAME_EMOJI[id] || ''} ${GAME_LABELS[id] || id}${hidden ? ' (hidden)' : ''}`;
+      const up = row.querySelector('[data-act="up"]');
+      const down = row.querySelector('[data-act="down"]');
+      up.disabled = i === 0;
+      down.disabled = i === home.order.length - 1;
+      row.querySelector('[data-act="hide"]').textContent = hidden ? '👁 Show' : '🙈 Hide';
+      up.onclick = () => move(i, -1);
+      down.onclick = () => move(i, 1);
+      row.querySelector('[data-act="hide"]').onclick = () => toggleHidden(id);
+      box.appendChild(row);
+    });
+  }
+
+  async function saveHomeGames(next) {
+    try {
+      home = await api('/home-games', { method: 'POST', body: next });
+      renderHomeGames();
+      say($('homeGamesMsg'), 'Saved. The home page shows the new order now.');
+    } catch (e) { say($('homeGamesMsg'), e.message, false); }
+  }
+
+  function move(i, by) {
+    const order = home.order.slice();
+    const [id] = order.splice(i, 1);
+    order.splice(i + by, 0, id);
+    saveHomeGames({ order, hidden: home.hidden });
+  }
+
+  function toggleHidden(id) {
+    const hidden = home.hidden.includes(id) ? home.hidden.filter(x => x !== id) : [...home.hidden, id];
+    saveHomeGames({ order: home.order, hidden });
+  }
+
   // ---- wiring --------------------------------------------------------------
 
   function refresh() {
     loadFeedback();
     loadPosts();
+    loadHomeGames();
     loadPin();
   }
 

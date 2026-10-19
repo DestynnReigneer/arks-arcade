@@ -701,6 +701,18 @@ async function run({ base, root }) {
   ok('clues can be added to an existing theme', added.status === 200 && added.data.total === 3, JSON.stringify(added.data));
   ok('adding clues needs the admin password', (await wl(`/themes/${clueTheme.data.id}/clues`, 'POST', { clues: { horse: 'Neigh' } })).status === 401);
 
+  // ---- home page game order -------------------------------------------------------
+  const startInfo = (await wl('/arcade-info')).data;
+  ok('the home page gets every game in an order', startInfo.games.order.length === 6 && startInfo.games.hidden.length === 0);
+  const reordered = await asAdmin('/comm/admin/home-games', 'POST', { order: ['dino', 'chess'], hidden: ['shortfuse'] });
+  ok('the admin can reorder and hide games', reordered.status === 200 && reordered.data.order[0] === 'dino' &&
+    reordered.data.order.length === 6 && reordered.data.hidden.join() === 'shortfuse', JSON.stringify(reordered.data));
+  ok('the home page sees the new order', (await wl('/arcade-info')).data.games.order[0] === 'dino');
+  ok('hiding every game is refused', (await asAdmin('/comm/admin/home-games', 'POST', {
+    order: startInfo.games.order, hidden: startInfo.games.order })).status === 400);
+  ok('reordering needs the admin password', (await wl('/comm/admin/home-games', 'POST', { order: ['chess'] })).status === 401);
+  await asAdmin('/comm/admin/home-games', 'POST', { order: startInfo.games.order, hidden: [] });
+
   // ---- arcade high scores ---------------------------------------------------------
   const savedRun = await wl('/scores/dino', 'POST', { initials: 'dd1', score: 1234, board: 'run' });
   ok('a Dino Dash score saves and ranks', savedRun.status === 201 && savedRun.data.rank === 1);
@@ -757,7 +769,15 @@ async function run({ base, root }) {
   ok('adult-theme scores stay off the kids board', !(await wl('/leaderboard?difficulty=normal')).data.some(r => r.initials === 'XXX'));
   ok('…and show once unlocked', (await pinGet('/leaderboard?difficulty=normal&adult=1', '2468')).data.some(r => r.initials === 'XXX'));
 
-  // ---- Spin & Solve: levels, packs, requests --------------------------------------
+  // ---- built-in adult Wordless themes ----------------------------------------------
+  ok('built-in adult themes stay hidden from kids', !(await wl('/themes')).data.some(t => t.id === 'naughty-bits'));
+  const adultBuiltins = (await pinGet('/themes?adult=1', '2468')).data.filter(t => t.builtin && t.adult).map(t => t.id).sort();
+  ok('four built-in adult themes appear with the PIN', adultBuiltins.join() === 'bachelorette,bar-crawl,naughty-bits,swear-jar', adultBuiltins.join());
+  const barHint = (await pinGet('/wordless/hints?theme=bar-crawl&word=tequila&adult=1', '2468')).data;
+  ok('they come with clues', barHint.clue === 'Salt, shot, lime' && barHint.category === 'Drink', JSON.stringify(barHint));
+  ok('their hints need the PIN too', (await wl('/wordless/hints?theme=bar-crawl&word=tequila')).status === 403);
+
+    // ---- Spin & Solve: levels, packs, requests --------------------------------------
   const spinCfg = (await wl('/spinsolve/config')).data;
   ok('Spin & Solve has the four levels', spinCfg.levels.map(l => l.id).join() === 'kids,cheeky,spicy,filthy');
   ok('…with built-in puzzles at every level', spinCfg.levels.every(l => l.builtin >= 30));

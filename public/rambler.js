@@ -192,9 +192,21 @@ function paintTrace(state = '') {
   }
 }
 
-function dieIndexAt(x, y) {
+// While dragging, a die only counts once the finger is near its middle.
+// Going diagonally means passing right by the corners of the two dice beside
+// the one you want; with the whole square as the target, those get picked up
+// by accident. A circle a bit smaller than the die leaves the corners alone.
+const DRAG_HIT_RADIUS = 0.36;   // of the die's width
+
+function dieIndexAt(x, y, strict = false) {
   const el = document.elementFromPoint(x, y);
   if (!el || !el.classList.contains('die')) return -1;
+  if (strict) {
+    const r = el.getBoundingClientRect();
+    const dx = x - (r.left + r.width / 2);
+    const dy = y - (r.top + r.height / 2);
+    if (Math.hypot(dx, dy) > Math.min(r.width, r.height) * DRAG_HIT_RADIUS) return -1;
+  }
   return Number(el.dataset.i);
 }
 
@@ -255,7 +267,7 @@ function bindTracing() {
     wrap.addEventListener('pointermove', e => {
       if (!trace.active || trace.ctx !== ctx) return;
       e.preventDefault();
-      extendTrace(dieIndexAt(e.clientX, e.clientY));
+      extendTrace(dieIndexAt(e.clientX, e.clientY, true));
     });
   }
 
