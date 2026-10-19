@@ -23,23 +23,81 @@ gamification layer", and streaks, coins and milestones qualify. It is held in
 reserve; two palettes in one app is already the limit before it stops reading
 as one product.
 
-## Status: not yet applied
+## Status
 
-**The current UI is off-spec.** It was built before the palette existed and
-uses ad-hoc values:
+| Surface | Palette | State |
+|---|---|---|
+| Arcade hub (`index.html`) | 8-Bit | **applied** |
+| Rambler, kids dictionary (`rambler.css`) | 8-Bit | **applied** |
+| Rambler, unfiltered dictionary | Vice | **applied** — `:root.unfiltered` |
+| Rambler Marathon | Vice | applied (built that way) |
+| Wordless (`style.css`) | 8-Bit | **not yet — see below** |
+| Admin (`admin.html`) | — | not assigned a palette |
 
-| Currently | Should be |
-|---|---|
-| `--bg: #0f1115` | 8-Bit background `#12111C` |
-| `--accent: #facc15` | 8-Bit accent `#FFC72C` |
-| `--trace: #7dd3fc` | 8-Bit accent 2 `#2E9BFF` |
-| `--good: #4ade80` | 8-Bit good `#3CD070` |
-| `--bad: #f87171` | 8-Bit bad `#FF3B30` |
+### How Rambler switches
 
-Close enough to look deliberate, far enough to be wrong. Retheming is a
-contained job — `public/rambler.css` and `public/style.css` both already
-define their colours as CSS custom properties at `:root`, so it is a token
-swap rather than a rewrite.
+Every colour in `rambler.css` reads from the token block at the top of the
+file. The 8-Bit values sit on bare `:root`; the Vice values sit on
+`:root.unfiltered`, and `paintPalette()` in `rambler.js` toggles that class
+from the dictionary actually in play. A guest joining a room gets the host's
+dictionary, so for rooms the palette comes from the room's settings, not the
+setup screen.
+
+The class goes on `<html>` rather than `<body>` on purpose. A theme pack sets
+its accent inline on the same element, and an inline style beats a class
+rule — so a Halloween season keeps its orange on either palette.
+
+### Derived tokens
+
+The spec has no border, hover or tint swatches. Rather than invent hex values
+for them, they are mixed from tokens that *are* in the spec:
+
+```css
+--border:      color-mix(in srgb, var(--text) 11%, var(--card));
+--card-hover:  color-mix(in srgb, var(--text) 9%, var(--card-2));
+--accent-soft: color-mix(in srgb, var(--accent) 18%, var(--card));
+--scrim:       color-mix(in srgb, var(--plate) 88%, transparent);
+```
+
+Which means they follow the palette switch and a theme pack's accent for free.
+The old `--accent-soft` was a fixed dark olive, so a Halloween season had an
+orange accent sitting on yellow-tinted highlights. That is gone.
+
+### What changed besides the hex values
+
+- **Text is warm cream now** (`#F4ECD0`), and the secondary and caption greys
+  are gold-tinted. The earlier version of this doc listed only five swaps
+  and missed these — they are the biggest visible difference.
+- **The clock's low-time warning uses `--warn`**, not the accent. Gold is the
+  coin colour; it was standing in for a warning colour the old palette did
+  not have.
+- **The "season closing soon" strip uses `--warn` and gained an hourglass**,
+  because status is colour + icon + word, never colour alone.
+- **Traced dice are blue** — the spec's "player two" colour — where they were
+  sky blue before. Accepted and rejected dice are tints of the spec's good
+  and bad.
+
+### Known overlap: Marathon is always Vice
+
+Vice was assigned to the unfiltered dictionary as a "tell from across the
+room" signal. Marathon is *also* Vice, on either dictionary, because that is
+the look it was built around. So a purple phone means "unfiltered or
+Marathon", not just "unfiltered". On the classic screens the signal is clean.
+Left as is: changing Marathon would undo a look that was asked for.
+
+### Why Wordless is not done
+
+Not a token swap, and it needs a decision rather than a guess:
+
+1. **Every Wordless theme sets its own background and accent** from the
+   database (`themes.accent`, `themes.bg`), applied inline over the
+   stylesheet. Retheming `style.css` changes almost nothing a player sees.
+   The built-in themes are inserted with `INSERT OR IGNORE`, so changing their
+   seed values would not reach an existing database either — it needs a
+   migration.
+2. **The "present" tile is gold**, and the 8-Bit accent is gold. Buttons and
+   half-right letters would be the same colour. One of them has to move, and
+   which one is a design call.
 
 ## Rules inherited from the spec
 
