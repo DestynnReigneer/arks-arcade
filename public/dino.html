@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Dino Dash</title>
+<link rel="stylesheet" href="arcade-ui.css">
+<link rel="stylesheet" href="dino.css">
+<link rel="stylesheet" href="tutorial.css">
+</head>
+<body>
+
+<header class="top">
+  <a href="/" class="icon-btn" title="Back to the arcade">←</a>
+  <h1>🦖 DINO <span>DASH</span></h1>
+  <div class="btns">
+    <button class="icon-btn" id="muteBtn" title="Sound">🔊</button>
+    <button class="icon-btn" id="scoresBtn" title="High scores">🏆</button>
+    <button class="icon-btn" id="helpBtn" title="How to play">?</button>
+  </div>
+</header>
+
+<div class="stage">
+  <canvas id="canvas" aria-label="Dino Dash game. Tap or press space to jump, down arrow to duck."></canvas>
+</div>
+
+<div class="pad">
+  <button id="duckBtn" class="pad-btn">⬇<small>Duck</small></button>
+  <button id="jumpBtn" class="pad-btn primary-pad">⬆<small>Jump</small></button>
+</div>
+<p class="hint center keys-hint">Keyboard: <b>Space</b> or <b>↑</b> to jump, <b>↓</b> to duck.</p>
+
+<div class="panel center hidden" id="overPanel">
+  <h2 id="overTitle">Game over</h2>
+  <div class="final-score" id="overScore"></div>
+  <div id="savePart">
+    <p class="hint">Get on the board and see where you stack up.</p>
+    <div class="initials">
+      <input maxlength="1" class="ini" autocomplete="off"><input maxlength="1" class="ini" autocomplete="off"><input maxlength="1" class="ini" autocomplete="off">
+    </div>
+    <button class="primary big" id="saveScoreBtn">Save score</button>
+    <div class="msg" id="scoreMsg"></div>
+  </div>
+  <button class="ghost big" id="againBtn">Run again</button>
+</div>
+
+<div class="overlay hidden" id="scoresView">
+  <div class="card-panel">
+    <h2>🏆 Farthest runs</h2>
+    <ul class="scores" id="scoreList"></ul>
+    <div class="stack"><button class="ghost" id="scoresClose">Close</button></div>
+  </div>
+</div>
+
+<script src="tutorial.js"></script>
+<script src="blip.js"></script>
+<script src="arcade-kit.js"></script>
+<script src="dino.js"></script>
+</body>
+</html>

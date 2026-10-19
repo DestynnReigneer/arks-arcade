@@ -701,6 +701,39 @@ async function run({ base, root }) {
   ok('clues can be added to an existing theme', added.status === 200 && added.data.total === 3, JSON.stringify(added.data));
   ok('adding clues needs the admin password', (await wl(`/themes/${clueTheme.data.id}/clues`, 'POST', { clues: { horse: 'Neigh' } })).status === 401);
 
+  // ---- arcade high scores ---------------------------------------------------------
+  const savedRun = await wl('/scores/dino', 'POST', { initials: 'dd1', score: 1234, board: 'run' });
+  ok('a Dino Dash score saves and ranks', savedRun.status === 201 && savedRun.data.rank === 1);
+  ok('…and shows on its board', (await wl('/scores/dino?board=run')).data.some(r => r.initials === 'DD1' && r.score === 1234));
+  ok('a new #1 is announced in the Comm Center', (await wl('/comm/posts')).data.some(p => p.title.includes('DD1') && p.game === 'dino'));
+  ok('bad initials are refused', (await wl('/scores/dino', 'POST', { initials: '!!', score: 5 })).status === 400);
+  ok('an impossible score is refused', (await wl('/scores/chess', 'POST', { initials: 'AB', score: 999999, board: 'hard' })).status === 400);
+  ok('an unknown game is a 404', (await wl('/scores/pong', 'POST', { initials: 'AB', score: 5 })).status === 404);
+  await wl('/scores/chess', 'POST', { initials: 'CHE', score: 700, board: 'hard' });
+  ok('chess boards are kept apart by level',
+    (await wl('/scores/chess?board=hard')).data.some(r => r.initials === 'CHE') &&
+    !(await wl('/scores/chess?board=easy')).data.some(r => r.initials === 'CHE'));
+
+  // ---- two-phone chess -------------------------------------------------------------
+  const hostChess = (await wl('/chess/rooms', 'POST', { name: 'Sam', color: 'w' })).data;
+  ok('a chess room has a code and a color', /^[A-Z0-9]{4}$/.test(hostChess.code) && hostChess.color === 'w');
+  const guestChess = (await wl(`/chess/rooms/${hostChess.code}/join`, 'POST', { name: 'Alex' })).data;
+  ok('the guest gets the other color', guestChess.color === 'b');
+  ok('a third player is turned away', (await wl(`/chess/rooms/${hostChess.code}/join`, 'POST', { name: 'Kim' })).status === 409);
+  const cmove = (who, from, to) => wl(`/chess/rooms/${hostChess.code}/move`, 'POST', { playerId: who.playerId, token: who.token, from, to });
+  ok('Black cannot move first', (await cmove(guestChess, 'e7', 'e5')).status === 409);
+  ok('an illegal move is refused', (await cmove(hostChess, 'e2', 'e5')).status === 400);
+  ok('a legal move is played', (await cmove(hostChess, 'f2', 'f3')).data.moves[0] === 'f3');
+  ok('a wrong token cannot move', (await wl(`/chess/rooms/${hostChess.code}/move`, 'POST', { playerId: guestChess.playerId, token: 'nope', from: 'e7', to: 'e5' })).status === 403);
+  await cmove(guestChess, 'e7', 'e5');
+  await cmove(hostChess, 'g2', 'g4');
+  const mated = (await cmove(guestChess, 'd8', 'h4')).data;
+  ok('checkmate ends the game for both', mated.ended && mated.ended.reason === 'checkmate' && mated.ended.winner === 'b');
+  const act = (who, action) => wl(`/chess/rooms/${hostChess.code}/act`, 'POST', { playerId: who.playerId, token: who.token, action });
+  await act(hostChess, 'rematch');
+  const again = (await act(guestChess, 'rematch')).data;
+  ok('a rematch swaps colors and starts fresh', again.you === 'w' && again.moves.length === 0 && !again.ended);
+
   // ---- adult Wordless themes ---------------------------------------------------
   await asAdmin('/themes', 'POST', {
     label: 'Naughty', emoji: '😈', words: ['booty', 'cheeky', 'frisky', 'spank', 'naughty'], adult: true

@@ -109,7 +109,7 @@
         else if (!/[A-Z]/.test(ch) || S.revealed.has(ch)) {
           tile.className = 'tile shown' + (flash === ch ? ' flip' : '');
           tile.textContent = ch;
-        } else tile.className = 'tile hidden';
+        } else tile.className = 'tile covered';
         board.appendChild(tile);
       }
     }

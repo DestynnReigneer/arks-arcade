@@ -8,7 +8,10 @@
   const GAMES = {
     wordless: { label: 'Wordless', href: 'wordless.html' },
     rambler: { label: 'Rambler', href: 'rambler.html' },
-    shortfuse: { label: 'Short Fuse', href: 'shortfuse.html' }
+    shortfuse: { label: 'Short Fuse', href: 'shortfuse.html' },
+    spinsolve: { label: 'Spin & Solve', href: 'spinsolve.html' },
+    chess: { label: 'Chess', href: 'chess.html' },
+    dino: { label: 'Dino Dash', href: 'dino.html' }
   };
 
   // ---- the arcade's name --------------------------------------------------

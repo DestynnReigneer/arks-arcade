@@ -266,6 +266,41 @@ async function run() {
   ok('pasted clues keep only theme words that do not give the word away',
     Object.keys(cleaned).join() === 'creeper', JSON.stringify(cleaned));
 
+  console.log('\n-- chess --');
+  const Chess = require(path.join(ROOT, 'public/chess-engine.js'));
+  // Known move counts for standard test positions. Any rules bug changes them.
+  const perfts = [
+    [Chess.START, 3, 8902],
+    ['r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1', 2, 2039],
+    ['8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1', 3, 2812],
+    ['r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1', 3, 9467],
+    ['rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8', 2, 1486]
+  ];
+  for (const [fen, depth, want] of perfts) {
+    const got = Chess.perft(Chess.fromFen(fen), depth);
+    ok(`perft ${depth} = ${want} for ${fen.split(' ')[0].slice(0, 18)}…`, got === want, String(got));
+  }
+  const fools = Chess.fromFen();
+  for (const [from, to] of [['f2', 'f3'], ['e7', 'e5'], ['g2', 'g4'], ['d8', 'h4']]) Chess.play(fools, { from, to });
+  ok('fool\'s mate is checkmate for Black', Chess.status(fools).reason === 'checkmate' && Chess.status(fools).winner === 'b');
+  ok('an illegal move is refused', Chess.play(Chess.fromFen(), { from: 'e2', to: 'e5' }) === null);
+  const stale = Chess.fromFen('7k/5Q2/6K1/8/8/8/8/8 b - - 0 1');
+  ok('stalemate is a draw', Chess.status(stale).reason === 'stalemate');
+  const mateIn1 = Chess.fromFen('r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 4 4');
+  const aiMove = Chess.bestMove(mateIn1, 'medium');
+  ok('the computer finds mate in one', Chess.name(aiMove.from) + Chess.name(aiMove.to) === 'h5f7');
+  const promo = Chess.fromFen('8/P6k/8/8/8/8/8/K7 w - - 0 1');
+  ok('promotion makes the piece you pick', Chess.play(promo, { from: 'a7', to: 'a8', promo: 'n' }).san === 'a8=N');
+
+  console.log('\n-- spin & solve --');
+  const puzzles = require(path.join(ROOT, 'public/spin-puzzles.js'));
+  ok('there are plenty of puzzles', puzzles.length >= 150, String(puzzles.length));
+  ok('every word fits on the board (12 letters max)',
+    puzzles.every(p => p.answer.split(' ').every(w => w.length <= 12)));
+  ok('puzzles use only capitals, spaces and simple punctuation', puzzles.every(p => /^[A-Z '&?!-]+$/.test(p.answer)));
+  ok('no puzzle uses a British spelling',
+    puzzles.every(p => p.answer.split(' ').every(w => !dictionary.isBritish(w.replace(/[^A-Z]/g, '')))));
+
   console.log(`\n  ${pass} passed, ${fail} failed`);
   return { pass, fail };
 }
