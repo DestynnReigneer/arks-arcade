@@ -695,7 +695,12 @@ async function run({ base, root }) {
   ok('adult themes are hidden by default', !(await wl('/themes')).data.some(t => t.adult));
   ok('a wrong PIN does not show them', (await pinGet('/themes?adult=1', '0000')).status === 403);
   ok('the right PIN shows them', (await pinGet('/themes?adult=1', '2468')).data.some(t => t.label === 'Naughty'));
+  const naughtyPlayed = (await pinGet('/themes?adult=1', '2468')).data.find(t => t.label === 'Naughty');
+  ok('adult Easy gets plenty of short rude words', naughtyPlayed.words.filter(w => w.length <= 4).length >= 40);
+  ok('the theme keeps its own words too', naughtyPlayed.words.includes('cheeky'));
   ok('the admin always sees them', (await asAdmin('/themes')).data.some(t => t.label === 'Naughty'));
+  ok('the admin list shows only the theme\'s own words',
+    (await asAdmin('/themes')).data.find(t => t.label === 'Naughty').words.length === 5);
   ok('adult themes are never announced', !(await wl('/comm/posts')).data.some(p => p.title.includes('Naughty')));
   const naughtyId = (await asAdmin('/themes')).data.find(t => t.label === 'Naughty').id;
   await wl('/leaderboard', 'POST', { initials: 'XXX', themeId: naughtyId, won: true, guesses: 1, hintsUsed: 0, word: 'spank', elapsedMs: 1000, difficulty: 'normal' });

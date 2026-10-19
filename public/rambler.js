@@ -1738,6 +1738,7 @@ function renderPlayersEditor() {
 // mode it is in before anyone reads a word on it.
 function paintPalette() {
   document.documentElement.classList.toggle('unfiltered', S.profile === 'adult');
+  document.documentElement.classList.toggle('adult-mode', S.profile === 'adult');
 }
 
 function renderSetup() {

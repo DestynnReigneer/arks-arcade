@@ -21,7 +21,9 @@
     return buildPrompt(topic)
       .replace('Keep every word family-friendly.',
         'This is an ADULTS-ONLY theme for a private party game among consenting adults. Make the words cheeky, naughty and funny: innuendo, rude slang and swear words are welcome. No slurs or hateful terms.')
-      .replace('(Easy: simple words a young child knows)', '(Easy: short, punchy rude words)')
+      .replace('at least 25 words of 3-4 letters (Easy: simple words a young child knows)',
+        'at least 40 words of 3-4 letters (Easy: short, punchy rude words; every one of them naughty, no tame filler)')
+      .replace('No duplicates.', 'No duplicates. Every word at every length should be naughty or innuendo, not just on-topic.')
       .replace('"label": "Short display name for the theme",', '"label": "Short display name for the theme",\n  "adult": true,');
   }
 

@@ -63,6 +63,7 @@ const levelInfo = id => S.config.levels.find(l => l.id === id) || S.config.level
 
 function paintPalette(level) {
   document.documentElement.classList.toggle('adult', !!levelInfo(level).adult);
+  document.documentElement.classList.toggle('adult-mode', !!levelInfo(level).adult);
 }
 
 // What each kind of card does, in two words. Card names change with the deck
