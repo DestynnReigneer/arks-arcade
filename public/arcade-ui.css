@@ -30,7 +30,7 @@ body {
 button { font-family: inherit; }
 
 .top { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 14px 0 10px; }
-.top h1 { margin: 0; font-size: 21px; letter-spacing: 2px; white-space: nowrap; }
+.top h1 { margin: 0; font-size: clamp(15px, 4.6vw, 21px); letter-spacing: 1.5px; white-space: nowrap; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .top h1 span { color: var(--accent); }
 .top .btns { display: flex; gap: 6px; }
 .icon-btn {
