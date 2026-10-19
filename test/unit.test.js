@@ -54,7 +54,15 @@ async function run() {
     ['CAT', 'kids', true], ['CAT', 'adult', true],
     ['FUCK', 'kids', false], ['FUCK', 'adult', true],
     ['SHITTING', 'kids', false], ['SHITTING', 'adult', true],
-    ['WANKER', 'kids', false], ['WANKER', 'adult', true],
+    ['DUMBASS', 'kids', false], ['DUMBASS', 'adult', true],
+    // American English only: the US spelling scores, the British one doesn't
+    ['COLOR', 'kids', true], ['COLOUR', 'kids', false], ['COLOUR', 'adult', false],
+    ['GRAY', 'kids', true], ['GREY', 'kids', false], ['CENTER', 'kids', true], ['CENTRE', 'kids', false],
+    ['TRAVELED', 'kids', true], ['TRAVELLED', 'kids', false], ['ORGANIZE', 'kids', true], ['ORGANISE', 'kids', false],
+    ['WANKER', 'adult', false],
+    // American words the British filter must leave alone
+    ['SURPRISE', 'kids', true], ['ADVERTISE', 'kids', true], ['SHOES', 'kids', true], ['SCOURING', 'kids', true],
+    ['TIMBRE', 'kids', true], ['FILLED', 'kids', true], ['CONTROLLED', 'kids', true], ['ENROLLED', 'kids', true],
     ['RIZZ', 'kids', false], ['RIZZ', 'adult', true],
     // innocent words the blocklist's inflections used to catch by accident
     ['HEROINES', 'kids', true], ['BONKERS', 'kids', true],

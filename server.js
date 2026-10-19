@@ -180,7 +180,8 @@ app.post('/api/themes', requireAdmin, (req, res) => {
 
   const rawWords = Array.isArray(body.words) ? body.words : [];
   const words = [...new Set(
-    rawWords.map(w => String(w).trim().toLowerCase()).filter(w => WORD_RE.test(w))
+    rawWords.map(w => String(w).trim().toLowerCase())
+      .filter(w => WORD_RE.test(w) && !dictionary.isBritish(w.toUpperCase()))
   )];
 
   if (words.length < 5) {

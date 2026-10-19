@@ -2,7 +2,7 @@
 #
 # ENABLE1 is a Scrabble tournament list, so it already contains most
 # profanity (fuck, shit, cunt, twat, blowjob and friends all score by
-# default). What it misses is slang, British/Aussie vernacular, and
+# default). What it misses is American slang and
 # anything coined after about 2000 — so those are listed here.
 #
 # Inflections are written out explicitly rather than generated, so this
@@ -15,13 +15,8 @@
 # if you disagree.
 
 # --- gaps in ENABLE1: profanity & anatomy ---
-arsehole
-arseholes
 ballsack
 ballsacks
-bellend
-bellends
-bollocking
 clit
 clits
 dumbass
@@ -31,8 +26,6 @@ handjobs
 jizz
 jizzed
 jizzing
-minge
-minges
 nads
 poo
 pooed
@@ -48,42 +41,17 @@ rimjob
 rimjobs
 schlong
 schlongs
-shite
-shited
-shites
 shitting
 skanky
 stiffy
 stiffies
-todger
-todgers
 wang
 wangs
-wank
-wanked
-wanker
-wankers
-wanking
-wanks
 
 # --- gaps: insults ---
-knobhead
-knobheads
-munter
-munters
-naff
-numpty
 perv
 perved
 pervs
-plonker
-plonkers
-scrote
-scrotes
-tosspot
-tosspots
-wazzock
-wazzocks
 
 # --- drinking ---
 boozed
@@ -92,28 +60,17 @@ boozers
 boozing
 chugged
 chugging
-chundered
-chundering
-chunders
 chuggable
 necked
 necking
-pissup
-pissups
 prosecco
-sesh
-seshes
-shandy
 shitfaced
 shots
 slammer
 slammers
 tequila
-tinnie
-tinnies
 vodkas
 wasted
-wazzed
 
 # --- modern slang ---
 bae

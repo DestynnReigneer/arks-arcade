@@ -60,12 +60,21 @@ function activeTheme() {
   return overlay.theme;
 }
 
+// The arcade plays in American English. british.txt is already stripped out
+// of the other files; filtering here as well keeps theme packs and admin
+// edits from bringing COLOUR back.
+let british = null;
+function isBritish(word) {
+  if (!british) british = new Set(readList('british.txt', { optional: true }).map(w => w.toUpperCase()));
+  return british.has(word);
+}
+
 const CLEAN = /^[A-Z]+$/;
 function normalize(list, minLength) {
   const out = [];
   for (const raw of list) {
     const w = raw.toUpperCase();
-    if (w.length >= minLength && CLEAN.test(w)) out.push(w);
+    if (w.length >= minLength && CLEAN.test(w) && !isBritish(w)) out.push(w);
   }
   return out;
 }
@@ -247,6 +256,6 @@ function listProfiles() {
 module.exports = {
   KIDS, ADULT, TERM, PRE, PROFILES,
   load, isWord, isCommon, isThemeWord, listProfiles, profileBit,
-  applyOverlay, activeTheme,
+  applyOverlay, activeTheme, isBritish,
   get stats() { return load().stats; }
 };
