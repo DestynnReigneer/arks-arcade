@@ -14,7 +14,14 @@
   // 24 wedges, clockwise from the top.
   const WEDGES = [500, 900, 300, 650, 'BANKRUPT', 400, 700, 350, 550, 800, 'LOSE A TURN', 450,
     600, 1000, 300, 500, 750, 400, 850, 350, 500, 600, 450, 700];
-  const WEDGE_COLORS = ['#ff4fa3', '#ffc72c', '#2e9bff', '#3ddc84', '#a46bff', '#ff8a3d'];
+  // Each wedge color is a gradient from a bright core to a deep edge.
+  const WEDGE_COLORS = [
+    ['#ff8fc8', '#ff2e8c', '#8a0f4a'], ['#ffe27a', '#ffb800', '#8a5a00'], ['#7cc4ff', '#1f7bff', '#0b2f7a'],
+    ['#7dffc0', '#14d27a', '#06603a'], ['#c9a6ff', '#8a4dff', '#3b1680'], ['#ffb27a', '#ff6a1f', '#7a2a05']
+  ];
+  const LED_COUNT = 36;
+  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const wait = ms => new Promise(r => setTimeout(r, reducedMotion ? Math.min(ms, 60) : ms));
   const SLICE = 360 / WEDGES.length;
 
   const S = {
@@ -175,6 +182,11 @@
     S.cur = (S.round - 1) % S.players.length;
     render();
     say(`${S.players[S.cur].name}, spin the wheel!`);
+    requestAnimationFrame(() => {
+      Host.home();
+      Host.pose('wave', 1500);
+      Host.talk(pick(LINES.hello), 1800);
+    });
   }
 
   // ---- the board ------------------------------------------------------------------
@@ -203,11 +215,15 @@
       for (let c = 0; c < COLS; c++) {
         const ch = line[c - pad];
         const tile = document.createElement('div');
+        tile.style.setProperty('--i', board.children.length);
         if (ch === undefined || ch === ' ') tile.className = 'tile blank';
         else if (!/[A-Z]/.test(ch) || S.revealed.has(ch)) {
           tile.className = 'tile shown' + (flash === ch ? ' flip' : '');
           tile.textContent = ch;
-        } else tile.className = 'tile covered';
+        } else {
+          tile.className = 'tile covered';
+          tile.dataset.ch = ch;
+        }
         board.appendChild(tile);
       }
     }
@@ -248,41 +264,179 @@
 
   function say(text) { $('turnLine').textContent = text; }
 
+  // ---- Vee, the robot co-host ----------------------------------------------------
+  // She glides along under the wall, touches each letter to light it up, and
+  // reacts to the wheel. Poses are CSS (data-pose); this just moves her.
+  const Host = (() => {
+    const el = $('host');
+    const bubble = $('hostSay');
+    const lane = $('hostLane');
+    let x = 0;
+    let sayTimer = null;
+    let poseTimer = null;
+    const HAND = 18;   // her right hand sits this far right of her middle
+
+    function laneWidth() { return lane.clientWidth - el.offsetWidth; }
+    function place(px) {
+      x = Math.max(0, Math.min(laneWidth(), px));
+      el.style.transform = `translateX(${x}px)`;
+      bubble.classList.toggle('left', x > laneWidth() / 2);
+    }
+    // Walks so her raised hand is under a tile, and waits until she's there.
+    async function walkTo(tile) {
+      const laneBox = lane.getBoundingClientRect();
+      const box = tile.getBoundingClientRect();
+      const target = box.left + box.width / 2 - laneBox.left - el.offsetWidth / 2 - HAND;
+      const distance = Math.abs(target - x);
+      el.style.transitionDuration = `${Math.min(520, 140 + distance * 1.4)}ms`;
+      place(target);
+      await wait(Math.min(520, 140 + distance * 1.4));
+    }
+    function pose(name, ms) {
+      clearTimeout(poseTimer);
+      el.dataset.pose = name;
+      if (ms) poseTimer = setTimeout(() => { el.dataset.pose = 'idle'; }, ms);
+    }
+    function talk(text, ms = 2000) {
+      bubble.textContent = text;
+      bubble.classList.add('show');
+      clearTimeout(sayTimer);
+      sayTimer = setTimeout(() => bubble.classList.remove('show'), ms);
+    }
+    function home() {
+      el.style.transitionDuration = '600ms';
+      place(laneWidth());
+    }
+    window.addEventListener('resize', () => place(x));
+    return { walkTo, pose, talk, home };
+  })();
+
+  const pick = list => list[Math.floor(Math.random() * list.length)];
+  const LINES = {
+    hello: ['Let\'s play!', 'Spin to win!', 'Big money, no whammies!', 'Good luck, have fun!'],
+    hit: n => n > 2 ? ['Look at all those!', 'Jackpot of letters!', `${n} of them!`] : ['There it is!', 'Nice call!', 'Ooh, yes!'],
+    miss: ['Sorry, not there.', 'Nope, none of those.', 'Ooh, so close.'],
+    bankrupt: ['Ouch! Bankrupt!', 'Nooo, the money!', 'That hurts to watch.'],
+    lose: ['Aww, lose a turn.', 'Skip-a-roo!'],
+    spin: ['Round and round…', 'Come on, big money!', 'Spinning!'],
+    solved: ['You got it! 🎉', 'Brilliant!', 'Puzzle solved!'],
+    wrong: ['Ooh, not quite.', 'Close, but no.'],
+    vowel: ['Vowels are on me!', 'One vowel, coming up!']
+  };
+
+  // Lights up every hidden copy of a letter, one at a time, with Vee touching each.
+  async function revealLetter(ch) {
+    const tiles = [...$('puzzleBoard').querySelectorAll(`.tile.covered[data-ch="${ch}"]`)];
+    for (const tile of tiles) {
+      await Host.walkTo(tile);
+      Host.pose('touch');
+      tile.classList.add('lit');
+      Blip.tone(1046, 0.12, { type: 'triangle' });
+      Blip.tone(1568, 0.08, { type: 'sine', volume: 0.06, delay: 0.05 });
+      await wait(320);
+      tile.classList.remove('covered', 'lit');
+      tile.classList.add('shown', 'flip');
+      tile.textContent = ch;
+      await wait(180);
+    }
+    Host.pose('idle');
+  }
+
+  // The whole wall at once, in a quick sweep, when the puzzle is solved.
+  async function revealAll() {
+    const tiles = [...$('puzzleBoard').querySelectorAll('.tile.covered')];
+    Host.pose('cheer', 2600);
+    for (const tile of tiles) {
+      tile.classList.add('lit');
+      Blip.tone(880 + Math.random() * 600, 0.05, { type: 'triangle', volume: 0.05 });
+      await wait(45);
+      tile.classList.remove('covered', 'lit');
+      tile.classList.add('shown', 'flip');
+      tile.textContent = tile.dataset.ch;
+    }
+    for (const tile of $('puzzleBoard').querySelectorAll('.tile.shown')) tile.classList.add('win');
+  }
+
   // ---- the wheel ------------------------------------------------------------------
 
+  // A glossy wheel: gradient wedges, pegs, a chrome rim ringed with LEDs, a
+  // glass highlight on top, and a glowing hub. Built once as SVG.
   function buildWheel() {
-    const g = $('wheelSpin');
     const ns = 'http://www.w3.org/2000/svg';
+    const make = (tag, attrs, parent) => {
+      const n = document.createElementNS(ns, tag);
+      for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+      if (parent) parent.appendChild(n);
+      return n;
+    };
+    const defs = $('wheelDefs');
+    const gradient = (id, stops, attrs = {}) => {
+      const g = make('radialGradient', { id, cx: '0', cy: '0', r: '100', gradientUnits: 'userSpaceOnUse', ...attrs }, defs);
+      stops.forEach(([o, c, a]) => make('stop', { offset: o, 'stop-color': c, ...(a != null ? { 'stop-opacity': a } : {}) }, g));
+    };
+    WEDGE_COLORS.forEach(([hi, mid, lo], i) => gradient(`wg${i}`, [['0.25', hi], ['0.7', mid], ['1', lo]]));
+    gradient('wg-bankrupt', [['0.3', '#3a3a46'], ['0.75', '#101016'], ['1', '#000']]);
+    gradient('wg-lose', [['0.3', '#ffffff'], ['0.75', '#cfd8ea'], ['1', '#7d8aa6']]);
+    gradient('wg-gold', [['0.25', '#fff3b0'], ['0.7', '#ffcc33'], ['1', '#9a6a00']]);
+    gradient('hub-grad', [['0', '#3b2a7a'], ['0.8', '#120d2a'], ['1', '#000']], { r: '22' });
+    const shine = make('linearGradient', { id: 'wheel-shine', x1: '0', y1: '0', x2: '0', y2: '1' }, defs);
+    make('stop', { offset: '0', 'stop-color': '#fff', 'stop-opacity': '0.38' }, shine);
+    make('stop', { offset: '0.5', 'stop-color': '#fff', 'stop-opacity': '0' }, shine);
+    const rim = make('linearGradient', { id: 'wheel-rim', x1: '0', y1: '0', x2: '1', y2: '1' }, defs);
+    [['0', '#f5f7ff'], ['0.35', '#8f97b8'], ['0.6', '#ffffff'], ['1', '#5b6283']].forEach(([o, c]) => make('stop', { offset: o, 'stop-color': c }, rim));
+    const blur = make('filter', { id: 'wheel-blur', x: '-20%', y: '-20%', width: '140%', height: '140%' }, defs);
+    make('feGaussianBlur', { id: 'wheel-blur-amount', stdDeviation: '0' }, blur);
+
     const pt = (deg, r) => {
       const a = (deg - 90) * Math.PI / 180;
       return [Math.cos(a) * r, Math.sin(a) * r];
     };
+    const spinG = $('wheelSpin');
     WEDGES.forEach((w, i) => {
       const [x1, y1] = pt(i * SLICE, 100);
       const [x2, y2] = pt((i + 1) * SLICE, 100);
-      const path = document.createElementNS(ns, 'path');
-      path.setAttribute('d', `M0 0 L${x1} ${y1} A100 100 0 0 1 ${x2} ${y2} Z`);
-      path.setAttribute('fill', w === 'BANKRUPT' ? '#111' : w === 'LOSE A TURN' ? '#f4ecd0' : WEDGE_COLORS[i % WEDGE_COLORS.length]);
-      path.setAttribute('stroke', '#12111c');
-      path.setAttribute('stroke-width', '1');
-      g.appendChild(path);
-      const text = document.createElementNS(ns, 'text');
+      const fill = w === 'BANKRUPT' ? 'url(#wg-bankrupt)' : w === 'LOSE A TURN' ? 'url(#wg-lose)'
+        : w >= 1000 ? 'url(#wg-gold)' : `url(#wg${i % WEDGE_COLORS.length})`;
+      make('path', { d: `M0 0 L${x1} ${y1} A100 100 0 0 1 ${x2} ${y2} Z`, fill, stroke: 'rgba(255,255,255,0.35)', 'stroke-width': '0.6' }, spinG);
+      // Characters stacked from the rim inward, game-show style, so every
+      // label reads the same way up wherever it is on the wheel.
       const mid = i * SLICE + SLICE / 2;
-      text.setAttribute('transform', `rotate(${mid}) translate(0 -62) rotate(-90)`);
-      text.setAttribute('text-anchor', 'middle');
-      text.setAttribute('dominant-baseline', 'middle');
-      text.setAttribute('font-size', typeof w === 'number' ? '11' : '6.5');
-      text.setAttribute('font-weight', '800');
-      text.setAttribute('fill', w === 'BANKRUPT' ? '#fff' : '#12111c');
-      text.textContent = typeof w === 'number' ? w : w;
-      g.appendChild(text);
+      const label = typeof w === 'number' ? String(w) : w === 'LOSE A TURN' ? 'LOSE TURN' : w;
+      const size = typeof w === 'number' ? 11 : 5.4;
+      const step = typeof w === 'number' ? 11 : 5.6;
+      const group = make('g', { transform: `rotate(${mid})` }, spinG);
+      [...label].forEach((ch, k) => {
+        if (ch === ' ') return;
+        const t = make('text', {
+          class: 'wheel-label', x: '0', y: String(-88 + k * step),
+          'text-anchor': 'middle', 'dominant-baseline': 'middle', 'font-size': String(size)
+        }, group);
+        t.textContent = ch;
+        if (w === 'LOSE A TURN') t.style.fill = '#1b1446';
+      });
+      // A peg at each wedge boundary
+      const [px, py] = pt(i * SLICE, 95);
+      make('circle', { cx: px, cy: py, r: '1.8', fill: '#fff', stroke: '#8f97b8', 'stroke-width': '0.6' }, spinG);
     });
-    const hub = document.createElementNS(ns, 'circle');
-    hub.setAttribute('r', '14');
-    hub.setAttribute('fill', '#12111c');
-    hub.setAttribute('stroke', '#ffc72c');
-    hub.setAttribute('stroke-width', '3');
-    $('wheel').appendChild(hub);
+
+    const still = $('wheelStatic');
+    make('circle', { r: '100', fill: 'url(#wheel-shine)', 'pointer-events': 'none' }, still);
+    make('circle', { r: '104', fill: 'none', stroke: 'url(#wheel-rim)', 'stroke-width': '8' }, still);
+    for (let i = 0; i < LED_COUNT; i++) {
+      const [lx, ly] = pt(i * 360 / LED_COUNT, 104);
+      const led = make('circle', { cx: lx, cy: ly, r: '2.3', class: 'led' }, still);
+      led.style.setProperty('--n', i % 2 ? i : i + LED_COUNT);
+    }
+    make('circle', { r: '20', fill: 'url(#hub-grad)', stroke: '#ffd23f', 'stroke-width': '2.5' }, still);
+    make('circle', { r: '15', fill: 'none', stroke: '#2de2e6', 'stroke-width': '1', opacity: '0.8' }, still);
+    const hub = make('text', { 'text-anchor': 'middle', 'dominant-baseline': 'middle', class: 'wheel-label', 'font-size': '7' }, still);
+    hub.textContent = 'SPIN';
+    $('wheel').classList.add('idle');
+  }
+
+  function setLeds(on) {
+    const leds = $('wheelStatic').querySelectorAll('.led');
+    leds.forEach((led, i) => led.classList.toggle('on', on(i)));
   }
 
   const wedgeAt = rot => Math.floor((((360 - rot) % 360) + 360) % 360 / SLICE) % WEDGES.length;
@@ -293,6 +447,15 @@
     S.busy = true;
     $('landed').classList.add('hidden');
     render();
+    Host.talk(pick(LINES.spin), 1400);
+    Host.pose('point', 900);
+    const wheel = $('wheel');
+    wheel.classList.remove('idle', 'won');
+    const blurAmount = $('wheel-blur-amount');
+    const flapper = $('flapper');
+    let chase = 0;
+    let lastRot = S.rotation;
+    let lastT = performance.now();
     const target = Math.floor(Math.random() * WEDGES.length);
     const jitter = (Math.random() - 0.5) * SLICE * 0.7;
     const want = 360 - (target * SLICE + SLICE / 2) + jitter;
@@ -307,37 +470,62 @@
       const eased = 1 - Math.pow(1 - t, 3);
       S.rotation = startRot + (endRot - startRot) * eased;
       g.setAttribute('transform', `rotate(${S.rotation})`);
+      // Motion blur and chasing lights, both following how fast it's going.
+      const speed = Math.abs(S.rotation - lastRot) / Math.max(1, now - lastT);   // degrees per ms
+      lastRot = S.rotation;
+      lastT = now;
+      if (!reducedMotion) blurAmount.setAttribute('stdDeviation', Math.min(2.4, speed * 1.1).toFixed(2));
+      chase = (chase + Math.max(0.15, speed * 1.2)) % LED_COUNT;
+      setLeds(i => (i + Math.floor(chase)) % 6 < 2);
       const w = wedgeAt(S.rotation);
-      if (w !== lastWedge) { lastWedge = w; Blip.tone(1400, 0.015, { type: 'square', volume: 0.05 }); }
+      if (w !== lastWedge) {
+        lastWedge = w;
+        Blip.tone(1400, 0.015, { type: 'square', volume: 0.05 });
+        flapper.classList.remove('kick');
+        void flapper.offsetWidth;
+        flapper.classList.add('kick');
+      }
       if (t < 1) requestAnimationFrame(frame);
-      else landed(WEDGES[wedgeAt(S.rotation)]);
+      else {
+        blurAmount.setAttribute('stdDeviation', '0');
+        setLeds(() => false);
+        wheel.classList.add('won');
+        setTimeout(() => { wheel.classList.remove('won'); wheel.classList.add('idle'); }, 1500);
+        landed(WEDGES[wedgeAt(S.rotation)]);
+      }
     };
     requestAnimationFrame(frame);
   }
 
-  function showLanded(text) {
+  function showLanded(text, bad = false) {
     $('landed').innerHTML = '<span></span>';
     $('landed').firstChild.textContent = text;
+    $('landed').classList.toggle('bad', bad);
     $('landed').classList.remove('hidden');
   }
 
   function landed(w) {
     const p = S.players[S.cur];
     if (w === 'BANKRUPT') {
-      showLanded('💸 BANKRUPT');
+      showLanded('💸 BANKRUPT', true);
+      Host.pose('oops', 1800);
+      Host.talk(pick(LINES.bankrupt));
       Blip.tune([[300, 0.15], [200, 0.15], [120, 0.4]], { type: 'sawtooth', volume: 0.08 });
       p.round = 0;
       S.busy = false;
       return endTurn(`${p.name} went bankrupt!`);
     }
     if (w === 'LOSE A TURN') {
-      showLanded('🙅 LOSE A TURN');
+      showLanded('🙅 LOSE A TURN', true);
+      Host.pose('oops', 1500);
+      Host.talk(pick(LINES.lose));
       Blip.tone([400, 200], 0.3, { type: 'square', volume: 0.08 });
       S.busy = false;
       return endTurn(`${p.name} loses a turn.`);
     }
     showLanded(money(w));
-    Blip.tone(880, 0.12, { type: 'triangle' });
+    Blip.tune([[880, 0.08], [1320, 0.14]], { type: 'triangle' });
+    Host.talk(`${money(w)}! Pick a letter.`, 1600);
     S.wedge = w;
     setTimeout(() => { S.busy = false; openLetters('consonant'); }, 650);
   }
@@ -364,21 +552,29 @@
     $('letterView').classList.remove('hidden');
   }
 
-  function callLetter(ch) {
+  async function callLetter(ch) {
     const p = S.players[S.cur];
     S.used.add(ch);
     const count = letters(S.puzzle.answer).split('').filter(c => c === ch).length;
-    if (letterMode === 'vowel') p.round -= VOWEL_COST;
+    if (letterMode === 'vowel') { p.round -= VOWEL_COST; Host.talk(pick(LINES.vowel), 1200); }
+    $('landed').classList.add('hidden');
     if (!count) {
       Blip.tone([220, 140], 0.35, { type: 'sawtooth', volume: 0.08 });
-      $('landed').classList.add('hidden');
+      Host.pose('oops', 1500);
+      Host.talk(`${pick(LINES.miss)} No ${ch}.`);
       return endTurn(`No ${ch}. ${solo() ? 'Strike!' : 'Next player.'}`);
     }
     if (letterMode === 'consonant') p.round += S.wedge * count;
+    // Vee walks the wall lighting each one; the buttons wait until she's done.
+    S.busy = true;
+    render();
+    say(`${count} ${ch}${count > 1 ? '\'s' : ''}!`);
+    await revealLetter(ch);
     S.revealed.add(ch);
-    for (let i = 0; i < count; i++) Blip.tone(1046, 0.12, { type: 'triangle', delay: i * 0.18 });
-    render(ch);
-    $('landed').classList.add('hidden');
+    S.busy = false;
+    Host.pose('cheer', 900);
+    Host.talk(pick(LINES.hit(count)), 1500);
+    render();
     say(`${count} ${ch}${count > 1 ? '\'s' : ''}! ${p.name}, go again: spin, buy a vowel, or solve.`);
     if (!consonantsLeft().length && !vowelsLeft().length) return solved();
     if (!consonantsLeft().length) say('No consonants left! Buy a vowel or solve.');
@@ -413,34 +609,42 @@
     $('solveView').classList.add('hidden');
     if (guess === letters(S.puzzle.answer)) return solved();
     Blip.tone([220, 140], 0.4, { type: 'sawtooth', volume: 0.08 });
+    Host.pose('oops', 1500);
+    Host.talk(pick(LINES.wrong));
     endTurn('Not quite!');
   }
 
-  function solved() {
+  async function solved() {
     const p = S.players[S.cur];
     const won = Math.max(p.round, SOLVE_MIN);
     p.total += won;
-    for (const ch of letters(S.puzzle.answer)) S.revealed.add(ch);
     S.players.forEach(x => { x.round = 0; });
-    render();
+    S.busy = true;
+    renderPlayers();
+    Host.talk(pick(LINES.solved), 2600);
     Blip.tune([[523, 0.12], [659, 0.12], [784, 0.12], [1047, 0.35]], { type: 'triangle' });
-    showRound('🎉', `${p.name} solved it!`, `+${money(won)}`);
+    await revealAll();
+    for (const ch of letters(S.puzzle.answer)) S.revealed.add(ch);
+    S.busy = false;
+    showRound('🎉', `${p.name} solved it!`, `+${money(won)}`, 1400);
   }
 
   function roundLost() {
     for (const ch of letters(S.puzzle.answer)) S.revealed.add(ch);
     S.players.forEach(x => { x.round = 0; });
     render();
+    Host.pose('oops', 2000);
+    Host.talk('Three strikes! Here\'s the answer.');
     showRound('😵', 'Three strikes!', 'This round banks nothing.');
   }
 
-  function showRound(emoji, title, hint) {
+  function showRound(emoji, title, hint, delay = 700) {
     $('roundEmoji').textContent = emoji;
     $('roundTitle').textContent = title;
     $('roundAnswer').textContent = S.puzzle.answer;
     $('roundHint').textContent = hint;
     $('nextRoundBtn').textContent = S.round >= S.rounds ? 'See the results' : 'Next round';
-    setTimeout(() => $('roundView').classList.remove('hidden'), 700);
+    setTimeout(() => $('roundView').classList.remove('hidden'), delay);
   }
 
   // ---- the end -----------------------------------------------------------------------------
