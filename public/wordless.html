@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Wordless Arcade</title>
+<title>Wordless</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -19,6 +19,7 @@
   <div id="themeBar">
     <label for="themeSelect">Theme</label>
     <select id="themeSelect"></select>
+    <button id="difficultyBtn" class="small-btn">🎚️ <span id="difficultyLabel">Normal</span></button>
     <button id="suggestThemeBtn" class="small-btn">💡 Suggest a Theme</button>
   </div>
 </header>
@@ -52,6 +53,14 @@
   </div>
 </div>
 
+<!-- Difficulty: asked before the first game, changeable from the theme bar -->
+<div id="difficultyOverlay" class="overlay hidden">
+  <div class="overlay-card">
+    <h2 class="difficulty-title">How hard?</h2>
+    <div id="difficultyChoices" class="difficulty-choices"></div>
+  </div>
+</div>
+
 <!-- Leaderboard -->
 <div id="leaderboardOverlay" class="overlay hidden">
   <div class="overlay-card wide">
@@ -59,7 +68,10 @@
       <h2>🏆 Leaderboard</h2>
       <button id="closeLeaderboardBtn" class="icon-btn">✕</button>
     </div>
-    <select id="leaderboardThemeFilter"></select>
+    <div class="lb-filters">
+      <select id="leaderboardDifficultyFilter"></select>
+      <select id="leaderboardThemeFilter"></select>
+    </div>
     <div id="leaderboardList"></div>
   </div>
 </div>

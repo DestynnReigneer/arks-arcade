@@ -2,6 +2,18 @@
   const MAX_GUESSES = 6;
   const MAX_HINTS = 3;
   const THEME_KEY = 'wordless_theme_v2';
+  const DIFFICULTY_KEY = 'wordless_difficulty';
+
+  // Difficulty picks the answer by length: short words for little kids, long
+  // ones for show-offs. Each has its own leaderboard, so a five-year-old's
+  // Easy win never has to sit under somebody's Ludicrous score.
+  // Must match DIFFICULTIES in server.js.
+  const DIFFICULTIES = {
+    easy:      { label: 'Easy',      emoji: '🐣', min: 3, max: 4,  blurb: 'Short words, 3–4 letters' },
+    normal:    { label: 'Normal',    emoji: '🙂', min: 5, max: 6,  blurb: '5–6 letters' },
+    hard:      { label: 'Hard',      emoji: '🔥', min: 7, max: 8,  blurb: '7–8 letters' },
+    ludicrous: { label: 'Ludicrous', emoji: '🤯', min: 9, max: 10, blurb: '9–10 letters. Good luck.' }
+  };
 
   // Must match SCORING constants in db.js
   const SCORING = {
@@ -32,6 +44,7 @@
   // ---- State ----
   let themes = [];
   let currentTheme = null;
+  let difficulty = DIFFICULTIES[safeStorageGet(DIFFICULTY_KEY)] ? safeStorageGet(DIFFICULTY_KEY) : 'normal';
   let answer = "";
   let wordLen = 5;
   let guesses = [];
@@ -66,6 +79,11 @@
 
   const leaderboardOverlay = document.getElementById('leaderboardOverlay');
   const leaderboardThemeFilter = document.getElementById('leaderboardThemeFilter');
+  const leaderboardDifficultyFilter = document.getElementById('leaderboardDifficultyFilter');
+  const difficultyOverlay = document.getElementById('difficultyOverlay');
+  const difficultyChoices = document.getElementById('difficultyChoices');
+  const difficultyBtn = document.getElementById('difficultyBtn');
+  const difficultyLabel = document.getElementById('difficultyLabel');
   const leaderboardList = document.getElementById('leaderboardList');
   const closeLeaderboardBtn = document.getElementById('closeLeaderboardBtn');
 
@@ -79,9 +97,10 @@
   const closeThemeRequestBtn = document.getElementById('closeThemeRequestBtn');
 
   const KEY_ROWS = [
-    "qwertyuiop".split(""),
+    // Delete top right, Enter bottom right: where thumbs expect them.
+    [..."qwertyuiop".split(""), "back"],
     "asdfghjkl".split(""),
-    ["enter", ..."zxcvbnm".split(""), "back"]
+    [..."zxcvbnm".split(""), "enter"]
   ];
 
   // ---- API helpers ----
@@ -141,9 +160,43 @@
   }
 
   // ---- Board / keyboard ----
+  // Words in the difficulty's length range. A theme with none that length
+  // falls back to its closest lengths, so a small theme still plays.
   function pickAnswer() {
+    const { min, max } = DIFFICULTIES[difficulty];
     const words = currentTheme.words;
-    return words[Math.floor(Math.random() * words.length)];
+    const distance = w => w.length < min ? min - w.length : w.length > max ? w.length - max : 0;
+    const best = Math.min(...words.map(distance));
+    const pool = words.filter(w => distance(w) === best);
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+
+  function renderDifficultyChoices() {
+    difficultyChoices.innerHTML = '';
+    Object.entries(DIFFICULTIES).forEach(([id, d]) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'difficulty-choice' + (id === difficulty ? ' current' : '');
+      btn.innerHTML = `<span class="d-emoji"></span><span><div class="d-name"></div><div class="d-blurb"></div></span>`;
+      btn.querySelector('.d-emoji').textContent = d.emoji;
+      btn.querySelector('.d-name').textContent = d.label;
+      btn.querySelector('.d-blurb').textContent = d.blurb;
+      btn.addEventListener('click', () => chooseDifficulty(id));
+      difficultyChoices.appendChild(btn);
+    });
+  }
+
+  function openDifficulty() {
+    renderDifficultyChoices();
+    difficultyOverlay.classList.remove('hidden');
+  }
+
+  function chooseDifficulty(id) {
+    difficulty = id;
+    safeStorageSet(DIFFICULTY_KEY, id);
+    difficultyLabel.textContent = DIFFICULTIES[id].label;
+    difficultyOverlay.classList.add('hidden');
+    newGame();
   }
 
   function computeTileSize(cols) {
@@ -373,11 +426,13 @@
     if (!initialsOverlay.classList.contains('hidden')) return;
     if (!leaderboardOverlay.classList.contains('hidden')) return;
     if (!themeRequestOverlay.classList.contains('hidden')) return;
+    if (!difficultyOverlay.classList.contains('hidden')) return;
     handleKey(e.key);
   });
 
   newGameBtn.addEventListener('click', newGame);
   hintBtn.addEventListener('click', useHint);
+  difficultyBtn.addEventListener('click', openDifficulty);
   themeSelect.addEventListener('change', (e) => { setTheme(e.target.value); newGame(); });
 
   // ---- End of game / scoring / initials ----
@@ -386,7 +441,7 @@
     const elapsedMs = Date.now() - startTime;
     const guessesUsed = guesses.length;
     const score = computeScoreClient({ won, guesses: guessesUsed, hintsUsed, elapsedMs });
-    lastResult = { won, guesses: guessesUsed, hintsUsed, elapsedMs, score, word: answer, themeId: currentTheme.id };
+    lastResult = { won, guesses: guessesUsed, hintsUsed, elapsedMs, score, word: answer, themeId: currentTheme.id, difficulty };
 
     if (won) {
       showMessage("🎉 You got it! " + answer.toUpperCase(), true);
@@ -401,9 +456,9 @@
   function openInitialsOverlay() {
     finalScoreValue.textContent = lastResult.score;
     const secs = Math.round(lastResult.elapsedMs / 1000);
-    finalScoreDetail.textContent = lastResult.won
+    finalScoreDetail.textContent = `${DIFFICULTIES[lastResult.difficulty].label} · ` + (lastResult.won
       ? `${lastResult.guesses} guess${lastResult.guesses === 1 ? '' : 'es'} · ${lastResult.hintsUsed} hint${lastResult.hintsUsed === 1 ? '' : 's'} · ${secs}s`
-      : `Not solved — word was ${lastResult.word.toUpperCase()}`;
+      : `Not solved — word was ${lastResult.word.toUpperCase()}`);
     initialBoxes.forEach(b => { b.value = ''; b.classList.remove('error'); });
     initialsOverlay.classList.remove('hidden');
     initialBoxes[0].focus();
@@ -442,10 +497,11 @@
         guesses: lastResult.guesses,
         hintsUsed: lastResult.hintsUsed,
         word: lastResult.word,
-        elapsedMs: lastResult.elapsedMs
+        elapsedMs: lastResult.elapsedMs,
+        difficulty: lastResult.difficulty
       });
       initialsOverlay.classList.add('hidden');
-      await openLeaderboard(lastResult.themeId, id);
+      await openLeaderboard(lastResult.themeId, id, lastResult.difficulty);
     } catch (e) {
       showMessage(e.message, true);
     }
@@ -467,6 +523,17 @@
     leaderboardThemeFilter.value = selectedId || 'all';
   }
 
+  function populateDifficultyFilter(selected) {
+    leaderboardDifficultyFilter.innerHTML = "";
+    Object.entries(DIFFICULTIES).forEach(([id, d]) => {
+      const opt = document.createElement('option');
+      opt.value = id;
+      opt.textContent = `${d.emoji} ${d.label}`;
+      leaderboardDifficultyFilter.appendChild(opt);
+    });
+    leaderboardDifficultyFilter.value = selected;
+  }
+
   function renderLeaderboard(rows, highlightId) {
     leaderboardList.innerHTML = "";
     if (rows.length === 0) {
@@ -479,9 +546,10 @@
     rows.forEach((row, i) => {
       const div = document.createElement('div');
       div.className = 'lb-row' + (i === 0 ? ' top1' : i === 1 ? ' top2' : i === 2 ? ' top3' : '');
+      const level = (DIFFICULTIES[row.difficulty] || DIFFICULTIES.normal).label;
       const metaText = row.won
-        ? `${row.themeEmoji} ${row.themeLabel} · ${row.guesses}g · ${row.hintsUsed}h`
-        : `${row.themeEmoji} ${row.themeLabel} · DNF`;
+        ? `${level} · ${row.themeEmoji} ${row.themeLabel} · ${row.guesses}g · ${row.hintsUsed}h`
+        : `${level} · ${row.themeEmoji} ${row.themeLabel} · DNF`;
       div.innerHTML = `
         <div class="lb-rank">#${i + 1}</div>
         <div class="lb-initials">${escapeHtml(row.initials)}</div>
@@ -501,10 +569,12 @@
     return div.innerHTML;
   }
 
-  async function openLeaderboard(themeId, highlightId) {
+  async function openLeaderboard(themeId, highlightId, level) {
     populateLeaderboardFilter(themeId);
+    populateDifficultyFilter(level || leaderboardDifficultyFilter.value || difficulty);
     try {
-      const rows = await apiGet(`/api/leaderboard?theme=${encodeURIComponent(leaderboardThemeFilter.value)}&limit=25`);
+      const rows = await apiGet(`/api/leaderboard?theme=${encodeURIComponent(leaderboardThemeFilter.value)}` +
+        `&difficulty=${encodeURIComponent(leaderboardDifficultyFilter.value)}&limit=25`);
       renderLeaderboard(rows, highlightId);
     } catch (e) {
       leaderboardList.innerHTML = `<div class="lb-empty">${escapeHtml(e.message)}</div>`;
@@ -512,9 +582,10 @@
     leaderboardOverlay.classList.remove('hidden');
   }
 
-  leaderboardBtn.addEventListener('click', () => openLeaderboard(currentTheme ? currentTheme.id : 'all'));
+  leaderboardBtn.addEventListener('click', () => openLeaderboard(currentTheme ? currentTheme.id : 'all', null, difficulty));
   closeLeaderboardBtn.addEventListener('click', () => leaderboardOverlay.classList.add('hidden'));
   leaderboardThemeFilter.addEventListener('change', () => openLeaderboard(leaderboardThemeFilter.value));
+  leaderboardDifficultyFilter.addEventListener('change', () => openLeaderboard(leaderboardThemeFilter.value));
 
   // ---- Suggest a theme (kid-facing request, no direct creation power) ----
   suggestThemeBtn.addEventListener('click', () => {
@@ -555,6 +626,8 @@
     const savedId = safeStorageGet(THEME_KEY);
     const initial = themes.find(t => t.id === savedId) || themes.find(t => t.id === 'classic') || themes[0];
     setTheme(initial.id);
-    newGame();
+    difficultyLabel.textContent = DIFFICULTIES[difficulty].label;
+    // Ask before the first game; picking one starts it.
+    openDifficulty();
   })();
 })();

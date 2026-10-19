@@ -55,11 +55,19 @@ async function api(path, { method = 'GET', body } = {}) {
   if (body) headers['Content-Type'] = 'application/json';
   if (S.adultPin) headers['X-Adult-Pin'] = S.adultPin;
 
-  const res = await fetch(API + path, {
-    method,
-    headers: Object.keys(headers).length ? headers : undefined,
-    body: body ? JSON.stringify(body) : undefined
-  });
+  // A server that has gone away can leave a request hanging forever, which
+  // looks to the player like the game froze. Give up and say so instead.
+  let res;
+  try {
+    res = await fetch(API + path, {
+      method,
+      headers: Object.keys(headers).length ? headers : undefined,
+      body: body ? JSON.stringify(body) : undefined,
+      signal: AbortSignal.timeout(15000)
+    });
+  } catch {
+    throw new Error('Could not reach the game server. Check it is running and try again.');
+  }
   let data = null;
   try { data = await res.json(); } catch { /* empty body */ }
   if (!res.ok) throw new Error((data && data.error) || `Request failed (${res.status})`);
@@ -1513,6 +1521,9 @@ function showResults(results) {
   showArcadePanel(results.arcade, scoreTarget() ? scoreTarget().score : 0);
   refreshSeason();
   $('saveScoreBtn').classList.toggle('hidden', !canSaveScore());
+  // A score that made the board is only kept once initials go on it, and a
+  // button alone was easy to walk past. Ask straight after the banner.
+  if (canSaveScore()) setTimeout(() => { if (S.results === results) openInitials(); }, 2100);
   $('againBtn').textContent = S.mode === 'room'
     ? (S.room && S.room.youAreHost ? 'New round' : 'Back to lobby')
     : S.mode === 'daily' ? 'Back to today\u2019s board'
@@ -1892,6 +1903,9 @@ async function saveInitials() {
     ? { ...S.creds, initials, profileId }
     : { boardId: S.boardId, playerId: target.playerId, mode: S.mode, durationSec: S.duration, initials, profileId };
 
+  if (S.savingInitials) return;
+  S.savingInitials = true;
+  say($('initialsMsg'), 'Saving…');
   try {
     const saved = await api('/leaderboard', { method: 'POST', body });
     if (!saved.made) {
@@ -1908,6 +1922,8 @@ async function saveInitials() {
     setTimeout(() => $('initialsOverlay').classList.add('hidden'), 1400);
   } catch (e) {
     say($('initialsMsg'), e.message, 'err');
+  } finally {
+    S.savingInitials = false;
   }
 }
 

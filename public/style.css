@@ -322,15 +322,29 @@ header h1 span#titleSuffix { color: var(--accent); }
 .ghost-btn { background: transparent; border: 1px solid var(--tile-border) !important; color: var(--text); }
 .ghost-btn:hover { background: var(--key-hover); }
 
-#leaderboardThemeFilter {
+.lb-filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+#leaderboardThemeFilter, #leaderboardDifficultyFilter {
   background: var(--key-bg);
   color: var(--text);
   border: 1px solid var(--tile-border);
   border-radius: 6px;
   padding: 6px 8px;
   font-size: 12px;
-  margin-bottom: 12px;
 }
+
+.difficulty-title { margin: 0 0 14px; font-size: 20px; }
+.difficulty-choices { display: flex; flex-direction: column; gap: 8px; }
+.difficulty-choice {
+  display: flex; align-items: center; gap: 12px; text-align: left;
+  background: var(--key-bg); color: var(--text);
+  border: 2px solid var(--tile-border); border-radius: 10px;
+  padding: 12px 14px; cursor: pointer; font-family: inherit;
+}
+.difficulty-choice:hover { border-color: var(--accent); }
+.difficulty-choice.current { border-color: var(--accent); }
+.difficulty-choice .d-emoji { font-size: 24px; }
+.difficulty-choice .d-name { font-weight: 800; font-size: 15px; }
+.difficulty-choice .d-blurb { font-size: 12px; opacity: 0.65; }
 #leaderboardList {
   max-height: 50vh;
   overflow-y: auto;

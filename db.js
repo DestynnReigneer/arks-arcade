@@ -207,6 +207,10 @@ ensureColumn('rambler_scores', 'player_id', 'TEXT');
 // Which season a score belongs to, so a board can be rebuilt after the fact.
 ensureColumn('rambler_scores', 'season_id', 'INTEGER');
 
+// Wordless difficulty. Scores from before it existed were all the old
+// any-length game, which is closest to Normal.
+ensureColumn('scores', 'difficulty', "TEXT NOT NULL DEFAULT 'normal'");
+
 // Which dictionary somebody played the daily on. Everyone gets the same
 // letters, but the unfiltered list is wider, so an adult's 55 and a kid's 40
 // are not the same achievement. The standings say which was which instead of
@@ -340,12 +344,12 @@ function computeScore({ won, guesses, hintsUsed, elapsedMs }) {
   return Math.max(0, Math.round(raw / 10) * 10);
 }
 
-function insertScore({ initials, themeId, won, guesses, hintsUsed, word, elapsedMs }) {
+function insertScore({ initials, themeId, won, guesses, hintsUsed, word, elapsedMs, difficulty = 'normal' }) {
   const theme = getTheme(themeId);
   const score = computeScore({ won, guesses, hintsUsed, elapsedMs });
   const info = db.prepare(`
-    INSERT INTO scores (initials, score, theme_id, theme_label, theme_emoji, won, guesses, hints_used, word, elapsed_ms)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO scores (initials, score, theme_id, theme_label, theme_emoji, won, guesses, hints_used, word, elapsed_ms, difficulty)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     initials,
     score,
@@ -356,24 +360,24 @@ function insertScore({ initials, themeId, won, guesses, hintsUsed, word, elapsed
     guesses,
     hintsUsed,
     word,
-    elapsedMs
+    elapsedMs,
+    difficulty
   );
-  const rank = db.prepare('SELECT COUNT(*) AS c FROM scores WHERE score > ?').get(score).c + 1;
-  return { id: info.lastInsertRowid, score, rank };
+  // Each difficulty is its own board, so rank within it.
+  const rank = db.prepare('SELECT COUNT(*) AS c FROM scores WHERE score > ? AND difficulty = ?').get(score, difficulty).c + 1;
+  return { id: info.lastInsertRowid, score, rank, difficulty };
 }
 
-function listLeaderboard({ themeId, limit }) {
+function listLeaderboard({ themeId, difficulty, limit }) {
   const cap = Math.min(Math.max(parseInt(limit, 10) || 25, 1), 100);
-  let rows;
-  if (themeId && themeId !== 'all') {
-    rows = db.prepare(`
-      SELECT * FROM scores WHERE theme_id = ? ORDER BY score DESC, created_at ASC LIMIT ?
-    `).all(themeId, cap);
-  } else {
-    rows = db.prepare(`
-      SELECT * FROM scores ORDER BY score DESC, created_at ASC LIMIT ?
-    `).all(cap);
-  }
+  const where = [];
+  const args = [];
+  if (themeId && themeId !== 'all') { where.push('theme_id = ?'); args.push(themeId); }
+  if (difficulty && difficulty !== 'all') { where.push('difficulty = ?'); args.push(difficulty); }
+  const rows = db.prepare(`
+    SELECT * FROM scores ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
+    ORDER BY score DESC, created_at ASC LIMIT ?
+  `).all(...args, cap);
   return rows.map(r => ({
     id: r.id,
     initials: r.initials,
@@ -386,6 +390,7 @@ function listLeaderboard({ themeId, limit }) {
     hintsUsed: r.hints_used,
     word: r.word,
     elapsedMs: r.elapsed_ms,
+    difficulty: r.difficulty,
     createdAt: r.created_at
   }));
 }
