@@ -2065,6 +2065,8 @@ function bind() {
   // Browsers will not make a sound until the page has been interacted with,
   // so the very first tap anywhere is what wakes the audio engine.
   document.addEventListener('pointerdown', () => Sound.arm(), { once: true });
+  $('helpBtn').onclick = () => window.ramblerTutorial.open();
+  window.ramblerTutorial.autoOpen();
 
   $('lobbyStartBtn').onclick = () => {
     api(`/rooms/${S.creds.code}/start`, { method: 'POST', body: S.creds })

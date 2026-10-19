@@ -39,6 +39,7 @@ header {
   justify-content: space-between;
 }
 #headerSpacer { width: 34px; }
+.header-btns { display: flex; gap: 6px; }
 #backToArcade {
   width: 34px;
   text-decoration: none;
