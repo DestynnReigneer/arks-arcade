@@ -131,7 +131,7 @@ body::before {
 .host[data-host="brass"][data-pose="oops"] .h-arm-l { transform: rotate(150deg); }
 
 .host-say {
-  position: absolute; bottom: 70px; left: 46px; z-index: 4; white-space: nowrap;
+  position: absolute; bottom: 70px; left: 46px; z-index: 4; width: max-content; max-width: min(240px, 62vw); line-height: 1.3;
   padding: 6px 10px; border-radius: 12px 12px 12px 3px;
   background: rgba(16, 12, 40, 0.92); border: 1px solid var(--cyan); color: #fff;
   font-size: 12px; font-weight: 700; box-shadow: 0 0 12px rgba(45, 226, 230, 0.45);
@@ -236,4 +236,39 @@ body::before {
 @media (prefers-reduced-motion: reduce) {
   body::before, .stage::before, .tile.covered::after, .host .h-body, .host .h-shadow { animation: none; }
   .host { transition: none; }
+}
+
+/* Jokes come in two parts; the punchline gets a little glow */
+.host-say.punch { border-color: var(--gold); box-shadow: 0 0 14px rgba(255, 210, 63, 0.55); }
+
+/* A heckler zooms on from the far side, roasts the host, then zooms off */
+.heckler { z-index: 2; transition: transform 0.55s cubic-bezier(.3, .1, .2, 1); }
+.heckler .host-say { border-color: var(--danger); box-shadow: 0 0 12px rgba(255, 94, 94, 0.5); }
+
+/* The host's comeback gesture: 😛 ✋ or, at adult levels, 🖕 */
+.gesture {
+  position: absolute; left: 50%; top: -20px; z-index: 5; font-size: 30px; line-height: 1; pointer-events: none;
+  opacity: 0; transform: translate(-50%, 10px) scale(0.3);
+}
+.gesture.show { animation: gesture 1.8s cubic-bezier(.2, 1.5, .4, 1) forwards; }
+@keyframes gesture {
+  0% { opacity: 0; transform: translate(-50%, 10px) scale(0.3); }
+  20% { opacity: 1; transform: translate(-50%, -6px) scale(1.25) rotate(-8deg); }
+  35% { transform: translate(-50%, -4px) scale(1.1) rotate(6deg); }
+  80% { opacity: 1; transform: translate(-50%, -8px) scale(1.15); }
+  100% { opacity: 0; transform: translate(-50%, -20px) scale(1); }
+}
+
+/* Turn timer: a bar that drains, turning red near the end */
+.turn-timer {
+  position: relative; height: 18px; max-width: 360px; margin: -4px auto 10px; border-radius: 999px; overflow: hidden;
+  background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 255, 255, 0.14);
+}
+.tt-fill { position: absolute; inset: 0; transform-origin: left; background: linear-gradient(90deg, var(--cyan), var(--violet)); transition: transform 0.25s linear; }
+.turn-timer.warn .tt-fill { background: linear-gradient(90deg, #ff5e5e, #ff9a3d); }
+.turn-timer.warn { animation: warn 0.5s ease-in-out infinite alternate; }
+@keyframes warn { to { box-shadow: 0 0 12px rgba(255, 94, 94, 0.8); } }
+.turn-timer span {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-family: var(--show-font); font-size: 11px; font-weight: 800; letter-spacing: 1px; color: #fff; text-shadow: 0 1px 2px #000;
 }

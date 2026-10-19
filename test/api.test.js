@@ -766,6 +766,13 @@ async function run({ base, root }) {
   ok('adult puzzles need the PIN', (await wl('/spinsolve/puzzles?level=filthy')).status === 403);
   ok('a wrong PIN is refused', (await pinGet('/spinsolve/puzzles?level=filthy', '0000')).status === 403);
   ok('the right PIN opens them', (await pinGet('/spinsolve/puzzles?level=filthy', '2468')).data.puzzles.length >= 30);
+  const kidsBanter = kidsPuzzles.data.banter;
+  ok('kids games come with jokes and hecklers', kidsBanter.jokes.length >= 20 && kidsBanter.heckles.length >= 5);
+  ok('…and no rude gestures or swearing', !kidsBanter.comebacks.some(c => c.startsWith('🖕')) &&
+    !JSON.stringify(kidsBanter).match(/fuck|shit|damn|hell\b/i));
+  const filthyBanter = (await pinGet('/spinsolve/puzzles?level=filthy', '2468')).data.banter;
+  ok('filthy games get the adult jokes and the finger', filthyBanter.comebacks.every(c => c.startsWith('🖕')) &&
+    filthyBanter.jokes.some(([a, b]) => /fuck/i.test(a + b)));
   ok('the unlock check works', (await wl('/spinsolve/unlock', 'POST', { pin: '2468' })).data.ok === true &&
     (await wl('/spinsolve/unlock', 'POST', { pin: '1111' })).data.ok === false);
 
