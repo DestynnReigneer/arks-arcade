@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spin &amp; Solve</title>
+<link rel="stylesheet" href="arcade-ui.css">
+<link rel="stylesheet" href="spinsolve.css">
+<link rel="stylesheet" href="tutorial.css">
+</head>
+<body>
+
+<header class="top">
+  <a href="/" class="icon-btn" title="Back to the arcade">←</a>
+  <h1>🎡 SPIN <span>&amp; SOLVE</span></h1>
+  <div class="btns">
+    <button class="icon-btn" id="muteBtn" title="Sound">🔊</button>
+    <button class="icon-btn" id="scoresBtn" title="High scores">🏆</button>
+    <button class="icon-btn" id="helpBtn" title="How to play">?</button>
+  </div>
+</header>
+
+<!-- ============ setup ============ -->
+<section id="setup">
+  <div class="panel">
+    <h2>Who's playing?</h2>
+    <p class="hint">One player plays solo for the 🏆 board. Two to four take turns on this phone.</p>
+    <div id="nameList"></div>
+    <button class="ghost" id="addPlayerBtn">+ Add player</button>
+    <h2 style="margin-top:18px">How many rounds?</h2>
+    <div class="seg" id="roundSeg">
+      <button data-rounds="3" aria-pressed="true">3 rounds</button>
+      <button data-rounds="5" aria-pressed="false">5 rounds</button>
+    </div>
+    <button class="primary big" id="goBtn">Let's play</button>
+  </div>
+</section>
+
+<!-- ============ game ============ -->
+<section id="game" class="hidden">
+  <div class="round-line"><span id="roundLabel"></span><span id="strikes" class="strikes"></span></div>
+  <div class="puzzle-board" id="puzzleBoard"></div>
+  <div class="category" id="categoryLabel"></div>
+
+  <ul class="players" id="playerList"></ul>
+
+  <div class="wheel-area">
+    <div class="pointer"></div>
+    <svg class="wheel" id="wheel" viewBox="-110 -110 220 220" aria-hidden="true"><g id="wheelSpin"></g></svg>
+    <div class="landed hidden" id="landed"></div>
+  </div>
+
+  <div class="turn-line" id="turnLine"></div>
+  <div class="row-btns actions">
+    <button class="primary" id="spinBtn">🎡 Spin</button>
+    <button class="ghost" id="vowelBtn">🅰️ Buy a vowel <small>$250</small></button>
+    <button class="ghost" id="solveBtn">💡 Solve</button>
+  </div>
+  <div class="used" id="usedLetters"></div>
+  <button class="ghost big" id="quitBtn">Back to setup</button>
+</section>
+
+<!-- ============ overlays ============ -->
+<div class="overlay hidden" id="letterView">
+  <div class="card-panel center">
+    <h2 id="letterTitle">Pick a consonant</h2>
+    <p class="hint" id="letterHint"></p>
+    <div class="letter-grid" id="letterGrid"></div>
+    <button class="ghost" id="letterCancel" style="margin-top:10px;width:100%">Cancel</button>
+  </div>
+</div>
+
+<div class="overlay hidden" id="solveView">
+  <div class="card-panel center">
+    <h2>Solve the puzzle</h2>
+    <p class="hint" id="solveCategory"></p>
+    <input id="solveInput" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Type the whole answer">
+    <div class="msg" id="solveMsg"></div>
+    <div class="stack">
+      <button class="primary" id="solveOk">That's my answer</button>
+      <button class="ghost" id="solveCancel">Not yet</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="roundView">
+  <div class="card-panel center">
+    <div class="big-emoji" id="roundEmoji">🎉</div>
+    <h2 id="roundTitle"></h2>
+    <p class="answer" id="roundAnswer"></p>
+    <p class="hint" id="roundHint"></p>
+    <button class="primary big" id="nextRoundBtn">Next round</button>
+  </div>
+</div>
+
+<div class="overlay hidden" id="overView">
+  <div class="card-panel center">
+    <div class="big-emoji">🏆</div>
+    <h2 id="overTitle"></h2>
+    <ul class="final" id="finalList"></ul>
+    <div id="overScore" class="hidden">
+      <p class="hint">Get on the board and see where you stack up.</p>
+      <div class="initials">
+        <input maxlength="1" class="ini" autocomplete="off"><input maxlength="1" class="ini" autocomplete="off"><input maxlength="1" class="ini" autocomplete="off">
+      </div>
+      <button class="primary big" id="saveScoreBtn">Save score</button>
+      <div class="msg" id="scoreMsg"></div>
+    </div>
+    <div class="stack">
+      <button class="primary" id="againBtn">Play again</button>
+      <button class="ghost" id="menuBtn">Back to setup</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="scoresView">
+  <div class="card-panel">
+    <h2>🏆 Solo high scores</h2>
+    <ul class="scores" id="scoreList"></ul>
+    <div class="stack"><button class="ghost" id="scoresClose">Close</button></div>
+  </div>
+</div>
+
+<script src="tutorial.js"></script>
+<script src="blip.js"></script>
+<script src="arcade-kit.js"></script>
+<script src="spin-puzzles.js"></script>
+<script src="spinsolve.js"></script>
+</body>
+</html>
