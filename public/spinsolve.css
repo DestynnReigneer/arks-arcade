@@ -79,7 +79,7 @@ body::before {
 .tile.win { animation: winPulse 0.9s ease-in-out infinite alternate; animation-delay: calc(var(--i, 0) * 30ms); }
 @keyframes winPulse { to { box-shadow: 0 0 16px var(--gold), 0 0 30px rgba(255, 210, 63, 0.7); } }
 
-/* ---- Vee, the robot co-host ---- */
+/* ---- the robot co-hosts (drawn in spin-hosts.js) ---- */
 .host-lane { position: relative; height: 96px; margin-top: -2px; }
 .host {
   position: absolute; left: 0; bottom: 0; width: 52px; height: 96px; z-index: 3;
@@ -97,12 +97,15 @@ body::before {
 .host .h-gown { animation: gown 1.4s ease-in-out infinite; }
 @keyframes gown { 50% { opacity: 0.75; } }
 .host .h-arm-r, .host .h-arm-l, .host .h-head, .host .h-smile { transform-box: view-box; transition: transform 0.22s cubic-bezier(.3, 1.4, .5, 1); }
-.host .h-arm-r { transform-origin: 39px 38px; }
-.host .h-arm-l { transform-origin: 21px 38px; }
-.host .h-head { transform-origin: 30px 30px; }
-.host .h-smile { transform-origin: 30px 27px; }
+.host-art { width: 100%; height: 100%; }
+.host.swap { animation: beamIn 0.6s ease-out; }
+@keyframes beamIn {
+  0% { opacity: 0; filter: brightness(3) drop-shadow(0 0 12px #2de2e6); transform: var(--at) scaleY(0.2); }
+  60% { opacity: 1; filter: brightness(1.8) drop-shadow(0 0 10px #2de2e6); }
+  100% { filter: none; transform: var(--at) scaleY(1); }
+}
 .host[data-pose="touch"] .h-arm-r { transform: rotate(-155deg); }
-.host[data-pose="touch"] .h-hand { fill: #fff; }
+.host[data-pose="touch"] circle.h-hand { fill: #fff; }
 .host[data-pose="point"] .h-arm-r { transform: rotate(-95deg); }
 .host[data-pose="cheer"] .h-arm-r { transform: rotate(-150deg); }
 .host[data-pose="cheer"] .h-arm-l { transform: rotate(150deg); }
@@ -114,6 +117,18 @@ body::before {
 .host[data-pose="oops"] .h-eyes rect { fill: var(--accent); }
 .host[data-pose="wave"] .h-arm-r { animation: wave 0.35s ease-in-out 4 alternate; transform: rotate(-140deg); }
 @keyframes wave { from { transform: rotate(-120deg); } to { transform: rotate(-165deg); } }
+
+/* Bleep's arm sticks out sideways, so it needs less turn to reach up. */
+.host[data-host="bleep"][data-pose="touch"] .h-arm-r { transform: rotate(-70deg); }
+.host[data-host="bleep"][data-pose="point"] .h-arm-r { transform: rotate(-25deg); }
+.host[data-host="bleep"][data-pose="cheer"] .h-arm-r { transform: rotate(-55deg); }
+.host[data-host="bleep"][data-pose="cheer"] .h-arm-l { transform: rotate(55deg); }
+.host[data-host="bleep"][data-pose="oops"] .h-head { transform: rotate(-20deg); }
+.host[data-host="bleep"][data-pose="wave"] .h-arm-r { animation: waveSide 0.35s ease-in-out 4 alternate; transform: rotate(-50deg); }
+@keyframes waveSide { from { transform: rotate(-30deg); } to { transform: rotate(-70deg); } }
+/* Brass throws both hands up in a panic when things go wrong. */
+.host[data-host="brass"][data-pose="oops"] .h-arm-r { transform: rotate(-150deg); }
+.host[data-host="brass"][data-pose="oops"] .h-arm-l { transform: rotate(150deg); }
 
 .host-say {
   position: absolute; bottom: 70px; left: 46px; z-index: 4; white-space: nowrap;

@@ -184,8 +184,9 @@
     say(`${S.players[S.cur].name}, spin the wheel!`);
     requestAnimationFrame(() => {
       Host.home();
+      const host = Host.rotate();
       Host.pose('wave', 1500);
-      Host.talk(pick(LINES.hello), 1800);
+      Host.talk(pick(host.intro), 2200);
     });
   }
 
@@ -264,9 +265,10 @@
 
   function say(text) { $('turnLine').textContent = text; }
 
-  // ---- Vee, the robot co-host ----------------------------------------------------
-  // She glides along under the wall, touches each letter to light it up, and
-  // reacts to the wheel. Poses are CSS (data-pose); this just moves her.
+  // ---- the robot co-host -----------------------------------------------------------
+  // A different robot from spin-hosts.js runs each round. It glides along under
+  // the wall, touches each letter to light it up, and reacts to the wheel.
+  // Poses are CSS (data-pose); this moves it, swaps it, and gives it a voice.
   const Host = (() => {
     const el = $('host');
     const bubble = $('hostSay');
@@ -274,12 +276,40 @@
     let x = 0;
     let sayTimer = null;
     let poseTimer = null;
-    const HAND = 18;   // her right hand sits this far right of her middle
+    let current = null;
+    let HAND = 14;
+
+    function setHost(id) {
+      current = SPIN_HOSTS[id];
+      HAND = current.hand;
+      el.dataset.host = id;
+      $('hostArt').innerHTML = current.svg;
+      el.style.setProperty('--at', `translateX(${x}px)`);
+      el.classList.remove('swap');
+      void el.offsetWidth;
+      el.classList.add('swap');
+      Blip.tone([400, 1600], 0.25, { type: 'sine', volume: 0.05 });
+    }
+    // Each robot sounds different when it talks.
+    function voice() {
+      const v = current && current.voice;
+      if (!v) return;
+      if (v.beeps) {
+        for (let i = 0; i < 5; i++) Blip.tone(900 + Math.random() * 1500, 0.05, { type: 'sine', volume: 0.06, delay: i * 0.06 });
+      } else Blip.tune(v.notes, { type: v.type, volume: 0.05 });
+    }
+    // This robot's line for a moment, or the house line if it has none.
+    function line(key, ...args) {
+      const own = current && current.lines[key];
+      const list = own ? (typeof own === 'function' ? own(...args) : own) : (typeof LINES[key] === 'function' ? LINES[key](...args) : LINES[key]);
+      return pick(list);
+    }
 
     function laneWidth() { return lane.clientWidth - el.offsetWidth; }
     function place(px) {
       x = Math.max(0, Math.min(laneWidth(), px));
       el.style.transform = `translateX(${x}px)`;
+      el.style.setProperty('--at', `translateX(${x}px)`);
       bubble.classList.toggle('left', x > laneWidth() / 2);
     }
     // Walks so her raised hand is under a tile, and waits until she's there.
@@ -298,6 +328,7 @@
       if (ms) poseTimer = setTimeout(() => { el.dataset.pose = 'idle'; }, ms);
     }
     function talk(text, ms = 2000) {
+      voice();
       bubble.textContent = text;
       bubble.classList.add('show');
       clearTimeout(sayTimer);
@@ -308,7 +339,13 @@
       place(laneWidth());
     }
     window.addEventListener('resize', () => place(x));
-    return { walkTo, pose, talk, home };
+    // A new robot each round, never the same one twice in a row.
+    function rotate() {
+      const ids = Object.keys(SPIN_HOSTS).filter(id => !current || SPIN_HOSTS[id] !== current);
+      setHost(pick(ids));
+      return current;
+    }
+    return { walkTo, pose, talk, home, rotate, line, setHost };
   })();
 
   const pick = list => list[Math.floor(Math.random() * list.length)];
@@ -447,7 +484,7 @@
     S.busy = true;
     $('landed').classList.add('hidden');
     render();
-    Host.talk(pick(LINES.spin), 1400);
+    Host.talk(Host.line('spin'), 1400);
     Host.pose('point', 900);
     const wheel = $('wheel');
     wheel.classList.remove('idle', 'won');
@@ -509,7 +546,7 @@
     if (w === 'BANKRUPT') {
       showLanded('💸 BANKRUPT', true);
       Host.pose('oops', 1800);
-      Host.talk(pick(LINES.bankrupt));
+      Host.talk(Host.line('bankrupt'));
       Blip.tune([[300, 0.15], [200, 0.15], [120, 0.4]], { type: 'sawtooth', volume: 0.08 });
       p.round = 0;
       S.busy = false;
@@ -518,7 +555,7 @@
     if (w === 'LOSE A TURN') {
       showLanded('🙅 LOSE A TURN', true);
       Host.pose('oops', 1500);
-      Host.talk(pick(LINES.lose));
+      Host.talk(Host.line('lose'));
       Blip.tone([400, 200], 0.3, { type: 'square', volume: 0.08 });
       S.busy = false;
       return endTurn(`${p.name} loses a turn.`);
@@ -556,12 +593,12 @@
     const p = S.players[S.cur];
     S.used.add(ch);
     const count = letters(S.puzzle.answer).split('').filter(c => c === ch).length;
-    if (letterMode === 'vowel') { p.round -= VOWEL_COST; Host.talk(pick(LINES.vowel), 1200); }
+    if (letterMode === 'vowel') { p.round -= VOWEL_COST; Host.talk(Host.line('vowel'), 1200); }
     $('landed').classList.add('hidden');
     if (!count) {
       Blip.tone([220, 140], 0.35, { type: 'sawtooth', volume: 0.08 });
       Host.pose('oops', 1500);
-      Host.talk(`${pick(LINES.miss)} No ${ch}.`);
+      Host.talk(`${Host.line('miss')} No ${ch}.`);
       return endTurn(`No ${ch}. ${solo() ? 'Strike!' : 'Next player.'}`);
     }
     if (letterMode === 'consonant') p.round += S.wedge * count;
@@ -573,7 +610,7 @@
     S.revealed.add(ch);
     S.busy = false;
     Host.pose('cheer', 900);
-    Host.talk(pick(LINES.hit(count)), 1500);
+    Host.talk(Host.line('hit', count), 1500);
     render();
     say(`${count} ${ch}${count > 1 ? '\'s' : ''}! ${p.name}, go again: spin, buy a vowel, or solve.`);
     if (!consonantsLeft().length && !vowelsLeft().length) return solved();
@@ -610,7 +647,7 @@
     if (guess === letters(S.puzzle.answer)) return solved();
     Blip.tone([220, 140], 0.4, { type: 'sawtooth', volume: 0.08 });
     Host.pose('oops', 1500);
-    Host.talk(pick(LINES.wrong));
+    Host.talk(Host.line('wrong'));
     endTurn('Not quite!');
   }
 
@@ -621,7 +658,7 @@
     S.players.forEach(x => { x.round = 0; });
     S.busy = true;
     renderPlayers();
-    Host.talk(pick(LINES.solved), 2600);
+    Host.talk(Host.line('solved'), 2600);
     Blip.tune([[523, 0.12], [659, 0.12], [784, 0.12], [1047, 0.35]], { type: 'triangle' });
     await revealAll();
     for (const ch of letters(S.puzzle.answer)) S.revealed.add(ch);
@@ -732,6 +769,7 @@
     {
       emoji: '🎯', title: 'The goal',
       html: `<p>Figure out the hidden <b>phrase</b> on the board. The <b>category</b> under it tells you what kind of thing it is.</p>
+        <p>A different <b>robot host</b> runs each round and lights up your letters. Meet Vee, Tinny, Bleep, Brass, Scrappy, Ova and Puffy!</p>
         <p>Bank the most money by the end of the last round to win.</p>`
     },
     {
@@ -795,6 +833,7 @@
   initials = ArcadeKit.wireInitials([...document.querySelectorAll('#overScore .ini')], saveScore);
 
   buildWheel();
+  Host.setHost('vee');
   renderNames();
   loadConfig();
   help.autoOpen();
