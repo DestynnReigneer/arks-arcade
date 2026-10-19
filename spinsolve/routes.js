@@ -10,6 +10,7 @@ const db = require('../db');
 const comm = require('../arcade/comm');
 const adultPin = require('../arcade/adult-pin');
 const P = require('./puzzles');
+const banter = require('./banter');
 
 db.db.exec(`
   CREATE TABLE IF NOT EXISTS spin_packs (
@@ -77,13 +78,13 @@ module.exports = function spinRoutes({ requireAdmin, notify }) {
         if (!row) throw fail('That puzzle pack is gone.', 404);
         requireLevel(row.level, req);
         const pack = rowToPack(row, true);
-        return res.json({ level: row.level, puzzles: pack.puzzles.map(p => ({ ...p, pack: pack.label })) });
+        return res.json({ level: row.level, puzzles: pack.puzzles.map(p => ({ ...p, pack: pack.label })), banter: banter.forLevel(row.level) });
       }
       const level = P.levelOf(req.query.level);
       requireLevel(level, req);
       const fromPacks = allPacks().filter(r => r.level === level)
         .flatMap(r => JSON.parse(r.puzzles).map(p => ({ ...p, pack: r.label })));
-      res.json({ level, puzzles: [...P.BUILTIN[level], ...fromPacks] });
+      res.json({ level, puzzles: [...P.BUILTIN[level], ...fromPacks], banter: banter.forLevel(level) });
     } catch (e) { next(e); }
   });
 

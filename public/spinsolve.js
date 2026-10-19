@@ -28,7 +28,8 @@
     names: ['', ''], rounds: 3, players: [], cur: 0, round: 0, puzzle: null,
     revealed: new Set(), used: new Set(), strikes: 0, wedge: null, busy: false,
     rotation: 0, usedPuzzles: new Set(),
-    config: null, level: 'kids', pack: 'all', pool: [],
+    config: null, level: 'kids', pack: 'all', pool: [], banter: null,
+    turnSecs: 45, timeLeft: 0, idleSince: 0, jokedThisTurn: false, heckledThisRound: false, heckling: false,
     pin: (() => { try { return sessionStorage.getItem('spin.adultPin') || ''; } catch { return ''; } })(),
     adultOk: (() => { try { return sessionStorage.getItem('spin.adultOk') === 'yes'; } catch { return false; } })()
   };
@@ -149,7 +150,9 @@
     Blip.unlock();
     try {
       const q = S.pack === 'all' ? `level=${S.level}` : `pack=${encodeURIComponent(S.pack)}`;
-      S.pool = (await api(`/api/spinsolve/puzzles?${q}`, undefined, pinHeaders())).puzzles;
+      const got = await api(`/api/spinsolve/puzzles?${q}`, undefined, pinHeaders());
+      S.pool = got.puzzles;
+      S.banter = got.banter;
     } catch (e) { toast(e.message); return; }
     if (!S.pool.length) { toast('No puzzles here yet.'); return; }
     S.usedPuzzles.clear();
@@ -178,6 +181,7 @@
     S.used = new Set();
     S.strikes = 0;
     S.wedge = null;
+    S.heckledThisRound = false;
     S.players.forEach(p => { p.round = 0; });
     S.cur = (S.round - 1) % S.players.length;
     render();
@@ -188,6 +192,7 @@
       Host.pose('wave', 1500);
       Host.talk(pick(host.intro), 2200);
     });
+    resetTurn();
   }
 
   // ---- the board ------------------------------------------------------------------
@@ -327,8 +332,9 @@
       el.dataset.pose = name;
       if (ms) poseTimer = setTimeout(() => { el.dataset.pose = 'idle'; }, ms);
     }
-    function talk(text, ms = 2000) {
+    function talk(text, ms = 2000, punch = false) {
       voice();
+      bubble.classList.toggle('punch', punch);
       bubble.textContent = text;
       bubble.classList.add('show');
       clearTimeout(sayTimer);
@@ -358,7 +364,8 @@
     spin: ['Round and round…', 'Come on, big money!', 'Spinning!'],
     solved: ['You got it! 🎉', 'Brilliant!', 'Puzzle solved!'],
     wrong: ['Ooh, not quite.', 'Close, but no.'],
-    vowel: ['Vowels are on me!', 'One vowel, coming up!']
+    vowel: ['Vowels are on me!', 'One vowel, coming up!'],
+    timeup: ['Time\'s up!', 'Tick tock… too slow!', 'Buzzer! Out of time!']
   };
 
   // Lights up every hidden copy of a letter, one at a time, with Vee touching each.
@@ -615,6 +622,7 @@
     say(`${count} ${ch}${count > 1 ? '\'s' : ''}! ${p.name}, go again: spin, buy a vowel, or solve.`);
     if (!consonantsLeft().length && !vowelsLeft().length) return solved();
     if (!consonantsLeft().length) say('No consonants left! Buy a vowel or solve.');
+    resetTurn();
   }
 
   function endTurn(message) {
@@ -623,11 +631,158 @@
       render();
       if (S.strikes >= MAX_STRIKES) return roundLost();
       say(`${message} ${MAX_STRIKES - S.strikes} strike${MAX_STRIKES - S.strikes === 1 ? '' : 's'} left.`);
+      resetTurn();
+      maybeHeckle();
       return;
     }
     S.cur = (S.cur + 1) % S.players.length;
     render();
     say(`${message} ${S.players[S.cur].name}, your turn!`);
+    resetTurn();
+    maybeHeckle();
+  }
+
+  // ---- the turn clock ---------------------------------------------------------------------
+  // Runs only while a player is actually deciding: not while the wheel spins,
+  // the host is lighting letters, or a results screen is up.
+
+  function resetTurn() {
+    S.timeLeft = S.turnSecs * 1000;
+    S.idleSince = Date.now();
+    S.jokedThisTurn = false;
+    $('turnTimer').classList.toggle('hidden', !S.turnSecs);
+    paintClock();
+  }
+
+  const overlayOpen = id => !$(id).classList.contains('hidden');
+  function clockPaused() {
+    return $('game').classList.contains('hidden') || S.busy || S.heckling || help.isOpen ||
+      overlayOpen('roundView') || overlayOpen('overView') || overlayOpen('scoresView');
+  }
+
+  function paintClock() {
+    if (!S.turnSecs) return;
+    const secs = Math.ceil(S.timeLeft / 1000);
+    $('ttFill').style.transform = `scaleX(${Math.max(0, S.timeLeft / (S.turnSecs * 1000))})`;
+    $('ttText').textContent = `⏱ ${secs}s · ${S.players[S.cur] ? S.players[S.cur].name : ''}`;
+    $('turnTimer').classList.toggle('warn', secs <= 10);
+  }
+
+  let lastTick = Date.now();
+  setInterval(() => {
+    const now = Date.now();
+    const step = now - lastTick;
+    lastTick = now;
+    if (!S.puzzle || clockPaused()) { S.idleSince += step; return; }
+    if (S.turnSecs) {
+      const before = Math.ceil(S.timeLeft / 1000);
+      S.timeLeft -= step;
+      const after = Math.ceil(S.timeLeft / 1000);
+      if (after !== before && after <= 5 && after > 0) Blip.tone(after <= 2 ? 1320 : 990, 0.05, { type: 'square', volume: 0.05 });
+      paintClock();
+      if (S.timeLeft <= 0) return timeUp();
+    }
+    // Nobody's done anything for a while: the host fills the silence.
+    const letterOrSolveOpen = overlayOpen('letterView') || overlayOpen('solveView');
+    if (!S.jokedThisTurn && !letterOrSolveOpen && now - S.idleSince > 9000) {
+      S.jokedThisTurn = true;
+      tellJoke();
+    }
+  }, 250);
+
+  function timeUp() {
+    S.timeLeft = 0;
+    $('letterView').classList.add('hidden');
+    $('solveView').classList.add('hidden');
+    $('landed').classList.add('hidden');
+    S.wedge = null;
+    Blip.tune([[440, 0.15], [330, 0.15], [220, 0.3]], { type: 'square', volume: 0.06 });
+    Host.pose('oops', 1500);
+    Host.talk(Host.line('timeup'));
+    endTurn('⏰ Time\'s up!');
+  }
+
+  // Any tap on the game counts as "doing something", so the host waits for a lull.
+  document.addEventListener('pointerdown', () => { S.idleSince = Date.now(); }, true);
+
+  // ---- jokes and hecklers -----------------------------------------------------------------
+
+  async function tellJoke() {
+    const jokes = S.banter && S.banter.jokes;
+    if (!jokes || !jokes.length) return;
+    const [setup, punch] = pick(jokes);
+    const beeper = $('host').dataset.host === 'bleep';
+    Host.talk(beeper ? `Bwee-doo? (${setup})` : setup, 3200);
+    await wait(3000);
+    if (clockPaused()) return;
+    Host.talk(beeper ? `Dweet! (${punch})` : punch, 4200, true);
+    Host.pose('cheer', 900);
+    // Ba-dum-tss.
+    Blip.tone(150, 0.08, { type: 'sine', volume: 0.12 });
+    Blip.tone(150, 0.08, { type: 'sine', volume: 0.12, delay: 0.14 });
+    setTimeout(() => Blip.noise(0.35, 0.08), 330);
+  }
+
+  // Once a round, sometimes, between turns.
+  function maybeHeckle() {
+    if (S.heckledThisRound || !S.banter || Math.random() > 0.4) return;
+    S.heckledThisRound = true;
+    setTimeout(heckle, 1400);
+  }
+
+  async function heckle() {
+    if (clockPaused() || overlayOpen('letterView') || overlayOpen('solveView')) return;
+    const hostEl = $('host');
+    const hostId = hostEl.dataset.host;
+    const hostName = SPIN_HOSTS[hostId].name;
+    const others = Object.keys(SPIN_HOSTS).filter(id => id !== hostId);
+    const id = pick(others);
+    const h = $('heckler');
+    const lane = $('hostLane');
+    // Come in from whichever side the host isn't on.
+    const hostX = hostEl.getBoundingClientRect().left - lane.getBoundingClientRect().left;
+    const fromLeft = hostX > lane.clientWidth / 2;
+    const offstage = fromLeft ? -80 : lane.clientWidth + 30;
+    const stop = fromLeft ? Math.max(0, hostX - 110) : Math.min(lane.clientWidth - 52, hostX + 110);
+    S.heckling = true;
+    $('hecklerArt').innerHTML = SPIN_HOSTS[id].svg;
+    h.dataset.host = id;
+    h.style.transition = 'none';
+    h.style.transform = `translateX(${offstage}px)`;
+    h.classList.remove('hidden');
+    $('hecklerSay').classList.toggle('left', !fromLeft);
+    h.getBoundingClientRect();
+    h.style.transition = '';
+    h.style.transform = `translateX(${stop}px)`;
+    Blip.tone([200, 900], 0.3, { type: 'sawtooth', volume: 0.04 });
+    await wait(600);
+    h.dataset.pose = 'point';
+    const say = $('hecklerSay');
+    say.textContent = pick(S.banter.heckles).replace(/\{host\}/g, hostName);
+    say.classList.add('show');
+    await wait(2600);
+    say.classList.remove('show');
+    // The comeback, with a gesture popping up over the host's head.
+    const comeback = pick(S.banter.comebacks);
+    const gesture = [...comeback][0];
+    const text = comeback.slice(gesture.length).trim();
+    Host.pose(gesture === '🖕' || gesture === '✋' ? 'point' : 'oops', 1800);
+    const g = $('hostGesture');
+    g.textContent = gesture;
+    g.classList.remove('show');
+    void g.offsetWidth;
+    g.classList.add('show');
+    Host.talk(text, 2200);
+    await wait(1700);
+    h.dataset.pose = 'oops';
+    await wait(500);
+    h.style.transform = `translateX(${offstage}px)`;
+    Blip.tone([900, 200], 0.3, { type: 'sawtooth', volume: 0.04 });
+    await wait(600);
+    h.classList.add('hidden');
+    h.dataset.pose = 'idle';
+    S.heckling = false;
+    S.idleSince = Date.now();
   }
 
   // ---- solving --------------------------------------------------------------------------
@@ -757,6 +912,7 @@
   }
 
   function backToSetup() {
+    S.puzzle = null;
     $('overView').classList.add('hidden');
     $('roundView').classList.add('hidden');
     $('game').classList.add('hidden');
@@ -794,6 +950,7 @@
       emoji: '🎮', title: 'Solo or together',
       html: `<p><b>Solo:</b> you get 3 strikes a round: a missing letter, a wrong answer, Bankrupt or Lose a Turn each cost one. Your total goes on the 🏆 board.</p>
         <p><b>2–4 players:</b> pass the phone. Only whoever solves keeps that round's money.</p>
+        <p><b>Turn timer:</b> pick 30 to 90 seconds (or Off) in setup. Run out and your turn passes.</p>
         <p><b>Puzzles:</b> play everything, or pick one theme pack from the list. 💡 Suggest a theme to ask for a new one. Grown-ups can turn up the heat with Cheeky, Spicy or Filthy.</p>
         <div class="tut-tip">Tap <b>?</b> at the top any time to see this again.</div>`
     }
@@ -806,6 +963,12 @@
     b.addEventListener('click', () => {
       S.rounds = Number(b.dataset.rounds);
       for (const x of $('roundSeg').children) x.setAttribute('aria-pressed', String(x === b));
+    });
+  }
+  for (const b of $('timerSeg').children) {
+    b.addEventListener('click', () => {
+      S.turnSecs = Number(b.dataset.secs);
+      for (const x of $('timerSeg').children) x.setAttribute('aria-pressed', String(x === b));
     });
   }
   $('goBtn').addEventListener('click', startGame);

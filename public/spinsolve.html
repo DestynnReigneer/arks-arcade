@@ -45,6 +45,15 @@
       <button data-rounds="3" aria-pressed="true">3 rounds</button>
       <button data-rounds="5" aria-pressed="false">5 rounds</button>
     </div>
+    <h2 style="margin-top:18px">Turn timer</h2>
+    <p class="hint">How long each player gets to make a move before the turn passes.</p>
+    <div class="seg" id="timerSeg">
+      <button data-secs="30" aria-pressed="false">30s</button>
+      <button data-secs="45" aria-pressed="true">45s</button>
+      <button data-secs="60" aria-pressed="false">60s</button>
+      <button data-secs="90" aria-pressed="false">90s</button>
+      <button data-secs="0" aria-pressed="false">Off</button>
+    </div>
     <button class="primary big" id="goBtn">Let's play</button>
   </div>
 </section>
@@ -57,7 +66,12 @@
   <div class="stage">
     <div class="puzzle-board" id="puzzleBoard"></div>
     <div class="host-lane" id="hostLane">
+      <div class="host heckler hidden" id="heckler" data-pose="idle" aria-hidden="true">
+        <div class="host-say" id="hecklerSay"></div>
+        <div class="host-art" id="hecklerArt"></div>
+      </div>
       <div class="host" id="host" data-pose="idle" aria-hidden="true">
+        <div class="gesture" id="hostGesture"></div>
         <div class="host-say" id="hostSay"></div>
         <div class="host-art" id="hostArt"></div>
       </div>
@@ -79,6 +93,7 @@
   </div>
 
   <div class="turn-line" id="turnLine"></div>
+  <div class="turn-timer hidden" id="turnTimer"><div class="tt-fill" id="ttFill"></div><span id="ttText"></span></div>
   <div class="row-btns actions">
     <button class="primary" id="spinBtn">🎡 Spin</button>
     <button class="ghost" id="vowelBtn">🅰️ Buy a vowel <small>$250</small></button>

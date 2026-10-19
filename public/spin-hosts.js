@@ -57,7 +57,8 @@ const SPIN_HOSTS = {
       lose: ['Skipped! Ha!'],
       spin: ['Spin harder, flesh-thing.', 'Wake me when it stops.'],
       solved: ['Show-off.', 'OK… that was pretty good.'],
-      wrong: ['Not even close, pal.']
+      wrong: ['Not even close, pal.'],
+      timeup: ['Too slow, human!', 'Snooze, you lose.']
     },
     svg: `<svg class="host-svg" viewBox="0 0 60 110">
       <defs><linearGradient id="tn-metal" x1="0" x2="1"><stop offset="0" stop-color="#9aa4b5"/><stop offset=".45" stop-color="#e6ebf2"/><stop offset="1" stop-color="#6d7688"/></linearGradient></defs>
@@ -97,6 +98,7 @@ const SPIN_HOSTS = {
       spin: ['Wheeeeooo!', 'Dwee-dwee-dwee!'],
       solved: ['Dee-doo-dweep! (You did it!)'],
       wrong: ['Bwop-bwop. (Nope.)'],
+      timeup: ['BZZZT! (Time\'s up!)'],
       vowel: ['Bip! (One vowel!)']
     },
     svg: `<svg class="host-svg" viewBox="0 0 60 110">
@@ -145,7 +147,8 @@ const SPIN_HOSTS = {
       lose: ['Oh! Dreadfully sorry.'],
       spin: ['The odds of a good spin are… oh, never mind.', 'I can\'t look!'],
       solved: ['Simply splendid!', 'Marvelous! Absolutely marvelous!'],
-      wrong: ['Oh dear, that\'s not it at all.']
+      wrong: ['Oh dear, that\'s not it at all.'],
+      timeup: ['Oh my, we\'re out of time!']
     },
     svg: `<svg class="host-svg" viewBox="0 0 60 110">
       <defs><linearGradient id="br-gold" x1="0" x2="1"><stop offset="0" stop-color="#a7741c"/><stop offset=".45" stop-color="#ffe08a"/><stop offset="1" stop-color="#8a5c12"/></linearGradient></defs>
@@ -184,7 +187,8 @@ const SPIN_HOSTS = {
       lose: ['Awww, skip.'],
       spin: ['Wheeeeee!', 'Round and rouuund!'],
       solved: ['Wheee! Yay! Yay!', 'Woo-hoo!'],
-      wrong: ['Hmm… nope!']
+      wrong: ['Hmm… nope!'],
+      timeup: ['Uh-oh! Time!']
     },
     svg: `<svg class="host-svg" viewBox="0 0 60 110">
       <defs><linearGradient id="sc-rust" x1="0" x2="1"><stop offset="0" stop-color="#b8792a"/><stop offset=".5" stop-color="#f0bf55"/><stop offset="1" stop-color="#9a5f1c"/></linearGradient></defs>
@@ -223,7 +227,8 @@ const SPIN_HOSTS = {
       lose: ['Turn forfeited.'],
       spin: ['Calculating spin…', 'Tracking wheel.'],
       solved: ['Puzzle complete. Well done.', 'Directive achieved.'],
-      wrong: ['Incorrect.']
+      wrong: ['Incorrect.'],
+      timeup: ['Time expired.']
     },
     svg: `<svg class="host-svg" viewBox="0 0 60 110">
       <defs>
@@ -257,7 +262,8 @@ const SPIN_HOSTS = {
       lose: ['It\'s OK to take a break.'],
       spin: ['Spinning gently…', 'Wheee… carefully.'],
       solved: ['You did it! Have a lollipop. 🍭', 'I am so proud of you!'],
-      wrong: ['Close! Keep thinking.']
+      wrong: ['Close! Keep thinking.'],
+      timeup: ['It\'s OK. We\'ll try again next turn.']
     },
     svg: `<svg class="host-svg" viewBox="0 0 60 110">
       <defs><radialGradient id="pf-white" cx=".4" cy=".35" r=".75"><stop offset="0" stop-color="#fff"/><stop offset=".75" stop-color="#eef1f6"/><stop offset="1" stop-color="#c9d0dc"/></radialGradient></defs>
