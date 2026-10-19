@@ -633,6 +633,57 @@ async function run({ base, root }) {
 
   ok('the arcade name endpoint answers', typeof (await wl('/arcade-info')).data.name === 'string');
 
+  // ---- Comm Center ------------------------------------------------------------
+  const asAdmin = async (p, method = 'GET', body, token = ADMIN) => {
+    const res = await fetch(base + '/api' + p, {
+      method,
+      headers: { ...(body ? { 'Content-Type': 'application/json' } : {}), 'X-Admin-Token': token },
+      body: body ? JSON.stringify(body) : undefined
+    });
+    return { status: res.status, data: await res.json().catch(() => null) };
+  };
+
+  ok('a new #1 Wordless score is announced',
+    (await wl('/comm/posts')).data.some(p => p.kind === 'highscore' && p.title.includes('EZY')));
+
+  const req = await wl('/theme-requests', 'POST', { topic: 'Bluey', requestedBy: 'Ava' });
+  const madeTheme = await asAdmin('/themes', 'POST', {
+    label: 'Bluey', emoji: '🐶', words: ['bluey', 'bingo', 'muffin', 'chilli', 'bandit', 'socks'], requestId: req.data.id
+  });
+  ok('creating a theme from a request closes the request',
+    madeTheme.status === 201 && !(await asAdmin('/theme-requests?status=pending')).data.some(r => r.id === req.data.id));
+  ok('a new theme is announced, crediting who asked',
+    (await wl('/comm/posts')).data.some(p => p.kind === 'theme' && p.body.includes('Ava')));
+
+  const fb = await wl('/comm/feedback', 'POST', { kind: 'issue', message: 'The dice are sticky', game: 'rambler' });
+  ok('players can send feedback', fb.status === 201);
+  ok('empty feedback is refused', (await wl('/comm/feedback', 'POST', { message: '  ' })).status === 400);
+  ok('the inbox is admin-only', (await asAdmin('/comm/admin/feedback', 'GET', null, 'wrong')).status === 401);
+  const moved = await asAdmin(`/comm/admin/feedback/${fb.data.id}`, 'PATCH', { status: 'completed', note: 'Wiped them' });
+  ok('the admin can change a message status', moved.data.status === 'completed' && moved.data.note === 'Wiped them');
+  ok('an unknown status is refused',
+    (await asAdmin(`/comm/admin/feedback/${fb.data.id}`, 'PATCH', { status: 'lol' })).status === 400);
+
+  const ann = await asAdmin('/comm/admin/posts', 'POST', { emoji: '🍀', title: 'GLHF', body: 'Good luck!', game: 'wordless' });
+  const feed = (await wl('/comm/posts')).data;
+  ok('the admin can post an announcement', ann.status === 201 && feed[0].title === 'GLHF' && feed[0].game === 'wordless');
+  await asAdmin(`/comm/admin/posts/${ann.data.id}`, 'DELETE');
+  ok('the admin can take a post down', !(await wl('/comm/posts')).data.some(p => p.id === ann.data.id));
+
+  // ---- adult PIN from the admin page -------------------------------------------
+  ok('a PIN must be 4-8 digits', (await asAdmin('/comm/admin/adult-pin', 'POST', { pin: '12' })).status === 400);
+  await asAdmin('/comm/admin/adult-pin', 'POST', { pin: '2468' });
+  ok('the admin can set the adult PIN', (await asAdmin('/comm/admin/adult-pin')).data.source === 'admin');
+  const lockedOut = await api('/board', 'POST', { size: 4, profile: 'adult' });
+  const pinned = await fetch(API + '/board', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Adult-Pin': '2468' },
+    body: JSON.stringify({ size: 4, profile: 'adult' })
+  });
+  ok('the new PIN guards adult boards', lockedOut.status === 403 && pinned.status === 201);
+  await asAdmin('/comm/admin/adult-pin', 'POST', { pin: '' });
+  ok('the PIN can be removed', (await api('/board', 'POST', { size: 4, profile: 'adult' })).status === 201);
+
   console.log(`\n  ${pass} passed, ${fail} failed`);
   return { pass, fail };
 }

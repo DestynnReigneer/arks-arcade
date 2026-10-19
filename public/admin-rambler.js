@@ -385,19 +385,17 @@
   }
 
   function bind() {
-    $('tabRambler').onclick = () => {
-      $('ramblerPanel').classList.remove('hidden');
-      $('wordlessPanel').classList.add('hidden');
-      $('tabRambler').setAttribute('aria-pressed', 'true');
-      $('tabWordless').setAttribute('aria-pressed', 'false');
-      refreshAll();
-    };
-    $('tabWordless').onclick = () => {
-      $('ramblerPanel').classList.add('hidden');
-      $('wordlessPanel').classList.remove('hidden');
-      $('tabRambler').setAttribute('aria-pressed', 'false');
-      $('tabWordless').setAttribute('aria-pressed', 'true');
-    };
+    // One panel per tab; admin-arcade.js listens for 'admin-tab' to load its own.
+    const TABS = { tabArcade: 'arcadePanel', tabRambler: 'ramblerPanel', tabWordless: 'wordlessPanel' };
+    function showTab(tabId) {
+      for (const [tab, panel] of Object.entries(TABS)) {
+        $(panel).classList.toggle('hidden', tab !== tabId);
+        $(tab).setAttribute('aria-pressed', String(tab === tabId));
+      }
+      if (tabId === 'tabRambler') refreshAll();
+      document.dispatchEvent(new CustomEvent('admin-tab', { detail: tabId }));
+    }
+    for (const tab of Object.keys(TABS)) $(tab).onclick = () => showTab(tab);
 
     $('intervalUnit').onchange = () => {
       $('intervalEvery').disabled = $('intervalUnit').value === 'manual';

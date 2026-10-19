@@ -4,6 +4,7 @@ const express = require('express');
 const db = require('../db');
 const seasons = require('./seasons');
 const packs = require('./packs');
+const comm = require('../arcade/comm');
 
 // Admin routes for Rambler. Mounted under /api/rambler/admin and gated by the
 // same ADMIN_TOKEN the Wordless admin already uses -- deny by default: if the
@@ -140,6 +141,14 @@ router.post('/themes', (req, res, next) => {
     const parsed = packs.parsePack(body.json !== undefined ? body.json : body);
     const created = db.createRamblerTheme(parsed);
     packs.refresh({ force: true });
+    // The home page is the kids' front door too, so adult packs stay quiet.
+    if (created.audience !== 'adult') {
+      comm.safePost({
+        kind: 'theme', emoji: created.emoji || '🎭', game: 'rambler',
+        title: `New Rambler theme pack: ${created.label}`,
+        body: `${created.label} has been added to Rambler. When it's the active pack, its words score bonus points.`
+      });
+    }
     res.status(201).json({
       theme: { ...created, words: undefined },
       skipped: parsed.skipped,

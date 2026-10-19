@@ -14,6 +14,8 @@ const dictionary = require('./rambler/dictionary');
 const ramblerRoutes = require('./rambler/routes');
 const ramblerSeasons = require('./rambler/seasons');
 const ramblerPacks = require('./rambler/packs');
+const comm = require('./arcade/comm');
+const adultPin = require('./arcade/adult-pin');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -104,6 +106,10 @@ app.get('/healthz', (req, res) => {
   }
 });
 
+// ---- Comm Center (home page message board) ----
+app.use('/api/comm/admin', comm.adminRouter(requireAdmin));
+app.use('/api/comm', comm.router);
+
 // The arcade's name for the hub page, from ARCADE_NAME in .env.
 app.get('/api/arcade-info', (req, res) => {
   res.json({ name: String(process.env.ARCADE_NAME || '').trim().slice(0, 30) });
@@ -163,6 +169,20 @@ app.post('/api/themes', requireAdmin, (req, res) => {
   }
 
   const theme = db.createTheme({ label, subject, emoji, accent, bg, fontKey, words });
+
+  // Made from a kid's suggestion? Close the request in the same step -- there
+  // is nothing left to decide once the theme exists.
+  const requestId = Number(body.requestId);
+  const request = requestId ? db.getThemeRequest(requestId) : null;
+  if (request && request.status === 'pending') db.fulfillThemeRequest(requestId, theme.id);
+
+  comm.safePost({
+    kind: 'theme', emoji, game: 'wordless',
+    title: `New Wordless theme: ${label}`,
+    body: request && request.requestedBy
+      ? `${label} is ready to play, thanks to ${request.requestedBy} for the idea!`
+      : `${label} is ready to play. Pick it from the Theme menu in Wordless.`
+  });
   res.status(201).json(theme);
 });
 
@@ -232,6 +252,14 @@ app.post('/api/leaderboard', leaderboardLimiter, (req, res) => {
   }
 
   const result = db.insertScore({ initials, themeId, won, guesses, hintsUsed, word, elapsedMs, difficulty });
+  if (won && result.rank === 1) {
+    const level = difficulty[0].toUpperCase() + difficulty.slice(1);
+    comm.safePost({
+      kind: 'highscore', emoji: '🏆', game: 'wordless',
+      title: `${initials} took #1 on Wordless ${level}`,
+      body: `${initials} just set the top Wordless ${level} score: ${result.score} points in ${guesses} guess${guesses === 1 ? '' : 'es'}. Think you can beat it?`
+    });
+  }
   res.status(201).json(result);
 });
 
@@ -269,7 +297,7 @@ app.listen(PORT, () => {
   if (!DISCORD_WEBHOOK_URL) {
     console.warn('DISCORD_WEBHOOK_URL is not set — theme request notifications will not be sent.');
   }
-  if (process.env.ADULT_PIN) {
-    console.log('ADULT_PIN is set — the unfiltered dictionary requires a PIN.');
+  if (adultPin.status().set) {
+    console.log('Adult PIN is set — adult content requires it.');
   }
 });
