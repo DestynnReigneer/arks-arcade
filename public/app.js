@@ -138,6 +138,7 @@
       else { sessionStorage.removeItem('wordless.adult'); sessionStorage.removeItem('wordless.adultPin'); }
     } catch { /* private mode */ }
     document.getElementById('adultBtn').classList.toggle('on', on);
+    document.documentElement.classList.toggle('adult-mode', on);
   }
 
   // ---- Theme select / skin ----
