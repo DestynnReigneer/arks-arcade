@@ -116,6 +116,37 @@
   .hidden { display: none !important; }
 
   /* ---- Comm Center ---- */
+  /* ---- join a game ---- */
+  .lobby {
+    width: 100%; max-width: 680px; margin: 0 0 22px;
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px;
+  }
+  .lobby-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .lobby-head h2 { margin: 0; font-size: 14px; letter-spacing: 3px; color: var(--accent-2); }
+  .lobby-list { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 8px; }
+  .lobby-list:empty { display: none; }
+  .lobby-list li {
+    display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px;
+    background: var(--card-2); border: 1px solid var(--border);
+  }
+  .lobby-list li.open { border-color: color-mix(in srgb, var(--accent-2) 55%, var(--border)); }
+  .lobby-list .l-emoji { font-size: 24px; }
+  .lobby-list .l-main { flex: 1; min-width: 0; }
+  .lobby-list .l-title { font-weight: 800; font-size: 14px; }
+  .lobby-list .l-sub { font-size: 12px; color: var(--muted); }
+  .lobby-list .l-join {
+    padding: 8px 12px; border-radius: 9px; font-weight: 800; font-size: 13px; text-decoration: none; white-space: nowrap;
+    background: var(--accent-2); color: #04121f; border: 0;
+  }
+  .lobby-list .l-join.off { background: transparent; color: var(--dim); border: 1px solid var(--border); pointer-events: none; }
+  .lobby-empty { margin: 8px 0 0; font-size: 12.5px; color: var(--dim); line-height: 1.5; }
+  .qr-card { display: flex; gap: 14px; align-items: center; margin-top: 12px; flex-wrap: wrap; }
+  .qr-card img { width: 160px; height: 160px; border-radius: 10px; background: #fff; padding: 6px; }
+  .qr-card div { flex: 1; min-width: 180px; font-size: 13px; color: var(--muted); line-height: 1.5; }
+  .qr-card b { color: var(--text); }
+  .qr-link { font-family: ui-monospace, Menlo, Consolas, monospace; color: var(--accent-2); margin: 4px 0; word-break: break-all; }
+  .qr-card p { margin: 4px 0 0; font-size: 12px; }
+
   .comm {
     margin-top: 36px; width: 100%; max-width: 680px;
     background: var(--card); border: 1px solid var(--border); border-radius: 14px;
@@ -207,6 +238,24 @@
 
 <h1 id="arcadeTitle"><span id="arcadeName"></span><span class="lit">ARCADE</span></h1>
 <div class="tagline">No accounts, no ads, no internet required.</div>
+
+<!-- Games being hosted right now, and a QR code to get other phones here -->
+<section class="lobby" aria-label="Join a game">
+  <div class="lobby-head">
+    <h2>📡 JOIN A GAME</h2>
+    <button class="hub-btn" id="qrToggle" aria-expanded="false">📱 Phone QR</button>
+  </div>
+  <div class="qr-card hidden" id="qrCard">
+    <img id="arcadeQr" class="hidden" alt="QR code for the arcade" width="180" height="180">
+    <div>
+      <b>Scan to open the arcade on another phone.</b>
+      <div class="qr-link" id="arcadeLink"></div>
+      <p>Every game's lobby has its own code too, to jump straight into that game.</p>
+    </div>
+  </div>
+  <ul class="lobby-list" id="lobbyList"></ul>
+  <p class="lobby-empty" id="lobbyEmpty">Nobody's hosting right now. Pick a game below and choose <b>Host</b> to start one; it shows up here for everyone.</p>
+</section>
 
 <div class="games">
   <a class="game wordless" href="wordless.html">
@@ -322,6 +371,7 @@
   </div>
 </div>
 
+<script src="arcade-qr.js"></script>
 <script src="hub.js"></script>
 
 </body>

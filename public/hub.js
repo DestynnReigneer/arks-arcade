@@ -15,6 +15,47 @@
     trivia: { label: 'Know-It-All', href: 'trivia.html' }
   };
 
+  // ---- join a game -----------------------------------------------------------
+  // Every room being hosted anywhere in the arcade, refreshed every few seconds.
+  const STATUS = { open: 'Join', playing: 'Playing now', full: 'Full' };
+
+  async function loadLobby() {
+    try {
+      const { rooms } = await (await fetch('/api/lobby')).json();
+      const list = $('lobbyList');
+      list.innerHTML = '';
+      for (const r of rooms) {
+        const li = document.createElement('li');
+        li.className = r.status;
+        li.innerHTML = '<span class="l-emoji"></span><span class="l-main"><div class="l-title"></div><div class="l-sub"></div></span><a class="l-join"></a>';
+        li.querySelector('.l-emoji').textContent = r.emoji;
+        li.querySelector('.l-title').textContent = `${r.label} · ${r.host || 'someone'}'s game`;
+        li.querySelector('.l-sub').textContent = `Code ${r.code} · ${r.players}/${r.max} players · ${r.detail}${r.status === 'playing' ? ' · game in progress' : ''}`;
+        const join = li.querySelector('.l-join');
+        join.textContent = STATUS[r.status];
+        if (r.status === 'open') join.href = r.href;
+        else join.classList.add('off');
+        list.appendChild(li);
+      }
+      $('lobbyEmpty').classList.toggle('hidden', rooms.length > 0);
+      const open = rooms.filter(r => r.status === 'open').length;
+      if (rooms.length && !open) $('lobbyEmpty').classList.remove('hidden');
+      $('lobbyEmpty').innerHTML = rooms.length && !open
+        ? 'Those games are full or already going. Pick a game below and choose <b>Host</b> to start your own.'
+        : 'Nobody\'s hosting right now. Pick a game below and choose <b>Host</b> to start one; it shows up here for everyone.';
+    } catch { /* the server's away; try again shortly */ }
+  }
+  loadLobby();
+  setInterval(() => { if (!document.hidden) loadLobby(); }, 5000);
+
+  $('qrToggle').onclick = () => {
+    const card = $('qrCard');
+    const opening = card.classList.contains('hidden');
+    card.classList.toggle('hidden', !opening);
+    $('qrToggle').setAttribute('aria-expanded', String(opening));
+    if (opening) ArcadeQR.show($('arcadeQr'), '/', $('arcadeLink'));
+  };
+
   // ---- the arcade's name --------------------------------------------------
   // ARCADE_NAME in .env: "ARKS" makes this the ARKS Arcade. Blank is just Arcade.
   fetch('/api/arcade-info').then(r => r.json()).then(info => {

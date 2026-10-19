@@ -321,6 +321,7 @@
   function renderLobby(snap) {
     show('lobby');
     $('lobbyCode').textContent = snap.code;
+    if ($('joinQr').dataset.code !== snap.code) { $('joinQr').dataset.code = snap.code; ArcadeQR.forGame($('joinQr'), 'trivia.html', snap.code, $('joinLink')); }
     const s = snap.settings;
     $('lobbyLevel').textContent = `${s.levelLabel} · ${s.count} questions · ${s.seconds}s each` +
       (s.drinking ? ' · 🍺 Drinking' : '') + (s.couples ? ' · 💋 Dares' : '');
