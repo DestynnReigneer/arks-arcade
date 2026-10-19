@@ -121,7 +121,8 @@ Edit these by hand — they are plain text, one word per line, `#` for comments:
 | `words/enable1.txt` | The base list (~172,000 words, public domain). |
 | `words/blocklist-kids.txt` | Base words removed from the Kids dictionary. Inflections are generated, so listing `wank` also blocks `wanks`/`wanked`/`wanker`. |
 | `words/allowlist-kids.txt` | Exact words the blocklist must never catch. Exists because inflecting stems produces false positives — `heroin` generates `HEROINES`, `bonk` generates `BONKERS`. |
-| `words/supplement-adult.txt` | Words added to the Unfiltered dictionary that ENABLE1 lacks: slang, British vernacular, anything coined recently. |
+| `words/supplement-adult.txt` | Words added to the Unfiltered dictionary that ENABLE1 lacks: American slang, anything coined recently. |
+| `words/british.txt` | British spellings (COLOUR, CENTRE, ORGANISE…) and British slang. The arcade is American English: these are stripped from the other lists and refused on load, so theme packs and admin edits can't add them back. |
 | `words/common-10k.txt` | Frequency list used only to decide which words are "common" enough to show a child on the reveal screen. |
 
 Validation always uses the full list, so a real word is never rejected as fake — only the blocked ones are. Slurs aimed at race, sexuality, or disability are in neither list.
