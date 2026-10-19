@@ -8,6 +8,7 @@ services:
       - "3000:3000"
     environment:
       - ARCADE_NAME=${ARCADE_NAME:-}
+      - TRIVIA_ONLINE=${TRIVIA_ONLINE:-}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
       - ADMIN_TOKEN=${ADMIN_TOKEN:-}
       - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}

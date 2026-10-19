@@ -306,6 +306,22 @@ async function run() {
   ok('no puzzle uses a British spelling',
     puzzles.every(p => p.answer.split(' ').every(w => !dictionary.isBritish(w.replace(/[^A-Z]/g, '')))));
 
+  console.log('\n-- know-it-all --');
+  const tbank = require(path.join(ROOT, 'trivia/bank.js'));
+  const tstore = require(path.join(ROOT, 'trivia/store.js'));
+  const TR = require(path.join(ROOT, 'public/trivia-rules.js'));
+  const badQs = Object.values(tbank.QUESTIONS).flat().filter(q => tstore.checkQuestion(q).error)
+    .map(q => `${q.question} (${tstore.checkQuestion(q).error})`);
+  ok('every built-in question passes the pack checks', badQs.length === 0, badQs.join('; '));
+  ok('every level has its own questions', ['kids', 'cheeky', 'spicy', 'filthy'].every(l => tbank.QUESTIONS[l].length >= 20));
+  ok('faster right answers score more', TR.points('hard', true, 9000, 10000) > TR.points('hard', true, 1000, 10000));
+  ok('wrong answers score nothing', TR.points('hard', false, 9000, 10000) === 0);
+  const calls = TR.afterQuestion([{ id: 'a', name: 'A', correct: false, streak: 0 }, { id: 'b', name: 'B', correct: true, streak: 3 }],
+    { drinking: true, couples: true, drinks: tbank.DRINKS.spicy, dares: tbank.DARES.spicy, rand: () => 0 });
+  ok('drinking: the wrong one drinks and a streak gives drinks', calls.some(c => c.kind === 'drink' && c.who === 'a') && calls.some(c => c.kind === 'drink' && c.who === 'b'));
+  ok('couples: someone who missed gets a dare', calls.some(c => c.kind === 'dare' && c.who === 'a'));
+  ok('no drinking, no dares when they are off', TR.afterQuestion([{ id: 'a', correct: false, streak: 0 }], { drinks: tbank.DRINKS.spicy, dares: tbank.DARES.spicy }).length === 0);
+
   console.log(`\n  ${pass} passed, ${fail} failed`);
   return { pass, fail };
 }

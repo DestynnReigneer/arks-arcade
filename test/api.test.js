@@ -703,10 +703,10 @@ async function run({ base, root }) {
 
   // ---- home page game order -------------------------------------------------------
   const startInfo = (await wl('/arcade-info')).data;
-  ok('the home page gets every game in an order', startInfo.games.order.length === 6 && startInfo.games.hidden.length === 0);
+  ok('the home page gets every game in an order', startInfo.games.order.length === 7 && startInfo.games.hidden.length === 0);
   const reordered = await asAdmin('/comm/admin/home-games', 'POST', { order: ['dino', 'chess'], hidden: ['shortfuse'] });
   ok('the admin can reorder and hide games', reordered.status === 200 && reordered.data.order[0] === 'dino' &&
-    reordered.data.order.length === 6 && reordered.data.hidden.join() === 'shortfuse', JSON.stringify(reordered.data));
+    reordered.data.order.length === 7 && reordered.data.hidden.join() === 'shortfuse', JSON.stringify(reordered.data));
   ok('the home page sees the new order', (await wl('/arcade-info')).data.games.order[0] === 'dino');
   ok('hiding every game is refused', (await asAdmin('/comm/admin/home-games', 'POST', {
     order: startInfo.games.order, hidden: startInfo.games.order })).status === 400);
@@ -836,6 +836,62 @@ async function run({ base, root }) {
   ok('the adult score board needs the PIN', (await wl('/scores/spinsolve?board=adult')).status === 403);
   ok('…shows with it', (await pinGet('/scores/spinsolve?board=adult', '2468')).data.some(r => r.initials === 'XXX'));
   ok('…and adult #1s are never announced', !(await wl('/comm/posts')).data.some(p => p.title.includes('XXX took #1 on Spin')));
+
+  // ---- Know-It-All (trivia) --------------------------------------------------------
+  const tcfg = (await wl('/trivia/config')).data;
+  ok('trivia has four levels', tcfg.levels.map(l => l.id).join() === 'kids,cheeky,spicy,filthy');
+  ok('…with family genres listed and adult ones hidden until unlocked', tcfg.levels[0].genres.length >= 8 && tcfg.levels[3].genres.length === 0);
+  ok('the Open Trivia DB credit is shown', /opentdb\.com/.test(tcfg.credit));
+  const famQs = (await wl('/trivia/questions?level=kids&count=10&genres=Animals,Science')).data;
+  ok('family questions come dealt, answers shuffled with the right one marked', famQs.questions.length === 10 &&
+    famQs.questions.every(q => q.answers[q.correctIndex] === q.correct && ['Animals', 'Science'].includes(q.genre)));
+  ok('family games get no drinks or dares', famQs.drinks === null && famQs.dares === null);
+  ok('filthy questions need the PIN', (await wl('/trivia/questions?level=filthy')).status === 403);
+  const filthyQs = (await pinGet('/trivia/questions?level=filthy&count=5', '2468')).data;
+  ok('…and come with drinking rules and dares', filthyQs.questions.length === 5 && !!filthyQs.drinks.wrong && filthyQs.dares.length >= 5);
+  ok('topic requests are accepted', (await wl('/trivia/requests', 'POST', { topic: 'Pokemon' })).status === 201);
+  ok('…and show up for the admin', (await asAdmin('/trivia/admin/requests')).data.some(r => r.topic === 'Pokemon'));
+  const tpack = await asAdmin('/trivia/admin/packs', 'POST', {
+    label: 'Space', emoji: '🚀', genre: 'Space', level: 'kids', questions: [
+      { question: 'What planet do we live on?', correct: 'Earth', wrong: ['Mars', 'Venus', 'Pluto'], difficulty: 'easy' },
+      { question: 'What is the biggest planet?', correct: 'Jupiter', wrong: ['Saturn', 'Earth', 'Mars'], difficulty: 'easy' },
+      { question: 'How many moons does Mars have?', correct: '2', wrong: ['0', '1', '4'], difficulty: 'medium' },
+      { question: 'What is the hottest planet?', correct: 'Venus', wrong: ['Mercury', 'Mars', 'Jupiter'], difficulty: 'medium' },
+      { question: 'Which planet has a Great Red Spot?', correct: 'Jupiter', wrong: ['Mars', 'Saturn', 'Neptune'], difficulty: 'hard' },
+      { question: 'What colour is the Moon?', correct: 'Gray', wrong: ['Red', 'Blue', 'Green'] },
+      { question: 'Broken?', correct: 'A', wrong: ['A'] }
+    ]
+  });
+  ok('a pack is made from pasted questions', tpack.status === 201 && tpack.data.pack.count === 5, JSON.stringify(tpack.data));
+  ok('…skipping British spelling and broken ones', tpack.data.skipped.length === 2);
+  ok('…and it is announced', (await wl('/comm/posts')).data.some(p => p.title.includes('Know-It-All questions: Space')));
+  ok('you can play just that pack', (await wl(`/trivia/questions?pack=${tpack.data.pack.id}&count=10`)).data.questions.length === 5);
+
+  // A room game from start to finish
+  const th = (await wl('/trivia/rooms', 'POST', { name: 'Sam', settings: { level: 'kids', count: 5, seconds: 30 } })).data;
+  const tg = (await wl(`/trivia/rooms/${th.code}/join`, 'POST', { name: 'Alex' })).data;
+  ok('players can join a trivia room', !!tg.playerId);
+  ok('an adult room needs the PIN to make', (await wl('/trivia/rooms', 'POST', { name: 'X', settings: { level: 'spicy' } })).status === 403);
+  const troom = async who => (await wl(`/trivia/rooms/${th.code}?playerId=${who.playerId}&token=${who.token}`)).data;
+  const tpost = (who, path, body = {}) => wl(`/trivia/rooms/${th.code}/${path}`, 'POST', { playerId: who.playerId, token: who.token, ...body });
+  ok('only the host can start', (await tpost(tg, 'start')).status === 403);
+  await tpost(th, 'start');
+  let snapT = await troom(th);
+  ok('the game starts on question 1, with no answer key sent', snapT.phase === 'question' && snapT.question.index === 0 &&
+    snapT.reveal === null && !('correctIndex' in snapT.question));
+  for (let i = 0; i < 5; i++) {
+    await tpost(th, 'answer', { choice: 0 });
+    await tpost(tg, 'answer', { choice: 1 });
+    snapT = await troom(th);
+    if (i === 0) {
+      ok('everyone answering reveals the answer right away', snapT.phase === 'reveal' && Number.isInteger(snapT.reveal.correctIndex));
+      ok('…and scores the right answer', snapT.reveal.results.every(r => r.correct ? r.points >= 100 : r.points === 0));
+      ok('answering twice is refused', (await tpost(th, 'answer', { choice: 2 })).status === 409);
+    }
+    await tpost(th, 'next');
+  }
+  snapT = await troom(tg);
+  ok('after the last question the game is over with standings', snapT.phase === 'over' && snapT.finale.standings.length === 2);
 
   // ---- Short Fuse -----------------------------------------------------------------
   const SF = base + '/api/shortfuse';

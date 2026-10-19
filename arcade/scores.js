@@ -16,7 +16,8 @@ const GAMES = {
   // Adult boards are read only with the adult PIN and never announced.
   spinsolve: { label: 'Spin & Solve', boards: { solo: 'Solo', adult: 'Adult' }, adultBoards: ['adult'], max: 200000 },
   chess: { label: 'Chess', boards: { easy: 'vs Easy', medium: 'vs Medium', hard: 'vs Hard' }, max: 5000 },
-  dino: { label: 'Dino Dash', boards: { run: 'Distance' }, max: 9999999 }
+  dino: { label: 'Dino Dash', boards: { run: 'Distance' }, max: 9999999 },
+  trivia: { label: 'Know-It-All', boards: { solo: 'Family', adult: 'Adult' }, adultBoards: ['adult'], max: 30000 }
 };
 
 const INITIALS_RE = /^[A-Z0-9]{1,3}$/;

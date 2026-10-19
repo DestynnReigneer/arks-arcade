@@ -11,7 +11,8 @@
     shortfuse: { label: 'Short Fuse', href: 'shortfuse.html' },
     spinsolve: { label: 'Spin & Solve', href: 'spinsolve.html' },
     chess: { label: 'Chess', href: 'chess.html' },
-    dino: { label: 'Dino Dash', href: 'dino.html' }
+    dino: { label: 'Dino Dash', href: 'dino.html' },
+    trivia: { label: 'Know-It-All', href: 'trivia.html' }
   };
 
   // ---- the arcade's name --------------------------------------------------
