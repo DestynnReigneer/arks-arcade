@@ -615,6 +615,9 @@ async function run({ base, root }) {
   };
 
   const classic = (await wl('/themes')).data.find(t => t.id === 'classic');
+  // Regression: Rambler's theme packs once had a same-named row mapper that
+  // silently replaced this one, and every Wordless theme lost its subject.
+  ok('Wordless themes keep their subject and font', classic.subject === 'word' && !!classic.font);
   ok('classic has words for every difficulty',
     [[3, 4], [5, 6], [7, 8], [9, 10]].every(([lo, hi]) => classic.words.some(w => w.length >= lo && w.length <= hi)));
 
@@ -681,6 +684,65 @@ async function run({ base, root }) {
     body: JSON.stringify({ size: 4, profile: 'adult' })
   });
   ok('the new PIN guards adult boards', lockedOut.status === 403 && pinned.status === 201);
+  // ---- adult Wordless themes ---------------------------------------------------
+  await asAdmin('/themes', 'POST', {
+    label: 'Naughty', emoji: '😈', words: ['booty', 'cheeky', 'frisky', 'spank', 'naughty'], adult: true
+  });
+  const pinGet = async (p, pin) => {
+    const res = await fetch(base + '/api' + p, { headers: pin ? { 'X-Adult-Pin': pin } : {} });
+    return { status: res.status, data: await res.json().catch(() => null) };
+  };
+  ok('adult themes are hidden by default', !(await wl('/themes')).data.some(t => t.adult));
+  ok('a wrong PIN does not show them', (await pinGet('/themes?adult=1', '0000')).status === 403);
+  ok('the right PIN shows them', (await pinGet('/themes?adult=1', '2468')).data.some(t => t.label === 'Naughty'));
+  ok('the admin always sees them', (await asAdmin('/themes')).data.some(t => t.label === 'Naughty'));
+  ok('adult themes are never announced', !(await wl('/comm/posts')).data.some(p => p.title.includes('Naughty')));
+  const naughtyId = (await asAdmin('/themes')).data.find(t => t.label === 'Naughty').id;
+  await wl('/leaderboard', 'POST', { initials: 'XXX', themeId: naughtyId, won: true, guesses: 1, hintsUsed: 0, word: 'spank', elapsedMs: 1000, difficulty: 'normal' });
+  ok('adult-theme scores stay off the kids board', !(await wl('/leaderboard?difficulty=normal')).data.some(r => r.initials === 'XXX'));
+  ok('…and show once unlocked', (await pinGet('/leaderboard?difficulty=normal&adult=1', '2468')).data.some(r => r.initials === 'XXX'));
+
+  // ---- Short Fuse -----------------------------------------------------------------
+  const SF = base + '/api/shortfuse';
+  const sf = async (p, method = 'GET', body, headers = {}) => {
+    const res = await fetch(SF + p, {
+      method,
+      headers: { ...(body ? { 'Content-Type': 'application/json' } : {}), ...headers },
+      body: body ? JSON.stringify(body) : undefined
+    });
+    return { status: res.status, data: await res.json().catch(() => null) };
+  };
+
+  const sfConfig = (await sf('/config')).data;
+  ok('Short Fuse has a kids deck and three spice levels', sfConfig.levels.length === 4 && sfConfig.levels.filter(l => l.adult).length === 3);
+  ok('adult decks need the PIN', (await sf('/local', 'POST', { names: ['A', 'B'], level: 'filthy' })).status === 403);
+  const spicy = await sf('/local', 'POST', { names: ['A', 'B'], level: 'spicy' }, { 'X-Adult-Pin': '2468' });
+  ok('the PIN unlocks them', spicy.status === 201 && spicy.data.game.level === 'spicy');
+
+  const loc = await sf('/local', 'POST', { names: ['Ann', 'Bob', 'Cat'], level: 'kids' });
+  ok('a shared-phone game deals everyone in', loc.status === 201 && Object.values(loc.data.game.hands).every(h => h.length === 7));
+  const tok = { 'X-Table-Token': loc.data.token };
+  ok('a shared-phone game needs its token', (await sf(`/local/${loc.data.id}`)).status === 403);
+  const turnSeat = loc.data.game.turn;
+  const notTurn = loc.data.game.seats.find(s => s.id !== turnSeat).id;
+  ok('only the player whose turn it is can draw',
+    (await sf(`/local/${loc.data.id}/act`, 'POST', { action: 'draw', as: notTurn }, tok)).status === 409);
+  const afterDraw = await sf(`/local/${loc.data.id}/act`, 'POST', { action: 'draw', as: turnSeat }, tok);
+  ok('drawing ends the turn', afterDraw.status === 200 && (afterDraw.data.game.turn !== turnSeat || afterDraw.data.game.phase === 'defuse'));
+
+  const sfHost = await sf('/rooms', 'POST', { name: 'Host', level: 'kids' });
+  ok('a host gets a room code', sfHost.status === 201 && /^[A-Z0-9]{4}$/.test(sfHost.data.code));
+  const sfGuest = await sf(`/rooms/${sfHost.data.code}/join`, 'POST', { name: 'Guest' });
+  ok('a guest can join with the code', sfGuest.status === 201);
+  ok('only the host can start', (await sf(`/rooms/${sfHost.data.code}/start`, 'POST', { playerId: sfGuest.data.playerId, token: sfGuest.data.token })).status === 403);
+  await sf(`/rooms/${sfHost.data.code}/start`, 'POST', { playerId: sfHost.data.playerId, token: sfHost.data.token });
+  const hostView = (await sf(`/rooms/${sfHost.data.code}?playerId=${sfHost.data.playerId}&token=${sfHost.data.token}`)).data;
+  ok('each phone sees only its own hand', hostView.game.hand.length === 7 && !hostView.game.hands);
+  ok('nobody joins mid-game', (await sf(`/rooms/${sfHost.data.code}/join`, 'POST', { name: 'Late' })).status === 409);
+  await sf(`/rooms/${sfHost.data.code}/leave`, 'POST', { playerId: sfGuest.data.playerId, token: sfGuest.data.token });
+  const solo = (await sf(`/rooms/${sfHost.data.code}?playerId=${sfHost.data.playerId}&token=${sfHost.data.token}`)).data;
+  ok('the last one left in a room wins', solo.game.phase === 'over' && solo.game.winner === sfHost.data.playerId);
+
   await asAdmin('/comm/admin/adult-pin', 'POST', { pin: '' });
   ok('the PIN can be removed', (await api('/board', 'POST', { size: 4, profile: 'adult' })).status === 201);
 

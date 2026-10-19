@@ -19,6 +19,7 @@
   <div id="themeBar">
     <label for="themeSelect">Theme</label>
     <select id="themeSelect"></select>
+    <button id="adultBtn" class="small-btn" title="Adult themes">🔞</button>
     <button id="difficultyBtn" class="small-btn">🎚️ <span id="difficultyLabel">Normal</span></button>
     <button id="suggestThemeBtn" class="small-btn">💡 Suggest a Theme</button>
   </div>
@@ -58,6 +59,20 @@
   <div class="overlay-card">
     <h2 class="difficulty-title">How hard?</h2>
     <div id="difficultyChoices" class="difficulty-choices"></div>
+  </div>
+</div>
+
+<!-- Adult themes unlock -->
+<div id="adultOverlay" class="overlay hidden">
+  <div class="overlay-card">
+    <h2 class="difficulty-title">🔞 Adult themes</h2>
+    <div id="adultHint" class="hint-text" style="margin-bottom:12px">Naughty themes for grown-ups.</div>
+    <input type="password" id="adultPinInput" inputmode="numeric" maxlength="8" class="pin-box" placeholder="PIN" autocomplete="off">
+    <div id="adultError" class="form-error"></div>
+    <div class="overlay-actions">
+      <button id="adultCancelBtn" class="ghost-btn">Cancel</button>
+      <button id="adultOkBtn" class="primary-btn">Unlock</button>
+    </div>
   </div>
 </div>
 

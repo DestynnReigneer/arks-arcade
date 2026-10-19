@@ -82,6 +82,7 @@
     border-radius: 7px; padding: 8px 9px; font-family: inherit; font-size: 13px; resize: vertical;
   }
   .admin-note { font-size: 12px; opacity: 0.7; margin: 0 0 8px; line-height: 1.5; }
+  .check-row { display: flex; align-items: center; gap: 8px; font-size: 13px; margin: 10px 0 6px; cursor: pointer; }
   .quick-posts { display: flex; gap: 6px; flex-wrap: wrap; }
   .quick-posts button {
     padding: 5px 10px; border-radius: 20px; font-size: 12px; cursor: pointer;
@@ -221,6 +222,7 @@
             <option value="">No button</option>
             <option value="wordless">Wordless</option>
             <option value="rambler">Rambler</option>
+            <option value="shortfuse">Short Fuse</option>
           </select>
         </div>
         <button class="small-btn" id="postBtn">Post to home page</button>
@@ -386,7 +388,16 @@
     </div>
 
     <div class="admin-section">
-      <h2>✨ Create Theme From JSON</h2>
+      <h2>✨ Create a Theme</h2>
+      <div class="field-row" style="margin-top:0">
+        <div class="grow">
+          <label for="newTopic">Topic</label>
+          <input type="text" id="newTopic" maxlength="60" placeholder="e.g. Bluey, Pokémon, 90s movies" style="width:100%">
+        </div>
+        <button class="small-btn" id="copyNewPromptBtn">📋 Copy prompt</button>
+      </div>
+      <label class="check-row"><input type="checkbox" id="newAdult"> 🔞 Adult theme: naughty words, hidden behind the adult PIN</label>
+      <p class="admin-note">Paste the prompt into any AI chatbot, then paste its answer below.</p>
       <p style="font-size:12px; opacity:0.7; margin-top:0;">Paste the JSON a chatbot (or you, by hand) generated for a topic.</p>
       <textarea id="jsonInput" rows="6" placeholder='{"label":"Bluey","subject":"Bluey character","emoji":"🐶","accent":"#4fb8e8","bg":"#0d1a22","fontKey":"comic","words":["bluey","bingo","muffin","chilli","bandit","socks"]}'></textarea>
       <button id="createFromJsonBtn" class="primary-btn" style="border:none;border-radius:8px;padding:10px 16px;font-weight:700;cursor:pointer;margin-top:8px;">Create Theme</button>

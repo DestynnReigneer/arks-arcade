@@ -12,7 +12,7 @@
     completed: '✅ Completed', cancelled: '🚫 Cancelled'
   };
   const KIND_LABELS = { feature: '💡 Feature idea', issue: '🐛 Issue', message: '💬 Message' };
-  const GAME_LABELS = { wordless: 'Wordless', rambler: 'Rambler' };
+  const GAME_LABELS = { wordless: 'Wordless', rambler: 'Rambler', shortfuse: 'Short Fuse' };
 
   // One-tap posts. Gaming culture is half the fun of the board.
   const QUICK_POSTS = [

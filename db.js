@@ -236,6 +236,9 @@ db.exec(`
   );
 `);
 
+// Adult-only Wordless themes, hidden until the adult PIN is entered.
+ensureColumn('themes', 'adult', 'INTEGER NOT NULL DEFAULT 0');
+
 // Wordless difficulty. Scores from before it existed were all the old
 // any-length game, which is closest to Normal.
 ensureColumn('scores', 'difficulty', "TEXT NOT NULL DEFAULT 'normal'");
@@ -337,12 +340,15 @@ function rowToTheme(row) {
     bg: row.bg,
     font: row.font,
     words: JSON.parse(row.words),
-    builtin: !!row.builtin
+    builtin: !!row.builtin,
+    adult: !!row.adult
   };
 }
 
-function listThemes() {
-  const rows = db.prepare('SELECT * FROM themes ORDER BY builtin DESC, created_at ASC').all();
+function listThemes({ includeAdult = false } = {}) {
+  const rows = db.prepare(`
+    SELECT * FROM themes ${includeAdult ? '' : 'WHERE adult = 0'} ORDER BY builtin DESC, adult ASC, created_at ASC
+  `).all();
   return rows.map(rowToTheme);
 }
 
@@ -358,7 +364,7 @@ function slugify(text) {
     .slice(0, 24) || 'theme';
 }
 
-function createTheme({ label, subject, emoji, accent, bg, fontKey, words }) {
+function createTheme({ label, subject, emoji, accent, bg, fontKey, words, adult = false }) {
   const base = slugify(label);
   let id = base;
   let n = 1;
@@ -367,9 +373,9 @@ function createTheme({ label, subject, emoji, accent, bg, fontKey, words }) {
   }
   const font = FONT_STACKS[fontKey] || FONT_STACKS.sans;
   db.prepare(`
-    INSERT INTO themes (id, label, subject, emoji, accent, bg, font, words, builtin)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
-  `).run(id, label, subject, emoji, accent, bg, font, JSON.stringify(words));
+    INSERT INTO themes (id, label, subject, emoji, accent, bg, font, words, builtin, adult)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
+  `).run(id, label, subject, emoji, accent, bg, font, JSON.stringify(words), adult ? 1 : 0);
   return getTheme(id);
 }
 
@@ -422,10 +428,12 @@ function insertScore({ initials, themeId, won, guesses, hintsUsed, word, elapsed
   return { id: info.lastInsertRowid, score, rank, difficulty };
 }
 
-function listLeaderboard({ themeId, difficulty, limit }) {
+function listLeaderboard({ themeId, difficulty, limit, includeAdult = false }) {
   const cap = Math.min(Math.max(parseInt(limit, 10) || 25, 1), 100);
   const where = [];
   const args = [];
+  // Scores on adult themes would put adult theme names on the kids' board.
+  if (!includeAdult) where.push('theme_id NOT IN (SELECT id FROM themes WHERE adult = 1)');
   if (themeId && themeId !== 'all') { where.push('theme_id = ?'); args.push(themeId); }
   if (difficulty && difficulty !== 'all') { where.push('difficulty = ?'); args.push(difficulty); }
   const rows = db.prepare(`
@@ -560,7 +568,7 @@ function listRamblerLeaderboard({ profile, boardSize, mode, limit }) {
 
 // ---- Rambler theme packs ----
 
-function rowToTheme(r) {
+function rowToRamblerTheme(r) {
   if (!r) return null;
   let words = [];
   try { words = JSON.parse(r.words); } catch { words = []; }
@@ -580,11 +588,11 @@ function rowToTheme(r) {
 }
 
 function listRamblerThemes() {
-  return db.prepare('SELECT * FROM rambler_themes ORDER BY created_at ASC').all().map(rowToTheme);
+  return db.prepare('SELECT * FROM rambler_themes ORDER BY created_at ASC').all().map(rowToRamblerTheme);
 }
 
 function getRamblerTheme(id) {
-  return rowToTheme(db.prepare('SELECT * FROM rambler_themes WHERE id = ?').get(String(id || '')));
+  return rowToRamblerTheme(db.prepare('SELECT * FROM rambler_themes WHERE id = ?').get(String(id || '')));
 }
 
 function themeSlug(label) {

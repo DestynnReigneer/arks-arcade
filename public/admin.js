@@ -16,6 +16,15 @@
 
   let token = '';
 
+  // Same shape, but for grown-ups: the words are the joke.
+  function buildAdultPrompt(topic) {
+    return buildPrompt(topic)
+      .replace('Keep every word family-friendly.',
+        'This is an ADULTS-ONLY theme for a private party game among consenting adults. Make the words cheeky, naughty and funny: innuendo, rude slang and swear words are welcome. No slurs or hateful terms.')
+      .replace('(Easy: simple words a young child knows)', '(Easy: short, punchy rude words)')
+      .replace('"label": "Short display name for the theme",', '"label": "Short display name for the theme",\n  "adult": true,');
+  }
+
   function buildPrompt(topic) {
     return `Create a word-guessing game "theme pack" for the topic: ${topic}.
 
@@ -147,7 +156,7 @@ No duplicates. Keep every word family-friendly.`;
       const row = document.createElement('div');
       row.className = 'theme-row';
       row.innerHTML = `
-        <span>${t.emoji} ${escapeHtml(t.label)} ${t.builtin ? '<span style="opacity:0.4">(built-in)</span>' : ''}</span>
+        <span>${t.emoji} ${escapeHtml(t.label)} ${t.builtin ? '<span style="opacity:0.4">(built-in)</span>' : ''}${t.adult ? ' <span style="color:#ff9a9a">🔞 adult</span>' : ''} <span style="opacity:0.4">· ${t.words.length} words</span></span>
         ${t.builtin ? '' : '<button data-action="delete" style="background:transparent;border:1px solid #7f3a3a;color:#f5a3a3;border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;">🗑 Delete</button>'}
       `;
       if (!t.builtin) {
@@ -165,6 +174,20 @@ No duplicates. Keep every word family-friendly.`;
     });
   }
 
+  document.getElementById('copyNewPromptBtn').addEventListener('click', async (e) => {
+    const topic = document.getElementById('newTopic').value.trim();
+    if (!topic) {
+      jsonStatus.textContent = 'Type a topic first.';
+      jsonStatus.className = 'status-msg error';
+      return;
+    }
+    const adult = document.getElementById('newAdult').checked;
+    await navigator.clipboard.writeText(adult ? buildAdultPrompt(topic) : buildPrompt(topic));
+    const btn = e.target;
+    btn.textContent = '✓ Copied!';
+    setTimeout(() => { btn.textContent = '📋 Copy prompt'; }, 1500);
+  });
+
   createFromJsonBtn.addEventListener('click', async () => {
     jsonStatus.textContent = '';
     jsonStatus.className = 'status-msg';
@@ -177,7 +200,8 @@ No duplicates. Keep every word family-friendly.`;
       return;
     }
     try {
-      await apiPost('/api/themes', parsed);
+      // Adult if either the box is ticked or the adult prompt's answer says so.
+      await apiPost('/api/themes', { ...parsed, adult: document.getElementById('newAdult').checked || parsed.adult === true });
       jsonInput.value = '';
       jsonStatus.textContent = 'Theme created!';
       jsonStatus.className = 'status-msg ok';

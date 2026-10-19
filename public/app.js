@@ -104,8 +104,8 @@
   ];
 
   // ---- API helpers ----
-  async function apiGet(url) {
-    const res = await fetch(url);
+  async function apiGet(url, headers) {
+    const res = await fetch(url, headers ? { headers } : undefined);
     if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Request failed');
     return res.json();
   }
@@ -119,6 +119,27 @@
     if (!res.ok) throw new Error(data.error || 'Request failed');
     return data;
   }
+  // ---- Adult themes ----
+  // Hidden until unlocked with the arcade's adult PIN (or a one-tap "I'm an
+  // adult" when no PIN is set). Remembered for this browser tab only.
+  const adult = {
+    on: (() => { try { return sessionStorage.getItem('wordless.adult') === 'on'; } catch { return false; } })(),
+    pin: (() => { try { return sessionStorage.getItem('wordless.adultPin') || ''; } catch { return ''; } })(),
+    requiresPin: false
+  };
+  const adultQuery = sep => (adult.on ? `${sep}adult=1` : '');
+  const adultHeaders = () => (adult.on && adult.pin ? { 'X-Adult-Pin': adult.pin } : undefined);
+
+  function setAdult(on, pin = '') {
+    adult.on = on;
+    adult.pin = on ? pin : '';
+    try {
+      if (on) { sessionStorage.setItem('wordless.adult', 'on'); sessionStorage.setItem('wordless.adultPin', adult.pin); }
+      else { sessionStorage.removeItem('wordless.adult'); sessionStorage.removeItem('wordless.adultPin'); }
+    } catch { /* private mode */ }
+    document.getElementById('adultBtn').classList.toggle('on', on);
+  }
+
   // ---- Theme select / skin ----
   function populateThemeSelect() {
     themeSelect.innerHTML = "";
@@ -126,14 +147,17 @@
     builtinGroup.label = "Built-in";
     const customGroup = document.createElement('optgroup');
     customGroup.label = "Custom";
+    const adultGroup = document.createElement('optgroup');
+    adultGroup.label = "🔞 Adult";
     themes.forEach(t => {
       const opt = document.createElement('option');
       opt.value = t.id;
       opt.textContent = `${t.emoji} ${t.label}`;
-      (t.builtin ? builtinGroup : customGroup).appendChild(opt);
+      (t.adult ? adultGroup : t.builtin ? builtinGroup : customGroup).appendChild(opt);
     });
     themeSelect.appendChild(builtinGroup);
     if (customGroup.children.length) themeSelect.appendChild(customGroup);
+    if (adultGroup.children.length) themeSelect.appendChild(adultGroup);
   }
 
   function applyThemeSkin(theme) {
@@ -155,8 +179,55 @@
   }
 
   async function refreshThemes() {
-    themes = await apiGet('/api/themes');
+    try {
+      themes = await apiGet('/api/themes' + adultQuery('?'), adultHeaders());
+    } catch (e) {
+      // A PIN changed since this tab unlocked: quietly go back to family mode.
+      if (!adult.on) throw e;
+      setAdult(false);
+      themes = await apiGet('/api/themes');
+    }
     populateThemeSelect();
+  }
+
+  async function openAdult() {
+    if (adult.on) {
+      setAdult(false);
+      await refreshThemes();
+      if (currentTheme && currentTheme.adult) { setTheme('classic'); newGame(); }
+      else themeSelect.value = currentTheme.id;
+      showMessage('Adult themes hidden.');
+      return;
+    }
+    const pinInput = document.getElementById('adultPinInput');
+    pinInput.value = '';
+    pinInput.classList.toggle('hidden', !adult.requiresPin);
+    document.getElementById('adultError').textContent = '';
+    document.getElementById('adultHint').textContent = adult.requiresPin
+      ? 'Naughty themes for grown-ups. Enter the adult PIN.'
+      : 'Naughty themes for grown-ups. Are you 18 or older?';
+    document.getElementById('adultOkBtn').textContent = adult.requiresPin ? 'Unlock' : "I'm an adult";
+    document.getElementById('adultOverlay').classList.remove('hidden');
+    if (adult.requiresPin) pinInput.focus();
+  }
+
+  async function confirmAdult() {
+    const pin = document.getElementById('adultPinInput').value.trim();
+    const err = document.getElementById('adultError');
+    try {
+      if (adult.requiresPin) {
+        const r = await apiPost('/api/adult-check', { pin });
+        if (!r.ok) { err.textContent = 'That PIN is not right.'; return; }
+      }
+      setAdult(true, pin);
+      document.getElementById('adultOverlay').classList.add('hidden');
+      await refreshThemes();
+      themeSelect.value = currentTheme.id;
+      const first = themes.find(t => t.adult);
+      showMessage(first ? 'Adult themes unlocked — pick one from the Theme menu. 😈' : 'Unlocked, but no adult themes have been made yet.');
+    } catch (e) {
+      err.textContent = e.message;
+    }
   }
 
   // ---- Board / keyboard ----
@@ -427,12 +498,17 @@
     if (!leaderboardOverlay.classList.contains('hidden')) return;
     if (!themeRequestOverlay.classList.contains('hidden')) return;
     if (!difficultyOverlay.classList.contains('hidden')) return;
+    if (!document.getElementById('adultOverlay').classList.contains('hidden')) return;
     handleKey(e.key);
   });
 
   newGameBtn.addEventListener('click', newGame);
   hintBtn.addEventListener('click', useHint);
   difficultyBtn.addEventListener('click', openDifficulty);
+  document.getElementById('adultBtn').addEventListener('click', openAdult);
+  document.getElementById('adultOkBtn').addEventListener('click', confirmAdult);
+  document.getElementById('adultCancelBtn').addEventListener('click', () => document.getElementById('adultOverlay').classList.add('hidden'));
+  document.getElementById('adultPinInput').addEventListener('keydown', e => { if (e.key === 'Enter') confirmAdult(); });
   themeSelect.addEventListener('change', (e) => { setTheme(e.target.value); newGame(); });
 
   // ---- End of game / scoring / initials ----
@@ -574,7 +650,7 @@
     populateDifficultyFilter(level || leaderboardDifficultyFilter.value || difficulty);
     try {
       const rows = await apiGet(`/api/leaderboard?theme=${encodeURIComponent(leaderboardThemeFilter.value)}` +
-        `&difficulty=${encodeURIComponent(leaderboardDifficultyFilter.value)}&limit=25`);
+        `&difficulty=${encodeURIComponent(leaderboardDifficultyFilter.value)}&limit=25` + adultQuery('&'), adultHeaders());
       renderLeaderboard(rows, highlightId);
     } catch (e) {
       leaderboardList.innerHTML = `<div class="lb-empty">${escapeHtml(e.message)}</div>`;
@@ -622,6 +698,8 @@
 
   // ---- Init ----
   (async function init() {
+    try { adult.requiresPin = !!(await apiGet('/api/arcade-info')).adultRequiresPin; } catch { /* assume no PIN */ }
+    setAdult(adult.on, adult.pin);
     await refreshThemes();
     const savedId = safeStorageGet(THEME_KEY);
     const initial = themes.find(t => t.id === savedId) || themes.find(t => t.id === 'classic') || themes[0];
