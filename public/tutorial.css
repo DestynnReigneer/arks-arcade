@@ -1,0 +1,48 @@
+/* The arcade's shared how-to-play walkthrough. Picks up each game's --accent
+   so it matches whatever page it is on. */
+.tut-overlay {
+  position: fixed; inset: 0; z-index: 100; background: rgba(5, 4, 12, 0.84);
+  display: flex; align-items: center; justify-content: center; padding: 16px;
+}
+.tut-overlay[hidden] { display: none; }
+.tut-card {
+  position: relative; width: 100%; max-width: 440px; max-height: calc(100vh - 32px); overflow-y: auto;
+  background: #1c1a2b; color: #f4ecd0; border: 1px solid rgba(244, 236, 208, 0.14);
+  border-radius: 16px; padding: 26px 22px 18px; text-align: center;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
+}
+.tut-x {
+  position: absolute; top: 10px; right: 10px; width: 34px; height: 34px; border-radius: 9px;
+  background: transparent; color: inherit; border: 1px solid rgba(244, 236, 208, 0.14); cursor: pointer; font-size: 14px;
+}
+.tut-emoji { font-size: 52px; line-height: 1; min-height: 52px; }
+.tut-title { margin: 12px 0 10px; font-size: 21px; letter-spacing: 0.5px; color: var(--accent, #ffc72c); }
+.tut-body { font-size: 15px; line-height: 1.6; color: #e3d9bb; text-align: left; }
+.tut-body p { margin: 0 0 10px; }
+.tut-body b { color: #fff6dc; }
+.tut-body ol, .tut-body ul { margin: 0 0 10px; padding-left: 22px; }
+.tut-body li { margin-bottom: 6px; }
+.tut-body .tut-tip {
+  margin-top: 12px; padding: 10px 12px; border-radius: 10px; font-size: 13.5px;
+  background: rgba(255, 199, 44, 0.08); border: 1px solid rgba(255, 199, 44, 0.25);
+}
+.tut-body table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.tut-body td { padding: 6px 4px; border-top: 1px solid rgba(244, 236, 208, 0.1); vertical-align: top; }
+.tut-body td:first-child { white-space: nowrap; font-weight: 700; padding-right: 10px; }
+.tut-tiles { display: flex; gap: 5px; justify-content: center; margin: 10px 0 12px; }
+.tut-tiles span {
+  width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 6px; font-weight: 800; font-size: 18px; color: #fff; background: #3a3a46;
+}
+.tut-tiles .g { background: #2f9e55; }
+.tut-tiles .y { background: #c9a227; color: #1a1400; }
+.tut-dots { display: flex; gap: 7px; justify-content: center; margin: 18px 0 14px; }
+.tut-dot { width: 9px; height: 9px; border-radius: 50%; border: none; padding: 0; cursor: pointer; background: rgba(244, 236, 208, 0.22); }
+.tut-dot.on { background: var(--accent, #ffc72c); width: 22px; border-radius: 5px; }
+.tut-nav { display: flex; gap: 10px; }
+.tut-nav button {
+  flex: 1; padding: 12px; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; font-family: inherit;
+}
+.tut-back { background: transparent; color: inherit; border: 1px solid rgba(244, 236, 208, 0.18); }
+.tut-next { background: var(--accent, #ffc72c); color: #1a1405; border: 1px solid var(--accent, #ffc72c); }

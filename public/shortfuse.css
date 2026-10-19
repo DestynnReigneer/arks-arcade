@@ -135,6 +135,18 @@ button:disabled { opacity: 0.4; cursor: default; }
   border: 2px solid var(--border); color: var(--text); min-height: 132px; display: flex; flex-direction: column;
   transition: transform 0.1s ease, border-color 0.1s ease;
 }
+/* The tag is what the card DOES. Names change with the deck; the tag never does. */
+.card .c-tag {
+  align-self: flex-start; font-size: 10px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;
+  padding: 3px 7px; border-radius: 6px; margin-bottom: 8px; background: rgba(255, 255, 255, 0.08); color: var(--muted);
+}
+.card.k-bomb .c-tag { background: var(--danger); color: #fff; }
+.card.k-defuse .c-tag { background: var(--ok); color: #062012; }
+.card.k-nope .c-tag { background: #ff9a3d; color: #241000; }
+.card.k-junk .c-tag { background: var(--accent-2); color: #031322; }
+.card.k-skip .c-tag, .card.k-attack .c-tag, .card.k-shuffle .c-tag, .card.k-peek .c-tag, .card.k-favor .c-tag {
+  background: var(--accent); color: #1a0f05;
+}
 .card .c-emoji { font-size: 28px; line-height: 1; }
 .card .c-name { font-weight: 800; font-size: 13px; margin-top: 6px; line-height: 1.25; }
 .card .c-quip { font-size: 11px; color: var(--muted); margin-top: 4px; font-style: italic; line-height: 1.35; }
@@ -169,9 +181,25 @@ button:disabled { opacity: 0.4; cursor: default; }
 .timer div { height: 100%; background: var(--accent); width: 100%; }
 .slider-row { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--dim); }
 .slider-row input { flex: 1; padding: 0; margin: 0; }
-.rules { padding-left: 20px; line-height: 1.6; font-size: 14px; color: var(--muted); }
-.rule-row { display: flex; gap: 10px; align-items: flex-start; padding: 6px 0; border-top: 1px solid var(--border); font-size: 13px; }
-.rule-row b { min-width: 110px; }
+.goal {
+  width: 100%; text-align: left; background: var(--card); border: 1px solid var(--border); color: var(--muted);
+  border-radius: 10px; padding: 9px 12px; font-size: 13px; cursor: pointer; margin-bottom: 10px;
+}
+.goal b { color: var(--text); }
+.goal span { float: right; color: var(--accent); font-weight: 700; }
+
+/* "What can I do right now?" in plain words. */
+.coach {
+  margin: 12px 0 0; padding: 11px 13px; border-radius: 12px; font-size: 14px; line-height: 1.5;
+  background: color-mix(in srgb, var(--accent) 10%, var(--card)); border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--border));
+}
+.coach.waiting { background: var(--card); border-color: var(--border); color: var(--muted); }
+.coach b { color: var(--accent); }
+
+.sheet-card { display: flex; justify-content: center; margin-bottom: 8px; }
+.sheet-card .card { max-width: 190px; width: 100%; cursor: default; }
+.sheet-h { margin: 14px 0 4px; font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--accent); }
+.sheet-p { margin: 0; font-size: 15px; line-height: 1.55; }
 
 .toast {
   position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 60; max-width: calc(100vw - 32px);

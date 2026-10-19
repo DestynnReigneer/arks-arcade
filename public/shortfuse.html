@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Short Fuse</title>
 <link rel="stylesheet" href="shortfuse.css">
+<link rel="stylesheet" href="tutorial.css">
 </head>
 <body>
 
@@ -74,6 +75,7 @@
 
 <!-- ============ game ============ -->
 <section id="game" class="screen hidden">
+  <button class="goal" id="goalBtn" type="button">🎯 <b>Don't draw a bomb.</b> Last one standing wins. <span>How to play ›</span></button>
   <div class="table-top">
     <div class="pile deck" id="deckPile">
       <div class="pile-face">🂠</div>
@@ -94,15 +96,16 @@
 
   <div class="log" id="log"></div>
 
+  <div class="coach" id="coach"></div>
+
   <div class="hand-head">
     <span id="handTitle">Your hand</span>
-    <span class="hint" id="handHint">Tap a card to play it, or draw to end your turn.</span>
+    <span class="hint">Tap any card to see what it does.</span>
   </div>
   <div class="hand" id="hand"></div>
 
   <div class="actions">
-    <button class="ghost" id="playBtn" disabled>Play</button>
-    <button class="primary big" id="drawBtn">Draw &amp; end turn</button>
+    <button class="primary big" id="drawBtn">Draw a card &amp; end turn</button>
   </div>
 </section>
 
@@ -113,6 +116,7 @@
     <h2 id="passTitle">Pass the phone</h2>
     <p class="hint" id="passHint">No peeking, everyone else.</p>
     <button class="primary big" id="passReady">I'm ready</button>
+    <button class="ghost" id="passHelp" style="margin-top:10px;width:100%">📖 How to play</button>
   </div>
 </div>
 
@@ -202,22 +206,24 @@
   </div>
 </div>
 
-<div class="overlay hidden" id="rulesView">
+<!-- One card, explained, with a button to play it when it can be played -->
+<div class="overlay hidden" id="cardSheet">
   <div class="card-panel">
-    <h2>How to play</h2>
-    <ol class="rules">
-      <li>On your turn, play as many cards as you like — or none.</li>
-      <li>Then <b>draw one card</b> to end your turn.</li>
-      <li>Draw a 💣 bomb and you're <b>out</b>… unless you have a <b>Defuse</b>. Then you hide the bomb back in the pile, anywhere you like.</li>
-      <li>Last player standing wins.</li>
-    </ol>
-    <div id="rulesCards"></div>
-    <button class="primary" id="rulesClose">Let's go</button>
+    <div class="sheet-card" id="sheetCard"></div>
+    <h3 class="sheet-h">What it does</h3>
+    <p class="sheet-p" id="sheetDoes"></p>
+    <h3 class="sheet-h">How to use it</h3>
+    <p class="sheet-p" id="sheetHow"></p>
+    <div class="stack">
+      <button class="primary hidden" id="sheetPlay"></button>
+      <button class="ghost" id="sheetClose">Close</button>
+    </div>
   </div>
 </div>
 
 <div class="toast hidden" id="toast"></div>
 
+<script src="tutorial.js"></script>
 <script src="shortfuse.js"></script>
 </body>
 </html>

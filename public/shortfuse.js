@@ -65,11 +65,20 @@ function paintPalette(level) {
   document.documentElement.classList.toggle('adult', !!levelInfo(level).adult);
 }
 
+// What each kind of card does, in two words. Card names change with the deck
+// (a kids Skip is "Nap Time", a filthy one is "Post-Nut Clarity"); the tag is
+// how you know what you are holding without memorising every joke.
+const TAGS = {
+  bomb: '💣 Bomb', defuse: '✂️ Defuse', skip: '⏭ Skip', attack: '⚔️ Attack',
+  shuffle: '🔀 Shuffle', peek: '👀 Peek', favor: '🎁 Favor', nope: '🙅 Nope', junk: '🃏 Pair up'
+};
+
 function cardEl(card, { onClick, selected } = {}) {
   const el = document.createElement(onClick ? 'button' : 'div');
   el.className = `card k-${card.kind}${selected ? ' selected' : ''}`;
   if (onClick) { el.type = 'button'; el.onclick = onClick; }
-  el.innerHTML = '<div class="c-emoji"></div><div class="c-name"></div><div class="c-quip"></div><div class="c-rule"></div>';
+  el.innerHTML = '<div class="c-tag"></div><div class="c-emoji"></div><div class="c-name"></div><div class="c-quip"></div><div class="c-rule"></div>';
+  el.querySelector('.c-tag').textContent = TAGS[card.kind] || card.kind;
   el.querySelector('.c-emoji').textContent = card.emoji;
   el.querySelector('.c-name').textContent = card.name;
   el.querySelector('.c-quip').textContent = card.quip;
@@ -363,24 +372,16 @@ function renderGame() {
   const viewing = me();
   $('handTitle').textContent = S.table.kind === 'local' && viewing ? `${nameOf(viewing)}'s hand` : 'Your hand';
   const out = viewing && seat(viewing) && seat(viewing).out;
-  $('handHint').textContent = out ? 'You blew up. Watch the rest go boom.'
-    : mine && g.phase === 'play' ? 'Tap cards to play them, then draw to end your turn.'
-      : 'Waiting…';
+  renderCoach(mine, out);
 
   const hand = $('hand');
   hand.innerHTML = '';
   for (const c of myHand()) {
-    hand.appendChild(cardEl(c, {
-      selected: S.selected.includes(c.id),
-      onClick: () => toggleCard(c)
-    }));
+    hand.appendChild(cardEl(c, { onClick: () => openCardSheet(c) }));
   }
 
   const canAct = mine && g.phase === 'play' && !out;
   $('drawBtn').disabled = !canAct;
-  const play = playable();
-  $('playBtn').disabled = !canAct || !play;
-  $('playBtn').textContent = play ? `Play ${play.label}` : 'Play';
 
   renderReaction();
   renderFavor();
@@ -389,28 +390,89 @@ function renderGame() {
   renderOver();
 }
 
-function toggleCard(c) {
-  const i = S.selected.indexOf(c.id);
-  if (i >= 0) S.selected.splice(i, 1);
-  else {
-    // Keep a selection that could make sense: one action, or a pair.
-    S.selected.push(c.id);
-    if (S.selected.length > 2) S.selected.shift();
-  }
-  renderGame();
-}
-
 const ACTIONS = ['skip', 'attack', 'shuffle', 'peek', 'favor'];
 
-function playable() {
-  const cards = S.selected.map(id => myHand().find(c => c.id === id)).filter(Boolean);
-  if (cards.length === 1 && ACTIONS.includes(cards[0].type)) {
-    return { cards, action: cards[0].type, label: cards[0].name, target: cards[0].type === 'favor' };
+// The one line that says what to do now, in plain words.
+function renderCoach(mine, out) {
+  const g = G();
+  const el = $('coach');
+  let html;
+  let waiting = true;
+  if (g.phase === 'over') html = 'Game over.';
+  else if (out) html = '💥 You blew up. Hang around and watch who goes next!';
+  else if (!mine) {
+    const hasNope = myHand().some(c => c.kind === 'nope');
+    html = `Waiting for <b>${escapeHtml(nameOf(g.turn))}</b>.` + (hasNope
+      ? ' You have a <b>Nope</b> — if they play an action card, you can cancel it.'
+      : ' Nothing to do until your turn.');
+  } else if (g.phase === 'play') {
+    waiting = false;
+    const owed = g.turnsOwed > 1 ? ` You were attacked: take <b>${g.turnsOwed} turns</b> (draw ${g.turnsOwed} times).` : '';
+    const actions = myHand().filter(c => ACTIONS.includes(c.kind)).length;
+    html = `<b>Your turn.</b>${owed} ` + (actions
+      ? 'Play a card first if you want (tap it), then tap <b>Draw</b> to end your turn.'
+      : 'No action cards to play — just tap <b>Draw</b> to end your turn.');
+    if (g.bombsLeft && g.deckCount && g.bombsLeft / g.deckCount >= 0.25) {
+      html += ' ⚠️ The pile is getting dangerous.';
+    }
+  } else {
+    html = 'Hang on…';
   }
-  if (cards.length === 2 && cards[0].kind === 'junk' && cards[0].type === cards[1].type) {
-    return { cards, action: 'steal', label: 'pair (steal)', target: true };
+  el.innerHTML = html;
+  el.classList.toggle('waiting', waiting);
+}
+
+function escapeHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+// Tap a card: what it does, how to use it, and a button to play it if you can.
+function openCardSheet(card) {
+  const g = G();
+  const mine = g.turn === me() && g.phase === 'play' && !(seat(me()) || {}).out;
+  const pair = myHand().filter(c => c.type === card.type);
+  const host = $('sheetCard');
+  host.innerHTML = '';
+  host.appendChild(cardEl(card));
+  $('sheetDoes').textContent = card.rule;
+
+  const how = {
+    bomb: 'You should never be holding one of these!',
+    defuse: 'Just keep it. If you draw a bomb, your Defuse is used automatically and you survive. Then you get to hide the bomb back in the pile — put it on top to blow up the next player.',
+    skip: 'Play it on your turn instead of drawing. Your turn ends and you don\'t have to draw — handy when you think a bomb is on top.',
+    attack: 'Play it on your turn instead of drawing. You don\'t draw, and the next player has to take two turns in a row.',
+    shuffle: 'Play it on your turn to shuffle the pile. Good when you know (or fear) a bomb is near the top. You still draw afterwards.',
+    peek: 'Play it on your turn to secretly see the top three cards. Then decide: draw, or Skip/Attack to dodge a bomb.',
+    favor: 'Play it on your turn and pick another player. They choose a card from their hand to give you.',
+    nope: 'Keep it. When anyone plays an action card, a big NOPE button pops up — tap it to cancel their card. You can even Nope a Nope.',
+    junk: pair.length >= 2
+      ? 'You have a matching pair! Play both together on your turn to steal a random card from another player.'
+      : 'On its own it does nothing. Collect a second one with the same picture, then play the pair to steal a random card from someone.'
+  }[card.kind];
+  $('sheetHow').textContent = how;
+
+  const btn = $('sheetPlay');
+  let play = null;
+  if (mine && ACTIONS.includes(card.kind)) {
+    play = { cards: [card.id], action: card.kind, target: card.kind === 'favor' };
+    btn.textContent = `Play ${card.name}`;
+  } else if (mine && card.kind === 'junk' && pair.length >= 2) {
+    play = { cards: [pair[0].id, pair[1].id], action: 'steal', target: true };
+    btn.textContent = 'Play the pair — steal a card';
   }
-  return null;
+  btn.classList.toggle('hidden', !play);
+  btn.onclick = async () => {
+    hide('cardSheet');
+    let target = null;
+    if (play.target) {
+      target = await pickTarget(play.action === 'favor' ? 'Who has to do you a favor?' : 'Steal from who?');
+      if (!target) return;
+    }
+    take(await send({ action: 'play', cards: play.cards, target }));
+  };
+  show('cardSheet');
 }
 
 async function send(body) {
@@ -434,19 +496,6 @@ function take(snap) {
   if (!snap) return;
   if (S.table.kind === 'local') applyLocal(snap);
   else applyRoom(snap);
-}
-
-async function playSelected() {
-  const p = playable();
-  if (!p) return;
-  let target = null;
-  if (p.target) {
-    target = await pickTarget(p.action === 'favor' ? 'Who owes you a favor?' : 'Steal from who?');
-    if (!target) return;
-  }
-  const snap = await send({ action: 'play', cards: p.cards.map(c => c.id), target });
-  S.selected = [];
-  take(snap);
 }
 
 function pickTarget(title) {
@@ -618,22 +667,65 @@ async function leave() {
   backToSetup();
 }
 
-// ---- rules -----------------------------------------------------------------------
+// ---- how to play -----------------------------------------------------------------
 
-function renderRules() {
-  const host = $('rulesCards');
-  host.innerHTML = '';
-  const names = { bomb: '💣 Bomb', defuse: '✂️ Defuse', skip: '😴 Skip', attack: '⚔️ Attack', shuffle: '🌀 Shuffle',
-    peek: '👀 Peek', favor: '🎁 Favor', nope: '🙅 Nope', junk: '🃏 Junk' };
-  for (const [kind, rule] of Object.entries(S.config.rules)) {
-    const row = document.createElement('div');
-    row.className = 'rule-row';
-    row.innerHTML = '<b></b><span></span>';
-    row.querySelector('b').textContent = names[kind] || kind;
-    row.querySelector('span').textContent = rule;
-    host.appendChild(row);
+const tutorial = Tutorial.create('shortfuse', [
+  {
+    emoji: '💣',
+    title: 'The goal',
+    html: `<p>Somewhere in the draw pile are <b>bombs</b>. Draw one and you're <b>out</b>.</p>
+      <p>Be the <b>last player standing</b>.</p>
+      <p>Everybody draws from the same pile, so every card drawn makes the next draw more dangerous.</p>`
+  },
+  {
+    emoji: '🔁',
+    title: 'Your turn, in two steps',
+    html: `<ol><li><b>Play cards</b> if you want to — as many as you like, or none. Tap a card to see what it does and play it.</li>
+      <li><b>Draw one card</b> from the pile. That ends your turn.</li></ol>
+      <p>That's the whole game. Everything else is about not drawing the bomb.</p>
+      <div class="tut-tip">💡 Not sure what to do? Just tap <b>Draw</b>.</div>`
+  },
+  {
+    emoji: '✂️',
+    title: 'Defuse cards save you',
+    html: `<p>Everyone starts with one <b>Defuse</b> (it has a green tag).</p>
+      <p>If you draw a bomb while holding a Defuse, it's used <b>automatically</b> and you survive.</p>
+      <p>Then you secretly <b>hide the bomb back</b> in the pile wherever you like. Put it on top and the next player is in trouble. 😈</p>`
+  },
+  {
+    emoji: '⚡',
+    title: 'Action cards',
+    html: `<p>Play these on your turn, <b>before</b> you draw:</p>
+      <table>
+        <tr><td>⏭ Skip</td><td>End your turn <b>without drawing</b>.</td></tr>
+        <tr><td>⚔️ Attack</td><td>Don't draw — the next player takes <b>two turns</b>.</td></tr>
+        <tr><td>👀 Peek</td><td>Secretly see the top 3 cards.</td></tr>
+        <tr><td>🔀 Shuffle</td><td>Shuffle the pile.</td></tr>
+        <tr><td>🎁 Favor</td><td>Someone has to give you a card.</td></tr>
+      </table>
+      <div class="tut-tip">💡 Peek, then Skip or Attack if a bomb is on top.</div>`
+  },
+  {
+    emoji: '🙅',
+    title: 'Nope!',
+    html: `<p>A <b>Nope</b> cancels someone's action card — and you can play it even when it's <b>not your turn</b>.</p>
+      <p>Whenever anyone plays an action card, a <b>NOPE</b> button pops up for a few seconds. Tap it to cancel their card.</p>
+      <p>You can even Nope a Nope.</p>`
+  },
+  {
+    emoji: '🃏',
+    title: 'Pair-up cards',
+    html: `<p>Cards with a blue <b>Pair up</b> tag do nothing alone.</p>
+      <p>Get <b>two with the same picture</b> and play them together to <b>steal a random card</b> from anyone.</p>`
+  },
+  {
+    emoji: '🏷️',
+    title: 'Reading the cards',
+    html: `<p>Every deck (Kids, Cheeky, Spicy, Filthy) gives the cards different funny names — but the <b>coloured tag at the top</b> always tells you what the card really does.</p>
+      <p>Tap any card for a full explanation. The box above your hand always tells you what you can do right now.</p>
+      <div class="tut-tip">Tap <b>?</b> at the top any time to see this again.</div>`
   }
-}
+]);
 
 // ---- boot ------------------------------------------------------------------------
 
@@ -646,7 +738,6 @@ async function boot() {
   }
   renderLevels($('levelList'), S.level, pickLevel);
   renderNames();
-  renderRules();
   setMode('local');
 
   for (const b of $('modeSeg').children) b.onclick = () => setMode(b.dataset.mode);
@@ -658,10 +749,12 @@ async function boot() {
   };
   $('leaveBtn').onclick = leave;
   $('drawBtn').onclick = drawCard;
-  $('playBtn').onclick = playSelected;
   $('peekClose').onclick = () => hide('peekView');
-  $('rulesBtn').onclick = () => show('rulesView');
-  $('rulesClose').onclick = () => hide('rulesView');
+  $('sheetClose').onclick = () => hide('cardSheet');
+  $('rulesBtn').onclick = () => tutorial.open();
+  $('goalBtn').onclick = () => tutorial.open();
+  $('passHelp').onclick = () => tutorial.open();
+  tutorial.autoOpen();
   $('joinCode').oninput = e => { e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''); };
 
   // A link like shortfuse.html?join=ABCD drops you straight into Join.

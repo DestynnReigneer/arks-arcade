@@ -499,12 +499,14 @@
     if (!themeRequestOverlay.classList.contains('hidden')) return;
     if (!difficultyOverlay.classList.contains('hidden')) return;
     if (!document.getElementById('adultOverlay').classList.contains('hidden')) return;
+    if (window.wordlessTutorial && window.wordlessTutorial.isOpen) return;
     handleKey(e.key);
   });
 
   newGameBtn.addEventListener('click', newGame);
   hintBtn.addEventListener('click', useHint);
   difficultyBtn.addEventListener('click', openDifficulty);
+  document.getElementById('helpBtn').addEventListener('click', () => window.wordlessTutorial.open());
   document.getElementById('adultBtn').addEventListener('click', openAdult);
   document.getElementById('adultOkBtn').addEventListener('click', confirmAdult);
   document.getElementById('adultCancelBtn').addEventListener('click', () => document.getElementById('adultOverlay').classList.add('hidden'));
@@ -705,7 +707,9 @@
     const initial = themes.find(t => t.id === savedId) || themes.find(t => t.id === 'classic') || themes[0];
     setTheme(initial.id);
     difficultyLabel.textContent = DIFFICULTIES[difficulty].label;
-    // Ask before the first game; picking one starts it.
+    // Ask before the first game; picking one starts it. First-timers see how
+    // to play on top of it, and land on the difficulty question after.
     openDifficulty();
+    window.wordlessTutorial.autoOpen();
   })();
 })();
