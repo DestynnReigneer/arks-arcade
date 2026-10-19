@@ -12,7 +12,7 @@
     completed: '✅ Completed', canceled: '🚫 Canceled'
   };
   const KIND_LABELS = { feature: '💡 Feature idea', issue: '🐛 Issue', message: '💬 Message' };
-  const GAME_LABELS = { wordless: 'Wordless', rambler: 'Rambler', shortfuse: 'Short Fuse', spinsolve: 'Spin & Solve', chess: 'Chess', dino: 'Dino Dash' };
+  const GAME_LABELS = { wordless: 'Wordless', rambler: 'Rambler', shortfuse: 'Short Fuse', spinsolve: 'Spin & Solve', chess: 'Chess', dino: 'Dino Dash', trivia: 'Know-It-All' };
 
   // One-tap posts. Gaming culture is half the fun of the board.
   const QUICK_POSTS = [
@@ -214,7 +214,7 @@
 
   // ---- home page games -------------------------------------------------------
 
-  const GAME_EMOJI = { wordless: '🔤', rambler: '🎲', shortfuse: '💣', spinsolve: '🎡', chess: '♞', dino: '🦖' };
+  const GAME_EMOJI = { wordless: '🔤', rambler: '🎲', shortfuse: '💣', spinsolve: '🎡', chess: '♞', dino: '🦖', trivia: '🧠' };
   let home = null;
 
   async function loadHomeGames() {

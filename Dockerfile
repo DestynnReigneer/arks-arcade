@@ -18,6 +18,7 @@ COPY arcade ./arcade
 COPY shortfuse ./shortfuse
 COPY chess ./chess
 COPY spinsolve ./spinsolve
+COPY trivia ./trivia
 COPY words ./words
 COPY public ./public
 

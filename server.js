@@ -111,6 +111,7 @@ app.get('/healthz', (req, res) => {
 app.use('/api/shortfuse', require('./shortfuse/routes'));
 app.use('/api/chess', require('./chess/routes'));
 app.use('/api/spinsolve', require('./spinsolve/routes')({ requireAdmin, notify: notifyDiscord }));
+app.use('/api/trivia', require('./trivia/routes')({ requireAdmin, notify: notifyDiscord }));
 app.use('/api/scores', require('./arcade/scores').router);
 
 // ---- Comm Center (home page message board) ----
@@ -348,6 +349,14 @@ app.listen(PORT, () => {
   // plays, so the first board of the day already knows about them.
   ramblerPacks.refresh({ force: true });
   const theme = ramblerPacks.active();
+
+  // Know-It-All downloads Open Trivia DB's questions in the background the
+  // first time (about 8 minutes), then once a month. Set TRIVIA_ONLINE=off
+  // to stay fully offline.
+  require('./trivia/store').syncOpenTdb().then(s => {
+    if (s.addedThisRun) console.log(`Know-It-All: downloaded ${s.addedThisRun} questions from Open Trivia DB (${s.downloaded} saved).`);
+    if (s.lastError) console.warn(`Know-It-All: Open Trivia DB download stopped: ${s.lastError}`);
+  });
 
   console.log(`Arcade running at http://localhost:${PORT}`);
   console.log(

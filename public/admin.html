@@ -190,6 +190,7 @@
     <button id="tabRambler" aria-pressed="false">🎲 Rambler</button>
     <button id="tabWordless" aria-pressed="false">🔤 Wordless</button>
     <button id="tabSpin" aria-pressed="false">🎡 Spin &amp; Solve</button>
+    <button id="tabTrivia" aria-pressed="false">🧠 Trivia</button>
   </div>
 
   <div id="arcadePanel">
@@ -230,6 +231,7 @@
             <option value="spinsolve">Spin &amp; Solve</option>
             <option value="chess">Chess</option>
             <option value="dino">Dino Dash</option>
+            <option value="trivia">Know-It-All</option>
           </select>
         </div>
         <button class="small-btn" id="postBtn">Post to home page</button>
@@ -432,6 +434,59 @@
     </div>
   </div>
 
+  <div id="triviaPanel" class="hidden">
+    <div class="admin-section">
+      <h2>💡 Topic requests</h2>
+      <div id="triviaRequests">Loading…</div>
+    </div>
+
+    <div class="admin-section">
+      <h2>🛠️ Create a question pack</h2>
+      <div class="admin-note" id="triviaBuildingFor"></div>
+      <div class="field-row" style="margin-top:0">
+        <div class="grow">
+          <label for="triviaTopic">Topic</label>
+          <input type="text" id="triviaTopic" maxlength="60" placeholder="e.g. Harry Potter, '90s music, sex positions" style="width:100%">
+        </div>
+        <div>
+          <label for="triviaLevel">Level</label>
+          <select id="triviaLevel">
+            <option value="kids">🧒 Family</option>
+            <option value="cheeky">🌶️ Cheeky (adult)</option>
+            <option value="spicy">🌶️🌶️ Spicy (adult)</option>
+            <option value="filthy">🌶️🌶️🌶️ Filthy (adult)</option>
+          </select>
+        </div>
+        <div>
+          <label for="triviaDifficulty">Difficulty</label>
+          <select id="triviaDifficulty">
+            <option value="mixed">Mixed</option>
+            <option value="easy">Easy</option>
+            <option value="medium">Medium</option>
+            <option value="hard">Hard</option>
+          </select>
+        </div>
+        <button class="small-btn" id="triviaCopyPrompt">📋 Copy prompt</button>
+      </div>
+      <p class="admin-note">Paste the prompt into any AI chatbot, then paste its answer below. Adult packs stay behind the adult PIN and never show on the home page. Questions with British spelling or broken answers are skipped, and you'll see which.</p>
+      <textarea id="triviaJson" rows="6" class="admin-textarea" placeholder='{"label":"Space","emoji":"🚀","genre":"Science","questions":[{"question":"…","correct":"…","wrong":["…","…","…"],"difficulty":"easy"}]}'></textarea>
+      <button id="triviaCreate" class="primary-btn" style="border:none;border-radius:8px;padding:10px 16px;font-weight:700;cursor:pointer;margin-top:8px;">Create pack</button>
+      <div id="triviaStatus" class="status-msg"></div>
+    </div>
+
+    <div class="admin-section">
+      <h2>🧠 All question packs</h2>
+      <div id="triviaPacks"></div>
+    </div>
+
+    <div class="admin-section">
+      <h2>🌐 Open Trivia DB</h2>
+      <p class="admin-note">Free family-friendly questions (opentdb.com, CC BY-SA 4.0), downloaded in the background and saved so they work offline. It refreshes once a month by itself.</p>
+      <div class="admin-note" id="triviaOnline">Loading…</div>
+      <button class="small-btn" id="triviaSync">⬇️ Download now</button>
+    </div>
+  </div>
+
   <div id="wordlessPanel" class="hidden">
     <div class="admin-section">
       <h2>💬 Pending Theme Requests</h2>
@@ -469,5 +524,6 @@
 <script src="admin-rambler.js"></script>
 <script src="admin-arcade.js"></script>
 <script src="admin-spinsolve.js"></script>
+<script src="admin-trivia.js"></script>
 </body>
 </html>
