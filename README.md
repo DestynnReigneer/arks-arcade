@@ -146,11 +146,11 @@ Against the computer (Easy, Medium, Hard), two players on one phone, or two phon
 
 An endless runner: jump cactuses, duck birds, and it gets faster (and then dark). Tap or Space to jump, hold Duck or ↓ to duck. Original pixel art drawn from text bitmaps; all sounds synthesized.
 
-### Know-It-All ()
+### Know-It-All (`/trivia.html`)
 
 Multiple-choice trivia. Solo (high-score board), take turns on one phone, or a room where everyone answers on their own phone at the same time and faster right answers score more. Pick genres, difficulty, how many questions and how long to answer.
 
-Questions come from a built-in bank (), packs built from an AI prompt in the admin Trivia tab (with player topic requests), and Open Trivia DB (opentdb.com, CC BY-SA 4.0), which the server downloads in the background and saves for offline play ( to skip it). Cheeky, Spicy and Filthy levels sit behind the adult PIN, with optional Drinking rules and Couples dares that get raunchier with the level.
+Questions come from a built-in bank (`trivia/bank.js`), packs built from an AI prompt in the admin Trivia tab (with player topic requests), and Open Trivia DB (opentdb.com, CC BY-SA 4.0), which the server downloads in the background and saves for offline play (`TRIVIA_ONLINE=off` to skip it). Cheeky, Spicy and Filthy levels sit behind the adult PIN, with optional Drinking rules and Couples dares that get raunchier with the level.
 
 ### Shared
 
