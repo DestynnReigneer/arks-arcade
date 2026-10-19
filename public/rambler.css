@@ -1,27 +1,76 @@
 :root {
-  --bg: #0f1115;
-  --text: #e8ecf4;
-  --muted: #8b93a3;
-  --dim: #5f6675;
-  --card: #181b22;
-  --card-2: #1f232c;
-  --border: #262a33;
-  --accent: #facc15;
-  --accent-soft: #3a3005;
-  --good: #4ade80;
-  --bad: #f87171;
-  --trace: #7dd3fc;
+  /* ARKS 8-Bit -- docs/arks-color-spec.html. Every value below is the spec's;
+     nothing in this block is invented. "Dark cabinet black lit by marquee
+     bulbs. Gold reads as the coin/power-up colour, blue as the player-two
+     signal -- red is held back for status only." */
+  --ground: linear-gradient(160deg, #08080f 0%, #12111c 58%, #1e1a30 100%);
+  --bg: #12111c;
+  --plate: #060509;
+  --card: #171623;
+  --card-2: #1e1a30;
+  --text: #f4ecd0;
+  --muted: #c9b98a;
+  --dim: #8f8367;
+  --accent: #ffc72c;
+  --on-accent: #1a1300;
+  --trace: #2e9bff;
+  --good: #3cd070;
+  --warn: #ffa400;
+  --bad: #ff3b30;
+  --info: #4fc3f7;
+
+  /* Derived, not chosen. The spec has no border or tint swatches, so these
+     are mixed from tokens that are in it -- which also means they follow a
+     theme pack's accent and the unfiltered palette without a second copy. */
+  --border: color-mix(in srgb, var(--text) 11%, var(--card));
+  --card-hover: color-mix(in srgb, var(--text) 9%, var(--card-2));
+  --accent-soft: color-mix(in srgb, var(--accent) 18%, var(--card));
+  --scrim: color-mix(in srgb, var(--plate) 88%, transparent);
+
   --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* ARKS Vice, for the unfiltered dictionary. Swapping palette with the
+   dictionary is a safety feature as much as a style one: you can tell from
+   across the room which mode a phone is in. The class sits on <html> rather
+   than <body> so a theme pack's accent -- set inline on the same element --
+   still wins over it. */
+:root.unfiltered {
+  --ground:
+    radial-gradient(ellipse at 20% -10%, rgba(255, 46, 196, 0.18), transparent 55%),
+    radial-gradient(ellipse at 90% 6%, rgba(0, 255, 194, 0.12), transparent 50%),
+    linear-gradient(160deg, #100620 0%, #170a2e 55%, #2c1350 100%);
+  --bg: #170a2e;
+  --plate: #0a0416;
+  --card: #22103f;
+  --card-2: #2c1350;
+  --text: #f5eaff;
+  --muted: #c9a8dd;
+  --dim: #9483ae;
+  --accent: #ff2ec4;
+  --on-accent: #1c0326;
+  --trace: #00ffc2;
+  --good: #39ff8c;
+  --warn: #ffd23f;
+  --bad: #ff3860;
+  --info: #3ec6ff;
 }
 * { box-sizing: border-box; }
 html, body {
   margin: 0;
   min-height: 100%;
-  background: var(--bg);
   color: var(--text);
   font-family: var(--font);
   -webkit-text-size-adjust: 100%;
 }
+/* The gradient goes on <html>, which is always at least the viewport tall;
+   on <body> it would stop wherever a short screen's content does. */
+html {
+  background: var(--bg);
+  background-image: var(--ground);
+  background-attachment: fixed;
+}
+body { background: transparent; }
 body {
   display: flex;
   flex-direction: column;
@@ -65,7 +114,7 @@ header h1 .lit { color: var(--accent); }
   justify-content: center;
   flex: 0 0 auto;
 }
-.icon-btn:hover { background: #333843; }
+.icon-btn:hover { background: var(--card-hover); }
 
 .screen {
   width: 100%;
@@ -83,7 +132,7 @@ button {
   width: 100%;
   padding: 14px;
   background: var(--accent);
-  color: #1a1400;
+  color: var(--on-accent);
   border: none;
   border-radius: 11px;
   font-size: 16px;
@@ -253,7 +302,7 @@ textarea:focus { outline: none; border-color: var(--accent); }
   font-variant-numeric: tabular-nums;
   letter-spacing: 1px;
 }
-.clock.warn { color: var(--accent); }
+.clock.warn { color: var(--warn); }
 .clock.urgent { color: var(--bad); }
 .timer-track {
   height: 4px;
@@ -301,13 +350,13 @@ textarea:focus { outline: none; border-color: var(--accent); }
 }
 .board.s5 .die { font-size: clamp(14px, 5vw, 23px); border-radius: 10px; }
 .die.on {
-  background: #0b3a4d;
+  background: color-mix(in srgb, var(--trace) 24%, var(--card-2));
   border-color: var(--trace);
-  color: #e0f5ff;
+  color: var(--text);
   transform: scale(0.94);
 }
-.die.ok { background: #14401f; border-color: var(--good); }
-.die.no { background: #401616; border-color: var(--bad); }
+.die.ok { background: color-mix(in srgb, var(--good) 22%, var(--card-2)); border-color: var(--good); }
+.die.no { background: color-mix(in srgb, var(--bad) 22%, var(--card-2)); border-color: var(--bad); }
 
 .trace-bar {
   margin: 14px auto 0;
@@ -401,7 +450,7 @@ textarea:focus { outline: none; border-color: var(--accent); }
   color: var(--muted);
   flex: 0 0 auto;
 }
-.stand.first .rank { background: var(--accent); color: #1a1400; }
+.stand.first .rank { background: var(--accent); color: var(--on-accent); }
 .stand .nm { flex: 1; font-weight: 600; }
 .stand .sc { font-weight: 700; font-variant-numeric: tabular-nums; }
 .stand .sc small { color: var(--dim); font-weight: 400; font-size: 11px; margin-left: 4px; }
@@ -442,7 +491,7 @@ textarea:focus { outline: none; border-color: var(--accent); }
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(6, 8, 12, 0.86);
+  background: var(--scrim);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1004,7 +1053,7 @@ body.in-vice .screen { position: relative; z-index: 1; }
   transition: border-color 0.14s ease;
 }
 .who-tile:hover .av { border-color: var(--accent); }
-.who-tile.current .av { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(250, 204, 21, 0.18); }
+.who-tile.current .av { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 .who-tile .nm {
   font-size: 14px;
   font-weight: 600;
@@ -1152,9 +1201,9 @@ body.in-vice .screen { position: relative; z-index: 1; }
 /* Only shouts in the last few days. A countdown that sits there all month is
    wallpaper; one that appears near the end is a prompt. */
 .season-strip.soon {
-  color: var(--accent);
-  border-color: var(--accent);
-  background: var(--accent-soft);
+  color: var(--warn);
+  border-color: var(--warn);
+  background: color-mix(in srgb, var(--warn) 14%, var(--card));
 }
 
 .badge-wall {

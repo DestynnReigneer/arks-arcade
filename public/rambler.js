@@ -1343,6 +1343,7 @@ function applyRoomState(snap) {
   S.size = snap.settings.size;
   S.duration = snap.settings.durationSec;
   S.profile = snap.settings.profile;
+  paintPalette();
 
   if (snap.state === 'lobby') {
     renderLobby(snap);
@@ -1587,9 +1588,13 @@ function renderSeasonStrip() {
   const el = $('seasonStrip');
   if (!el) return;
   const text = seasonStripText(S.season);
-  el.textContent = text;
+  const soon = !!(S.season && S.season.closingSoon);
+  // The spec's rule: status is colour + icon + word, never colour alone.
+  // The words were already there; the warn colour and the hourglass make
+  // the third.
+  el.textContent = soon && text ? '⏳ ' + text : text;
   el.classList.toggle('hidden', !text);
-  el.classList.toggle('soon', !!(S.season && S.season.closingSoon));
+  el.classList.toggle('soon', soon);
 }
 
 async function refreshSeason() {
@@ -1717,7 +1722,15 @@ function renderPlayersEditor() {
   $('addPlayerBtn').classList.toggle('hidden', S.players.length >= (S.config?.maxPlayers || 8));
 }
 
+// 8-Bit for the kids list, Vice for unfiltered. One switch, read from the
+// dictionary actually in play, so a phone handed across the room says which
+// mode it is in before anyone reads a word on it.
+function paintPalette() {
+  document.documentElement.classList.toggle('unfiltered', S.profile === 'adult');
+}
+
 function renderSetup() {
+  paintPalette();
   for (const b of $('modeList').children) {
     b.setAttribute('aria-pressed', String(b.dataset.mode === S.mode));
   }

@@ -6,23 +6,32 @@
 <title>Wordless Arcade</title>
 <style>
   :root {
-    --bg: #0f1115;
-    --text: #e8ecf4;
-    --muted: #8b93a3;
-    --card: #181b22;
-    --card-hover: #1f232c;
-    --border: #262a33;
-    --accent: #7dd3fc;
-    --accent-2: #facc15;
+    /* ARKS 8-Bit, the same values as rambler.css. The hub is the front door,
+       so it is the first place the palette has to be right. */
+    --ground: linear-gradient(160deg, #08080f 0%, #12111c 58%, #1e1a30 100%);
+    --bg: #12111c;
+    --card: #171623;
+    --card-2: #1e1a30;
+    --text: #f4ecd0;
+    --muted: #c9b98a;
+    --dim: #8f8367;
+    --accent: #ffc72c;
+    --accent-2: #2e9bff;
+    --border: color-mix(in srgb, var(--text) 11%, var(--card));
+    --card-hover: color-mix(in srgb, var(--text) 9%, var(--card-2));
     --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   }
   * { box-sizing: border-box; }
   html, body {
     margin: 0;
     min-height: 100%;
-    background: var(--bg);
     color: var(--text);
     font-family: var(--font);
+  }
+  html {
+    background: var(--bg);
+    background-image: var(--ground);
+    background-attachment: fixed;
   }
   body {
     display: flex;
@@ -75,8 +84,8 @@
     font-size: 19px;
     letter-spacing: 1px;
   }
-  .game.rambler h2 { color: var(--accent-2); }
-  .game.wordless h2 { color: var(--accent); }
+  .game.rambler h2 { color: var(--accent); }
+  .game.wordless h2 { color: var(--accent-2); }
   .game p {
     margin: 0;
     font-size: 13px;
@@ -88,16 +97,16 @@
     font-size: 11px;
     letter-spacing: 0.8px;
     text-transform: uppercase;
-    color: #5f6675;
+    color: var(--dim);
   }
   footer {
     margin-top: 44px;
     font-size: 12px;
-    color: #4d5461;
+    color: var(--dim);
     text-align: center;
     line-height: 1.7;
   }
-  footer a { color: #6b7383; }
+  footer a { color: var(--muted); }
 </style>
 </head>
 <body>
