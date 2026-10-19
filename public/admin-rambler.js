@@ -386,7 +386,7 @@
 
   function bind() {
     // One panel per tab; admin-arcade.js listens for 'admin-tab' to load its own.
-    const TABS = { tabArcade: 'arcadePanel', tabRambler: 'ramblerPanel', tabWordless: 'wordlessPanel' };
+    const TABS = { tabArcade: 'arcadePanel', tabRambler: 'ramblerPanel', tabWordless: 'wordlessPanel', tabSpin: 'spinPanel' };
     function showTab(tabId) {
       for (const [tab, panel] of Object.entries(TABS)) {
         $(panel).classList.toggle('hidden', tab !== tabId);

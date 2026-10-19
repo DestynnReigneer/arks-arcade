@@ -298,6 +298,11 @@ async function run() {
   ok('every word fits on the board (12 letters max)',
     puzzles.every(p => p.answer.split(' ').every(w => w.length <= 12)));
   ok('puzzles use only capitals, spaces and simple punctuation', puzzles.every(p => /^[A-Z '&?!-]+$/.test(p.answer)));
+  const spinBanks = require(path.join(ROOT, 'spinsolve/puzzles.js'));
+  const badBuiltins = Object.entries(spinBanks.BUILTIN)
+    .flatMap(([lv, list]) => list.filter(p => spinBanks.checkPuzzle(p).error).map(p => `${lv}: ${p.answer}`));
+  ok('every built-in puzzle at every level passes the pack checks', badBuiltins.length === 0, badBuiltins.join(', '));
+  ok('each adult level has its own bank', ['cheeky', 'spicy', 'filthy'].every(l => spinBanks.BUILTIN[l].length >= 30));
   ok('no puzzle uses a British spelling',
     puzzles.every(p => p.answer.split(' ').every(w => !dictionary.isBritish(w.replace(/[^A-Z]/g, '')))));
 

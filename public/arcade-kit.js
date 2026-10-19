@@ -21,9 +21,9 @@ const ArcadeKit = (() => {
     toastTimer = setTimeout(() => el.classList.add('hidden'), ms);
   }
 
-  async function api(path, body) {
-    const res = await fetch(path, body === undefined ? undefined : {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+  async function api(path, body, headers = {}) {
+    const res = await fetch(path, body === undefined ? { headers } : {
+      method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify(body)
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
@@ -72,9 +72,9 @@ const ArcadeKit = (() => {
     });
   }
 
-  async function loadScores(game, board, list, highlightId) {
+  async function loadScores(game, board, list, highlightId, headers) {
     try {
-      renderScores(list, await api(`/api/scores/${game}?board=${encodeURIComponent(board || '')}&limit=20`), highlightId);
+      renderScores(list, await api(`/api/scores/${game}?board=${encodeURIComponent(board || '')}&limit=20`, undefined, headers), highlightId);
     } catch (e) {
       list.innerHTML = `<li class="empty"></li>`;
       list.firstChild.textContent = e.message;

@@ -136,6 +136,8 @@ An Exploding Kittens-style card game for 2-8 players on one phone or several, wi
 
 A wheel-and-phrase puzzle game. Spin, call consonants, buy vowels for $250, solve. Solo gets three strikes a round and goes on the high-score board; 2-4 players pass one phone. 200+ built-in family-friendly puzzles in `public/spin-puzzles.js`.
 
+Levels run Kids, Cheeky, Spicy, Filthy like Short Fuse; the three adult levels have their own built-in banks (`spinsolve/puzzles.js`), sit behind the adult PIN, switch on the adult look, and keep their own unannounced high-score board. Players can suggest a theme from the game; the admin builds packs at any level in the Spin & Solve tab by copying a prompt and pasting the AI's answer, and every pasted puzzle is checked to fit the board and use American spelling.
+
 ### Chess (`/chess.html`)
 
 Against the computer (Easy, Medium, Hard), two players on one phone, or two phones with a room code. The rules engine (`public/chess-engine.js`) runs in the page, in a Web Worker for the computer, and on the server to check two-phone moves; the tests check it against the standard perft counts. Beating the computer scores on the high-score board.
@@ -268,6 +270,7 @@ rambler/                   Rambler, self-contained
 
 shortfuse/                Short Fuse engine, cards and rooms
 chess/                    Two-phone chess rooms (/api/chess)
+spinsolve/                Spin & Solve levels, adult banks, packs and requests (/api/spinsolve)
 arcade/                   Arcade-wide pieces: Comm Center, adult PIN, high scores, Wordless hints
 
 words/                    Dictionaries, baked into the image (see above)

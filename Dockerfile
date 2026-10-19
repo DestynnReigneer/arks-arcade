@@ -17,6 +17,7 @@ COPY rambler ./rambler
 COPY arcade ./arcade
 COPY shortfuse ./shortfuse
 COPY chess ./chess
+COPY spinsolve ./spinsolve
 COPY words ./words
 COPY public ./public
 

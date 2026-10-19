@@ -4,7 +4,7 @@
 // phrase. Solo plays for the high-score board; 2-4 players share a phone.
 
 (() => {
-  const { $, toast } = ArcadeKit;
+  const { $, toast, api } = ArcadeKit;
   const VOWELS = 'AEIOU';
   const VOWEL_COST = 250;
   const SOLVE_MIN = 1000;     // solving always banks at least this much
@@ -20,8 +20,15 @@
   const S = {
     names: ['', ''], rounds: 3, players: [], cur: 0, round: 0, puzzle: null,
     revealed: new Set(), used: new Set(), strikes: 0, wedge: null, busy: false,
-    rotation: 0, usedPuzzles: new Set()
+    rotation: 0, usedPuzzles: new Set(),
+    config: null, level: 'kids', pack: 'all', pool: [],
+    pin: (() => { try { return sessionStorage.getItem('spin.adultPin') || ''; } catch { return ''; } })(),
+    adultOk: (() => { try { return sessionStorage.getItem('spin.adultOk') === 'yes'; } catch { return false; } })()
   };
+  const pinHeaders = () => (S.pin ? { 'X-Adult-Pin': S.pin } : {});
+  const levelInfo = id => (S.config ? S.config.levels.find(l => l.id === id) : null) || { id: 'kids', label: 'Kids', adult: false, builtin: 0 };
+  const isAdult = () => levelInfo(S.level).adult;
+  const unlocked = () => (S.config && S.config.adultRequiresPin ? !!S.pin : S.adultOk);
   const solo = () => S.players.length === 1;
   const money = n => '$' + n.toLocaleString('en-US');
   const letters = s => s.replace(/[^A-Z]/g, '');
@@ -46,8 +53,99 @@
     $('addPlayerBtn').classList.toggle('hidden', S.names.length >= 4);
   }
 
-  function startGame() {
+  async function loadConfig() {
+    try {
+      S.config = await api('/api/spinsolve/config', undefined, pinHeaders());
+    } catch (e) { toast(e.message); return; }
+    renderLevels();
+    renderPacks();
+  }
+
+  function renderLevels() {
+    const list = $('levelList');
+    list.innerHTML = '';
+    for (const l of S.config.levels) {
+      const b = document.createElement('button');
+      b.className = 'level';
+      b.setAttribute('aria-pressed', String(l.id === S.level));
+      b.innerHTML = '<div class="l-name"></div><div class="l-blurb"></div>';
+      b.querySelector('.l-name').textContent = `${l.emoji} ${l.label}`;
+      b.querySelector('.l-blurb').textContent = l.blurb;
+      if (l.adult && !unlocked()) b.insertAdjacentHTML('beforeend', '<div class="l-lock">🔞 Adults only</div>');
+      b.addEventListener('click', () => pickLevel(l.id));
+      list.appendChild(b);
+    }
+    document.documentElement.classList.toggle('adult-mode', isAdult());
+  }
+
+  function renderPacks() {
+    const select = $('packSelect');
+    const packs = S.config.packs.filter(p => p.level === S.level);
+    const total = levelInfo(S.level).builtin + packs.reduce((n, p) => n + p.count, 0);
+    select.innerHTML = '';
+    const all = document.createElement('option');
+    all.value = 'all';
+    all.textContent = `🎲 All ${levelInfo(S.level).label} puzzles (${total})`;
+    select.appendChild(all);
+    for (const p of packs) {
+      const o = document.createElement('option');
+      o.value = String(p.id);
+      o.textContent = `${p.emoji} ${p.label} (${p.count})`;
+      select.appendChild(o);
+    }
+    if (![...select.options].some(o => o.value === S.pack)) S.pack = 'all';
+    select.value = S.pack;
+  }
+
+  async function pickLevel(id) {
+    if (levelInfo(id).adult && !unlocked() && !(await unlockAdult())) return;
+    S.level = id;
+    S.pack = 'all';
+    // Unlocking may reveal adult packs, so ask again.
+    await loadConfig();
+  }
+
+  // The adult PIN if one is set, otherwise a one-tap "I'm an adult".
+  function unlockAdult() {
+    if (!S.config.adultRequiresPin) {
+      const ok = confirm('These puzzles are for adults only (18+). Continue?');
+      if (ok) { S.adultOk = true; try { sessionStorage.setItem('spin.adultOk', 'yes'); } catch { /* unavailable */ } }
+      return Promise.resolve(ok);
+    }
+    return new Promise(resolve => {
+      $('pinInput').value = '';
+      $('pinMsg').textContent = '';
+      $('pinView').classList.remove('hidden');
+      $('pinInput').focus();
+      const done = ok => {
+        $('pinView').classList.add('hidden');
+        $('pinOk').onclick = $('pinCancel').onclick = $('pinInput').onkeydown = null;
+        resolve(ok);
+      };
+      const tryPin = async () => {
+        const pin = $('pinInput').value.trim();
+        try {
+          const r = await api('/api/spinsolve/unlock', { pin });
+          if (!r.ok) { $('pinMsg').textContent = 'That PIN is not right.'; return; }
+          S.pin = pin;
+          try { sessionStorage.setItem('spin.adultPin', pin); } catch { /* unavailable */ }
+          done(true);
+        } catch (e) { $('pinMsg').textContent = e.message; }
+      };
+      $('pinOk').onclick = tryPin;
+      $('pinInput').onkeydown = e => { if (e.key === 'Enter') tryPin(); };
+      $('pinCancel').onclick = () => done(false);
+    });
+  }
+
+  async function startGame() {
     Blip.unlock();
+    try {
+      const q = S.pack === 'all' ? `level=${S.level}` : `pack=${encodeURIComponent(S.pack)}`;
+      S.pool = (await api(`/api/spinsolve/puzzles?${q}`, undefined, pinHeaders())).puzzles;
+    } catch (e) { toast(e.message); return; }
+    if (!S.pool.length) { toast('No puzzles here yet.'); return; }
+    S.usedPuzzles.clear();
     S.players = S.names.map((n, i) => ({ name: n.trim() || `Player ${i + 1}`, round: 0, total: 0 }));
     S.round = 0;
     $('setup').classList.add('hidden');
@@ -57,8 +155,8 @@
   }
 
   function pickPuzzle() {
-    let pool = SPIN_PUZZLES.filter(p => !S.usedPuzzles.has(p.answer));
-    if (!pool.length) { S.usedPuzzles.clear(); pool = SPIN_PUZZLES; }
+    let pool = S.pool.filter(p => !S.usedPuzzles.has(p.answer));
+    if (!pool.length) { S.usedPuzzles.clear(); pool = S.pool; }
     const p = pool[Math.floor(Math.random() * pool.length)];
     S.usedPuzzles.add(p.answer);
     return p;
@@ -138,7 +236,7 @@
   function render(flash) {
     renderBoard(flash);
     $('categoryLabel').textContent = S.puzzle.category;
-    $('roundLabel').textContent = `Round ${S.round} of ${S.rounds}`;
+    $('roundLabel').textContent = `Round ${S.round} of ${S.rounds}` + (S.puzzle.pack ? ` · ${S.puzzle.pack}` : '');
     $('strikes').textContent = solo() ? '❌'.repeat(S.strikes) + '⬜'.repeat(MAX_STRIKES - S.strikes) : '';
     renderPlayers();
     const p = S.players[S.cur];
@@ -372,8 +470,10 @@
     if (!who) { $('scoreMsg').textContent = 'Type your initials first.'; return; }
     $('saveScoreBtn').disabled = true;
     try {
+      const packLabel = S.pack === 'all' ? '' : ` · ${$('packSelect').selectedOptions[0].textContent.replace(/ \(\d+\)$/, '')}`;
       const r = await ArcadeKit.saveScore('spinsolve', {
-        initials: who, score: S.players[0].total, board: 'solo', detail: `${S.rounds} rounds`
+        initials: who, score: S.players[0].total, board: isAdult() ? 'adult' : 'solo',
+        detail: `${S.rounds} rounds · ${levelInfo(S.level).label}${packLabel}`
       });
       initials.remember(who);
       $('overScore').classList.add('hidden');
@@ -385,9 +485,34 @@
     }
   }
 
-  function openScores(highlightId) {
-    ArcadeKit.loadScores('spinsolve', 'solo', $('scoreList'), highlightId);
+  function openScores(highlightId, board = isAdult() ? 'adult' : 'solo') {
+    // The adult board only shows (and only loads) once adult play is unlocked.
+    $('scoreBoardSeg').classList.toggle('hidden', !unlocked());
+    for (const b of $('scoreBoardSeg').children) b.setAttribute('aria-pressed', String(b.dataset.board === board));
+    ArcadeKit.loadScores('spinsolve', board, $('scoreList'), highlightId, pinHeaders());
     $('scoresView').classList.remove('hidden');
+  }
+
+  // ---- theme requests ------------------------------------------------------------------
+
+  function openRequest() {
+    for (const id of ['reqTopic', 'reqNote', 'reqBy']) $(id).value = '';
+    $('reqMsg').textContent = '';
+    $('requestForm').classList.remove('hidden');
+    $('reqThanks').classList.add('hidden');
+    $('requestView').classList.remove('hidden');
+    $('reqTopic').focus();
+  }
+
+  async function sendRequest() {
+    const topic = $('reqTopic').value.trim();
+    if (!topic) { $('reqMsg').textContent = 'Type a theme idea first.'; return; }
+    try {
+      await api('/api/spinsolve/requests', { topic, note: $('reqNote').value.trim(), requestedBy: $('reqBy').value.trim() });
+      $('requestForm').classList.add('hidden');
+      $('reqThanks').classList.remove('hidden');
+      setTimeout(() => $('requestView').classList.add('hidden'), 1800);
+    } catch (e) { $('reqMsg').textContent = e.message; }
   }
 
   function backToSetup() {
@@ -427,6 +552,7 @@
       emoji: '🎮', title: 'Solo or together',
       html: `<p><b>Solo:</b> you get 3 strikes a round: a missing letter, a wrong answer, Bankrupt or Lose a Turn each cost one. Your total goes on the 🏆 board.</p>
         <p><b>2–4 players:</b> pass the phone. Only whoever solves keeps that round's money.</p>
+        <p><b>Puzzles:</b> play everything, or pick one theme pack from the list. 💡 Suggest a theme to ask for a new one. Grown-ups can turn up the heat with Cheeky, Spicy or Filthy.</p>
         <div class="tut-tip">Tap <b>?</b> at the top any time to see this again.</div>`
     }
   ]);
@@ -441,6 +567,11 @@
     });
   }
   $('goBtn').addEventListener('click', startGame);
+  $('packSelect').addEventListener('change', () => { S.pack = $('packSelect').value; });
+  $('suggestBtn').addEventListener('click', openRequest);
+  $('reqSend').addEventListener('click', sendRequest);
+  $('reqCancel').addEventListener('click', () => $('requestView').classList.add('hidden'));
+  for (const b of $('scoreBoardSeg').children) b.addEventListener('click', () => openScores(null, b.dataset.board));
   $('spinBtn').addEventListener('click', spin);
   $('vowelBtn').addEventListener('click', () => openLetters('vowel'));
   $('solveBtn').addEventListener('click', openSolve);
@@ -461,5 +592,6 @@
 
   buildWheel();
   renderNames();
+  loadConfig();
   help.autoOpen();
 })();

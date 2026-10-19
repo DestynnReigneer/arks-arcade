@@ -757,6 +757,59 @@ async function run({ base, root }) {
   ok('adult-theme scores stay off the kids board', !(await wl('/leaderboard?difficulty=normal')).data.some(r => r.initials === 'XXX'));
   ok('…and show once unlocked', (await pinGet('/leaderboard?difficulty=normal&adult=1', '2468')).data.some(r => r.initials === 'XXX'));
 
+  // ---- Spin & Solve: levels, packs, requests --------------------------------------
+  const spinCfg = (await wl('/spinsolve/config')).data;
+  ok('Spin & Solve has the four levels', spinCfg.levels.map(l => l.id).join() === 'kids,cheeky,spicy,filthy');
+  ok('…with built-in puzzles at every level', spinCfg.levels.every(l => l.builtin >= 30));
+  const kidsPuzzles = await wl('/spinsolve/puzzles?level=kids');
+  ok('kids puzzles need no PIN', kidsPuzzles.status === 200 && kidsPuzzles.data.puzzles.length >= 150);
+  ok('adult puzzles need the PIN', (await wl('/spinsolve/puzzles?level=filthy')).status === 403);
+  ok('a wrong PIN is refused', (await pinGet('/spinsolve/puzzles?level=filthy', '0000')).status === 403);
+  ok('the right PIN opens them', (await pinGet('/spinsolve/puzzles?level=filthy', '2468')).data.puzzles.length >= 30);
+  ok('the unlock check works', (await wl('/spinsolve/unlock', 'POST', { pin: '2468' })).data.ok === true &&
+    (await wl('/spinsolve/unlock', 'POST', { pin: '1111' })).data.ok === false);
+
+  const spinReq = await wl('/spinsolve/requests', 'POST', { topic: 'Camping', requestedBy: 'Kid' });
+  ok('players can request a puzzle theme', spinReq.status === 201);
+  ok('requests need a topic', (await wl('/spinsolve/requests', 'POST', { topic: ' ' })).status === 400);
+  const spinPending = await asAdmin('/spinsolve/admin/requests');
+  ok('the admin sees the request', spinPending.data.some(r => r.topic === 'Camping'));
+  ok('requests are admin-only', (await wl('/spinsolve/admin/requests')).status === 401);
+
+  const campPuzzles = [
+    { category: 'Thing', answer: 'Sleeping bag' }, { category: 'Thing', answer: 'TENT STAKES' },
+    { category: 'Food & Drink', answer: 'TOASTED MARSHMALLOWS' }, { category: 'Place', answer: 'NATIONAL FOREST' },
+    { category: 'Phrase', answer: 'HAPPY CAMPER' }, { category: 'Thing', answer: 'CAMPFIRE' },
+    { category: 'Thing', answer: 'SUPERCALIFRAGILISTIC' }, { category: 'Thing', answer: 'GREY SQUIRREL' },
+    { category: 'Thing', answer: 'CAMPFIRE' }
+  ];
+  const kidPack = await asAdmin('/spinsolve/admin/packs', 'POST', {
+    label: 'Camping', emoji: '🏕️', level: 'kids', puzzles: campPuzzles, requestId: spinReq.data.id
+  });
+  ok('a kids pack is created from pasted puzzles', kidPack.status === 201 && kidPack.data.pack.count === 6,
+    JSON.stringify(kidPack.data));
+  ok('…skipping ones too long for the board or British', kidPack.data.skipped.length === 2);
+  ok('…which closes the request', !(await asAdmin('/spinsolve/admin/requests')).data.some(r => r.topic === 'Camping'));
+  ok('…and is announced on the home page', (await wl('/comm/posts')).data.some(p => p.title.includes('Camping')));
+  const packPlay = (await wl(`/spinsolve/puzzles?pack=${kidPack.data.pack.id}`)).data;
+  ok('you can play just that pack', packPlay.puzzles.length === 6 && packPlay.puzzles.every(p => p.pack === 'Camping'));
+  ok('…and its puzzles join the full kids list', (await wl('/spinsolve/puzzles?level=kids')).data.puzzles.some(p => p.answer === 'HAPPY CAMPER'));
+
+  const adultPack = await asAdmin('/spinsolve/admin/packs', 'POST', {
+    label: 'Hen Night', emoji: '👰', level: 'spicy', puzzles: campPuzzles.slice(0, 6)
+  });
+  ok('an adult pack can be made', adultPack.status === 201);
+  ok('adult packs are hidden from the kids', !(await wl('/spinsolve/config')).data.packs.some(p => p.label === 'Hen Night'));
+  ok('…shown once unlocked', (await pinGet('/spinsolve/config', '2468')).data.packs.some(p => p.label === 'Hen Night'));
+  ok('…locked when played without the PIN', (await wl(`/spinsolve/puzzles?pack=${adultPack.data.pack.id}`)).status === 403);
+  ok('…and never announced', !(await wl('/comm/posts')).data.some(p => p.title.includes('Hen Night')));
+  ok('too few good puzzles is refused', (await asAdmin('/spinsolve/admin/packs', 'POST', { label: 'X', puzzles: [{ answer: 'HI THERE' }] })).status === 400);
+
+  await wl('/scores/spinsolve', 'POST', { initials: 'XXX', score: 99999, board: 'adult' });
+  ok('the adult score board needs the PIN', (await wl('/scores/spinsolve?board=adult')).status === 403);
+  ok('…shows with it', (await pinGet('/scores/spinsolve?board=adult', '2468')).data.some(r => r.initials === 'XXX'));
+  ok('…and adult #1s are never announced', !(await wl('/comm/posts')).data.some(p => p.title.includes('XXX took #1 on Spin')));
+
   // ---- Short Fuse -----------------------------------------------------------------
   const SF = base + '/api/shortfuse';
   const sf = async (p, method = 'GET', body, headers = {}) => {
