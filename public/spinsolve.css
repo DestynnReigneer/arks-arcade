@@ -72,3 +72,15 @@
 .name-row { display: flex; gap: 6px; margin-bottom: 6px; }
 .name-row input { margin: 0; }
 .name-row button { width: 42px; border-radius: 9px; border: 1px solid var(--border); background: var(--bg); color: var(--text); cursor: pointer; flex: none; }
+
+/* Level picker, same as Short Fuse */
+.levels { display: grid; gap: 8px; grid-template-columns: repeat(2, 1fr); }
+.level {
+  text-align: left; padding: 10px; border-radius: 12px; cursor: pointer; background: var(--bg);
+  border: 2px solid var(--border); color: var(--text);
+}
+.level[aria-pressed="true"] { border-color: var(--accent); }
+.level .l-name { font-weight: 800; font-size: 14px; }
+.level .l-blurb { font-size: 11px; color: var(--dim); margin-top: 4px; line-height: 1.35; }
+.level .l-lock { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--accent); margin-top: 6px; }
+.pack-tag { color: var(--dim); text-transform: none; letter-spacing: 0; }

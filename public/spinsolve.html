@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="arcade-ui.css">
 <link rel="stylesheet" href="spinsolve.css">
 <link rel="stylesheet" href="tutorial.css">
+<link rel="stylesheet" href="adult-mode.css">
 </head>
 <body>
 
@@ -22,6 +23,15 @@
 
 <!-- ============ setup ============ -->
 <section id="setup">
+  <div class="panel">
+    <h2>How spicy?</h2>
+    <div class="levels" id="levelList"></div>
+    <label style="margin-top:14px">Puzzles
+      <select id="packSelect"></select>
+    </label>
+    <button class="ghost" id="suggestBtn" style="width:100%">💡 Suggest a theme</button>
+  </div>
+
   <div class="panel">
     <h2>Who's playing?</h2>
     <p class="hint">One player plays solo for the 🏆 board. Two to four take turns on this phone.</p>
@@ -113,9 +123,48 @@
   </div>
 </div>
 
+<div class="overlay hidden" id="pinView">
+  <div class="card-panel center">
+    <div class="big-emoji">🔞</div>
+    <h2>Adults only</h2>
+    <p class="hint" id="pinHint">Enter the adult PIN.</p>
+    <input type="password" id="pinInput" inputmode="numeric" maxlength="8" class="code-input" autocomplete="off">
+    <div class="msg" id="pinMsg"></div>
+    <div class="stack">
+      <button class="primary" id="pinOk">Unlock</button>
+      <button class="ghost" id="pinCancel">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="requestView">
+  <div class="card-panel">
+    <h2>💡 Suggest a theme</h2>
+    <p class="hint">What should the next puzzle pack be about? The arcade's owner gets your idea.</p>
+    <div id="requestForm">
+      <label>Theme idea<input id="reqTopic" maxlength="60" placeholder="e.g. Pokémon, Disney movies, camping"></label>
+      <label>Anything else? (optional)<input id="reqNote" maxlength="200"></label>
+      <label>Your name (optional)<input id="reqBy" maxlength="30"></label>
+      <div class="msg" id="reqMsg"></div>
+      <div class="stack">
+        <button class="primary" id="reqSend">Send idea</button>
+        <button class="ghost" id="reqCancel">Cancel</button>
+      </div>
+    </div>
+    <div id="reqThanks" class="hidden center">
+      <div class="big-emoji">🙌</div>
+      <p>Thanks! Your idea is on its way.</p>
+    </div>
+  </div>
+</div>
+
 <div class="overlay hidden" id="scoresView">
   <div class="card-panel">
     <h2>🏆 Solo high scores</h2>
+    <div class="seg hidden" id="scoreBoardSeg">
+      <button data-board="solo" aria-pressed="true">🧒 Kids</button>
+      <button data-board="adult" aria-pressed="false">🔞 Adult</button>
+    </div>
     <ul class="scores" id="scoreList"></ul>
     <div class="stack"><button class="ghost" id="scoresClose">Close</button></div>
   </div>
@@ -124,7 +173,6 @@
 <script src="tutorial.js"></script>
 <script src="blip.js"></script>
 <script src="arcade-kit.js"></script>
-<script src="spin-puzzles.js"></script>
 <script src="spinsolve.js"></script>
 </body>
 </html>

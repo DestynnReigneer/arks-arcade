@@ -64,14 +64,14 @@ const requestLimiter = rateLimit({
   message: { error: 'Too many theme requests. Try again later.' }
 });
 
-async function notifyDiscord(request) {
+async function notifyDiscord(request, game = 'Wordless') {
   if (!DISCORD_WEBHOOK_URL) return;
   try {
     await fetch(DISCORD_WEBHOOK_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        content: `🎮 **New Wordless theme request**\n**Topic:** ${request.topic}${request.requestedBy ? `\n**From:** ${request.requestedBy}` : ''}${request.note ? `\n**Note:** ${request.note}` : ''}`
+        content: `🎮 **New ${game} theme request**\n**Topic:** ${request.topic}${request.requestedBy ? `\n**From:** ${request.requestedBy}` : ''}${request.note ? `\n**Note:** ${request.note}` : ''}`
       })
     });
   } catch (e) {
@@ -110,6 +110,7 @@ app.get('/healthz', (req, res) => {
 // ---- Short Fuse ----
 app.use('/api/shortfuse', require('./shortfuse/routes'));
 app.use('/api/chess', require('./chess/routes'));
+app.use('/api/spinsolve', require('./spinsolve/routes')({ requireAdmin, notify: notifyDiscord }));
 app.use('/api/scores', require('./arcade/scores').router);
 
 // ---- Comm Center (home page message board) ----

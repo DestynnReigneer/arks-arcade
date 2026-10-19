@@ -8,11 +8,13 @@ const express = require('express');
 const rateLimit = require('express-rate-limit');
 const db = require('../db');
 const comm = require('./comm');
+const adultPin = require('./adult-pin');
 
 // Each game's boards and the highest score that could honestly be reached,
 // so a typo'd or tampered post can't sit at #1 forever.
 const GAMES = {
-  spinsolve: { label: 'Spin & Solve', boards: { solo: 'Solo' }, max: 200000 },
+  // Adult boards are read only with the adult PIN and never announced.
+  spinsolve: { label: 'Spin & Solve', boards: { solo: 'Solo', adult: 'Adult' }, adultBoards: ['adult'], max: 200000 },
   chess: { label: 'Chess', boards: { easy: 'vs Easy', medium: 'vs Medium', hard: 'vs Hard' }, max: 5000 },
   dino: { label: 'Dino Dash', boards: { run: 'Distance' }, max: 9999999 }
 };
@@ -65,7 +67,7 @@ function save(game, { initials, score, board, detail }) {
   const rank = db.db.prepare(`
     SELECT COUNT(*) AS c FROM arcade_scores WHERE game = ? AND board = ? AND score > ?
   `).get(game, key, points).c + 1;
-  if (rank === 1) {
+  if (rank === 1 && !(g.adultBoards || []).includes(key)) {
     const where = Object.keys(g.boards).length > 1 ? ` (${g.boards[key]})` : '';
     comm.safePost({
       kind: 'highscore', emoji: '🏆', game,
@@ -83,7 +85,13 @@ const saveLimiter = rateLimit({
 });
 
 router.get('/:game', (req, res, next) => {
-  try { res.json(list(req.params.game, req.query.board, req.query.limit)); } catch (e) { next(e); }
+  try {
+    const { g, key } = boardOf(req.params.game, req.query.board);
+    if ((g.adultBoards || []).includes(key) && !adultPin.matches(req.get('X-Adult-Pin') || '')) {
+      throw fail('That PIN is not right.', 403);
+    }
+    res.json(list(req.params.game, key, req.query.limit));
+  } catch (e) { next(e); }
 });
 
 router.post('/:game', saveLimiter, (req, res, next) => {
