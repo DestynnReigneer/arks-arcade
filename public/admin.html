@@ -6,7 +6,10 @@
 <title>Arcade Admin</title>
 <link rel="stylesheet" href="style.css">
 <style>
-  body { align-items: stretch; }
+  /* Same width on every tab: the shared stylesheet centers body in a flex
+     column, which would shrink it to whatever the current tab holds. */
+  html { scrollbar-gutter: stable; }
+  body { align-items: stretch; width: 100%; }
   main { width: 100%; max-width: 700px; margin: 0 auto; padding: 20px 16px 60px; }
   .admin-header { text-align: center; padding: 20px 0; }
   /* Its own row above the title, so it can never sit on top of it. */
@@ -237,8 +240,15 @@
     </div>
 
     <div class="admin-section">
+      <h2>🏠 Home page games</h2>
+      <p class="admin-note">Move games up and down to change their order on the home page, or hide ones you don't want showing. Hidden games still work if someone has the link.</p>
+      <div id="homeGames">Loading…</div>
+      <div id="homeGamesMsg" class="admin-msg"></div>
+    </div>
+
+    <div class="admin-section">
       <h2>🔞 Adult PIN</h2>
-      <p class="admin-note">Locks every adult option in the arcade (Rambler's unfiltered words, and adult modes added later).
+      <p class="admin-note">Locks every adult option in the arcade: adult Wordless themes, Rambler's Unfiltered words, Short Fuse's adult decks and Spin &amp; Solve's adult levels.
         Changing it here overrides <code>ADULT_PIN</code> in <code>.env</code>.</p>
       <div id="pinStatus" class="admin-note">Loading…</div>
       <div class="field-row">

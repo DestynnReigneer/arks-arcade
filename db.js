@@ -324,14 +324,18 @@ const BUILTIN_THEMES = [
 
 // Built-in word lists are refreshed on every start, so an expanded list in a
 // new release reaches databases that were seeded with the old one.
+// The built-in adult themes (arcade/wordless-adult-themes.js) seed the same
+// way, flagged adult so they stay behind the adult PIN.
 function seedBuiltinThemes() {
   const insert = db.prepare(`
-    INSERT INTO themes (id, label, subject, emoji, accent, bg, font, words, builtin)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
-    ON CONFLICT(id) DO UPDATE SET words = excluded.words WHERE themes.builtin = 1
+    INSERT INTO themes (id, label, subject, emoji, accent, bg, font, words, builtin, adult)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
+    ON CONFLICT(id) DO UPDATE SET words = excluded.words, adult = excluded.adult WHERE themes.builtin = 1
   `);
-  for (const t of BUILTIN_THEMES) {
-    insert.run(t.id, t.label, t.subject, t.emoji, t.accent, t.bg, t.font, JSON.stringify(t.words));
+  const adultThemes = require('./arcade/wordless-adult-themes')
+    .map(t => ({ ...t, font: FONT_STACKS[t.font] || FONT_STACKS.sans }));
+  for (const t of [...BUILTIN_THEMES, ...adultThemes]) {
+    insert.run(t.id, t.label, t.subject, t.emoji, t.accent, t.bg, t.font, JSON.stringify(t.words), t.adult ? 1 : 0);
   }
 }
 seedBuiltinThemes();

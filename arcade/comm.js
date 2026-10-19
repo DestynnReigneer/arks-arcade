@@ -127,6 +127,13 @@ function adminRouter(requireAdmin) {
     res.json({ deleted: true });
   });
 
+  // The home page's game list: order and which ones show.
+  const homeGames = require('./home-games');
+  admin.get('/home-games', (req, res) => res.json(homeGames.get()));
+  admin.post('/home-games', (req, res, next) => {
+    try { res.json(homeGames.set(req.body || {})); } catch (e) { next(e); }
+  });
+
   // The adult PIN lives here rather than under one game: it guards adult
   // content anywhere in the arcade.
   admin.get('/adult-pin', (req, res) => res.json(adultPin.status()));

@@ -207,6 +207,9 @@ const BUILTIN = {
   }
 };
 
+// The built-in adult themes carry their clues with them.
+for (const theme of require('./wordless-adult-themes')) BUILTIN[theme.id] = theme.clues;
+
 // A theme's own clues win; Classic falls back on the dictionary. Other themes
 // don't, because a dictionary clue for CREEPER is a plant, not a Minecraft mob.
 function clueFor(theme, word) {

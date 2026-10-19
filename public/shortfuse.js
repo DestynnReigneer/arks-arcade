@@ -556,20 +556,48 @@ function renderReaction() {
   const timer = $('reactionTimer');
 
   if (S.table.kind === 'local') {
-    timer.classList.add('hidden');
-    const go = document.createElement('button');
-    go.className = 'primary';
-    go.textContent = p.nopes % 2 ? 'Nobody — it stays Noped' : 'Nobody — go ahead';
-    go.onclick = async () => take(await send({ action: 'resolve' }));
-    buttons.appendChild(go);
+    // One phone: put it in the middle of the table. Anyone with a Nope shouts
+    // it and taps their own name. Every other player gets a button, holding a
+    // Nope or not, so the buttons don't give anyone's hand away. If nobody
+    // moves before the countdown ends, the card goes ahead.
+    $('reactionTitle').textContent = (p.nopes % 2
+      ? 'Noped! Anyone Nope the Nope?'
+      : `${nameOf(p.by)} played ${p.cards.length === 2 ? 'a pair' : p.cards[0].name}${target}.`) +
+      ' 🙅 Got a Nope? Shout it and tap your name!';
+    timer.classList.remove('hidden');
+    const bar = document.createElement('div');
+    timer.innerHTML = '';
+    timer.appendChild(bar);
+    const total = 5000;
+    const ends = Date.now() + total;
+    let fired = false;
+    const goAhead = async () => { if (fired) return; fired = true; clearInterval(S.reactionTick); take(await send({ action: 'resolve' })); };
+    S.reactionTick = setInterval(() => {
+      const left = Math.max(0, ends - Date.now());
+      bar.style.width = `${(left / total) * 100}%`;
+      if (!left) goAhead();
+    }, 100);
     for (const s of g.seats) {
-      if (s.out || !s.hasNope) continue;
+      if (s.out) continue;
       const b = document.createElement('button');
       b.className = 'ghost';
-      b.textContent = `🙅 ${s.name} plays a Nope`;
-      b.onclick = async () => take(await send({ action: 'nope', as: s.id }));
+      b.textContent = `🙅 ${s.name}: NOPE!`;
+      b.onclick = async () => {
+        if (fired) return;
+        fired = true;
+        clearInterval(S.reactionTick);
+        // No Nope in that hand: the server says so, and the countdown starts again.
+        const snap = await send({ action: 'nope', as: s.id });
+        if (!snap) { renderReaction(); return; }
+        take(snap);
+      };
       buttons.appendChild(b);
     }
+    const go = document.createElement('button');
+    go.className = 'primary';
+    go.textContent = p.nopes % 2 ? 'Nobody: it stays Noped' : 'Nobody: go ahead';
+    go.onclick = goAhead;
+    buttons.appendChild(go);
   } else {
     timer.classList.remove('hidden');
     const bar = document.createElement('div');
@@ -749,6 +777,7 @@ async function boot() {
     catch (e) { $('lobbyMsg').textContent = e.message; }
   };
   $('leaveBtn').onclick = leave;
+  $('passLeave').onclick = () => { if (confirm('Leave this game?')) leave(); };
   $('drawBtn').onclick = drawCard;
   $('peekClose').onclick = () => hide('peekView');
   $('sheetClose').onclick = () => hide('cardSheet');
