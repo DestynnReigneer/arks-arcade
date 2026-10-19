@@ -643,8 +643,10 @@
   }
 
   // ---- the turn clock ---------------------------------------------------------------------
-  // Runs only while a player is actually deciding: not while the wheel spins,
-  // the host is lighting letters, or a results screen is up.
+  // Starts the moment a turn begins and runs while the player decides. It
+  // pauses only while the wheel spins or the host lights up letters (so
+  // nobody loses time to an animation) and behind a results screen. Jokes
+  // and hecklers never stop it: they're just entertainment while you think.
 
   function resetTurn() {
     S.timeLeft = S.turnSecs * 1000;
@@ -656,15 +658,16 @@
 
   const overlayOpen = id => !$(id).classList.contains('hidden');
   function clockPaused() {
-    return $('game').classList.contains('hidden') || S.busy || S.heckling || help.isOpen ||
+    return $('game').classList.contains('hidden') || S.busy || help.isOpen ||
       overlayOpen('roundView') || overlayOpen('overView') || overlayOpen('scoresView');
   }
 
-  function paintClock() {
+  function paintClock(paused = false) {
     if (!S.turnSecs) return;
     const secs = Math.ceil(S.timeLeft / 1000);
     $('ttFill').style.transform = `scaleX(${Math.max(0, S.timeLeft / (S.turnSecs * 1000))})`;
-    $('ttText').textContent = `⏱ ${secs}s · ${S.players[S.cur] ? S.players[S.cur].name : ''}`;
+    $('ttText').textContent = `${paused ? '⏸' : '⏱'} ${secs}s · ${S.players[S.cur] ? S.players[S.cur].name : ''}`;
+    $('turnTimer').classList.toggle('paused', paused);
     $('turnTimer').classList.toggle('warn', secs <= 10);
   }
 
@@ -673,7 +676,11 @@
     const now = Date.now();
     const step = now - lastTick;
     lastTick = now;
-    if (!S.puzzle || clockPaused()) { S.idleSince += step; return; }
+    if (!S.puzzle || clockPaused()) {
+      S.idleSince += step;
+      if (S.puzzle && S.busy) paintClock(true);
+      return;
+    }
     if (S.turnSecs) {
       const before = Math.ceil(S.timeLeft / 1000);
       S.timeLeft -= step;
@@ -684,7 +691,7 @@
     }
     // Nobody's done anything for a while: the host fills the silence.
     const letterOrSolveOpen = overlayOpen('letterView') || overlayOpen('solveView');
-    if (!S.jokedThisTurn && !letterOrSolveOpen && now - S.idleSince > 9000) {
+    if (!S.jokedThisTurn && !S.heckling && !letterOrSolveOpen && now - S.idleSince > 9000) {
       S.jokedThisTurn = true;
       tellJoke();
     }
@@ -731,7 +738,7 @@
   }
 
   async function heckle() {
-    if (clockPaused() || overlayOpen('letterView') || overlayOpen('solveView')) return;
+    if (clockPaused() || S.heckling || overlayOpen('letterView') || overlayOpen('solveView')) return;
     const hostEl = $('host');
     const hostId = hostEl.dataset.host;
     const hostName = SPIN_HOSTS[hostId].name;
