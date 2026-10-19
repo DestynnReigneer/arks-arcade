@@ -93,7 +93,7 @@ function broadcast(room) {
 
 // ---- lifecycle -------------------------------------------------------------
 
-function normaliseSettings({ size, profile, durationSec }) {
+function normalizeSettings({ size, profile, durationSec }) {
   const s = round.SIZES.includes(Number(size)) ? Number(size) : 4;
   const p = profile === 'adult' ? 'adult' : 'kids';
   const d = round.DURATIONS.includes(Number(durationSec)) ? Number(durationSec) : round.DEFAULT_DURATION;
@@ -133,7 +133,7 @@ function createRoom({ hostName, size, profile, durationSec }) {
     createdAt: Date.now(),
     lastActivity: Date.now(),
     state: 'lobby',
-    settings: normaliseSettings({ size, profile, durationSec }),
+    settings: normalizeSettings({ size, profile, durationSec }),
     board: null,
     boardId: null,
     minLength: null,
@@ -209,7 +209,7 @@ function updateSettings(code, id, suppliedToken, settings) {
   requireHost(room, player);
   if (room.state === 'playing') throw fail('Round in progress.', 409);
 
-  room.settings = normaliseSettings({ ...room.settings, ...settings });
+  room.settings = normalizeSettings({ ...room.settings, ...settings });
   touch(room);
   broadcast(room);
   return room;

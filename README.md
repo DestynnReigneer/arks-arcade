@@ -27,7 +27,7 @@ A dice-and-grid word hunt against the clock. (Boggle-style — "Boggle" is a Has
   - **Solo** — you against the clock.
   - **Pass & Play** — one phone, 2–8 players, same board each turn.
   - **Tabletop** — one shared timer, everyone writes on paper, then the lists get typed in for scoring. The phone is just the buzzer and the scorekeeper.
-  - **Own Phones** — a four-letter room code, everyone on their own device, synchronised timer, live word counts (counts only — never the words).
+  - **Own Phones** — a four-letter room code, everyone on their own device, synchronized timer, live word counts (counts only — never the words).
 - Two dictionaries: a **Kids** list with the rude words removed, and an **Unfiltered** list with slang and profanity added on top. Separate leaderboards, so the two never share a scale.
 - **Difficulty** — Easy (three-letter words count, roomier timer, richer boards), Normal (the box rules), Hard (four letters minimum, less time, scores multiplied by 1.35).
 - **Timers up to ten minutes.** Three is the box rule and it is genuinely miserable for a seven-year-old.
@@ -46,7 +46,7 @@ Because of Marathon, boards are rectangular internally. Anything that takes a bo
 
   The dictionary is the one thing that is not shared — the unfiltered list is wider, so an adult genuinely has more to find. The standings tag each row with the list it was played on rather than pretending the two are the same.
 - **Milestones** — sixteen of them, from "find your first word" to "play thirty days running". Each pays coins.
-- **Theme packs** — a pack of words about a subject (Halloween, Minecraft, whatever) that a season can wear. Its words become **valid** so `ENDERMAN` scores, they are **flagged** so finding one fires a celebration and pays **double**, boards are **re-rolled** until they actually contain some, and the accent colour changes to match. Written by pasting a generated prompt into any chatbot and pasting the answer back — no API key, no cost.
+- **Theme packs** — a pack of words about a subject (Halloween, Minecraft, whatever) that a season can wear. Its words become **valid** so `ENDERMAN` scores, they are **flagged** so finding one fires a celebration and pays **double**, boards are **re-rolled** until they actually contain some, and the accent color changes to match. Written by pasting a generated prompt into any chatbot and pasting the answer back — no API key, no cost.
 - **Seasons** — the arcade boards run on a schedule you set (monthly by default, or any interval, or manual). When a season ends every board is frozen into **badges** and then cleared, so everyone starts level. A badge records the year, season, which board, the rank and the score. Streaks, coins, milestones and lifetime bests are **never** reset — only the walls are. Players get a countdown in the last few days.
 - **The arcade board** — three walls (4x4, 5x5, Marathon), ten slots each. You only get to type your initials by beating the tenth score, and when you do, somebody is knocked off for good. Your profile keeps your personal best either way, so missing the wall costs you nothing but the wall.
 - **Coins and hints** — earned slowly, spent on a hint that reveals a word still sitting on the board. A hinted word buys you time but scores nothing, so coins can't be converted straight into points.
@@ -69,9 +69,9 @@ Because of Marathon, boards are rectangular internally. Anything that takes a bo
 
 Every feature now has a screen.
 
-Rambler and the arcade hub are on the ARKS colour spec: 8-Bit for the kids
+Rambler and the arcade hub are on the ARKS color spec: 8-Bit for the kids
 dictionary, Vice for unfiltered, switching with the dictionary in play.
-Wordless is not yet — its themes set their own colours from the database, so
+Wordless is not yet — its themes set their own colors from the database, so
 it needs a migration and a decision about its gold "present" tile.
 `docs/DESIGN.md` has the detail.
 
@@ -97,7 +97,7 @@ Everything lives under `/api/rambler`.
 
 | Route | What it does |
 |---|---|
-| `GET /config` | Sizes, timers, difficulties, milestone catalogue, dictionary stats |
+| `GET /config` | Sizes, timers, difficulties, milestone catalog, dictionary stats |
 | `POST /board` | Roll a board (`size`, `profile`, `difficulty`) |
 | `POST /check` | Validate one word against a board |
 | `POST /score` | Score a finished round; pass `playerId` to bank progress |

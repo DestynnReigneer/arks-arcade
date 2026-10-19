@@ -1,6 +1,6 @@
 'use strict';
 
-// Short Fuse's cards. The rules of each card never change; only the flavour
+// Short Fuse's cards. The rules of each card never change; only the flavor
 // does. Kids get glitter bombs and cookie bribes, the adult levels get
 // progressively filthier versions of the same eight jobs. Every card instance
 // picks one of its type's variants, so a deck reads differently every game.

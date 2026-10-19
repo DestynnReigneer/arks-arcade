@@ -9,7 +9,7 @@
 
   const STATUS_LABELS = {
     new: '🆕 New', pending: '⏳ Pending', 'in-progress': '🔧 In progress',
-    completed: '✅ Completed', cancelled: '🚫 Cancelled'
+    completed: '✅ Completed', canceled: '🚫 Canceled'
   };
   const KIND_LABELS = { feature: '💡 Feature idea', issue: '🐛 Issue', message: '💬 Message' };
   const GAME_LABELS = { wordless: 'Wordless', rambler: 'Rambler', shortfuse: 'Short Fuse' };

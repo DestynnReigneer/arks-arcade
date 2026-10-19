@@ -1488,8 +1488,8 @@ function showResults(results) {
     }
     for (const w of r.words) {
       const line = document.createElement('div');
-      line.className = `word-line${!w.valid ? ' bad' : w.cancelled ? ' dead' : ''}`;
-      const label = !w.valid ? w.reason : w.cancelled ? 'everyone found it' : '';
+      line.className = `word-line${!w.valid ? ' bad' : w.canceled ? ' dead' : ''}`;
+      const label = !w.valid ? w.reason : w.canceled ? 'everyone found it' : '';
       line.innerHTML = `<span class="w"></span><span class="p${w.points ? '' : ' zero'}"></span>`;
       line.querySelector('.w').textContent = w.word;
       line.querySelector('.p').textContent = w.points ? `+${w.points}` : label;
@@ -1499,10 +1499,10 @@ function showResults(results) {
     standings.appendChild(d);
   });
 
-  const cancelled = results.cancelled || [];
-  $('cancelledPanel').classList.toggle('hidden', cancelled.length === 0);
-  if (cancelled.length) {
-    chips($('cancelledChips'), cancelled.map(w => ({ word: w, points: 0 })));
+  const canceled = results.canceled || [];
+  $('canceledPanel').classList.toggle('hidden', canceled.length === 0);
+  if (canceled.length) {
+    chips($('canceledChips'), canceled.map(w => ({ word: w, points: 0 })));
   }
 
   $('missedPanel').classList.toggle('hidden', results.missed.length === 0);
@@ -1600,8 +1600,8 @@ function renderSeasonStrip() {
   if (!el) return;
   const text = seasonStripText(S.season);
   const soon = !!(S.season && S.season.closingSoon);
-  // The spec's rule: status is colour + icon + word, never colour alone.
-  // The words were already there; the warn colour and the hourglass make
+  // The spec's rule: status is color + icon + word, never color alone.
+  // The words were already there; the warn color and the hourglass make
   // the third.
   el.textContent = soon && text ? '⏳ ' + text : text;
   el.classList.toggle('hidden', !text);

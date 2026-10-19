@@ -52,7 +52,7 @@ async function run({ base, root }) {
   ok('config responds', cfg.status === 200);
   ok('three difficulties', cfg.data.difficulties.length === 3);
   ok('timers stretch to 10 minutes for younger players', cfg.data.durations.includes(600));
-  ok('milestone catalogue is published', cfg.data.milestones.length >= 15);
+  ok('milestone catalog is published', cfg.data.milestones.length >= 15);
 
   console.log('\n-- a classic round --');
   const board = await api('/board', 'POST', { size: 4, profile: 'kids' });
@@ -438,7 +438,7 @@ async function run({ base, root }) {
     themedCfg.data.theme && themedCfg.data.theme.label === 'Minecraft');
   ok('the word list still is not exposed', themedCfg.data.theme.words === undefined);
 
-  // The four behaviours the pack is supposed to have.
+  // The four behaviors the pack is supposed to have.
   const themeBoard = await api('/board', 'POST', { size: 4, profile: 'kids' });
   const check = await api('/check', 'POST', { boardId: themeBoard.data.boardId, word: 'ENDERMAN' });
   ok('a theme word is a real word now (1: it scores)',
@@ -588,7 +588,7 @@ async function run({ base, root }) {
   await new Promise(r => setTimeout(r, 300));
   const overlap = aWords.filter(w => bWords.includes(w));
   ok(`shared words cancel (${overlap.join(',')})`,
-    overlap.every(w => events[events.length - 1].results.cancelled.includes(w)));
+    overlap.every(w => events[events.length - 1].results.canceled.includes(w)));
   ok('late words are refused',
     (await api(`/rooms/${host.code}/words`, 'POST', { ...host, words: ['CAT'] })).status === 409);
   ok('the host can reset to the lobby',

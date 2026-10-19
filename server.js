@@ -19,7 +19,7 @@ const adultPin = require('./arcade/adult-pin');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-// ADMIN_PASSWORD is the name in .env; ADMIN_TOKEN is the older one, still honoured.
+// ADMIN_PASSWORD is the name in .env; ADMIN_TOKEN is the older one, still honored.
 const ADMIN_TOKEN = process.env.ADMIN_PASSWORD || process.env.ADMIN_TOKEN || '';
 const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL || '';
 

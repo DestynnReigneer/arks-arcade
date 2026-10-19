@@ -10,7 +10,7 @@
 # Add your own freely; one word per line, 3+ letters, A-Z only.
 #
 # Not included: slurs aimed at race, sexuality, or disability. Not a
-# judgement on your party — they just make for a bad scoring surprise
+# judgment on your party — they just make for a bad scoring surprise
 # when they turn up on the end-of-round reveal screen. Add them yourself
 # if you disagree.
 

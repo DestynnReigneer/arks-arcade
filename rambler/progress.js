@@ -120,7 +120,7 @@ const MILESTONES = [
 
 const MILESTONE_BY_CODE = new Map(MILESTONES.map(m => [m.code, m]));
 
-function catalogue() {
+function catalog() {
   return MILESTONES.map(({ check, ...rest }) => rest);
 }
 
@@ -241,6 +241,6 @@ function profile(playerId) {
 
 module.exports = {
   today, yesterday, seededRng, seedFrom, dailyBoard, DAILY_DURATION,
-  MILESTONES, MILESTONE_BY_CODE, catalogue,
+  MILESTONES, MILESTONE_BY_CODE, catalog,
   coinsFor, nextStreak, recordRound, profile
 };
