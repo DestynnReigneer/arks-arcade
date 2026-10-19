@@ -109,6 +109,8 @@ app.get('/healthz', (req, res) => {
 
 // ---- Short Fuse ----
 app.use('/api/shortfuse', require('./shortfuse/routes'));
+app.use('/api/chess', require('./chess/routes'));
+app.use('/api/scores', require('./arcade/scores').router);
 
 // ---- Comm Center (home page message board) ----
 app.use('/api/comm/admin', comm.adminRouter(requireAdmin));
