@@ -53,45 +53,13 @@
 <section id="game" class="hidden">
   <div class="round-line"><span id="roundLabel"></span><span id="strikes" class="strikes"></span></div>
 
-  <!-- The stage: the puzzle wall, and Vee gliding along underneath it -->
+  <!-- The stage: the puzzle wall, and this round's robot host gliding along underneath it -->
   <div class="stage">
     <div class="puzzle-board" id="puzzleBoard"></div>
     <div class="host-lane" id="hostLane">
       <div class="host" id="host" data-pose="idle" aria-hidden="true">
         <div class="host-say" id="hostSay"></div>
-        <svg class="host-svg" viewBox="0 0 60 110">
-          <defs>
-            <linearGradient id="vee-chrome" x1="0" x2="1">
-              <stop offset="0" stop-color="#dfe9ff"/><stop offset=".45" stop-color="#ffffff"/><stop offset="1" stop-color="#9fb1d6"/>
-            </linearGradient>
-            <linearGradient id="vee-gown" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stop-color="#ff4fa3"/><stop offset=".6" stop-color="#a46bff" stop-opacity=".85"/><stop offset="1" stop-color="#2de2e6" stop-opacity="0"/>
-            </linearGradient>
-            <linearGradient id="vee-hair" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0" stop-color="#ff7ac0"/><stop offset="1" stop-color="#b23cff"/>
-            </linearGradient>
-            <radialGradient id="vee-glow">
-              <stop offset="0" stop-color="#2de2e6" stop-opacity=".9"/><stop offset="1" stop-color="#2de2e6" stop-opacity="0"/>
-            </radialGradient>
-          </defs>
-          <ellipse class="h-shadow" cx="30" cy="105" rx="17" ry="4" fill="url(#vee-glow)"/>
-          <g class="h-body">
-            <path class="h-gown" d="M23 55 Q30 58 37 55 L49 99 Q30 106 11 99 Z" fill="url(#vee-gown)"/>
-            <g class="h-arm-l"><path d="M21 38 Q14 47 16 57" stroke="url(#vee-chrome)" stroke-width="4" stroke-linecap="round" fill="none"/><circle cx="16" cy="58" r="2.3" fill="#ff4fa3"/></g>
-            <path d="M20 35 Q30 32 40 35 L37 56 Q30 58.5 23 56 Z" fill="url(#vee-chrome)"/>
-            <path d="M21.5 39 L38.5 49" stroke="#2de2e6" stroke-width="2.2" stroke-linecap="round" class="h-sash"/>
-            <rect x="27" y="29" width="6" height="5" rx="1" fill="#9fb1d6"/>
-            <g class="h-head">
-              <path d="M17 19 Q15 3 30 3 Q46 3 44 19 L47 31 Q41 28 40.5 21 Q30 12 19.5 21 Q19 28 13 31 Z" fill="url(#vee-hair)"/>
-              <ellipse cx="30" cy="19" rx="11" ry="12" fill="url(#vee-chrome)"/>
-              <rect x="19.5" y="14.5" width="21" height="7.5" rx="3.75" fill="#12111c"/>
-              <g class="h-eyes"><rect x="23" y="16.6" width="5" height="3.2" rx="1.6" fill="#2de2e6"/><rect x="32" y="16.6" width="5" height="3.2" rx="1.6" fill="#2de2e6"/></g>
-              <path class="h-smile" d="M26 25.5 Q30 28.5 34 25.5" stroke="#ff4fa3" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-              <circle cx="44.5" cy="9" r="1.6" fill="#2de2e6" class="h-antenna"/>
-            </g>
-            <g class="h-arm-r"><path d="M39 38 Q46 47 44 57" stroke="url(#vee-chrome)" stroke-width="4" stroke-linecap="round" fill="none"/><circle cx="44" cy="58" r="2.6" fill="#2de2e6" class="h-hand"/></g>
-          </g>
-        </svg>
+        <div class="host-art" id="hostArt"></div>
       </div>
     </div>
   </div>
@@ -223,6 +191,7 @@
 <script src="tutorial.js"></script>
 <script src="blip.js"></script>
 <script src="arcade-kit.js"></script>
+<script src="spin-hosts.js"></script>
 <script src="spinsolve.js"></script>
 </body>
 </html>
