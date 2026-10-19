@@ -69,9 +69,11 @@ Because of Marathon, boards are rectangular internally. Anything that takes a bo
 
 Every feature now has a screen.
 
-What is still outstanding is the classic modes being off the ARKS colour spec
-— Marathon, the daily and the profile screens were built to it, the four
-original modes were not. `docs/DESIGN.md` lists exactly which values are wrong.
+Rambler and the arcade hub are on the ARKS colour spec: 8-Bit for the kids
+dictionary, Vice for unfiltered, switching with the dictionary in play.
+Wordless is not yet — its themes set their own colours from the database, so
+it needs a migration and a decision about its gold "present" tile.
+`docs/DESIGN.md` has the detail.
 
 #### A note on theme packs and word length
 
