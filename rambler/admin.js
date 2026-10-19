@@ -10,7 +10,7 @@ const packs = require('./packs');
 // token is not configured, none of this exists.
 
 const router = express.Router();
-const ADMIN_TOKEN = process.env.ADMIN_TOKEN || '';
+const ADMIN_TOKEN = process.env.ADMIN_PASSWORD || process.env.ADMIN_TOKEN || '';
 
 function fail(message, status) {
   return Object.assign(new Error(message), { status });

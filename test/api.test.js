@@ -604,6 +604,35 @@ async function run({ base, root }) {
   await api('/players/' + skint.data.id, 'DELETE');
   ok('profiles can be deleted', (await api('/players/' + pid)).status === 404);
 
+  // ---- Wordless difficulty --------------------------------------------------
+  const wl = async (p, method = 'GET', body) => {
+    const res = await fetch(base + '/api' + p, {
+      method,
+      headers: body ? { 'Content-Type': 'application/json' } : undefined,
+      body: body ? JSON.stringify(body) : undefined
+    });
+    return { status: res.status, data: await res.json().catch(() => null) };
+  };
+
+  const classic = (await wl('/themes')).data.find(t => t.id === 'classic');
+  ok('classic has words for every difficulty',
+    [[3, 4], [5, 6], [7, 8], [9, 10]].every(([lo, hi]) => classic.words.some(w => w.length >= lo && w.length <= hi)));
+
+  const wlScore = (initials, difficulty) => wl('/leaderboard', 'POST', {
+    initials, themeId: 'classic', won: true, guesses: 2, hintsUsed: 0, word: 'cat', elapsedMs: 5000, difficulty
+  });
+  const easySave = await wlScore('EZY', 'easy');
+  await wlScore('LUD', 'ludicrous');
+  const sneaky = await wlScore('BAD', 'impossible');
+  ok('a Wordless score keeps its difficulty', easySave.status === 201 && easySave.data.difficulty === 'easy');
+  ok('an unknown difficulty is filed as normal', sneaky.data.difficulty === 'normal');
+
+  const easyBoard = (await wl('/leaderboard?difficulty=easy')).data;
+  ok('each difficulty has its own board',
+    easyBoard.some(r => r.initials === 'EZY') && easyBoard.every(r => r.difficulty === 'easy'));
+
+  ok('the arcade name endpoint answers', typeof (await wl('/arcade-info')).data.name === 'string');
+
   console.log(`\n  ${pass} passed, ${fail} failed`);
   return { pass, fail };
 }

@@ -9,6 +9,15 @@
   body { align-items: stretch; }
   main { width: 100%; max-width: 700px; margin: 0 auto; padding: 20px 16px 60px; }
   .admin-header { text-align: center; padding: 20px 0; }
+  /* Its own row above the title, so it can never sit on top of it. */
+  .back-row { text-align: left; margin-bottom: 14px; }
+  .back-link {
+    display: inline-block;
+    color: var(--text); opacity: 0.75; text-decoration: none;
+    font-size: 13px; font-weight: 600; padding: 6px 10px;
+    border: 1px solid var(--tile-border); border-radius: 8px;
+  }
+  .back-link:hover { opacity: 1; border-color: var(--accent); }
   .admin-header h1 { margin: 0; font-size: 22px; }
   .admin-section {
     background: #171922;
@@ -131,13 +140,14 @@
 <body>
 <main>
   <div class="admin-header">
+    <div class="back-row"><a href="index.html" class="back-link">← Back to arcade</a></div>
     <h1>🛠️ Arcade Admin</h1>
     <div style="opacity:0.5; font-size:12px;">Theme requests · theme management</div>
   </div>
 
   <div id="lockScreen" class="admin-section">
-    <h2>Enter admin token</h2>
-    <input type="password" id="tokenInput" placeholder="Admin token" autocomplete="off">
+    <h2>Enter admin password</h2>
+    <input type="password" id="tokenInput" placeholder="Admin password" autocomplete="current-password">
     <button id="unlockBtn" class="primary-btn" style="border:none;border-radius:8px;padding:10px 16px;font-weight:700;cursor:pointer;">Unlock</button>
     <div id="lockError" class="status-msg error"></div>
   </div>

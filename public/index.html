@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Wordless Arcade</title>
+<title>Arcade</title>
 <style>
   :root {
     /* ARKS 8-Bit, the same values as rambler.css. The hub is the front door,
@@ -111,29 +111,38 @@
 </head>
 <body>
 
-<h1>WORD<span class="lit">LESS</span> ARCADE</h1>
-<div class="tagline">Self-hosted. No accounts, no ads, no internet required.</div>
+<h1 id="arcadeTitle"><span id="arcadeName"></span><span class="lit">ARCADE</span></h1>
+<div class="tagline">No accounts, no ads, no internet required.</div>
 
 <div class="games">
   <a class="game wordless" href="wordless.html">
     <div class="emoji">🔤</div>
     <h2>Wordless</h2>
-    <p>Guess the themed word in six tries. Pick a theme, use your hints wisely, and get your initials on the board.</p>
-    <div class="meta">1 player · Themed · Hints</div>
+    <p>Guess the themed word in six tries. Pick a theme and a difficulty, use your hints wisely, and get on the board to see where you stack up.</p>
+    <div class="meta">1 player · Themed · Easy to Ludicrous</div>
   </a>
 
   <a class="game rambler" href="rambler.html">
     <div class="emoji">🎲</div>
     <h2>Rambler</h2>
-    <p>Shake the dice and find every word you can before the timer runs out. Solo, around one phone, or everyone on their own.</p>
-    <div class="meta">1–8 players · Timed · Two dictionaries</div>
+    <p>Shake the dice and find every word you can before the timer runs out. Play solo, share a phone, or everyone on their own.</p>
+    <div class="meta">1–8 players · Timed · Kids &amp; adult word lists</div>
   </a>
 </div>
 
 <footer>
-  Running on your own hardware.<br>
   <a href="admin.html">Admin</a>
 </footer>
+
+<script>
+  // The arcade's name comes from ARCADE_NAME in .env: "ARKS" makes this the
+  // ARKS Arcade. Left blank, it is just the Arcade.
+  fetch('/api/arcade-info').then(r => r.json()).then(info => {
+    const name = (info.name || '').trim();
+    document.getElementById('arcadeName').textContent = name ? name + ' ' : '';
+    document.title = name ? `${name} Arcade` : 'Arcade';
+  }).catch(() => {});
+</script>
 
 </body>
 </html>

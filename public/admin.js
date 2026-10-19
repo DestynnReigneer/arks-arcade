@@ -28,8 +28,15 @@ Return ONLY a single valid JSON object (no markdown, no code fences, no commenta
   "accent": "#hexcolor - a bright accent color fitting the theme",
   "bg": "#hexcolor - a dark background color fitting the theme",
   "fontKey": "one of: sans, serif, comic, mono, fantasy",
-  "words": ["at least 15 lowercase words or names related to ${topic}, each using only letters a-z, 3 to 10 letters long, no spaces, no punctuation, no numbers"]
-}`;
+  "words": ["80 to 120 lowercase words or names related to ${topic}, each using only letters a-z, 3 to 10 letters long, no spaces, no punctuation, no numbers"]
+}
+
+The game has four difficulty levels that pick words by length, so spread the words across all lengths:
+- at least 25 words of 3-4 letters (Easy: simple words a young child knows)
+- at least 25 words of 5-6 letters (Normal)
+- at least 20 words of 7-8 letters (Hard)
+- at least 15 words of 9-10 letters (Ludicrous)
+No duplicates. Keep every word family-friendly.`;
   }
 
   async function apiGet(url) {
@@ -196,7 +203,7 @@ Return ONLY a single valid JSON object (no markdown, no code fences, no commenta
     try { localStorage.removeItem(key); } catch (e) { /* unavailable */ }
   }
 
-  async function tryUnlock(candidateToken) {
+  async function tryUnlock(candidateToken, { quiet = false } = {}) {
     token = candidateToken;
     try {
       await apiGet('/api/theme-requests?status=pending');
@@ -208,7 +215,10 @@ Return ONLY a single valid JSON object (no markdown, no code fences, no commenta
       await Promise.all([loadRequests(), loadThemes()]);
     } catch (e) {
       token = '';
-      lockError.textContent = 'Invalid token.';
+      // A remembered password that stopped working means it was changed in
+      // .env. Forget it quietly rather than greet the page with an error.
+      if (quiet) safeStorageRemove(TOKEN_KEY);
+      else lockError.textContent = 'Wrong password.';
     }
   }
 
@@ -228,6 +238,6 @@ Return ONLY a single valid JSON object (no markdown, no code fences, no commenta
 
   (function init() {
     const saved = safeStorageGet(TOKEN_KEY);
-    if (saved) tryUnlock(saved);
+    if (saved) tryUnlock(saved, { quiet: true });
   })();
 })();

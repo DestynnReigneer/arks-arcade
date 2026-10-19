@@ -1,4 +1,12 @@
 const path = require('node:path');
+
+// Running with plain `npm start`, read settings from .env the same way Docker
+// Compose does. Already-set variables win, so Compose and the test runner are
+// unaffected; tests skip it so a real password never leaks into the suite.
+if (process.env.NODE_ENV !== 'test') {
+  try { process.loadEnvFile(path.join(__dirname, '.env')); } catch { /* no .env */ }
+}
+
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const db = require('./db');
@@ -9,7 +17,8 @@ const ramblerPacks = require('./rambler/packs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const ADMIN_TOKEN = process.env.ADMIN_TOKEN || '';
+// ADMIN_PASSWORD is the name in .env; ADMIN_TOKEN is the older one, still honoured.
+const ADMIN_TOKEN = process.env.ADMIN_PASSWORD || process.env.ADMIN_TOKEN || '';
 const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL || '';
 
 app.set('trust proxy', 1);
@@ -95,9 +104,40 @@ app.get('/healthz', (req, res) => {
   }
 });
 
+// The arcade's name for the hub page, from ARCADE_NAME in .env.
+app.get('/api/arcade-info', (req, res) => {
+  res.json({ name: String(process.env.ARCADE_NAME || '').trim().slice(0, 30) });
+});
+
 // ---- Themes (read: public, write: admin-only) ----
+// Wordless difficulty levels, by answer length. Must match DIFFICULTIES in public/app.js.
+const DIFFICULTIES = { easy: [3, 4], normal: [5, 6], hard: [7, 8], ludicrous: [9, 10] };
+
+// Classic's built-in list is all five- and six-letter words, which leaves
+// nothing for Easy or Ludicrous. Top it up from the most common kid-safe
+// dictionary words (common-10k is in frequency order, so the first ones taken
+// are the most familiar).
+const CLASSIC_EXTRA_PER_LEVEL = 300;
+let classicExtras = null;
+function getClassicExtras() {
+  if (!classicExtras) {
+    const counts = {};
+    classicExtras = [];
+    for (const upper of dictionary.load().common) {
+      const w = upper.toLowerCase();
+      const level = Object.keys(DIFFICULTIES).find(k => w.length >= DIFFICULTIES[k][0] && w.length <= DIFFICULTIES[k][1]);
+      if (!level || !WORD_RE.test(w)) continue;
+      counts[level] = (counts[level] || 0) + 1;
+      if (counts[level] <= CLASSIC_EXTRA_PER_LEVEL) classicExtras.push(w);
+    }
+  }
+  return classicExtras;
+}
+
 app.get('/api/themes', (req, res) => {
-  res.json(db.listThemes());
+  res.json(db.listThemes().map(t => t.id === 'classic'
+    ? { ...t, words: [...new Set([...t.words, ...getClassicExtras()])] }
+    : t));
 });
 
 app.post('/api/themes', requireAdmin, (req, res) => {
@@ -170,7 +210,7 @@ app.post('/api/theme-requests/:id/fulfill', requireAdmin, (req, res) => {
 
 // ---- Leaderboard ----
 app.get('/api/leaderboard', (req, res) => {
-  res.json(db.listLeaderboard({ themeId: req.query.theme, limit: req.query.limit }));
+  res.json(db.listLeaderboard({ themeId: req.query.theme, difficulty: req.query.difficulty, limit: req.query.limit }));
 });
 
 app.post('/api/leaderboard', leaderboardLimiter, (req, res) => {
@@ -182,6 +222,7 @@ app.post('/api/leaderboard', leaderboardLimiter, (req, res) => {
   const hintsUsed = Math.max(0, Math.min(3, parseInt(body.hintsUsed, 10) || 0));
   const word = String(body.word || '').toLowerCase().slice(0, 20);
   const elapsedMs = Math.max(0, Math.min(3600000, parseInt(body.elapsedMs, 10) || 0));
+  const difficulty = Object.hasOwn(DIFFICULTIES, body.difficulty) ? body.difficulty : 'normal';
 
   if (!INITIALS_RE.test(initials)) {
     return res.status(400).json({ error: 'Initials must be 1-3 letters or numbers.' });
@@ -190,7 +231,7 @@ app.post('/api/leaderboard', leaderboardLimiter, (req, res) => {
     return res.status(400).json({ error: 'Unknown theme.' });
   }
 
-  const result = db.insertScore({ initials, themeId, won, guesses, hintsUsed, word, elapsedMs });
+  const result = db.insertScore({ initials, themeId, won, guesses, hintsUsed, word, elapsedMs, difficulty });
   res.status(201).json(result);
 });
 
@@ -210,7 +251,7 @@ app.listen(PORT, () => {
   ramblerPacks.refresh({ force: true });
   const theme = ramblerPacks.active();
 
-  console.log(`Wordless Arcade running at http://localhost:${PORT}`);
+  console.log(`Arcade running at http://localhost:${PORT}`);
   console.log(
     `Rambler dictionary: ${stats.kids.toLocaleString()} kids / ` +
     `${stats.adult.toLocaleString()} unfiltered words (${stats.buildMs}ms)`
@@ -223,7 +264,7 @@ app.listen(PORT, () => {
     console.log(`Theme pack: ${theme.emoji} ${theme.label} \u2014 ${theme.wordCount} words, ${theme.audience}`);
   }
   if (!ADMIN_TOKEN) {
-    console.warn('ADMIN_TOKEN is not set — admin routes (create/delete theme, view requests) are disabled.');
+    console.warn('ADMIN_PASSWORD is not set — admin routes (create/delete theme, view requests) are disabled.');
   }
   if (!DISCORD_WEBHOOK_URL) {
     console.warn('DISCORD_WEBHOOK_URL is not set — theme request notifications will not be sent.');
