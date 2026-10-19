@@ -26,9 +26,9 @@ async function run() {
   ok('4x4 rolls 16 tiles', dice.rollBoard(4).length === 16);
   ok('5x5 rolls 25 tiles', dice.rollBoard(5).length === 25);
   ok('rectangles roll the right count', dice.rollBoard({ cols: 4, rows: 6 }).length === 24);
-  ok('a corner has 3 neighbours', dice.neighbours(4)[0].length === 3);
-  ok('an interior cell has 8', dice.neighbours(4)[5].length === 8);
-  ok('rectangular adjacency is right', dice.neighbours({ cols: 4, rows: 2 })[0].length === 3);
+  ok('a corner has 3 neighbors', dice.neighbors(4)[0].length === 3);
+  ok('an interior cell has 8', dice.neighbors(4)[5].length === 8);
+  ok('rectangular adjacency is right', dice.neighbors({ cols: 4, rows: 2 })[0].length === 3);
   ok('bad dimensions are rejected', (() => {
     try { dice.dims({ cols: 1, rows: 1 }); return false; } catch { return true; }
   })());
@@ -88,7 +88,7 @@ async function run() {
       { id: 'c', name: 'Cy', words: [] }
     ]
   });
-  ok('a word two players found is cancelled', r.cancelled.includes('BBB'), JSON.stringify(r.cancelled));
+  ok('a word two players found is canceled', r.canceled.includes('BBB'), JSON.stringify(r.canceled));
   ok('both are left on 1 point', r.results[0].score === 1 && r.results[1].score === 1);
   ok('a tie shares rank 1', r.results.filter(p => p.rank === 1).length === 2);
   ok('the player with nothing ranks last', r.results[2].rank === 3);

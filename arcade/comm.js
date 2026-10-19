@@ -12,7 +12,7 @@ const adultPin = require('./adult-pin');
 
 const GAMES = ['wordless', 'rambler', 'shortfuse'];
 const FEEDBACK_KINDS = ['feature', 'issue', 'message'];
-const STATUSES = ['new', 'pending', 'in-progress', 'completed', 'cancelled'];
+const STATUSES = ['new', 'pending', 'in-progress', 'completed', 'canceled'];
 
 function fail(message, status) {
   return Object.assign(new Error(message), { status });

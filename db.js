@@ -243,6 +243,9 @@ ensureColumn('themes', 'adult', 'INTEGER NOT NULL DEFAULT 0');
 // any-length game, which is closest to Normal.
 ensureColumn('scores', 'difficulty', "TEXT NOT NULL DEFAULT 'normal'");
 
+// The feedback status used to be spelled the British way.
+db.exec("UPDATE comm_feedback SET status = 'canceled' WHERE status = 'cancelled'");
+
 // Which dictionary somebody played the daily on. Everyone gets the same
 // letters, but the unfiltered list is wider, so an adult's 55 and a kid's 40
 // are not the same achievement. The standings say which was which instead of

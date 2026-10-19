@@ -67,7 +67,7 @@ function paintPalette(level) {
 
 // What each kind of card does, in two words. Card names change with the deck
 // (a kids Skip is "Nap Time", a filthy one is "Post-Nut Clarity"); the tag is
-// how you know what you are holding without memorising every joke.
+// how you know what you are holding without memorizing every joke.
 const TAGS = {
   bomb: '💣 Bomb', defuse: '✂️ Defuse', skip: '⏭ Skip', attack: '⚔️ Attack',
   shuffle: '🔀 Shuffle', peek: '👀 Peek', favor: '🎁 Favor', nope: '🙅 Nope', junk: '🃏 Pair up'
@@ -721,7 +721,7 @@ const tutorial = Tutorial.create('shortfuse', [
   {
     emoji: '🏷️',
     title: 'Reading the cards',
-    html: `<p>Every deck (Kids, Cheeky, Spicy, Filthy) gives the cards different funny names — but the <b>coloured tag at the top</b> always tells you what the card really does.</p>
+    html: `<p>Every deck (Kids, Cheeky, Spicy, Filthy) gives the cards different funny names — but the <b>colored tag at the top</b> always tells you what the card really does.</p>
       <p>Tap any card for a full explanation. The box above your hand always tells you what you can do right now.</p>
       <div class="tut-tip">Tap <b>?</b> at the top any time to see this again.</div>`
   }

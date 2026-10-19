@@ -102,7 +102,7 @@ router.get('/config', (req, res) => {
     })),
     defaultDifficulty: round.DEFAULT_DIFFICULTY,
     marathon: { start: marathon.START, timeBonus: marathon.TIME_BONUS },
-    milestones: progress.catalogue(),
+    milestones: progress.catalog(),
     today: progress.today(),
     season: seasons.status(),
     theme: packs.active(),
