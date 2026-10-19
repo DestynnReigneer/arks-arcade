@@ -11,6 +11,7 @@ const express = require('express');
 const rateLimit = require('express-rate-limit');
 const db = require('./db');
 const dictionary = require('./rambler/dictionary');
+const wordlessHints = require('./arcade/wordless-hints');
 const ramblerRoutes = require('./rambler/routes');
 const ramblerSeasons = require('./rambler/seasons');
 const ramblerPacks = require('./rambler/packs');
@@ -164,6 +165,29 @@ const ADULT_SHORT_WORDS = `
   rack buns stud hunk orgy thot horn
 `.split(/\s+/).filter(w => w.length >= 3 && w.length <= 4);
 
+// Clues for a theme that was made before clues existed (or made without them).
+app.post('/api/themes/:id/clues', requireAdmin, (req, res) => {
+  const theme = db.getTheme(req.params.id);
+  if (!theme) return res.status(404).json({ error: 'Theme not found' });
+  const raw = req.body && (req.body.clues || req.body);
+  const clues = wordlessHints.cleanClues(raw, theme.words);
+  if (!Object.keys(clues).length) {
+    return res.status(400).json({ error: 'No usable clues. Expected { "word": "clue", ... } for words in this theme.' });
+  }
+  const updated = db.setThemeClues(theme.id, clues);
+  res.json({ saved: Object.keys(clues).length, total: Object.keys(updated.clues).length, of: theme.words.length });
+});
+
+// The puzzle title and the hint ladder for one answer. The answer is already
+// on the client (Wordless picks it there), so this gives nothing away.
+app.get('/api/wordless/hints', (req, res) => {
+  const theme = db.getTheme(String(req.query.theme || ''));
+  const word = String(req.query.word || '').toLowerCase();
+  if (!theme || !WORD_RE.test(word)) return res.status(400).json({ error: 'Unknown theme or word' });
+  if (theme.adult && !adultUnlocked(req)) return res.status(403).json({ error: 'That PIN is not right.' });
+  res.json(wordlessHints.hintsFor(theme, word, dictionary.load().common));
+});
+
 app.get('/api/themes', (req, res) => {
   if (req.query.adult === '1' && !adultUnlocked(req)) {
     return res.status(403).json({ error: 'That PIN is not right.' });
@@ -200,7 +224,8 @@ app.post('/api/themes', requireAdmin, (req, res) => {
   }
 
   const adult = body.adult === true;
-  const theme = db.createTheme({ label, subject, emoji, accent, bg, fontKey, words, adult });
+  const clues = wordlessHints.cleanClues(body.clues, words);
+  const theme = db.createTheme({ label, subject, emoji, accent, bg, fontKey, words, adult, clues });
 
   // Made from a kid's suggestion? Close the request in the same step -- there
   // is nothing left to decide once the theme exists.

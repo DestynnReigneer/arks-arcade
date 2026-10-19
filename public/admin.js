@@ -39,15 +39,32 @@ Return ONLY a single valid JSON object (no markdown, no code fences, no commenta
   "accent": "#hexcolor - a bright accent color fitting the theme",
   "bg": "#hexcolor - a dark background color fitting the theme",
   "fontKey": "one of: sans, serif, comic, mono, fantasy",
-  "words": ["80 to 120 lowercase words or names related to ${topic}, each using only letters a-z, 3 to 10 letters long, no spaces, no punctuation, no numbers"]
+  "words": ["80 to 120 lowercase words or names related to ${topic}, each using only letters a-z, 3 to 10 letters long, no spaces, no punctuation, no numbers"],
+  "clues": { "word": { "category": "Character, Place, Thing, Food...", "clue": "one short sentence" } }
 }
+
+"clues" has an entry for EVERY word. Each clue is one short sentence that hints at the word without giving it away: never use the word itself, a part of it, or its first letter as a giveaway. Think game-show clue, not dictionary definition. "category" is one or two words, like a game-show puzzle title.
 
 The game has four difficulty levels that pick words by length, so spread the words across all lengths:
 - at least 25 words of 3-4 letters (Easy: simple words a young child knows)
 - at least 25 words of 5-6 letters (Normal)
 - at least 20 words of 7-8 letters (Hard)
 - at least 15 words of 9-10 letters (Ludicrous)
-No duplicates. Keep every word family-friendly.`;
+No duplicates. Keep every word family-friendly. Use American English spelling.`;
+  }
+
+  // For a theme that has words but no clues yet.
+  function buildCluesPrompt(theme) {
+    return `Write game-show style clues for a word-guessing game. The theme is: ${theme.label} (${theme.subject}).
+
+Return ONLY a single valid JSON object (no markdown, no code fences, no commentary) mapping every word below to a category and a clue:
+
+{ "word": { "category": "Character, Place, Thing, Food...", "clue": "one short sentence" } }
+
+Each clue is one short sentence that hints at the word without giving it away: never use the word itself or a part of it. "category" is one or two words, like a game-show puzzle title. ${theme.adult ? 'This is an adults-only theme, so cheeky innuendo is welcome.' : 'Keep it family-friendly.'} Use American English spelling.
+
+Words:
+${theme.words.join(', ')}`;
   }
 
   async function apiGet(url) {
@@ -158,9 +175,15 @@ No duplicates. Keep every word family-friendly.`;
       const row = document.createElement('div');
       row.className = 'theme-row';
       row.innerHTML = `
-        <span>${t.emoji} ${escapeHtml(t.label)} ${t.builtin ? '<span style="opacity:0.4">(built-in)</span>' : ''}${t.adult ? ' <span style="color:#ff9a9a">🔞 adult</span>' : ''} <span style="opacity:0.4">· ${t.words.length} words</span></span>
+        <span>${t.emoji} ${escapeHtml(t.label)} ${t.builtin ? '<span style="opacity:0.4">(built-in)</span>' : ''}${t.adult ? ' <span style="color:#ff9a9a">🔞 adult</span>' : ''} <span style="opacity:0.4">· ${t.words.length} words · ${t.builtin ? 'clues built in' : `${Object.keys(t.clues || {}).length} clues`}</span></span>
+        <span style="display:flex;gap:6px">
+        ${t.builtin ? '' : '<button data-action="clues" style="background:transparent;border:1px solid #6b5bb5;color:#c9bdf5;border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;">💡 Clues</button>'}
         ${t.builtin ? '' : '<button data-action="delete" style="background:transparent;border:1px solid #7f3a3a;color:#f5a3a3;border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;">🗑 Delete</button>'}
+        </span>
       `;
+      if (!t.builtin) {
+        row.querySelector('[data-action="clues"]').addEventListener('click', () => toggleCluesPanel(row, t));
+      }
       if (!t.builtin) {
         row.querySelector('[data-action="delete"]').addEventListener('click', async () => {
           if (!confirm(`Delete theme "${t.label}"? This can't be undone.`)) return;
@@ -174,6 +197,45 @@ No duplicates. Keep every word family-friendly.`;
       }
       themesList.appendChild(row);
     });
+  }
+
+  // Copy a prompt, paste the AI's answer back: same no-API-key flow as making a theme.
+  function toggleCluesPanel(row, theme) {
+    const open = row.nextElementSibling && row.nextElementSibling.classList.contains('clues-panel');
+    if (open) { row.nextElementSibling.remove(); return; }
+    const panel = document.createElement('div');
+    panel.className = 'clues-panel';
+    panel.style.cssText = 'padding:10px 0 14px;display:flex;flex-direction:column;gap:8px';
+    panel.innerHTML = `
+      <div style="font-size:12px;opacity:0.75">1. Copy the prompt and paste it into any AI chat. 2. Paste its answer below. 3. Save. Clues show up as Wordless hints.</div>
+      <button class="small-btn" data-act="copy">📋 Copy clues prompt</button>
+      <textarea class="admin-textarea" rows="5" placeholder='{ "word": { "category": "...", "clue": "..." } }'></textarea>
+      <button class="primary-btn" data-act="save" style="border:none;border-radius:8px;padding:10px 16px;font-weight:700;cursor:pointer">Save clues</button>
+      <div class="status-msg"></div>`;
+    const status = panel.querySelector('.status-msg');
+    panel.querySelector('[data-act="copy"]').addEventListener('click', async e => {
+      await navigator.clipboard.writeText(buildCluesPrompt(theme));
+      e.target.textContent = '✓ Copied!';
+      setTimeout(() => { e.target.textContent = '📋 Copy clues prompt'; }, 1500);
+    });
+    panel.querySelector('[data-act="save"]').addEventListener('click', async () => {
+      let clues;
+      try { clues = JSON.parse(panel.querySelector('textarea').value); } catch {
+        status.textContent = 'Invalid JSON — check for missing commas/quotes.';
+        status.className = 'status-msg error';
+        return;
+      }
+      try {
+        const r = await apiPost(`/api/themes/${encodeURIComponent(theme.id)}/clues`, { clues: clues.clues || clues });
+        status.textContent = `Saved ${r.saved} clues (${r.total} of ${r.of} words have one).`;
+        status.className = 'status-msg ok';
+        setTimeout(loadThemes, 1500);
+      } catch (e) {
+        status.textContent = e.message;
+        status.className = 'status-msg error';
+      }
+    });
+    row.after(panel);
   }
 
   document.getElementById('copyNewPromptBtn').addEventListener('click', async (e) => {

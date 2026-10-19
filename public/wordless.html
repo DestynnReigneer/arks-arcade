@@ -30,6 +30,13 @@
   </div>
 </header>
 
+<!-- The puzzle's title, game-show style, and any hints used so far -->
+<div id="puzzleTitle" class="puzzle-title hidden">
+  <span class="pt-label">Category</span>
+  <span id="puzzleCategory" class="pt-category"></span>
+</div>
+<ul id="hintList" class="hint-list"></ul>
+
 <div id="statusBar">
   <div id="message"></div>
   <button id="hintBtn" class="hint-btn">💡 Hint (<span id="hintCount">3</span>)</button>
@@ -158,7 +165,13 @@
     {
       emoji: '💡',
       title: 'Stuck? Use a hint',
-      html: `<p>Tap <b>Hint</b> to reveal one letter in its right spot. You get 3 per word.</p>
+      html: `<p>The <b>category</b> above the board tells you what kind of word it is, for free.</p>
+        <p>Still stuck? Tap <b>Hint</b>. You get 3 per word, and each one helps a bit more:</p>
+        <table>
+          <tr><td>🗣️ 1st</td><td>A clue that hints at the meaning.</td></tr>
+          <tr><td>🎵 2nd</td><td>A word that ends the same way.</td></tr>
+          <tr><td>🔤 3rd</td><td>One letter in its right spot.</td></tr>
+        </table>
         <p>Each hint costs points, so save them for when you really need them.</p>`
     },
     {

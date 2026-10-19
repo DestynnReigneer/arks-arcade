@@ -684,6 +684,23 @@ async function run({ base, root }) {
     body: JSON.stringify({ size: 4, profile: 'adult' })
   });
   ok('the new PIN guards adult boards', lockedOut.status === 403 && pinned.status === 201);
+  // ---- Wordless hints -------------------------------------------------------------
+  const hintRes = await wl('/wordless/hints?theme=classic&word=apple');
+  ok('the hints endpoint answers for Classic', hintRes.status === 200 && !!hintRes.data.clue && !!hintRes.data.category);
+  ok('an unknown theme is refused', (await wl('/wordless/hints?theme=nope&word=apple')).status === 400);
+  const clueTheme = await asAdmin('/themes', 'POST', {
+    label: 'Clue Test', subject: 'farm animal', emoji: '🐄',
+    words: ['cow', 'pig', 'goat', 'sheep', 'horse'],
+    clues: { cow: { category: 'Animal', clue: 'Says moo' }, pig: 'Rolls in mud', goat: 'A goat thing' }
+  });
+  ok('a new theme keeps its clues (minus give-aways)', Object.keys(clueTheme.data.clues || {}).sort().join() === 'cow,pig',
+    JSON.stringify(clueTheme.data.clues));
+  const cowHint = (await wl(`/wordless/hints?theme=${clueTheme.data.id}&word=cow`)).data;
+  ok('the theme clue and category are what the player sees', cowHint.clue === 'Says moo' && cowHint.category === 'Animal');
+  const added = await asAdmin(`/themes/${clueTheme.data.id}/clues`, 'POST', { clues: { sheep: 'Gives us wool' } });
+  ok('clues can be added to an existing theme', added.status === 200 && added.data.total === 3, JSON.stringify(added.data));
+  ok('adding clues needs the admin password', (await wl(`/themes/${clueTheme.data.id}/clues`, 'POST', { clues: { horse: 'Neigh' } })).status === 401);
+
   // ---- adult Wordless themes ---------------------------------------------------
   await asAdmin('/themes', 'POST', {
     label: 'Naughty', emoji: '😈', words: ['booty', 'cheeky', 'frisky', 'spank', 'naughty'], adult: true
