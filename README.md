@@ -247,6 +247,11 @@ Like streaming-service profiles for the family. **Who's playing?** on the home p
 
 Visit `/admin.html` and enter your `ADMIN_PASSWORD`.
 
+**Stats:**
+- What gets played, how often and for how long (only on-screen, recently-touched time counts), who plays what, and a day-by-hour chart of when
+- A log of every visit, filterable by game and player
+- The error log: crashes from browsers and the server, grouped by a code like `E-3F9A2C` (players see the code when the server fails). **Copy for chat** copies everything needed to get it fixed
+
 **Arcade:**
 - Profiles: approve or turn down "New profile" requests, rename, clear a forgotten PIN, or remove a profile (their old scores stay on the boards)
 - Set, change or remove the adult PIN
@@ -286,7 +291,7 @@ rambler/                   Rambler, self-contained
 chess/                    Two-phone chess rooms (/api/chess)
 spinsolve/                Spin & Solve levels, adult banks, packs and requests (/api/spinsolve)
 trivia/                   Know-It-All questions, packs, Open Trivia DB download, rooms (/api/trivia)
-arcade/                   Arcade-wide pieces: Comm Center, adult PIN, high scores, Wordless hints
+arcade/                   Arcade-wide pieces: Comm Center, adult PIN, high scores, profiles, stats and the error log, Wordless hints
 
 words/                    Dictionaries, baked into the image (see above)
 

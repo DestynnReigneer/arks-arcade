@@ -170,6 +170,7 @@
   // ---- solo and one-phone games ------------------------------------------------------
 
   async function startLocal() {
+    if (window.ArcadeStats) ArcadeStats.play();
     const names = S.mode === 'solo' ? ['You'] : S.names.map((n, i) => n.trim() || `Player ${i + 1}`);
     const st = settings();
     const per = st.count;
@@ -529,7 +530,7 @@
   $('addPlayerBtn').onclick = () => { if (S.names.length < 8) { S.names.push(''); renderNames(); } };
   $('goBtn').onclick = go;
   $('joinCode').onkeydown = e => { if (e.key === 'Enter') go(); };
-  $('startBtn').onclick = () => roomPost('start');
+  $('startBtn').onclick = () => { if (window.ArcadeStats) ArcadeStats.play(); roomPost('start'); };
   $('lobbyLeave').onclick = backToSetup;
   $('nextBtn').onclick = () => { if (S.room) roomPost('next'); else nextLocal(); };
   $('quitBtn').onclick = () => { if (confirm('Quit this game?')) backToSetup(); };

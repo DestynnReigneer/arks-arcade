@@ -31,9 +31,9 @@
   }
   .admin-section h2 { margin: 0 0 12px; font-size: 15px; }
 
-  .tabs { display: flex; gap: 8px; margin-bottom: 18px; }
+  .tabs { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
   .tabs button {
-    flex: 1; padding: 10px; border-radius: 9px; cursor: pointer;
+    flex: 1 1 auto; padding: 10px; border-radius: 9px; cursor: pointer;
     background: #171922; border: 1px solid #2a2d38; color: var(--text);
     font-family: inherit; font-size: 13px; font-weight: 600;
   }
@@ -166,6 +166,45 @@
   .status-msg { font-size: 12px; min-height: 16px; margin-top: 8px; }
   .status-msg.error { color: #f87171; }
   .status-msg.ok { color: var(--correct); }
+
+  /* ---- stats ---- */
+  .stat-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; }
+  .stat-card { border: 1px solid var(--tile-border); border-radius: 10px; padding: 10px 12px; }
+  .stat-card b { display: block; font-size: 22px; font-variant-numeric: tabular-nums; }
+  .stat-card span { font-size: 11px; opacity: 0.65; text-transform: uppercase; letter-spacing: 0.06em; }
+  .stat-card.warn b { color: #ff9a9a; }
+  .bar-row { display: grid; grid-template-columns: 130px 1fr auto; align-items: center; gap: 10px; padding: 6px 0; font-size: 13px; border-bottom: 1px solid #22252f; }
+  .bar-row:last-child { border-bottom: none; }
+  .bar-row .label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
+  .bar-row .bar { height: 10px; border-radius: 5px; background: #22252f; overflow: hidden; }
+  .bar-row .bar i { display: block; height: 100%; background: var(--accent); border-radius: 5px; }
+  .bar-row .nums { font-size: 11.5px; opacity: 0.75; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .player-block { border-bottom: 1px solid #22252f; padding: 8px 0; font-size: 13px; }
+  .player-block:last-child { border-bottom: none; }
+  .player-block .top-line { display: flex; justify-content: space-between; gap: 10px; font-weight: 700; }
+  .player-block .top-line small { font-weight: 500; opacity: 0.65; }
+  .player-block .games { opacity: 0.8; font-size: 12px; margin-top: 3px; line-height: 1.6; }
+  .heat { display: grid; grid-template-columns: 30px repeat(24, minmax(0, 1fr)); gap: 2px; font-size: 9.5px; }
+  .heat .cell { aspect-ratio: 1; border-radius: 2px; background: #1d2029; }
+  .heat .hl { opacity: 0.55; white-space: nowrap; overflow: visible; }
+  .heat .dl { opacity: 0.7; font-size: 10.5px; align-self: center; }
+  .heat-note { font-size: 12.5px; margin: 10px 0 0; opacity: 0.85; }
+  .log-filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+  .log-filters select { flex: 1; min-width: 130px; background: var(--key-bg); color: var(--text); border: 1px solid var(--tile-border); border-radius: 8px; padding: 7px 8px; font-family: inherit; }
+  .log-row { display: grid; grid-template-columns: 92px 1fr auto; gap: 8px; padding: 6px 0; border-bottom: 1px solid #22252f; font-size: 12.5px; align-items: baseline; }
+  .log-row .when { opacity: 0.6; font-size: 11.5px; font-variant-numeric: tabular-nums; }
+  .log-row .dur { font-variant-numeric: tabular-nums; opacity: 0.8; font-size: 12px; }
+  .log-day { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.55; margin: 12px 0 2px; }
+  .err { border: 1px solid var(--tile-border); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; font-size: 13px; }
+  .err.open { border-color: #7a2a2a; }
+  .err .err-head { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+  .err code { font-weight: 800; color: #ff9a9a; }
+  .err.fixed code { color: var(--text); opacity: 0.6; }
+  .err .err-msg { margin: 4px 0; word-break: break-word; }
+  .err .muted { font-size: 11.5px; opacity: 0.6; }
+  .err pre { white-space: pre-wrap; word-break: break-word; font-size: 11px; background: #0f1117; border-radius: 6px; padding: 8px; max-height: 220px; overflow: auto; margin: 6px 0; }
+  .err .err-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+  .empty-note { font-size: 12.5px; opacity: 0.6; padding: 6px 0; }
 </style>
 </head>
 <body>
@@ -191,6 +230,7 @@
     <button id="tabWordless" aria-pressed="false">🔤 Wordless</button>
     <button id="tabSpin" aria-pressed="false">🎡 Spin &amp; Solve</button>
     <button id="tabTrivia" aria-pressed="false">🧠 Trivia</button>
+    <button id="tabStats" aria-pressed="false">📊 Stats</button>
   </div>
 
   <div id="arcadePanel">
@@ -494,6 +534,50 @@
     </div>
   </div>
 
+  <div id="statsPanel" class="hidden">
+    <div class="admin-section">
+      <h2>📊 Stats</h2>
+      <div class="board-tabs" id="statsRange"></div>
+      <div class="stat-cards" id="statCards"></div>
+    </div>
+    <div class="admin-section">
+      <h2>🎮 Games</h2>
+      <p class="admin-note">Visits are how often a game was opened; time only counts while it was on screen and being used.</p>
+      <div id="statGames"></div>
+    </div>
+    <div class="admin-section">
+      <h2>👪 Who plays what</h2>
+      <div id="statPlayers"></div>
+    </div>
+    <div class="admin-section">
+      <h2>🕒 When people play</h2>
+      <div id="statWhen"></div>
+    </div>
+    <div class="admin-section">
+      <h2>📜 Log</h2>
+      <div class="log-filters">
+        <select id="logGame" aria-label="Filter by game"></select>
+        <select id="logPlayer" aria-label="Filter by player"></select>
+      </div>
+      <div id="statLog"></div>
+      <button class="small-btn hidden" id="logMore">Show more</button>
+    </div>
+    <div class="admin-section">
+      <h2>🐞 Errors</h2>
+      <p class="admin-note">Crashes from players' browsers and from the server, grouped by code. The same problem always gets the same code. Use <b>Copy for chat</b> and paste it to Claude to get it fixed. Something marked fixed that happens again comes back here on its own.</p>
+      <div id="errorList"></div>
+      <div class="err-actions" style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="small-btn" id="errRefresh">↻ Refresh</button>
+        <button class="small-btn" id="errClearFixed">Clear fixed ones</button>
+      </div>
+    </div>
+    <div class="admin-section danger-zone">
+      <h2>⚠️ Reset stats</h2>
+      <p class="admin-note">Deletes every visit in the log and charts. Scores, profiles and the error log stay.</p>
+      <button class="small-btn" id="resetStats">Clear all visit stats</button>
+    </div>
+  </div>
+
   <div id="wordlessPanel" class="hidden">
     <div class="admin-section">
       <h2>💬 Pending Theme Requests</h2>
@@ -528,11 +612,13 @@
   </div>
 
 <script src="avatars.js"></script>
+<script src="stats.js"></script>
 <script src="admin.js"></script>
 <script src="admin-rambler.js"></script>
 <script src="admin-arcade.js"></script>
 <script src="admin-spinsolve.js"></script>
 <script src="admin-trivia.js"></script>
 <script src="admin-profiles.js"></script>
+<script src="admin-stats.js"></script>
 </body>
 </html>

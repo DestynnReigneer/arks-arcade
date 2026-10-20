@@ -29,6 +29,10 @@ app.set('trust proxy', security.trustProxySetting());
 app.disable('x-powered-by');
 app.use(security.headers);
 app.use(express.json({ limit: '200kb' }));
+// Stats and the error log: see every server error answer on its way out.
+const stats = require('./arcade/stats');
+stats.watchProcess();
+app.use('/api', stats.watchResponses);
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Rambler lives behind its own router; everything it needs is under
@@ -117,6 +121,7 @@ app.use('/api/daredevil', require('./daredevil/routes'));
 app.use('/api', require('./arcade/lobby').router);
 app.use('/api/profiles', require('./arcade/profiles')({ requireAdmin, notify: notifyDiscord }));
 app.use('/api/scores', require('./arcade/scores').router);
+app.use('/api/stats', stats.routes({ requireAdmin }));
 
 // ---- Comm Center (home page message board) ----
 app.use('/api/comm/admin', comm.adminRouter(requireAdmin));
@@ -342,6 +347,10 @@ app.post('/api/leaderboard', leaderboardLimiter, (req, res) => {
   }
   res.status(201).json(result);
 });
+
+// Last: anything a route threw ends up here, gets logged with a code, and the
+// player is told something went wrong (and the code to mention).
+app.use(stats.errorHandler);
 
 app.listen(PORT, () => {
   // Build the trie now rather than on the first player's request -- it takes
