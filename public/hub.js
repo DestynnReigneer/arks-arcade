@@ -8,7 +8,6 @@
   const GAMES = {
     wordless: { label: 'Wordless', href: 'wordless.html' },
     rambler: { label: 'Rambler', href: 'rambler.html' },
-    shortfuse: { label: 'Short Fuse', href: 'shortfuse.html' },
     spinsolve: { label: 'Spin & Solve', href: 'spinsolve.html' },
     chess: { label: 'Chess', href: 'chess.html' },
     dino: { label: 'Dino Dash', href: 'dino.html' },
@@ -22,9 +21,10 @@
     const chip = $('playerChip');
     const p = ArcadeProfile.get();
     chip.innerHTML = '';
-    chip.appendChild(ArcadeProfile.avatarEl(p ? p.avatar : 'emoji:👤', 30));
+    chip.appendChild(ArcadeProfile.avatarEl(p ? p.avatar : 'emoji:👤', 26));
     const label = document.createElement('span');
-    label.textContent = p ? `Playing as ${p.name}` : 'Who\'s playing?';
+    label.textContent = p ? p.name : 'Who\'s playing?';
+    chip.title = p ? `Playing as ${p.name}. Tap to switch.` : 'Pick who is playing';
     chip.appendChild(label);
     chip.insertAdjacentHTML('beforeend', '<small>▾</small>');
   }

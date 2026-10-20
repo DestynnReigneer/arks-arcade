@@ -6,7 +6,7 @@
 
 const db = require('../db');
 
-const GAMES = ['wordless', 'rambler', 'shortfuse', 'spinsolve', 'chess', 'dino', 'trivia', 'partdeux', 'daredevil'];
+const GAMES = ['wordless', 'rambler', 'spinsolve', 'chess', 'dino', 'trivia', 'partdeux', 'daredevil'];
 const KEY = 'home_games';
 
 function get() {

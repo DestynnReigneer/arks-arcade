@@ -2,18 +2,18 @@
 
 // Uh-Oh: Part Deux. A shedding card game: match the top card by color or by
 // number/symbol, and the first player to empty their hand wins. The action
-// cards wear Short Fuse's funny names at every spice level.
+// cards wear funny names at every spice level (cards.js).
 //
-// Pure functions over a plain game object, like the Short Fuse engine: the
+// Pure functions over a plain game object: the
 // rooms and tables modules own timing, sockets and who's allowed to act.
 
 const crypto = require('node:crypto');
-const sfCards = require('../shortfuse/cards');
+const cardNames = require('./cards');
 
 const COLORS = ['red', 'yellow', 'green', 'blue'];
 const HAND_SIZE = 7;
 
-// Which Short Fuse card lends its funny names to each action.
+// Which set of funny names each action wears.
 const FLAVOR_OF = { skip: 'skip', draw2: 'attack', reverse: 'shuffle', nope: 'nope', gift: 'favor', wild: 'defuse', wild4: 'bomb' };
 
 const RULES = {
@@ -66,8 +66,8 @@ function createGame({ players, level = 'kids', drinking = false, rand }) {
   const cards = buildDeck();
   const deck = shuffle(Object.keys(cards), rand);
   const game = {
-    level: sfCards.levelOf(level),
-    drinking: !!drinking && sfCards.LEVELS[sfCards.levelOf(level)].adult,
+    level: cardNames.levelOf(level),
+    drinking: !!drinking && cardNames.LEVELS[cardNames.levelOf(level)].adult,
     cards, deck, discard: [],
     players: players.map(p => ({ id: p.id, name: p.name, hand: [] })),
     turn: 0, dir: 1, color: null, pendingDraw: 0,
@@ -290,7 +290,7 @@ function view(card, level) {
   if (!card) return null;
   const base = { id: card.id, kind: card.kind, color: card.color, value: card.value, rule: RULES[card.kind] };
   if (card.kind === 'num') return { ...base, name: `${card.value}`, emoji: '', quip: '' };
-  const variants = sfCards.FLAVOR[sfCards.levelOf(level)][FLAVOR_OF[card.kind]];
+  const variants = cardNames.FLAVOR[cardNames.levelOf(level)][FLAVOR_OF[card.kind]];
   const [emoji, name, quip] = variants[card.variant % variants.length];
   return { ...base, emoji, name, quip };
 }

@@ -5,7 +5,7 @@
 
 const { makeTables } = require('../arcade/party-tables');
 const engine = require('./engine');
-const sfCards = require('../shortfuse/cards');
+const cardNames = require('./cards');
 
 function act(game, actorId, body) {
   const a = body.action;
@@ -17,4 +17,4 @@ function act(game, actorId, body) {
   throw Object.assign(new Error('Unknown move.'), { status: 400 });
 }
 
-module.exports = makeTables({ engine, act, levels: sfCards.LEVELS, minPlayers: 2, maxPlayers: 8 });
+module.exports = makeTables({ engine, act, levels: cardNames.LEVELS, minPlayers: 2, maxPlayers: 8 });

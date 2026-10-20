@@ -12,7 +12,6 @@ const QRCode = require('qrcode');
 
 const GAMES = {
   rambler: { label: 'Rambler', emoji: '🔠', icon: 'rambler-logo.svg', page: 'rambler.html' },
-  shortfuse: { label: 'Short Fuse', emoji: '💣', page: 'shortfuse.html' },
   chess: { label: 'Chess', emoji: '♞', page: 'chess.html' },
   trivia: { label: 'Know-It-All', emoji: '🧠', page: 'trivia.html' },
   partdeux: { label: 'Uh-Oh: Part Deux', emoji: '🚨', page: 'partdeux.html' },
@@ -34,20 +33,6 @@ function collect() {
       code: r.code, host: host ? host.name : '', players: r.players.size, max: rambler.MAX_PLAYERS,
       status: r.players.size >= rambler.MAX_PLAYERS ? 'full' : r.state === 'lobby' ? 'open' : 'playing',
       detail: `${r.settings.size === 5 ? '5x5' : '4x4'} board${r.settings.profile === 'adult' ? ' · Unfiltered' : ''}`
-    });
-  }
-
-  const sf = require('../shortfuse/tables');
-  const cards = require('../shortfuse/cards');
-  for (const t of sf._tables.values()) {
-    if (t.mode !== 'room') continue;
-    const host = t.players.get(t.hostId);
-    const running = t.game && t.game.phase !== 'over';
-    add('shortfuse', {
-      adult: cards.LEVELS[t.level].adult, locked: !!t.password,
-      code: t.id, host: host ? host.name : '', players: t.players.size, max: sf.MAX_PLAYERS,
-      status: t.players.size >= sf.MAX_PLAYERS ? 'full' : running ? 'playing' : 'open',
-      detail: `${cards.LEVELS[t.level].label} deck`
     });
   }
 

@@ -1,9 +1,10 @@
 'use strict';
 
-// Short Fuse's cards. The rules of each card never change; only the flavor
-// does. Kids get glitter bombs and cookie bribes, the adult levels get
-// progressively filthier versions of the same eight jobs. Every card instance
-// picks one of its type's variants, so a deck reads differently every game.
+// The spice levels and the funny names Uh-Oh's action cards wear. Kids get
+// glitter bombs and cookie bribes, the adult levels get progressively
+// filthier versions of the same jobs. Every card picks one of its type's
+// variants, so a deck reads differently every game. (These names started out
+// in Short Fuse, the bomb card game Uh-Oh replaced; the type keys are its.)
 
 const LEVELS = {
   kids:   { id: 'kids',   label: 'Kids',   emoji: '🧒', adult: false, blurb: 'Glitter bombs and cookie bribes. Fine for everyone.' },

@@ -15,7 +15,6 @@ RUN npm ci --omit=dev 2>/dev/null || npm install --omit=dev
 COPY db.js server.js ./
 COPY rambler ./rambler
 COPY arcade ./arcade
-COPY shortfuse ./shortfuse
 COPY chess ./chess
 COPY spinsolve ./spinsolve
 COPY trivia ./trivia

@@ -5,7 +5,7 @@
 // game's ? button any time after. Steps are written by us, never by players,
 // so their HTML is trusted.
 //
-//   const help = Tutorial.create('shortfuse', [{ emoji, title, html }, ...]);
+//   const help = Tutorial.create('partdeux', [{ emoji, title, html }, ...]);
 //   help.autoOpen();          // first visit only
 //   help.open(2);             // jump to a step
 
