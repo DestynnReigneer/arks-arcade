@@ -8,12 +8,14 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;800&family=Rajdhani:wght@500;600;700&display=swap">
 <link rel="stylesheet" href="rambler.css">
+<link rel="stylesheet" href="tutorial.css">
+<link rel="stylesheet" href="adult-mode.css">
 </head>
 <body>
 
 <header>
   <a href="/" class="icon-btn" title="Back to the arcade">←</a>
-  <h1>RAM<span class="lit">BLER</span></h1>
+  <h1><img src="rambler-logo.svg" alt="" class="logo-grid">RAM<span class="lit">BLER</span></h1>
   <button id="profileBtn" class="profile-chip" title="Switch profile">
     <span class="pc-av" id="pcAvatar">👤</span>
     <span class="pc-info">
@@ -21,6 +23,7 @@
       <span class="pc-meta" id="pcMeta">tap to pick</span>
     </span>
   </button>
+  <button id="helpBtn" class="icon-btn" title="How to play">?</button>
   <button id="soundBtn" class="icon-btn" title="Sound on/off">🔊</button>
   <button id="leaderboardBtn" class="icon-btn" title="Leaderboard">🏆</button>
 </header>
@@ -122,7 +125,7 @@
   </div>
 
   <div class="msg" id="setupMsg"></div>
-  <button id="startBtn" class="primary-btn">Shake the dice</button>
+  <button id="startBtn" class="primary-btn">Slide to victory</button>
 
   <div class="divider" id="joinDivider">or</div>
   <div class="field" id="joinField">
@@ -181,8 +184,13 @@
   <div class="code-display">
     <div class="label">Room code</div>
     <div class="code" id="roomCode">----</div>
+    <img class="join-qr hidden" id="joinQr" width="150" height="150" alt="QR code to join"
+         style="width:150px;height:150px;background:#fff;padding:6px;border-radius:10px;margin:10px auto 2px;display:block">
+    <div class="join-link" id="joinLink" style="font-size:11px;opacity:0.65;text-align:center;word-break:break-all"></div>
+    <div style="font-size:12px;opacity:0.75;text-align:center">Scan to join from another phone</div>
   </div>
   <div class="code-hint">Everyone opens this page and taps Join, then types that code.</div>
+  <div class="code-hint" id="lobbyPassword"></div>
 
   <div class="field">
     <label>In the room</label>
@@ -227,7 +235,7 @@
     <div class="board" id="board"></div>
   </div>
 
-  <div class="trace-bar" id="traceBar"><span class="placeholder">Drag across the dice to spell a word</span></div>
+  <div class="trace-bar" id="traceBar"><span class="placeholder">Drag across the letters to spell a word</span></div>
 
   <div class="type-row" id="typeRow">
     <input type="text" id="typeInput" placeholder="…or type it" autocomplete="off"
@@ -300,7 +308,7 @@
     <div class="board" id="maraBoard"></div>
   </div>
 
-  <div class="trace-bar" id="maraTrace"><span class="placeholder">Drag across the dice</span></div>
+  <div class="trace-bar" id="maraTrace"><span class="placeholder">Drag across the letters</span></div>
 
   <div class="type-row">
     <input type="text" id="maraInput" placeholder="…or type it" autocomplete="off"
@@ -355,10 +363,10 @@
 
   <div class="standings" id="standings"></div>
 
-  <div class="panel hidden" id="cancelledPanel">
-    <h3>Cancelled</h3>
+  <div class="panel hidden" id="canceledPanel">
+    <h3>Canceled</h3>
     <div class="sub">More than one of you found these, so they score nothing for anybody. That's the rule that makes obscure words worth hunting.</div>
-    <div class="chips" id="cancelledChips"></div>
+    <div class="chips" id="canceledChips"></div>
   </div>
 
   <div class="panel" id="missedPanel">
@@ -380,7 +388,7 @@
   </div>
 
   <div class="result-actions">
-    <button id="saveScoreBtn" class="ghost-btn">Put your initials up</button>
+    <button id="saveScoreBtn" class="primary-btn">Put your initials up</button>
     <button id="againBtn" class="primary-btn">Play again</button>
   </div>
 </section>
@@ -484,6 +492,12 @@
 
 <script src="audio.js"></script>
 <script src="fx.js"></script>
+<script src="avatars.js"></script>
+<script src="profile.js"></script>
+<script src="tutorial.js"></script>
+<script src="rambler-help.js"></script>
+<script src="arcade-qr.js"></script>
+<script src="room-password.js"></script>
 <script src="rambler.js"></script>
 </body>
 </html>

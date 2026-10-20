@@ -10,7 +10,7 @@ fs.mkdirSync(DATA_DIR, { recursive: true });
 // first and behaved differently, which is exactly the kind of flake that
 // teaches people to ignore red builds.
 const DB_FILE = process.env.RAMBLER_DB
-  || (process.env.NODE_ENV === 'test' ? 'test.db' : 'wordless.db');
+  || (process.env.NODE_ENV === 'test' ? 'test.db' : 'arcade.db');
 const db = new DatabaseSync(path.join(DATA_DIR, DB_FILE));
 
 db.exec(`
@@ -207,6 +207,53 @@ ensureColumn('rambler_scores', 'player_id', 'TEXT');
 // Which season a score belongs to, so a board can be rebuilt after the fact.
 ensureColumn('rambler_scores', 'season_id', 'INTEGER');
 
+// ---- Comm Center ----
+// Posts are what the home page shows: the admin's announcements plus the ones
+// the arcade writes itself (a new theme, a new top score). Feedback is the
+// other direction -- players writing to the admin.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS comm_posts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    kind TEXT NOT NULL,
+    emoji TEXT NOT NULL DEFAULT '📣',
+    title TEXT NOT NULL,
+    body TEXT NOT NULL DEFAULT '',
+    game TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_comm_posts_created ON comm_posts (created_at DESC);
+
+  CREATE TABLE IF NOT EXISTS comm_feedback (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    kind TEXT NOT NULL,
+    message TEXT NOT NULL,
+    from_name TEXT NOT NULL DEFAULT '',
+    game TEXT,
+    status TEXT NOT NULL DEFAULT 'new',
+    admin_note TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+`);
+
+// Adult-only Wordless themes, hidden until the adult PIN is entered.
+ensureColumn('themes', 'adult', 'INTEGER NOT NULL DEFAULT 0');
+
+// Wordless clue hints for a custom theme: { word: { category?, clue } }.
+ensureColumn('themes', 'clues', "TEXT NOT NULL DEFAULT '{}'");
+
+// Wordless difficulty. Scores from before it existed were all the old
+// any-length game, which is closest to Normal.
+ensureColumn('scores', 'difficulty', "TEXT NOT NULL DEFAULT 'normal'");
+
+// Scores credited to an arcade profile.
+ensureColumn('scores', 'profile_id', 'TEXT');
+ensureColumn('scores', 'profile_name', 'TEXT');
+ensureColumn('scores', 'profile_avatar', 'TEXT');
+
+// The feedback status used to be spelled the British way.
+db.exec("UPDATE comm_feedback SET status = 'canceled' WHERE status = 'cancelled'");
+
 // Which dictionary somebody played the daily on. Everyone gets the same
 // letters, but the unfiltered list is wider, so an adult's 55 and a kid's 40
 // are not the same achievement. The standings say which was which instead of
@@ -239,32 +286,61 @@ const BUILTIN_THEMES = [
   {
     id: 'simpsons', label: 'The Simpsons', subject: 'Simpsons character or thing', emoji: '🍩',
     accent: '#facc15', bg: '#171203', font: FONT_STACKS.comic,
+    // Grouped by length so every difficulty has enough to pick from.
     words: [
-      "homer","marge","bart","lisa","maggie","krusty","milhouse","nelson","skinner",
-      "wiggum","burns","smithers","flanders","barney","patty","selma","comic","ralph",
-      "edna","willie","duffman","bobo","maude","lenny","carl","cletus","frink",
-      "hibbert","apu","moe","otto","troy","itchy","kang","kodos","duff","springfield"
+      // 3-4: Easy
+      "bart","lisa","moe","apu","otto","edna","carl","duff","kang","troy","bobo","abe",
+      "kirk","todd","rod","lou","gil","hans","mona","doh","plow","nuke","lard","cow",
+      // 5-6: Normal
+      "homer","marge","maggie","krusty","nelson","burns","patty","selma","ralph","lenny",
+      "frink","maude","itchy","kodos","snake","jimbo","dolph","sherri","terri","agnes",
+      "cletus","willie","martin","quimby","wiggum","barney","gumble","donut","donuts",
+      "jasper","comic","helen","mapple",
+      // 7-8: Hard
+      "skinner","hibbert","duffman","lovejoy","kearney","moleman","mcclure","lardlad",
+      "milhouse","smithers","flanders","chalmers","sideshow","scratchy","squishee",
+      "monorail","simpsons","spuckler","embiggen",
+      // 9-10: Ludicrous
+      "krabappel","vanhouten","evergreen","plutonium","bumblebee","sprinkles","cromulent",
+      "lunchlady","doughnuts","kwikemart","embiggens","saxophone","treehouse","powerplant"
     ]
   },
   {
     id: 'dune', label: 'Dune', subject: 'Dune name or term', emoji: '🏜️',
     accent: '#e0813f', bg: '#140f0a', font: FONT_STACKS.serif,
     words: [
-      "paul","leto","chani","duncan","stilgar","gurney","baron","feyd","fremen",
-      "arrakis","kynes","irulan","alia","thufir","hawat","yueh","piter","spice",
-      "sietch","worm","sandworm","mentat","shield","desert","house","shaddam",
-      "corrino","caladan","giedi","atreides","bene","gesserit","navigator","guild"
+      // 3-4: Easy
+      "paul","leto","feyd","alia","yueh","worm","sand","dune","duke","suk","liet","naib",
+      "pyon","shai","crys","usul","gom","dew","bene",
+      // 5-6: Normal
+      "chani","duncan","gurney","baron","fremen","kynes","irulan","thufir","hawat","piter",
+      "spice","sietch","shield","desert","house","guild","jamis","harah","ghola","maker",
+      "rabban","mentat","jabbar","giedi",
+      // 7-8: Hard
+      "stilgar","arrakis","sandworm","shaddam","corrino","caladan","atreides","gesserit",
+      "ghanima","muaddib","thopter","jessica","tleilax","fedaykin","emperor","melange",
+      "kwisatz","haderach","chakobsa","imperium","padishah","weirding","secundus",
+      // 9-10: Ludicrous
+      "navigator","harkonnen","sardaukar","crysknife","stillsuit","shaihulud","heighliner",
+      "sayyadina","landsraad","guildsman","deathstill","giediprime","mindkiller"
     ]
   }
 ];
 
+// Built-in word lists are refreshed on every start, so an expanded list in a
+// new release reaches databases that were seeded with the old one.
+// The built-in adult themes (arcade/wordless-adult-themes.js) seed the same
+// way, flagged adult so they stay behind the adult PIN.
 function seedBuiltinThemes() {
   const insert = db.prepare(`
-    INSERT OR IGNORE INTO themes (id, label, subject, emoji, accent, bg, font, words, builtin)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
+    INSERT INTO themes (id, label, subject, emoji, accent, bg, font, words, builtin, adult)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
+    ON CONFLICT(id) DO UPDATE SET words = excluded.words, adult = excluded.adult WHERE themes.builtin = 1
   `);
-  for (const t of BUILTIN_THEMES) {
-    insert.run(t.id, t.label, t.subject, t.emoji, t.accent, t.bg, t.font, JSON.stringify(t.words));
+  const adultThemes = require('./arcade/wordless-adult-themes')
+    .map(t => ({ ...t, font: FONT_STACKS[t.font] || FONT_STACKS.sans }));
+  for (const t of [...BUILTIN_THEMES, ...adultThemes]) {
+    insert.run(t.id, t.label, t.subject, t.emoji, t.accent, t.bg, t.font, JSON.stringify(t.words), t.adult ? 1 : 0);
   }
 }
 seedBuiltinThemes();
@@ -279,12 +355,16 @@ function rowToTheme(row) {
     bg: row.bg,
     font: row.font,
     words: JSON.parse(row.words),
-    builtin: !!row.builtin
+    builtin: !!row.builtin,
+    adult: !!row.adult,
+    clues: JSON.parse(row.clues || '{}')
   };
 }
 
-function listThemes() {
-  const rows = db.prepare('SELECT * FROM themes ORDER BY builtin DESC, created_at ASC').all();
+function listThemes({ includeAdult = false } = {}) {
+  const rows = db.prepare(`
+    SELECT * FROM themes ${includeAdult ? '' : 'WHERE adult = 0'} ORDER BY builtin DESC, adult ASC, created_at ASC
+  `).all();
   return rows.map(rowToTheme);
 }
 
@@ -300,7 +380,7 @@ function slugify(text) {
     .slice(0, 24) || 'theme';
 }
 
-function createTheme({ label, subject, emoji, accent, bg, fontKey, words }) {
+function createTheme({ label, subject, emoji, accent, bg, fontKey, words, adult = false, clues = {} }) {
   const base = slugify(label);
   let id = base;
   let n = 1;
@@ -309,9 +389,17 @@ function createTheme({ label, subject, emoji, accent, bg, fontKey, words }) {
   }
   const font = FONT_STACKS[fontKey] || FONT_STACKS.sans;
   db.prepare(`
-    INSERT INTO themes (id, label, subject, emoji, accent, bg, font, words, builtin)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
-  `).run(id, label, subject, emoji, accent, bg, font, JSON.stringify(words));
+    INSERT INTO themes (id, label, subject, emoji, accent, bg, font, words, builtin, adult, clues)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)
+  `).run(id, label, subject, emoji, accent, bg, font, JSON.stringify(words), adult ? 1 : 0, JSON.stringify(clues));
+  return getTheme(id);
+}
+
+// Merges new clues into a theme's existing ones.
+function setThemeClues(id, clues) {
+  const theme = getTheme(id);
+  if (!theme) return null;
+  db.prepare('UPDATE themes SET clues = ? WHERE id = ?').run(JSON.stringify({ ...theme.clues, ...clues }), id);
   return getTheme(id);
 }
 
@@ -340,12 +428,12 @@ function computeScore({ won, guesses, hintsUsed, elapsedMs }) {
   return Math.max(0, Math.round(raw / 10) * 10);
 }
 
-function insertScore({ initials, themeId, won, guesses, hintsUsed, word, elapsedMs }) {
+function insertScore({ initials, themeId, won, guesses, hintsUsed, word, elapsedMs, difficulty = 'normal', profile = null }) {
   const theme = getTheme(themeId);
   const score = computeScore({ won, guesses, hintsUsed, elapsedMs });
   const info = db.prepare(`
-    INSERT INTO scores (initials, score, theme_id, theme_label, theme_emoji, won, guesses, hints_used, word, elapsed_ms)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO scores (initials, score, theme_id, theme_label, theme_emoji, won, guesses, hints_used, word, elapsed_ms, difficulty, profile_id, profile_name, profile_avatar)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     initials,
     score,
@@ -356,24 +444,29 @@ function insertScore({ initials, themeId, won, guesses, hintsUsed, word, elapsed
     guesses,
     hintsUsed,
     word,
-    elapsedMs
+    elapsedMs,
+    difficulty,
+    profile ? profile.id : null,
+    profile ? profile.name : null,
+    profile ? profile.avatar : null
   );
-  const rank = db.prepare('SELECT COUNT(*) AS c FROM scores WHERE score > ?').get(score).c + 1;
-  return { id: info.lastInsertRowid, score, rank };
+  // Each difficulty is its own board, so rank within it.
+  const rank = db.prepare('SELECT COUNT(*) AS c FROM scores WHERE score > ? AND difficulty = ?').get(score, difficulty).c + 1;
+  return { id: info.lastInsertRowid, score, rank, difficulty };
 }
 
-function listLeaderboard({ themeId, limit }) {
+function listLeaderboard({ themeId, difficulty, limit, includeAdult = false }) {
   const cap = Math.min(Math.max(parseInt(limit, 10) || 25, 1), 100);
-  let rows;
-  if (themeId && themeId !== 'all') {
-    rows = db.prepare(`
-      SELECT * FROM scores WHERE theme_id = ? ORDER BY score DESC, created_at ASC LIMIT ?
-    `).all(themeId, cap);
-  } else {
-    rows = db.prepare(`
-      SELECT * FROM scores ORDER BY score DESC, created_at ASC LIMIT ?
-    `).all(cap);
-  }
+  const where = [];
+  const args = [];
+  // Scores on adult themes would put adult theme names on the kids' board.
+  if (!includeAdult) where.push('theme_id NOT IN (SELECT id FROM themes WHERE adult = 1)');
+  if (themeId && themeId !== 'all') { where.push('theme_id = ?'); args.push(themeId); }
+  if (difficulty && difficulty !== 'all') { where.push('difficulty = ?'); args.push(difficulty); }
+  const rows = db.prepare(`
+    SELECT * FROM scores ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
+    ORDER BY score DESC, created_at ASC LIMIT ?
+  `).all(...args, cap);
   return rows.map(r => ({
     id: r.id,
     initials: r.initials,
@@ -386,7 +479,10 @@ function listLeaderboard({ themeId, limit }) {
     hintsUsed: r.hints_used,
     word: r.word,
     elapsedMs: r.elapsed_ms,
-    createdAt: r.created_at
+    difficulty: r.difficulty,
+    createdAt: r.created_at,
+    profileName: r.profile_name || null,
+    profileAvatar: r.profile_avatar || null
   }));
 }
 
@@ -501,7 +597,7 @@ function listRamblerLeaderboard({ profile, boardSize, mode, limit }) {
 
 // ---- Rambler theme packs ----
 
-function rowToTheme(r) {
+function rowToRamblerTheme(r) {
   if (!r) return null;
   let words = [];
   try { words = JSON.parse(r.words); } catch { words = []; }
@@ -521,11 +617,11 @@ function rowToTheme(r) {
 }
 
 function listRamblerThemes() {
-  return db.prepare('SELECT * FROM rambler_themes ORDER BY created_at ASC').all().map(rowToTheme);
+  return db.prepare('SELECT * FROM rambler_themes ORDER BY created_at ASC').all().map(rowToRamblerTheme);
 }
 
 function getRamblerTheme(id) {
-  return rowToTheme(db.prepare('SELECT * FROM rambler_themes WHERE id = ?').get(String(id || '')));
+  return rowToRamblerTheme(db.prepare('SELECT * FROM rambler_themes WHERE id = ?').get(String(id || '')));
 }
 
 function themeSlug(label) {
@@ -991,15 +1087,19 @@ function listDaily(day) {
 }
 
 module.exports = {
+  // The raw handle, for small arcade-wide modules (arcade/) that own their tables.
+  db,
   FONT_STACKS,
   listThemes,
   getTheme,
   createTheme,
+  setThemeClues,
   deleteTheme,
   computeScore,
   insertScore,
   listLeaderboard,
   createThemeRequest,
+  getThemeRequest,
   listThemeRequests,
   dismissThemeRequest,
   fulfillThemeRequest,

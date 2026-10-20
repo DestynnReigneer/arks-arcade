@@ -26,9 +26,9 @@ async function run() {
   ok('4x4 rolls 16 tiles', dice.rollBoard(4).length === 16);
   ok('5x5 rolls 25 tiles', dice.rollBoard(5).length === 25);
   ok('rectangles roll the right count', dice.rollBoard({ cols: 4, rows: 6 }).length === 24);
-  ok('a corner has 3 neighbours', dice.neighbours(4)[0].length === 3);
-  ok('an interior cell has 8', dice.neighbours(4)[5].length === 8);
-  ok('rectangular adjacency is right', dice.neighbours({ cols: 4, rows: 2 })[0].length === 3);
+  ok('a corner has 3 neighbors', dice.neighbors(4)[0].length === 3);
+  ok('an interior cell has 8', dice.neighbors(4)[5].length === 8);
+  ok('rectangular adjacency is right', dice.neighbors({ cols: 4, rows: 2 })[0].length === 3);
   ok('bad dimensions are rejected', (() => {
     try { dice.dims({ cols: 1, rows: 1 }); return false; } catch { return true; }
   })());
@@ -54,7 +54,15 @@ async function run() {
     ['CAT', 'kids', true], ['CAT', 'adult', true],
     ['FUCK', 'kids', false], ['FUCK', 'adult', true],
     ['SHITTING', 'kids', false], ['SHITTING', 'adult', true],
-    ['WANKER', 'kids', false], ['WANKER', 'adult', true],
+    ['DUMBASS', 'kids', false], ['DUMBASS', 'adult', true],
+    // American English only: the US spelling scores, the British one doesn't
+    ['COLOR', 'kids', true], ['COLOUR', 'kids', false], ['COLOUR', 'adult', false],
+    ['GRAY', 'kids', true], ['GREY', 'kids', false], ['CENTER', 'kids', true], ['CENTRE', 'kids', false],
+    ['TRAVELED', 'kids', true], ['TRAVELLED', 'kids', false], ['ORGANIZE', 'kids', true], ['ORGANISE', 'kids', false],
+    ['WANKER', 'adult', false],
+    // American words the British filter must leave alone
+    ['SURPRISE', 'kids', true], ['ADVERTISE', 'kids', true], ['SHOES', 'kids', true], ['SCOURING', 'kids', true],
+    ['TIMBRE', 'kids', true], ['FILLED', 'kids', true], ['CONTROLLED', 'kids', true], ['ENROLLED', 'kids', true],
     ['RIZZ', 'kids', false], ['RIZZ', 'adult', true],
     // innocent words the blocklist's inflections used to catch by accident
     ['HEROINES', 'kids', true], ['BONKERS', 'kids', true],
@@ -88,7 +96,7 @@ async function run() {
       { id: 'c', name: 'Cy', words: [] }
     ]
   });
-  ok('a word two players found is cancelled', r.cancelled.includes('BBB'), JSON.stringify(r.cancelled));
+  ok('a word two players found is canceled', r.canceled.includes('BBB'), JSON.stringify(r.canceled));
   ok('both are left on 1 point', r.results[0].score === 1 && r.results[1].score === 1);
   ok('a tie shares rank 1', r.results.filter(p => p.rank === 1).length === 2);
   ok('the player with nothing ranks last', r.results[2].rank === 3);
@@ -147,6 +155,134 @@ async function run() {
   ok('nothing is accepted after the end', (() => {
     try { marathon.submit(session.id, 'CAT'); return false; } catch (e) { return e.status === 409; }
   })());
+
+  console.log('\n-- wordless hints --');
+  const hints = require(path.join(ROOT, 'arcade/wordless-hints.js'));
+  const common = dictionary.load().common;
+  const leaks = [];
+  for (const [themeId, words] of Object.entries(hints.BUILTIN)) {
+    for (const [w, [, clue]] of Object.entries(words)) if (clue.toLowerCase().includes(w)) leaks.push(`${themeId}:${w}`);
+  }
+  ok('no built-in clue contains its own word', leaks.length === 0, leaks.join(', '));
+  const classic = { id: 'classic', subject: 'word' };
+  const apple = hints.hintsFor(classic, 'apple', common);
+  ok('Classic words get a dictionary clue', /fruit/i.test(apple.clue || ''), apple.clue);
+  ok('…and a kid-friendly category', apple.category === 'Thing');
+  const ends = hints.endsLike('bottle', common);
+  ok('ends-like finds a word with the same ending', !!ends && ends.endsWith('TLE') && ends !== 'BOTTLE', ends);
+  ok('…that does not share the first letter', ends && ends[0] !== 'B');
+  const bart = hints.hintsFor({ id: 'simpsons', subject: 'Simpsons character or thing' }, 'bart', common);
+  ok('built-in themes have hand-written clues', bart.category === 'Character' && /skateboard/.test(bart.clue));
+  const mine = hints.hintsFor({ id: 'minecraft', subject: 'Minecraft thing', clues: {} }, 'creeper', common);
+  ok('custom themes never borrow dictionary clues', mine.clue === null && mine.category === 'Minecraft thing');
+  const cleaned = hints.cleanClues({ creeper: 'Green and explodes', zombie: 'Not in the theme', sheep: 'A sheep, baa' }, ['creeper', 'sheep']);
+  ok('pasted clues keep only theme words that do not give the word away',
+    Object.keys(cleaned).join() === 'creeper', JSON.stringify(cleaned));
+
+  console.log('\n-- chess --');
+  const Chess = require(path.join(ROOT, 'public/chess-engine.js'));
+  // Known move counts for standard test positions. Any rules bug changes them.
+  const perfts = [
+    [Chess.START, 3, 8902],
+    ['r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1', 2, 2039],
+    ['8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1', 3, 2812],
+    ['r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1', 3, 9467],
+    ['rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8', 2, 1486]
+  ];
+  for (const [fen, depth, want] of perfts) {
+    const got = Chess.perft(Chess.fromFen(fen), depth);
+    ok(`perft ${depth} = ${want} for ${fen.split(' ')[0].slice(0, 18)}…`, got === want, String(got));
+  }
+  const fools = Chess.fromFen();
+  for (const [from, to] of [['f2', 'f3'], ['e7', 'e5'], ['g2', 'g4'], ['d8', 'h4']]) Chess.play(fools, { from, to });
+  ok('fool\'s mate is checkmate for Black', Chess.status(fools).reason === 'checkmate' && Chess.status(fools).winner === 'b');
+  ok('an illegal move is refused', Chess.play(Chess.fromFen(), { from: 'e2', to: 'e5' }) === null);
+  const stale = Chess.fromFen('7k/5Q2/6K1/8/8/8/8/8 b - - 0 1');
+  ok('stalemate is a draw', Chess.status(stale).reason === 'stalemate');
+  const mateIn1 = Chess.fromFen('r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 4 4');
+  const aiMove = Chess.bestMove(mateIn1, 'medium');
+  ok('the computer finds mate in one', Chess.name(aiMove.from) + Chess.name(aiMove.to) === 'h5f7');
+  const promo = Chess.fromFen('8/P6k/8/8/8/8/8/K7 w - - 0 1');
+  ok('promotion makes the piece you pick', Chess.play(promo, { from: 'a7', to: 'a8', promo: 'n' }).san === 'a8=N');
+
+  console.log('\n-- spin & solve --');
+  const puzzles = require(path.join(ROOT, 'public/spin-puzzles.js'));
+  ok('there are plenty of puzzles', puzzles.length >= 150, String(puzzles.length));
+  ok('every word fits on the board (12 letters max)',
+    puzzles.every(p => p.answer.split(' ').every(w => w.length <= 12)));
+  ok('puzzles use only capitals, spaces and simple punctuation', puzzles.every(p => /^[A-Z '&?!-]+$/.test(p.answer)));
+  const spinBanks = require(path.join(ROOT, 'spinsolve/puzzles.js'));
+  const badBuiltins = Object.entries(spinBanks.BUILTIN)
+    .flatMap(([lv, list]) => list.filter(p => spinBanks.checkPuzzle(p).error).map(p => `${lv}: ${p.answer}`));
+  ok('every built-in puzzle at every level passes the pack checks', badBuiltins.length === 0, badBuiltins.join(', '));
+  ok('each adult level has its own bank', ['cheeky', 'spicy', 'filthy'].every(l => spinBanks.BUILTIN[l].length >= 30));
+  ok('no puzzle uses a British spelling',
+    puzzles.every(p => p.answer.split(' ').every(w => !dictionary.isBritish(w.replace(/[^A-Z]/g, '')))));
+
+  console.log('\n-- know-it-all --');
+  const tbank = require(path.join(ROOT, 'trivia/bank.js'));
+  const tstore = require(path.join(ROOT, 'trivia/store.js'));
+  const TR = require(path.join(ROOT, 'public/trivia-rules.js'));
+  const badQs = Object.values(tbank.QUESTIONS).flat().filter(q => tstore.checkQuestion(q).error)
+    .map(q => `${q.question} (${tstore.checkQuestion(q).error})`);
+  ok('every built-in question passes the pack checks', badQs.length === 0, badQs.join('; '));
+  ok('every level has its own questions', ['kids', 'cheeky', 'spicy', 'filthy'].every(l => tbank.QUESTIONS[l].length >= 20));
+  ok('faster right answers score more', TR.points('hard', true, 9000, 10000) > TR.points('hard', true, 1000, 10000));
+  ok('wrong answers score nothing', TR.points('hard', false, 9000, 10000) === 0);
+  const calls = TR.afterQuestion([{ id: 'a', name: 'A', correct: false, streak: 0 }, { id: 'b', name: 'B', correct: true, streak: 3 }],
+    { drinking: true, couples: true, drinks: tbank.DRINKS.spicy, dares: tbank.DARES.spicy, rand: () => 0 });
+  ok('drinking: the wrong one drinks and a streak gives drinks', calls.some(c => c.kind === 'drink' && c.who === 'a') && calls.some(c => c.kind === 'drink' && c.who === 'b'));
+  ok('couples: someone who missed gets a dare', calls.some(c => c.kind === 'dare' && c.who === 'a'));
+  ok('no drinking, no dares when they are off', TR.afterQuestion([{ id: 'a', correct: false, streak: 0 }], { drinks: tbank.DRINKS.spicy, dares: tbank.DARES.spicy }).length === 0);
+
+  console.log('\n-- uh-oh: part deux --');
+  const PD = require(path.join(ROOT, 'partdeux/engine.js'));
+  let pdDone = 0, pdProblem = '';
+  for (let n = 0; n < 200 && !pdProblem; n++) {
+    const g = PD.createGame({ players: Array.from({ length: 2 + n % 5 }, (_, i) => ({ id: 'p' + i, name: 'P' + i })), level: ['kids', 'cheeky', 'spicy', 'filthy'][n % 4], drinking: true });
+    try {
+      for (let guard = 0; g.phase !== 'over' && guard < 5000; guard++) {
+        const me = g.players[g.turn];
+        if (me.hand.length === 2 && guard % 3) PD.callUhOh(g, me.id);
+        const s = PD.snapshot(g, me.id);
+        // Gifts need another card to give away; with none left, draw instead.
+        const pick = s.playable.find(c => g.cards[c].kind !== 'gift' || me.hand.length > 1) || null;
+        if (pick) {
+          const card = g.cards[pick];
+          const opts = card.kind === 'wild' || card.kind === 'wild4' ? { color: PD.COLORS[guard % 4] }
+            : card.kind === 'gift' ? { giftCardId: me.hand.find(c => c !== pick), target: g.players.find(p => p.id !== me.id).id } : {};
+          PD.play(g, me.id, pick, opts);
+          if (g.vulnerable) PD.catchUhOh(g, g.players.find(p => p.id !== g.vulnerable).id, g.vulnerable);
+        } else { PD.draw(g, me.id); if (g.drew) PD.pass(g, me.id); }
+        const total = g.deck.length + g.discard.length + g.players.reduce((a, p) => a + p.hand.length, 0);
+        if (total !== 116) throw new Error('lost or duplicated a card: ' + total);
+      }
+      if (g.phase === 'over') pdDone++; else pdProblem = 'game ' + n + ' never ended';
+    } catch (e) { pdProblem = 'game ' + n + ': ' + e.message; }
+  }
+  ok('200 random games all end with a winner and no lost cards', pdDone === 200, pdProblem);
+  const pd = PD.createGame({ players: [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }] });
+  const notMine = pd.players[1].hand[0];
+  ok('you can only play your own cards on your turn', (() => { try { PD.play(pd, 'b', notMine); return false; } catch (e) { return e.status === 409; } })());
+  ok('action cards wear funny names', PD.view({ kind: 'wild4', color: null, variant: 0 }, 'filthy').name.length > 3);
+
+  console.log('\n-- dare devil --');
+  const DD = require(path.join(ROOT, 'daredevil/engine.js'));
+  const DDC = require(path.join(ROOT, 'daredevil/cards.js'));
+  for (const lv of ['kids', 'cheeky', 'spicy', 'filthy']) {
+    const g = DD.createGame({ players: [{ id: 'a', name: 'Ann' }, { id: 'b', name: 'Bo' }, { id: 'c', name: 'Cy' }], level: lv, drinking: true, length: 'quick' });
+    let leftover = false;
+    for (let i = 0; g.phase !== 'over' && i < 100; i++) {
+      const pid = g.players[g.turn].id;
+      DD.draw(g, pid);
+      if (/\{other\}/.test(g.card.text) || g.card.text.includes(g.players[g.turn].name + ' ') && g.card.other === pid) leftover = true;
+      if (i % 4) DD.done(g, pid); else DD.chicken(g, pid);
+    }
+    ok(`${lv}: a quick game plays to a winner, names filled in`, g.phase === 'over' && !!g.winner && !leftover);
+  }
+  const kidsTexts = DDC.pool('kids').map(c => c.text).join(' ');
+  ok('the family deck has nothing rude in it', !/sex|naked|strip|kiss|drink|clothing|orgasm|fuck|shit/i.test(kidsTexts));
+  ok('every card type is known', Object.values(DDC.DECK).flat().every(([type]) => DDC.TYPES[type]));
 
   console.log(`\n  ${pass} passed, ${fail} failed`);
   return { pass, fail };

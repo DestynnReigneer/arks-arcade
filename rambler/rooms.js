@@ -56,6 +56,8 @@ function snapshot(room, forPlayerId) {
     state: room.state,
     hostId: room.hostId,
     youAreHost: room.hostId === forPlayerId,
+    locked: !!room.password,
+    lobbyPassword: room.hostId === forPlayerId ? room.password : null,
     you: me ? { id: me.id, name: me.name } : null,
     settings: room.settings,
     board: room.state === 'lobby' ? null : room.board,
@@ -93,7 +95,7 @@ function broadcast(room) {
 
 // ---- lifecycle -------------------------------------------------------------
 
-function normaliseSettings({ size, profile, durationSec }) {
+function normalizeSettings({ size, profile, durationSec }) {
   const s = round.SIZES.includes(Number(size)) ? Number(size) : 4;
   const p = profile === 'adult' ? 'adult' : 'kids';
   const d = round.DURATIONS.includes(Number(durationSec)) ? Number(durationSec) : round.DEFAULT_DURATION;
@@ -122,7 +124,9 @@ function addPlayer(room, rawName) {
   return player;
 }
 
-function createRoom({ hostName, size, profile, durationSec }) {
+const roomPassword = require('../arcade/room-password');
+
+function createRoom({ hostName, size, profile, durationSec, password }) {
   if (rooms.size >= MAX_ROOMS) {
     sweep();
     if (rooms.size >= MAX_ROOMS) throw fail('Too many rooms open right now.', 503);
@@ -133,7 +137,7 @@ function createRoom({ hostName, size, profile, durationSec }) {
     createdAt: Date.now(),
     lastActivity: Date.now(),
     state: 'lobby',
-    settings: normaliseSettings({ size, profile, durationSec }),
+    settings: normalizeSettings({ size, profile, durationSec }),
     board: null,
     boardId: null,
     minLength: null,
@@ -145,8 +149,11 @@ function createRoom({ hostName, size, profile, durationSec }) {
     results: null,
     timer: null,
     hostId: null,
-    onFinish: null
+    onFinish: null,
+    password: null
   };
+  // The Unfiltered dictionary is adult: those rooms get a lobby password.
+  if (room.settings.profile === 'adult') room.password = roomPassword.requireNew(password);
   rooms.set(room.code, room);
 
   const host = addPlayer(room, hostName || 'Host');
@@ -176,8 +183,9 @@ function requireHost(room, player) {
   if (room.hostId !== player.id) throw fail('Only the host can do that.', 403);
 }
 
-function joinRoom(code, name) {
+function joinRoom(code, name, password) {
   const room = requireRoom(code);
+  roomPassword.check(room, password);
   if (room.players.size >= MAX_PLAYERS) {
     throw fail(`Room is full (${MAX_PLAYERS} players).`, 409);
   }
@@ -209,7 +217,9 @@ function updateSettings(code, id, suppliedToken, settings) {
   requireHost(room, player);
   if (room.state === 'playing') throw fail('Round in progress.', 409);
 
-  room.settings = normaliseSettings({ ...room.settings, ...settings });
+  const next = normalizeSettings({ ...room.settings, ...settings });
+  if (next.profile === 'adult') { if (!room.password) room.password = roomPassword.requireNew(settings.password); } else room.password = null;
+  room.settings = next;
   touch(room);
   broadcast(room);
   return room;

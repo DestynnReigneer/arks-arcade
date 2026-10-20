@@ -65,6 +65,16 @@ function resolveMinLength(spec, difficultyId) {
 
 const MAX_ROLLS = 25;
 
+// The Unfiltered list is the fun one, so its boards go looking for the words
+// in words/spice-adult.txt the same way theme boards look for theme words:
+// keep rolling until a few are findable, or take the spiciest near-miss.
+const SPICE = new Set(
+  require('node:fs').readFileSync(require('node:path').join(__dirname, '..', 'words', 'spice-adult.txt'), 'utf8')
+    .split('\n').map(l => l.trim().toUpperCase()).filter(l => l && !l.startsWith('#'))
+);
+const SPICE_FLOOR = { 16: 2, 25: 3 };
+const isSpicy = w => SPICE.has(w);
+
 // How many of the active theme's words a board should contain before it is
 // considered worth playing. One, not two: measured on random boards, a short
 // theme word is reachable about a quarter of the time, so insisting on two
@@ -99,10 +109,13 @@ function createBoard({ size = 4, cols, rows, profile = 'kids', difficulty = DEFA
   // rolling and simply take the best board we saw if none is ideal.
   const themed = !!dictionary.activeTheme();
   const themeFloor = themed ? THEME_WORD_FLOOR : 0;
+  const spicy = profile === 'adult';
+  const spiceFloor = spicy ? SPICE_FLOOR[cellCount(spec) <= 16 ? 16 : 25] : 0;
 
   let board = null;
   let words = null;
   let themeHits = 0;
+  let spiceHits = 0;
   let rolls = 0;
   let best = null;
 
@@ -112,20 +125,22 @@ function createBoard({ size = 4, cols, rows, profile = 'kids', difficulty = DEFA
     themeHits = themed
       ? [...words.keys()].filter(w => dictionary.isThemeWord(w)).length
       : 0;
+    spiceHits = spicy ? [...words.keys()].filter(isSpicy).length : 0;
     rolls++;
 
-    const good = words.size >= floor && themeHits >= themeFloor;
+    const good = words.size >= floor && themeHits >= themeFloor && spiceHits >= spiceFloor;
     if (good) { best = null; break; }
     // Keep whichever near-miss was closest, so a pack with rare letters
     // degrades to "the best board we could find" instead of a random one.
-    const rank = Math.min(words.size, floor) + themeHits * 25;
-    if (!best || rank > best.rank) best = { board, words, themeHits, rank };
-  } while (rolls < (themed ? MAX_THEME_ROLLS : MAX_ROLLS));
+    const rank = Math.min(words.size, floor) + themeHits * 25 + Math.min(spiceHits, spiceFloor) * 20;
+    if (!best || rank > best.rank) best = { board, words, themeHits, spiceHits, rank };
+  } while (rolls < (themed || spicy ? MAX_THEME_ROLLS : MAX_ROLLS));
 
   if (best) {
     board = best.board;
     words = best.words;
     themeHits = best.themeHits;
+    spiceHits = best.spiceHits;
   }
 
   return {
@@ -138,6 +153,7 @@ function createBoard({ size = 4, cols, rows, profile = 'kids', difficulty = DEFA
     minLength: min,
     totalWords: words.size,
     themeWords: themeHits,
+    spicyWords: spiceHits,
     rolls
   };
 }

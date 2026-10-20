@@ -37,7 +37,7 @@ jobs:
           context: .
           push: false
           load: true
-          tags: wordless-arcade:ci
+          tags: arks-arcade:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -45,7 +45,7 @@ jobs:
       # what catches a file the Dockerfile forgot to COPY.
       - name: Boot the image and wait for health
         run: |
-          docker run -d --name arcade -p 3000:3000 wordless-arcade:ci
+          docker run -d --name arcade -p 3000:3000 arks-arcade:ci
           for i in $(seq 1 30); do
             status=$(docker inspect --format='{{.State.Health.Status}}' arcade 2>/dev/null || echo starting)
             echo "health: $status"

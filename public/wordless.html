@@ -3,8 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Wordless Arcade</title>
+<title>Wordless</title>
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="tutorial.css">
+<link rel="stylesheet" href="adult-mode.css">
 </head>
 <body>
 
@@ -12,16 +14,28 @@
   <div id="headerTop">
     <a href="/" id="backToArcade" class="icon-btn" title="Back to the arcade">←</a>
     <h1><span id="titlePrefix">Word</span><span id="titleSuffix">less</span> <span id="titleEmoji"></span></h1>
-    <button id="leaderboardBtn" class="icon-btn" title="Leaderboard">🏆</button>
+    <span class="header-btns">
+      <button id="helpBtn" class="icon-btn" title="How to play">?</button>
+      <button id="leaderboardBtn" class="icon-btn" title="Leaderboard">🏆</button>
+    </span>
   </div>
   <div id="subtitle">Guess the word in 6 tries</div>
 
   <div id="themeBar">
     <label for="themeSelect">Theme</label>
     <select id="themeSelect"></select>
+    <button id="adultBtn" class="small-btn" title="Adult themes">🔞</button>
+    <button id="difficultyBtn" class="small-btn">🎚️ <span id="difficultyLabel">Normal</span></button>
     <button id="suggestThemeBtn" class="small-btn">💡 Suggest a Theme</button>
   </div>
 </header>
+
+<!-- The puzzle's title, game-show style, and any hints used so far -->
+<div id="puzzleTitle" class="puzzle-title hidden">
+  <span class="pt-label">Category</span>
+  <span id="puzzleCategory" class="pt-category"></span>
+</div>
+<ul id="hintList" class="hint-list"></ul>
 
 <div id="statusBar">
   <div id="message"></div>
@@ -52,6 +66,28 @@
   </div>
 </div>
 
+<!-- Difficulty: asked before the first game, changeable from the theme bar -->
+<div id="difficultyOverlay" class="overlay hidden">
+  <div class="overlay-card">
+    <h2 class="difficulty-title">How hard?</h2>
+    <div id="difficultyChoices" class="difficulty-choices"></div>
+  </div>
+</div>
+
+<!-- Adult themes unlock -->
+<div id="adultOverlay" class="overlay hidden">
+  <div class="overlay-card">
+    <h2 class="difficulty-title">🔞 Adult themes</h2>
+    <div id="adultHint" class="hint-text" style="margin-bottom:12px">Naughty themes for grown-ups.</div>
+    <input type="password" id="adultPinInput" inputmode="numeric" maxlength="8" class="pin-box" placeholder="PIN" autocomplete="off">
+    <div id="adultError" class="form-error"></div>
+    <div class="overlay-actions">
+      <button id="adultCancelBtn" class="ghost-btn">Cancel</button>
+      <button id="adultOkBtn" class="primary-btn">Unlock</button>
+    </div>
+  </div>
+</div>
+
 <!-- Leaderboard -->
 <div id="leaderboardOverlay" class="overlay hidden">
   <div class="overlay-card wide">
@@ -59,7 +95,10 @@
       <h2>🏆 Leaderboard</h2>
       <button id="closeLeaderboardBtn" class="icon-btn">✕</button>
     </div>
-    <select id="leaderboardThemeFilter"></select>
+    <div class="lb-filters">
+      <select id="leaderboardDifficultyFilter"></select>
+      <select id="leaderboardThemeFilter"></select>
+    </div>
     <div id="leaderboardList"></div>
   </div>
 </div>
@@ -94,6 +133,69 @@
 
 <div id="hint">Type letters to play · Enter to submit · Backspace to erase</div>
 
+<script src="avatars.js"></script>
+<script src="profile.js"></script>
+<script src="tutorial.js"></script>
+<script>
+  // How to play Wordless. Opens on the first visit; the ? button brings it back.
+  window.wordlessTutorial = Tutorial.create('wordless', [
+    {
+      emoji: '🎯',
+      title: 'The goal',
+      html: `<p>Guess the <b>secret word</b> in <b>6 tries</b>.</p>
+        <p>The <b>theme</b> tells you what kind of word it is — a Simpsons character, a Minecraft thing, or just an everyday word in Classic.</p>
+        <p>The number of boxes on the board is the number of letters.</p>`
+    },
+    {
+      emoji: '⌨️',
+      title: 'Make a guess',
+      html: `<p>Type a word with the keyboard (on screen or your own), then press <b>Enter</b>.</p>
+        <p>Made a mistake? <b>⌫</b> deletes a letter.</p>`
+    },
+    {
+      emoji: '🟩',
+      title: 'Read the colors',
+      html: `<p>After each guess the letters change color:</p>
+        <div class="tut-tiles"><span class="g">C</span><span class="y">A</span><span>T</span></div>
+        <table>
+          <tr><td>🟩 Green</td><td>Right letter, <b>right spot</b>.</td></tr>
+          <tr><td>🟨 Yellow</td><td>In the word, but in a <b>different spot</b>.</td></tr>
+          <tr><td>⬛ Gray</td><td><b>Not in the word</b> at all.</td></tr>
+        </table>
+        <p>The keyboard keeps track too, so you can see which letters you've ruled out.</p>`
+    },
+    {
+      emoji: '💡',
+      title: 'Stuck? Use a hint',
+      html: `<p>The <b>category</b> above the board tells you what kind of word it is, for free.</p>
+        <p>Still stuck? Tap <b>Hint</b>. You get 3 per word, and each one helps a bit more:</p>
+        <table>
+          <tr><td>🗣️ 1st</td><td>A clue that hints at the meaning.</td></tr>
+          <tr><td>🎵 2nd</td><td>A word that ends the same way.</td></tr>
+          <tr><td>🔤 3rd</td><td>One letter in its right spot.</td></tr>
+        </table>
+        <p>Each hint costs points, so save them for when you really need them.</p>`
+    },
+    {
+      emoji: '🎚️',
+      title: 'Pick your difficulty',
+      html: `<table>
+          <tr><td>🐣 Easy</td><td>3–4 letter words. Great for kids.</td></tr>
+          <tr><td>🙂 Normal</td><td>5–6 letters.</td></tr>
+          <tr><td>🔥 Hard</td><td>7–8 letters.</td></tr>
+          <tr><td>🤯 Ludicrous</td><td>9–10 letters.</td></tr>
+        </table>
+        <p>Change it any time with the 🎚️ button. Each difficulty has its own leaderboard.</p>`
+    },
+    {
+      emoji: '🏆',
+      title: 'Score big',
+      html: `<p>Win with <b>fewer guesses</b>, <b>fewer hints</b> and <b>faster</b> for more points.</p>
+        <p>When you finish, type your initials to get on the board and see where you stack up. 🏆 shows the leaderboard.</p>
+        <div class="tut-tip">Tap <b>?</b> at the top any time to see this again.</div>`
+    }
+  ]);
+</script>
 <script src="app.js"></script>
 </body>
 </html>

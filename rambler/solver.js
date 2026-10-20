@@ -1,6 +1,6 @@
 'use strict';
 
-const { neighbours, cellCount } = require('./dice');
+const { neighbors, cellCount } = require('./dice');
 const dictionary = require('./dictionary');
 
 const { TERM, PRE } = dictionary;
@@ -24,7 +24,7 @@ function minLength(spec) {
 function solve(board, spec, profileId, { min = minLength(spec) } = {}) {
   const { root } = dictionary.load();
   const bit = dictionary.profileBit(profileId);
-  const adj = neighbours(spec);
+  const adj = neighbors(spec);
   const used = new Array(board.length).fill(false);
   const found = new Map();
   const path = [];

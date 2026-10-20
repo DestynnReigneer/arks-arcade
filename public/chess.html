@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chess</title>
+<link rel="stylesheet" href="arcade-ui.css">
+<link rel="stylesheet" href="chess.css">
+<link rel="stylesheet" href="tutorial.css">
+</head>
+<body>
+
+<header class="top">
+  <a href="/" class="icon-btn" title="Back to the arcade">←</a>
+  <h1>♞ <span>CHESS</span></h1>
+  <div class="btns">
+    <button class="icon-btn" id="muteBtn" title="Sound">🔊</button>
+    <button class="icon-btn" id="scoresBtn" title="High scores">🏆</button>
+    <button class="icon-btn" id="helpBtn" title="How to play">?</button>
+  </div>
+</header>
+
+<!-- ============ setup ============ -->
+<section id="setup">
+  <div class="panel">
+    <h2>How are you playing?</h2>
+    <div class="seg" id="modeSeg">
+      <button data-mode="ai" aria-pressed="true">🤖 vs Computer</button>
+      <button data-mode="local" aria-pressed="false">📱 Share a phone</button>
+      <button data-mode="host" aria-pressed="false">📡 Host</button>
+      <button data-mode="join" aria-pressed="false">🔗 Join</button>
+    </div>
+
+    <div id="aiSetup">
+      <p class="hint">Play the computer. It thinks for a moment on harder levels.</p>
+      <div class="seg" id="levelSeg">
+        <button data-level="easy" aria-pressed="false">🐣 Easy</button>
+        <button data-level="medium" aria-pressed="true">🙂 Medium</button>
+        <button data-level="hard" aria-pressed="false">🔥 Hard</button>
+      </div>
+    </div>
+
+    <div id="localSetup" class="hidden">
+      <p class="hint">Two players, one phone. The board turns around to face whoever's move it is.</p>
+    </div>
+
+    <div id="hostSetup" class="hidden">
+      <p class="hint">Each player on their own phone. You'll get a code to share.</p>
+      <label>Your name<input id="hostName" maxlength="16" placeholder="e.g. Sam"></label>
+    </div>
+
+    <div id="joinSetup" class="hidden">
+      <p class="hint">Get the 4-letter code from whoever is hosting.</p>
+      <label>Game code<input id="joinCode" maxlength="4" placeholder="ABCD" autocapitalize="characters" class="code-input"></label>
+      <label>Your name<input id="joinName" maxlength="16" placeholder="e.g. Alex"></label>
+    </div>
+
+    <div id="colorPick">
+      <div class="hint" style="margin-top:12px">Play as</div>
+      <div class="seg" id="colorSeg">
+        <button data-color="w" aria-pressed="true">♔ White</button>
+        <button data-color="random" aria-pressed="false">🎲 Random</button>
+        <button data-color="b" aria-pressed="false">♚ Black</button>
+      </div>
+    </div>
+
+    <div class="msg" id="setupMsg"></div>
+    <button class="primary big" id="goBtn">Start</button>
+  </div>
+</section>
+
+<!-- ============ lobby (two phones) ============ -->
+<section id="lobby" class="hidden">
+  <div class="panel center">
+    <div class="hint">Game code</div>
+    <div class="code" id="lobbyCode">----</div>
+    <img class="join-qr hidden" id="joinQr" width="150" height="150" alt="QR code to join"
+         style="width:150px;height:150px;background:#fff;padding:6px;border-radius:10px;margin:10px auto 2px;display:block">
+    <div class="join-link" id="joinLink" style="font-size:11px;opacity:0.65;text-align:center;word-break:break-all"></div>
+    <div style="font-size:12px;opacity:0.75;text-align:center">Scan to join from another phone</div>
+    <div class="hint">On the other phone: Chess → Join, and type this in.</div>
+    <div class="hint" id="lobbyWait">Waiting for your opponent…</div>
+    <button class="ghost" id="lobbyLeave">Cancel</button>
+  </div>
+</section>
+
+<!-- ============ game ============ -->
+<section id="game" class="hidden">
+  <div class="player-bar" id="topBar">
+    <span class="p-name" id="topName"></span>
+    <span class="p-taken" id="topTaken"></span>
+  </div>
+
+  <div class="last-move" id="lastMove" aria-live="polite"></div>
+
+  <div class="board-wrap" id="boardWrap">
+    <div class="board" id="board"></div>
+  </div>
+
+  <div class="player-bar" id="bottomBar">
+    <span class="p-name" id="bottomName"></span>
+    <span class="p-taken" id="bottomTaken"></span>
+  </div>
+
+  <div class="status-line" id="statusLine"></div>
+
+  <div class="row-btns" id="gameBtns">
+    <button class="ghost" id="suggestBtn">💡 Suggest</button>
+    <button class="ghost" id="undoBtn">↶ Undo</button>
+    <button class="ghost" id="drawBtn">🤝 Draw</button>
+    <button class="ghost" id="resignBtn">🏳️ Resign</button>
+  </div>
+
+  <div class="moves" id="moveList"></div>
+  <button class="ghost big" id="quitBtn">Back to setup</button>
+</section>
+
+<!-- ============ overlays ============ -->
+<div class="overlay hidden" id="promoView">
+  <div class="card-panel center">
+    <h2>Promote your pawn</h2>
+    <p class="hint">It made it to the other side. Pick what it becomes.</p>
+    <div class="promo-row" id="promoRow"></div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="drawOfferView">
+  <div class="card-panel center">
+    <div class="big-emoji">🤝</div>
+    <h2>Your opponent offers a draw</h2>
+    <p class="hint">A draw means nobody wins.</p>
+    <div class="stack">
+      <button class="primary" id="drawAccept">Accept the draw</button>
+      <button class="ghost" id="drawDecline">No, keep playing</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="overView">
+  <div class="card-panel center">
+    <div class="big-emoji" id="overEmoji">🏆</div>
+    <h2 id="overTitle"></h2>
+    <p class="hint" id="overHint"></p>
+    <div id="overScore" class="hidden">
+      <div class="final-score" id="overPoints"></div>
+      <p class="hint">Get on the board and see where you stack up.</p>
+      <div class="initials">
+        <input maxlength="1" class="ini" autocomplete="off"><input maxlength="1" class="ini" autocomplete="off"><input maxlength="1" class="ini" autocomplete="off">
+      </div>
+      <button class="primary big" id="saveScoreBtn">Save score</button>
+      <div class="msg" id="scoreMsg"></div>
+    </div>
+    <div class="stack">
+      <button class="primary" id="againBtn">Play again</button>
+      <button class="ghost" id="reviewBtn">Look at the board</button>
+      <button class="ghost" id="menuBtn">Back to setup</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="scoresView">
+  <div class="card-panel">
+    <h2>🏆 Beat the computer</h2>
+    <div class="seg" id="scoreBoardSeg">
+      <button data-board="easy" aria-pressed="false">🐣 Easy</button>
+      <button data-board="medium" aria-pressed="true">🙂 Medium</button>
+      <button data-board="hard" aria-pressed="false">🔥 Hard</button>
+    </div>
+    <p class="hint">Points for a win: more for a harder computer, a quicker checkmate, and fewer suggestions.</p>
+    <ul class="scores" id="scoreList"></ul>
+    <div class="stack"><button class="ghost" id="scoresClose">Close</button></div>
+  </div>
+</div>
+
+<script src="avatars.js"></script>
+<script src="profile.js"></script>
+<script src="tutorial.js"></script>
+<script src="blip.js"></script>
+<script src="arcade-kit.js"></script>
+<script src="chess-engine.js"></script>
+<script src="arcade-qr.js"></script>
+<script src="chess.js"></script>
+</body>
+</html>

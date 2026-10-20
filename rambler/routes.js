@@ -20,10 +20,10 @@ const router = express.Router();
 router.use('/admin', adminRouter);
 
 // Optional extra lock on the unfiltered dictionary. Unset -- the default --
-// means a confirmation tap is all that stands in front of it, which is what
-// was asked for. Set ADULT_PIN in .env and it becomes a real gate, matching
-// how ADMIN_TOKEN already works.
-const ADULT_PIN = process.env.ADULT_PIN || '';
+// means a confirmation tap is all that stands in front of it. ADULT_PIN in
+// .env sets it; the admin page can change it later (arcade/adult-pin.js).
+const adultPin = require('../arcade/adult-pin');
+const comm = require('../arcade/comm');
 
 const INITIALS_RE = /^[A-Z0-9]{1,3}$/;
 
@@ -38,9 +38,9 @@ function profileOf(raw) {
 // Enforced on every path that could reach unfiltered words: creating a board,
 // creating a room, and changing a room's settings mid-session.
 function assertProfileAllowed(profile, req) {
-  if (profile !== 'adult' || !ADULT_PIN) return;
+  if (profile !== 'adult') return;
   const supplied = req.get('X-Adult-Pin') || (req.body && req.body.adultPin) || '';
-  if (String(supplied) !== ADULT_PIN) {
+  if (!adultPin.matches(supplied)) {
     throw fail('That PIN is not right.', 403);
   }
 }
@@ -50,6 +50,17 @@ function assertProfileAllowed(profile, req) {
 function publicEntry(row) {
   const clean = row.bestWord && dictionary.isWord(row.bestWord, 'kids');
   return { ...row, bestWord: clean ? row.bestWord : '', profile: undefined };
+}
+
+// Only a new number one makes the Comm Center; a whole board's worth of
+// shout-outs would bury everything else on it.
+function announceTopScore(saved, initials, board) {
+  if (!saved.made || saved.rank !== 1) return;
+  comm.safePost({
+    kind: 'highscore', emoji: '🏆', game: 'rambler',
+    title: `${initials} took #1 on Rambler ${board}`,
+    body: `${initials} just set the top score on the ${board} board with ${saved.score} points. Think you can beat it?`
+  });
 }
 
 function boardLabel(key) {
@@ -91,12 +102,12 @@ router.get('/config', (req, res) => {
     })),
     defaultDifficulty: round.DEFAULT_DIFFICULTY,
     marathon: { start: marathon.START, timeBonus: marathon.TIME_BONUS },
-    milestones: progress.catalogue(),
+    milestones: progress.catalog(),
     today: progress.today(),
     season: seasons.status(),
     theme: packs.active(),
     profiles: dictionary.listProfiles(),
-    adultRequiresPin: !!ADULT_PIN,
+    adultRequiresPin: adultPin.status().set,
     maxPlayers: rooms.MAX_PLAYERS,
     dictionary: dictionary.stats
   });
@@ -315,6 +326,7 @@ router.post('/leaderboard', leaderboardLimiter, (req, res, next) => {
         durationSec: Math.round(done.survivedMs / 1000),
         players: 1
       });
+      announceTopScore(saved, initials, 'Marathon');
       return res.status(saved.made ? 201 : 200).json(saved);
     }
 
@@ -353,6 +365,7 @@ router.post('/leaderboard', leaderboardLimiter, (req, res, next) => {
       durationSec,
       players: result.results.length
     });
+    announceTopScore(saved, initials, boardLabel(db.boardKeyFor(mode, result.size)));
     // Missing the board is not an error -- it is the answer to the question.
     res.status(saved.made ? 201 : 200).json(saved);
   } catch (e) {
@@ -372,7 +385,8 @@ router.post('/rooms', roomLimiter, (req, res, next) => {
       hostName: body.name,
       size: body.size,
       profile,
-      durationSec: body.durationSec
+      durationSec: body.durationSec,
+      password: body.password
     });
     res.status(201).json({
       code: room.code,
@@ -387,7 +401,7 @@ router.post('/rooms', roomLimiter, (req, res, next) => {
 
 router.post('/rooms/:code/join', (req, res, next) => {
   try {
-    const { room, player } = rooms.joinRoom(req.params.code, (req.body || {}).name);
+    const { room, player } = rooms.joinRoom(req.params.code, (req.body || {}).name, (req.body || {}).password);
     res.status(201).json({
       code: room.code,
       playerId: player.id,
@@ -414,7 +428,8 @@ router.post('/rooms/:code/settings', (req, res, next) => {
     const room = rooms.updateSettings(req.params.code, body.playerId, body.token, {
       size: body.size,
       profile: body.profile,
-      durationSec: body.durationSec
+      durationSec: body.durationSec,
+      password: body.password
     });
     res.json(rooms.snapshot(room, body.playerId));
   } catch (e) {
@@ -695,7 +710,7 @@ router.delete('/players/:id', (req, res, next) => {
 router.use((err, req, res, _next) => {
   const status = err.status || 500;
   if (status >= 500) console.error('rambler:', err);
-  res.status(status).json({ error: status >= 500 ? 'Something went wrong.' : err.message });
+  res.status(status).json({ error: status >= 500 ? 'Something went wrong.' : err.message, ...require('../arcade/room-password').extra(err) });
 });
 
 module.exports = router;

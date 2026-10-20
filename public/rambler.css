@@ -1,7 +1,7 @@
 :root {
   /* ARKS 8-Bit -- docs/arks-color-spec.html. Every value below is the spec's;
      nothing in this block is invented. "Dark cabinet black lit by marquee
-     bulbs. Gold reads as the coin/power-up colour, blue as the player-two
+     bulbs. Gold reads as the coin/power-up color, blue as the player-two
      signal -- red is held back for status only." */
   --ground: linear-gradient(160deg, #08080f 0%, #12111c 58%, #1e1a30 100%);
   --bg: #12111c;
@@ -573,7 +573,7 @@ textarea:focus { outline: none; border-color: var(--accent); }
 }
 
 /* ============================================================================
-   MARATHON — the Vice language from the ARKS colour spec.
+   MARATHON — the Vice language from the ARKS color spec.
    Scoped to .vice so the classic modes keep the arcade look and Marathon
    reads as its own place the moment you land on it.
    ========================================================================== */
@@ -1443,3 +1443,6 @@ body.in-vice .screen { position: relative; z-index: 1; }
 }
 .d-row.mine .nm { color: var(--accent); }
 .d-row.first .r { color: var(--accent); }
+
+/* The logo: a line tracing a word through a grid of tiles, like the game */
+.logo-grid { width: 26px; height: 26px; vertical-align: -5px; margin-right: 6px; }

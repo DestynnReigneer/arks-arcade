@@ -2,6 +2,18 @@
   const MAX_GUESSES = 6;
   const MAX_HINTS = 3;
   const THEME_KEY = 'wordless_theme_v2';
+  const DIFFICULTY_KEY = 'wordless_difficulty';
+
+  // Difficulty picks the answer by length: short words for little kids, long
+  // ones for show-offs. Each has its own leaderboard, so a five-year-old's
+  // Easy win never has to sit under somebody's Ludicrous score.
+  // Must match DIFFICULTIES in server.js.
+  const DIFFICULTIES = {
+    easy:      { label: 'Easy',      emoji: '🐣', min: 3, max: 4,  blurb: 'Short words, 3–4 letters' },
+    normal:    { label: 'Normal',    emoji: '🙂', min: 5, max: 6,  blurb: '5–6 letters' },
+    hard:      { label: 'Hard',      emoji: '🔥', min: 7, max: 8,  blurb: '7–8 letters' },
+    ludicrous: { label: 'Ludicrous', emoji: '🤯', min: 9, max: 10, blurb: '9–10 letters. Good luck.' }
+  };
 
   // Must match SCORING constants in db.js
   const SCORING = {
@@ -32,6 +44,7 @@
   // ---- State ----
   let themes = [];
   let currentTheme = null;
+  let difficulty = DIFFICULTIES[safeStorageGet(DIFFICULTY_KEY)] ? safeStorageGet(DIFFICULTY_KEY) : 'normal';
   let answer = "";
   let wordLen = 5;
   let guesses = [];
@@ -40,6 +53,9 @@
   let revealedLetters = [];
   let hintsRemaining = MAX_HINTS;
   let hintsUsed = 0;
+  // The puzzle's category and hint ladder, fetched when a word is picked.
+  let puzzle = { category: null, clue: null, endsLike: null };
+  let puzzleToken = 0;
   let gameOver = false;
   let startTime = 0;
   let lastResult = null;
@@ -55,6 +71,9 @@
   const titleEmojiEl = document.getElementById('titleEmoji');
   const hintBtn = document.getElementById('hintBtn');
   const hintCountEl = document.getElementById('hintCount');
+  const puzzleTitleEl = document.getElementById('puzzleTitle');
+  const puzzleCategoryEl = document.getElementById('puzzleCategory');
+  const hintListEl = document.getElementById('hintList');
   const leaderboardBtn = document.getElementById('leaderboardBtn');
 
   const initialsOverlay = document.getElementById('initialsOverlay');
@@ -66,6 +85,11 @@
 
   const leaderboardOverlay = document.getElementById('leaderboardOverlay');
   const leaderboardThemeFilter = document.getElementById('leaderboardThemeFilter');
+  const leaderboardDifficultyFilter = document.getElementById('leaderboardDifficultyFilter');
+  const difficultyOverlay = document.getElementById('difficultyOverlay');
+  const difficultyChoices = document.getElementById('difficultyChoices');
+  const difficultyBtn = document.getElementById('difficultyBtn');
+  const difficultyLabel = document.getElementById('difficultyLabel');
   const leaderboardList = document.getElementById('leaderboardList');
   const closeLeaderboardBtn = document.getElementById('closeLeaderboardBtn');
 
@@ -79,14 +103,15 @@
   const closeThemeRequestBtn = document.getElementById('closeThemeRequestBtn');
 
   const KEY_ROWS = [
-    "qwertyuiop".split(""),
+    // Delete top right, Enter bottom right: where thumbs expect them.
+    [..."qwertyuiop".split(""), "back"],
     "asdfghjkl".split(""),
-    ["enter", ..."zxcvbnm".split(""), "back"]
+    [..."zxcvbnm".split(""), "enter"]
   ];
 
   // ---- API helpers ----
-  async function apiGet(url) {
-    const res = await fetch(url);
+  async function apiGet(url, headers) {
+    const res = await fetch(url, headers ? { headers } : undefined);
     if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Request failed');
     return res.json();
   }
@@ -100,6 +125,28 @@
     if (!res.ok) throw new Error(data.error || 'Request failed');
     return data;
   }
+  // ---- Adult themes ----
+  // Hidden until unlocked with the arcade's adult PIN (or a one-tap "I'm an
+  // adult" when no PIN is set). Remembered for this browser tab only.
+  const adult = {
+    on: (() => { try { return sessionStorage.getItem('wordless.adult') === 'on'; } catch { return false; } })(),
+    pin: (() => { try { return sessionStorage.getItem('wordless.adultPin') || ''; } catch { return ''; } })(),
+    requiresPin: false
+  };
+  const adultQuery = sep => (adult.on ? `${sep}adult=1` : '');
+  const adultHeaders = () => (adult.on && adult.pin ? { 'X-Adult-Pin': adult.pin } : undefined);
+
+  function setAdult(on, pin = '') {
+    adult.on = on;
+    adult.pin = on ? pin : '';
+    try {
+      if (on) { sessionStorage.setItem('wordless.adult', 'on'); sessionStorage.setItem('wordless.adultPin', adult.pin); }
+      else { sessionStorage.removeItem('wordless.adult'); sessionStorage.removeItem('wordless.adultPin'); }
+    } catch { /* private mode */ }
+    document.getElementById('adultBtn').classList.toggle('on', on);
+    document.documentElement.classList.toggle('adult-mode', on);
+  }
+
   // ---- Theme select / skin ----
   function populateThemeSelect() {
     themeSelect.innerHTML = "";
@@ -107,14 +154,17 @@
     builtinGroup.label = "Built-in";
     const customGroup = document.createElement('optgroup');
     customGroup.label = "Custom";
+    const adultGroup = document.createElement('optgroup');
+    adultGroup.label = "🔞 Adult";
     themes.forEach(t => {
       const opt = document.createElement('option');
       opt.value = t.id;
       opt.textContent = `${t.emoji} ${t.label}`;
-      (t.builtin ? builtinGroup : customGroup).appendChild(opt);
+      (t.adult ? adultGroup : t.builtin ? builtinGroup : customGroup).appendChild(opt);
     });
     themeSelect.appendChild(builtinGroup);
     if (customGroup.children.length) themeSelect.appendChild(customGroup);
+    if (adultGroup.children.length) themeSelect.appendChild(adultGroup);
   }
 
   function applyThemeSkin(theme) {
@@ -136,21 +186,110 @@
   }
 
   async function refreshThemes() {
-    themes = await apiGet('/api/themes');
+    try {
+      themes = await apiGet('/api/themes' + adultQuery('?'), adultHeaders());
+    } catch (e) {
+      // A PIN changed since this tab unlocked: quietly go back to family mode.
+      if (!adult.on) throw e;
+      setAdult(false);
+      themes = await apiGet('/api/themes');
+    }
     populateThemeSelect();
   }
 
+  async function openAdult() {
+    if (adult.on) {
+      setAdult(false);
+      await refreshThemes();
+      if (currentTheme && currentTheme.adult) { setTheme('classic'); newGame(); }
+      else themeSelect.value = currentTheme.id;
+      showMessage('Adult themes hidden.');
+      return;
+    }
+    const pinInput = document.getElementById('adultPinInput');
+    pinInput.value = '';
+    pinInput.classList.toggle('hidden', !adult.requiresPin);
+    document.getElementById('adultError').textContent = '';
+    document.getElementById('adultHint').textContent = adult.requiresPin
+      ? 'Naughty themes for grown-ups. Enter the adult PIN.'
+      : 'Naughty themes for grown-ups. Are you 18 or older?';
+    document.getElementById('adultOkBtn').textContent = adult.requiresPin ? 'Unlock' : "I'm an adult";
+    document.getElementById('adultOverlay').classList.remove('hidden');
+    if (adult.requiresPin) pinInput.focus();
+  }
+
+  async function confirmAdult() {
+    const pin = document.getElementById('adultPinInput').value.trim();
+    const err = document.getElementById('adultError');
+    try {
+      if (adult.requiresPin) {
+        const r = await apiPost('/api/adult-check', { pin });
+        if (!r.ok) { err.textContent = 'That PIN is not right.'; return; }
+      }
+      setAdult(true, pin);
+      document.getElementById('adultOverlay').classList.add('hidden');
+      await refreshThemes();
+      themeSelect.value = currentTheme.id;
+      const first = themes.find(t => t.adult);
+      showMessage(first ? 'Adult themes unlocked — pick one from the Theme menu. 😈' : 'Unlocked, but no adult themes have been made yet.');
+    } catch (e) {
+      err.textContent = e.message;
+    }
+  }
+
   // ---- Board / keyboard ----
+  // Words in the difficulty's length range. A theme with none that length
+  // falls back to its closest lengths, so a small theme still plays.
   function pickAnswer() {
+    const { min, max } = DIFFICULTIES[difficulty];
     const words = currentTheme.words;
-    return words[Math.floor(Math.random() * words.length)];
+    const distance = w => w.length < min ? min - w.length : w.length > max ? w.length - max : 0;
+    const best = Math.min(...words.map(distance));
+    const pool = words.filter(w => distance(w) === best);
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+
+  function renderDifficultyChoices() {
+    difficultyChoices.innerHTML = '';
+    Object.entries(DIFFICULTIES).forEach(([id, d]) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'difficulty-choice' + (id === difficulty ? ' current' : '');
+      btn.innerHTML = `<span class="d-emoji"></span><span><div class="d-name"></div><div class="d-blurb"></div></span>`;
+      btn.querySelector('.d-emoji').textContent = d.emoji;
+      btn.querySelector('.d-name').textContent = d.label;
+      btn.querySelector('.d-blurb').textContent = d.blurb;
+      btn.addEventListener('click', () => chooseDifficulty(id));
+      difficultyChoices.appendChild(btn);
+    });
+  }
+
+  function openDifficulty() {
+    renderDifficultyChoices();
+    difficultyOverlay.classList.remove('hidden');
+  }
+
+  function chooseDifficulty(id) {
+    difficulty = id;
+    safeStorageSet(DIFFICULTY_KEY, id);
+    difficultyLabel.textContent = DIFFICULTIES[id].label;
+    difficultyOverlay.classList.add('hidden');
+    newGame();
   }
 
   function computeTileSize(cols) {
     const available = Math.min(window.innerWidth - 24, 600);
     const gap = 6;
     const size = Math.floor((available - (cols - 1) * gap) / cols);
-    return Math.max(30, Math.min(60, size));
+    // Tall enough for the hints and the keyboard too, so nothing scrolls away.
+    const top = board.getBoundingClientRect().top + window.scrollY;
+    const keys = keyboardEl.offsetHeight || 170;
+    const byHeight = Math.floor((window.innerHeight - top - keys - 24 - (MAX_GUESSES - 1) * gap) / MAX_GUESSES);
+    return Math.max(30, Math.min(60, size, byHeight));
+  }
+
+  function fitBoard() {
+    if (wordLen) board.style.setProperty('--tile-size', computeTileSize(wordLen) + 'px');
   }
 
   function buildBoard() {
@@ -172,10 +311,7 @@
     }
   }
 
-  window.addEventListener('resize', () => {
-    if (!wordLen) return;
-    board.style.setProperty('--tile-size', computeTileSize(wordLen) + 'px');
-  });
+  window.addEventListener('resize', fitBoard);
 
   function buildKeyboard() {
     keyboardEl.innerHTML = "";
@@ -219,8 +355,52 @@
     initialsOverlay.classList.add('hidden');
     buildBoard();
     buildKeyboard();
+    fitBoard();
     updateRowDisplay(0);
+    loadPuzzle();
     updateHintUI();
+  }
+
+  // The title shows straight away (it's free); clue and ends-like wait in the
+  // ladder until a hint is spent.
+  async function loadPuzzle() {
+    const token = ++puzzleToken;
+    puzzle = { category: currentTheme.subject || 'Word', clue: null, endsLike: null };
+    hintListEl.innerHTML = '';
+    showPuzzleTitle();
+    try {
+      const data = await apiGet(`/api/wordless/hints?theme=${encodeURIComponent(currentTheme.id)}&word=${encodeURIComponent(answer)}` +
+        adultQuery('&'), adultHeaders());
+      if (token !== puzzleToken) return;
+      puzzle = { category: data.category || puzzle.category, clue: data.clue, endsLike: data.endsLike };
+      showPuzzleTitle();
+      updateHintUI();
+    } catch (e) { /* offline: the title stays the theme's subject, hints fall back to letters */ }
+  }
+
+  function showPuzzleTitle() {
+    const base = currentTheme.id === 'classic' ? '' : `${currentTheme.emoji} ${currentTheme.label} · `;
+    const same = puzzle.category && currentTheme.subject &&
+      puzzle.category.toLowerCase() === currentTheme.subject.toLowerCase();
+    puzzleCategoryEl.textContent = same ? `${currentTheme.emoji} ${puzzle.category}` : base + (puzzle.category || 'Word');
+    puzzleTitleEl.classList.remove('hidden');
+  }
+
+  // Hints get stronger as you go: the meaning, then the sound, then letters.
+  function nextHintKind() {
+    const ladder = [];
+    if (puzzle.clue) ladder.push('clue');
+    if (puzzle.endsLike) ladder.push('ends');
+    return ladder[hintsUsed] || 'letter';
+  }
+
+  function addHintLine(icon, html) {
+    const li = document.createElement('li');
+    li.innerHTML = `<span></span><span></span>`;
+    li.firstChild.textContent = icon;
+    li.lastChild.innerHTML = html;
+    hintListEl.appendChild(li);
+    fitBoard();
   }
 
   function showMessage(msg, persist) {
@@ -288,12 +468,21 @@
 
   function updateHintUI() {
     hintCountEl.textContent = hintsRemaining;
-    const noCandidates = revealedSlots.every(Boolean);
+    const noCandidates = nextHintKind() === 'letter' && revealedSlots.every(Boolean);
     hintBtn.disabled = gameOver || hintsRemaining <= 0 || noCandidates;
   }
 
   function useHint() {
     if (gameOver || hintsRemaining <= 0) return;
+    const kind = nextHintKind();
+    if (kind === 'clue' || kind === 'ends') {
+      hintsRemaining--;
+      hintsUsed++;
+      if (kind === 'clue') addHintLine('🗣️', escapeHtml(puzzle.clue));
+      else addHintLine('🎵', `Ends the same way as <b>${escapeHtml(puzzle.endsLike)}</b>`);
+      updateHintUI();
+      return;
+    }
     const candidates = [];
     for (let i = 0; i < wordLen; i++) if (!revealedSlots[i]) candidates.push(i);
     if (candidates.length === 0) return;
@@ -305,7 +494,7 @@
     hintsUsed++;
     updateRowDisplay(guesses.length);
     updateHintUI();
-    showMessage(`Hint: letter ${idx + 1} is ${answer[idx].toUpperCase()}`);
+    addHintLine('🔤', `Letter ${idx + 1} is <b>${answer[idx].toUpperCase()}</b>`);
   }
 
   function submitGuess() {
@@ -373,11 +562,20 @@
     if (!initialsOverlay.classList.contains('hidden')) return;
     if (!leaderboardOverlay.classList.contains('hidden')) return;
     if (!themeRequestOverlay.classList.contains('hidden')) return;
+    if (!difficultyOverlay.classList.contains('hidden')) return;
+    if (!document.getElementById('adultOverlay').classList.contains('hidden')) return;
+    if (window.wordlessTutorial && window.wordlessTutorial.isOpen) return;
     handleKey(e.key);
   });
 
   newGameBtn.addEventListener('click', newGame);
   hintBtn.addEventListener('click', useHint);
+  difficultyBtn.addEventListener('click', openDifficulty);
+  document.getElementById('helpBtn').addEventListener('click', () => window.wordlessTutorial.open());
+  document.getElementById('adultBtn').addEventListener('click', openAdult);
+  document.getElementById('adultOkBtn').addEventListener('click', confirmAdult);
+  document.getElementById('adultCancelBtn').addEventListener('click', () => document.getElementById('adultOverlay').classList.add('hidden'));
+  document.getElementById('adultPinInput').addEventListener('keydown', e => { if (e.key === 'Enter') confirmAdult(); });
   themeSelect.addEventListener('change', (e) => { setTheme(e.target.value); newGame(); });
 
   // ---- End of game / scoring / initials ----
@@ -386,7 +584,7 @@
     const elapsedMs = Date.now() - startTime;
     const guessesUsed = guesses.length;
     const score = computeScoreClient({ won, guesses: guessesUsed, hintsUsed, elapsedMs });
-    lastResult = { won, guesses: guessesUsed, hintsUsed, elapsedMs, score, word: answer, themeId: currentTheme.id };
+    lastResult = { won, guesses: guessesUsed, hintsUsed, elapsedMs, score, word: answer, themeId: currentTheme.id, difficulty };
 
     if (won) {
       showMessage("🎉 You got it! " + answer.toUpperCase(), true);
@@ -401,10 +599,12 @@
   function openInitialsOverlay() {
     finalScoreValue.textContent = lastResult.score;
     const secs = Math.round(lastResult.elapsedMs / 1000);
-    finalScoreDetail.textContent = lastResult.won
+    finalScoreDetail.textContent = `${DIFFICULTIES[lastResult.difficulty].label} · ` + (lastResult.won
       ? `${lastResult.guesses} guess${lastResult.guesses === 1 ? '' : 'es'} · ${lastResult.hintsUsed} hint${lastResult.hintsUsed === 1 ? '' : 's'} · ${secs}s`
-      : `Not solved — word was ${lastResult.word.toUpperCase()}`;
-    initialBoxes.forEach(b => { b.value = ''; b.classList.remove('error'); });
+      : `Not solved — word was ${lastResult.word.toUpperCase()}`);
+    // Playing as a profile: their initials are already filled in.
+    const mine = typeof ArcadeProfile !== 'undefined' ? ArcadeProfile.initials() : '';
+    initialBoxes.forEach((b, i) => { b.value = mine[i] || ''; b.classList.remove('error'); });
     initialsOverlay.classList.remove('hidden');
     initialBoxes[0].focus();
   }
@@ -442,10 +642,12 @@
         guesses: lastResult.guesses,
         hintsUsed: lastResult.hintsUsed,
         word: lastResult.word,
-        elapsedMs: lastResult.elapsedMs
+        elapsedMs: lastResult.elapsedMs,
+        difficulty: lastResult.difficulty,
+        profileToken: typeof ArcadeProfile !== 'undefined' ? ArcadeProfile.token() : null
       });
       initialsOverlay.classList.add('hidden');
-      await openLeaderboard(lastResult.themeId, id);
+      await openLeaderboard(lastResult.themeId, id, lastResult.difficulty);
     } catch (e) {
       showMessage(e.message, true);
     }
@@ -467,6 +669,21 @@
     leaderboardThemeFilter.value = selectedId || 'all';
   }
 
+  function populateDifficultyFilter(selected) {
+    leaderboardDifficultyFilter.innerHTML = "";
+    const all = document.createElement('option');
+    all.value = 'all';
+    all.textContent = '🎚️ All difficulties';
+    leaderboardDifficultyFilter.appendChild(all);
+    Object.entries(DIFFICULTIES).forEach(([id, d]) => {
+      const opt = document.createElement('option');
+      opt.value = id;
+      opt.textContent = `${d.emoji} ${d.label}`;
+      leaderboardDifficultyFilter.appendChild(opt);
+    });
+    leaderboardDifficultyFilter.value = selected;
+  }
+
   function renderLeaderboard(rows, highlightId) {
     leaderboardList.innerHTML = "";
     if (rows.length === 0) {
@@ -479,15 +696,22 @@
     rows.forEach((row, i) => {
       const div = document.createElement('div');
       div.className = 'lb-row' + (i === 0 ? ' top1' : i === 1 ? ' top2' : i === 2 ? ' top3' : '');
+      const level = (DIFFICULTIES[row.difficulty] || DIFFICULTIES.normal).label;
       const metaText = row.won
-        ? `${row.themeEmoji} ${row.themeLabel} · ${row.guesses}g · ${row.hintsUsed}h`
-        : `${row.themeEmoji} ${row.themeLabel} · DNF`;
+        ? `${level} · ${row.themeEmoji} ${row.themeLabel} · ${row.guesses}g · ${row.hintsUsed}h`
+        : `${level} · ${row.themeEmoji} ${row.themeLabel} · DNF`;
       div.innerHTML = `
         <div class="lb-rank">#${i + 1}</div>
-        <div class="lb-initials">${escapeHtml(row.initials)}</div>
+        <div class="lb-initials"></div>
         <div class="lb-meta">${escapeHtml(metaText)}</div>
         <div class="lb-score">${row.score}</div>
       `;
+      // A profile's score shows its avatar and name instead of initials.
+      const who = div.querySelector('.lb-initials');
+      if (row.profileName && typeof ArcadeProfile !== 'undefined') {
+        who.style.cssText = 'display:flex;align-items:center;gap:6px;white-space:nowrap;letter-spacing:0';
+        who.append(ArcadeProfile.avatarEl(row.profileAvatar, 22), row.profileName);
+      } else who.textContent = row.initials;
       if (row.id === highlightId) {
         div.style.outline = '2px solid var(--accent)';
       }
@@ -501,10 +725,12 @@
     return div.innerHTML;
   }
 
-  async function openLeaderboard(themeId, highlightId) {
+  async function openLeaderboard(themeId, highlightId, level) {
     populateLeaderboardFilter(themeId);
+    populateDifficultyFilter(level || leaderboardDifficultyFilter.value || difficulty);
     try {
-      const rows = await apiGet(`/api/leaderboard?theme=${encodeURIComponent(leaderboardThemeFilter.value)}&limit=25`);
+      const rows = await apiGet(`/api/leaderboard?theme=${encodeURIComponent(leaderboardThemeFilter.value)}` +
+        `&difficulty=${encodeURIComponent(leaderboardDifficultyFilter.value)}&limit=25` + adultQuery('&'), adultHeaders());
       renderLeaderboard(rows, highlightId);
     } catch (e) {
       leaderboardList.innerHTML = `<div class="lb-empty">${escapeHtml(e.message)}</div>`;
@@ -512,9 +738,10 @@
     leaderboardOverlay.classList.remove('hidden');
   }
 
-  leaderboardBtn.addEventListener('click', () => openLeaderboard(currentTheme ? currentTheme.id : 'all'));
+  leaderboardBtn.addEventListener('click', () => openLeaderboard(currentTheme ? currentTheme.id : 'all', null, difficulty));
   closeLeaderboardBtn.addEventListener('click', () => leaderboardOverlay.classList.add('hidden'));
   leaderboardThemeFilter.addEventListener('change', () => openLeaderboard(leaderboardThemeFilter.value));
+  leaderboardDifficultyFilter.addEventListener('change', () => openLeaderboard(leaderboardThemeFilter.value));
 
   // ---- Suggest a theme (kid-facing request, no direct creation power) ----
   suggestThemeBtn.addEventListener('click', () => {
@@ -551,10 +778,16 @@
 
   // ---- Init ----
   (async function init() {
+    try { adult.requiresPin = !!(await apiGet('/api/arcade-info')).adultRequiresPin; } catch { /* assume no PIN */ }
+    setAdult(adult.on, adult.pin);
     await refreshThemes();
     const savedId = safeStorageGet(THEME_KEY);
     const initial = themes.find(t => t.id === savedId) || themes.find(t => t.id === 'classic') || themes[0];
     setTheme(initial.id);
-    newGame();
+    difficultyLabel.textContent = DIFFICULTIES[difficulty].label;
+    // Ask before the first game; picking one starts it. First-timers see how
+    // to play on top of it, and land on the difficulty question after.
+    openDifficulty();
+    window.wordlessTutorial.autoOpen();
   })();
 })();

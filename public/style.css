@@ -39,6 +39,7 @@ header {
   justify-content: space-between;
 }
 #headerSpacer { width: 34px; }
+.header-btns { display: flex; gap: 6px; }
 #backToArcade {
   width: 34px;
   text-decoration: none;
@@ -322,15 +323,35 @@ header h1 span#titleSuffix { color: var(--accent); }
 .ghost-btn { background: transparent; border: 1px solid var(--tile-border) !important; color: var(--text); }
 .ghost-btn:hover { background: var(--key-hover); }
 
-#leaderboardThemeFilter {
+.lb-filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+#leaderboardThemeFilter, #leaderboardDifficultyFilter {
   background: var(--key-bg);
   color: var(--text);
   border: 1px solid var(--tile-border);
   border-radius: 6px;
   padding: 6px 8px;
   font-size: 12px;
-  margin-bottom: 12px;
 }
+
+.difficulty-title { margin: 0 0 14px; font-size: 20px; }
+.pin-box {
+  width: 100%; text-align: center; letter-spacing: 8px; font-size: 22px; font-weight: 700;
+  background: var(--key-bg); color: var(--text); border: 1px solid var(--tile-border);
+  border-radius: 8px; padding: 10px; margin-bottom: 8px;
+}
+#adultBtn.on { border-color: #ff4fa3; color: #ff4fa3; }
+.difficulty-choices { display: flex; flex-direction: column; gap: 8px; }
+.difficulty-choice {
+  display: flex; align-items: center; gap: 12px; text-align: left;
+  background: var(--key-bg); color: var(--text);
+  border: 2px solid var(--tile-border); border-radius: 10px;
+  padding: 12px 14px; cursor: pointer; font-family: inherit;
+}
+.difficulty-choice:hover { border-color: var(--accent); }
+.difficulty-choice.current { border-color: var(--accent); }
+.difficulty-choice .d-emoji { font-size: 24px; }
+.difficulty-choice .d-name { font-weight: 800; font-size: 15px; }
+.difficulty-choice .d-blurb { font-size: 12px; opacity: 0.65; }
 #leaderboardList {
   max-height: 50vh;
   overflow-y: auto;
@@ -402,3 +423,29 @@ header h1 span#titleSuffix { color: var(--accent); }
   color: var(--correct);
   padding: 20px 0;
 }
+
+/* Puzzle title: the category banner, game-show style */
+.puzzle-title {
+  display: flex; align-items: center; gap: 8px;
+  margin: 6px 12px 0; padding: 6px 14px;
+  border: 2px solid var(--accent); border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  max-width: 560px;
+}
+.pt-label {
+  font-size: 10px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase;
+  opacity: 0.7;
+}
+.pt-category { font-weight: 800; letter-spacing: 1px; text-transform: uppercase; font-size: 14px; }
+
+/* Hints used so far, newest last */
+.hint-list { list-style: none; margin: 6px 12px 0; padding: 0; max-width: 560px; width: calc(100% - 24px); }
+.hint-list:empty { display: none; }
+.hint-list li {
+  display: flex; gap: 8px; align-items: flex-start;
+  padding: 4px 10px; margin-top: 3px; border-radius: 8px;
+  border: 1px solid var(--hint-glow); background: rgba(167, 139, 250, 0.10);
+  font-size: 13px; line-height: 1.35; animation: hintIn 0.25s ease;
+}
+.hint-list li b { letter-spacing: 1px; }
+@keyframes hintIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }

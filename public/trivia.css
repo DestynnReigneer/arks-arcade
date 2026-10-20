@@ -1,0 +1,94 @@
+/* Know-It-All: a neon quiz show. */
+:root { --accent: #2de2e6; --on-accent: #06171a; --hot: #ff4fa3; --gold: #ffd23f; --show-font: "Orbitron", var(--font); }
+
+.levels { display: grid; gap: 8px; grid-template-columns: repeat(2, 1fr); }
+.level { text-align: left; padding: 10px; border-radius: 12px; cursor: pointer; background: var(--bg); border: 2px solid var(--border); color: var(--text); }
+.level[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 12px rgba(45, 226, 230, 0.35); }
+.level .l-name { font-weight: 800; font-size: 14px; }
+.level .l-blurb { font-size: 11px; color: var(--dim); margin-top: 4px; line-height: 1.35; }
+.level .l-lock { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--hot); margin-top: 6px; }
+.toggle { display: flex; align-items: center; gap: 8px; color: var(--text); font-size: 13.5px; margin: 12px 0 0; cursor: pointer; }
+.toggle input { width: 20px; height: 20px; margin: 0; flex: none; accent-color: var(--hot); }
+
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips button {
+  border-radius: 999px; padding: 6px 11px; font-size: 12.5px; font-weight: 700; cursor: pointer;
+  background: var(--bg); color: var(--text); border: 1px solid var(--border);
+}
+.chips button small { color: var(--dim); font-weight: 600; margin-left: 3px; }
+.chips button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--bg)); }
+.credit { font-size: 10.5px; color: var(--dim); text-align: center; margin-top: 4px; }
+
+.name-row { display: flex; gap: 6px; margin-bottom: 6px; }
+.name-row input { margin: 0; }
+.name-row button { width: 42px; border-radius: 9px; border: 1px solid var(--border); background: var(--bg); color: var(--text); cursor: pointer; flex: none; }
+.people { list-style: none; padding: 0; margin: 0 0 10px; }
+.people li { padding: 9px 4px; border-bottom: 1px solid var(--border); font-size: 15px; }
+.people li .tag { font-size: 11px; color: var(--accent); margin-left: 6px; }
+.people li.offline { opacity: 0.5; }
+
+/* ---- the question ---- */
+.q-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-family: var(--show-font); font-size: 12px; letter-spacing: 1.5px; color: var(--muted); }
+.tags { display: flex; gap: 6px; }
+.tag { font-family: var(--font); font-size: 11px; font-weight: 800; letter-spacing: 0.5px; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--border); color: var(--text); background: var(--card); }
+.tag.easy { border-color: #3ddc84; color: #3ddc84; }
+.tag.medium { border-color: var(--gold); color: var(--gold); }
+.tag.hard { border-color: var(--hot); color: var(--hot); }
+.turn-banner { text-align: center; font-family: var(--show-font); font-weight: 900; letter-spacing: 2px; margin: 10px 0 0; color: var(--gold); text-shadow: 0 0 10px rgba(255, 210, 63, 0.6); }
+.q-timer { height: 8px; border-radius: 999px; background: rgba(255, 255, 255, 0.08); margin: 10px 0; overflow: hidden; }
+.q-timer div { height: 100%; width: 100%; transform-origin: left; background: linear-gradient(90deg, var(--accent), #a46bff, var(--hot)); }
+.q-timer.low div { background: var(--danger); }
+.q-card {
+  border-radius: 16px; padding: 22px 16px; min-height: 120px; display: flex; align-items: center; justify-content: center; text-align: center;
+  background: radial-gradient(120% 120% at 50% 0%, #1b1446 0%, #0b0a1c 75%);
+  border: 1px solid rgba(45, 226, 230, 0.35); box-shadow: 0 0 22px rgba(45, 226, 230, 0.18), inset 0 0 20px rgba(164, 107, 255, 0.15);
+}
+.q-text { font-size: clamp(17px, 4.8vw, 22px); font-weight: 800; line-height: 1.35; }
+.answers { display: grid; grid-template-columns: 1fr; gap: 8px; margin: 12px 0 8px; }
+@media (min-width: 560px) { .answers { grid-template-columns: 1fr 1fr; } }
+.answers button {
+  display: flex; align-items: center; gap: 10px; text-align: left; padding: 14px; border-radius: 14px; cursor: pointer;
+  font-size: 15px; font-weight: 700; color: var(--text); background: rgba(255, 255, 255, 0.05); border: 2px solid rgba(255, 255, 255, 0.14);
+  transition: transform 0.12s, border-color 0.12s, background 0.2s;
+}
+.answers button .k {
+  flex: none; width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center; justify-content: center;
+  font-family: var(--show-font); font-size: 13px; background: rgba(45, 226, 230, 0.15); color: var(--accent);
+}
+.answers button:not(:disabled):hover { border-color: var(--accent); transform: translateY(-1px); }
+.answers button.mine { border-color: var(--accent); background: rgba(45, 226, 230, 0.14); }
+.answers button.right { border-color: #3ddc84; background: rgba(61, 220, 132, 0.22); animation: right 0.5s ease; }
+.answers button.wrong { border-color: var(--danger); background: rgba(255, 94, 94, 0.2); }
+.answers button:disabled { cursor: default; }
+.answers button .who { margin-left: auto; font-size: 11px; color: var(--muted); font-weight: 600; }
+@keyframes right { 40% { transform: scale(1.03); box-shadow: 0 0 18px rgba(61, 220, 132, 0.7); } }
+.status-line { text-align: center; font-weight: 700; min-height: 22px; margin: 4px 0 8px; }
+.status-line .pts { color: var(--gold); font-family: var(--show-font); }
+
+.score-strip { list-style: none; margin: 6px 0 10px; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.score-strip li { padding: 5px 10px; border-radius: 999px; background: var(--card); border: 1px solid var(--border); font-size: 12.5px; }
+.score-strip li b { font-family: var(--show-font); color: var(--gold); margin-left: 4px; }
+.score-strip li.now { border-color: var(--accent); }
+.score-strip li.done::after { content: ' ✓'; color: var(--accent); }
+#quitBtn { margin-top: 10px; }
+
+/* Drinks and dares get a big card of their own */
+.callout-card { border: 2px solid var(--gold); box-shadow: 0 0 30px rgba(255, 210, 63, 0.35); }
+.callout-card.dare { border-color: var(--hot); box-shadow: 0 0 30px rgba(255, 79, 163, 0.45); }
+.callout-who { font-family: var(--show-font); letter-spacing: 2px; color: var(--gold); margin-top: 6px; }
+.callout-card.dare .callout-who { color: var(--hot); }
+.callout-card h2 { font-size: 20px; line-height: 1.35; margin: 10px 0 16px; }
+.callout-card .big-emoji { animation: wobble 0.8s ease-in-out infinite alternate; }
+@keyframes wobble { from { transform: rotate(-8deg); } to { transform: rotate(8deg) scale(1.08); } }
+
+.final { text-align: left; padding-left: 24px; margin: 10px 0; }
+.final li { padding: 6px 0; font-size: 15px; }
+.final li b { float: right; font-family: var(--show-font); color: var(--gold); }
+.final li:first-child { color: var(--gold); font-weight: 800; }
+.final .callouts { list-style: none; margin-left: -24px; color: var(--hot); font-weight: 700; }
+/* Locked answers stay bright; after the reveal, only the others fade */
+.answers button:disabled { opacity: 1; }
+.answers.revealed button:not(.right):not(.wrong) { opacity: 0.4; }
+/* The wobbling emoji used to poke past the card and flash a scrollbar */
+.overlay .callout-card { overflow: visible; max-height: none; }
+.callout-card .big-emoji { display: inline-block; }

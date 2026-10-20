@@ -60,12 +60,21 @@ function activeTheme() {
   return overlay.theme;
 }
 
+// The arcade plays in American English. british.txt is already stripped out
+// of the other files; filtering here as well keeps theme packs and admin
+// edits from bringing COLOUR back.
+let british = null;
+function isBritish(word) {
+  if (!british) british = new Set(readList('british.txt', { optional: true }).map(w => w.toUpperCase()));
+  return british.has(word);
+}
+
 const CLEAN = /^[A-Z]+$/;
-function normalise(list, minLength) {
+function normalize(list, minLength) {
   const out = [];
   for (const raw of list) {
     const w = raw.toUpperCase();
-    if (w.length >= minLength && CLEAN.test(w)) out.push(w);
+    if (w.length >= minLength && CLEAN.test(w) && !isBritish(w)) out.push(w);
   }
   return out;
 }
@@ -125,13 +134,13 @@ function buildTrie() {
     node[TERM] = (node[TERM] || 0) | mask;
   }
 
-  const base = normalise(readList('enable1.txt'), 3);
+  const base = normalize(readList('enable1.txt'), 3);
 
   // Expand the blocklist, then keep only forms that are really in ENABLE1 —
   // no point carrying entries that could never have matched anyway.
   const baseSet = new Set(base);
   const blocked = new Set();
-  const blockSources = [...normalise(readList('blocklist-kids.txt'), 3), ...normalise(overlay.block, 3)];
+  const blockSources = [...normalize(readList('blocklist-kids.txt'), 3), ...normalize(overlay.block, 3)];
   for (const word of blockSources) {
     for (const form of inflect(word)) {
       if (baseSet.has(form)) blocked.add(form);
@@ -142,8 +151,8 @@ function buildTrie() {
   // bystanders -- "heroin" produces HEROINES, "bonk" produces BONKERS -- and
   // wrongly rejecting a real word is the exact frustration this dictionary
   // split exists to prevent.
-  for (const word of [...normalise(readList('allowlist-kids.txt', { optional: true }), 3),
-                     ...normalise(overlay.allow, 3)]) {
+  for (const word of [...normalize(readList('allowlist-kids.txt', { optional: true }), 3),
+                     ...normalize(overlay.allow, 3)]) {
     blocked.delete(word);
   }
 
@@ -152,8 +161,8 @@ function buildTrie() {
   }
 
   const supplement = [
-    ...normalise(readList('supplement-adult.txt'), 3),
-    ...normalise(overlay.adult, 3)
+    ...normalize(readList('supplement-adult.txt'), 3),
+    ...normalize(overlay.adult, 3)
   ];
   for (const word of supplement) insert(word, ADULT);
 
@@ -165,7 +174,7 @@ function buildTrie() {
     const bits = audience === 'kids' ? KIDS | ADULT
       : audience === 'adult' ? ADULT
         : KIDS | ADULT;
-    for (const word of normalise(overlay.theme.words || [], 3)) {
+    for (const word of normalize(overlay.theme.words || [], 3)) {
       insert(word, bits);
       themeWords.add(word);
     }
@@ -175,7 +184,7 @@ function buildTrie() {
   // word the solver found means a wall of ZAX and AALII; showing only the
   // common ones means they learn something.
   const common = new Set();
-  for (const word of normalise(readList('common-10k.txt', { optional: true }), 3)) {
+  for (const word of normalize(readList('common-10k.txt', { optional: true }), 3)) {
     if (baseSet.has(word) && !blocked.has(word)) common.add(word);
   }
 
@@ -247,6 +256,6 @@ function listProfiles() {
 module.exports = {
   KIDS, ADULT, TERM, PRE, PROFILES,
   load, isWord, isCommon, isThemeWord, listProfiles, profileBit,
-  applyOverlay, activeTheme,
+  applyOverlay, activeTheme, isBritish,
   get stats() { return load().stats; }
 };
