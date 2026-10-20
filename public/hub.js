@@ -29,7 +29,7 @@
         li.className = r.status;
         li.innerHTML = '<span class="l-emoji"></span><span class="l-main"><div class="l-title"></div><div class="l-sub"></div></span><a class="l-join"></a>';
         li.querySelector('.l-emoji').textContent = r.emoji;
-        li.querySelector('.l-title').textContent = `${r.label} · ${r.host || 'someone'}'s game`;
+        li.querySelector('.l-title').textContent = `${r.adult ? '🔞 ' : ''}${r.label} · ${r.host || 'someone'}'s game${r.locked ? ' 🔒' : ''}`;
         li.querySelector('.l-sub').textContent = `Code ${r.code} · ${r.players}/${r.max} players · ${r.detail}${r.status === 'playing' ? ' · game in progress' : ''}`;
         const join = li.querySelector('.l-join');
         join.textContent = STATUS[r.status];
@@ -53,8 +53,9 @@
     const opening = card.classList.contains('hidden');
     card.classList.toggle('hidden', !opening);
     $('qrToggle').setAttribute('aria-expanded', String(opening));
-    if (opening) ArcadeQR.show($('arcadeQr'), '/', $('arcadeLink'));
+    if (opening) ArcadeQR.show($('arcadeQr'), $('qrTarget').value, $('arcadeLink'));
   };
+  $('qrTarget').onchange = () => ArcadeQR.show($('arcadeQr'), $('qrTarget').value, $('arcadeLink'));
 
   // ---- the arcade's name --------------------------------------------------
   // ARCADE_NAME in .env: "ARKS" makes this the ARKS Arcade. Blank is just Arcade.

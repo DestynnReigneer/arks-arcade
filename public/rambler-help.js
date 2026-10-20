@@ -3,9 +3,9 @@
 // How to play Rambler. Opens on the first visit; the ? button brings it back.
 window.ramblerTutorial = Tutorial.create('rambler', [
   {
-    emoji: '🎲',
+    emoji: '🥾',
     title: 'The goal',
-    html: `<p>Shake the dice to get a grid of letters, then find <b>as many words as you can</b> before the timer runs out.</p>
+    html: `<p>You get a grid of letter tiles. <b>Ramble</b> from letter to letter, chaining them into <b>as many words as you can</b> before the timer runs out.</p>
       <p>Longer words score <b>a lot</b> more.</p>`
   },
   {

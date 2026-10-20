@@ -2,8 +2,8 @@
 
 // The arcade's "join a game" board: every room being hosted right now, in
 // any game, so a phone that just scanned the QR code can find the game
-// everyone's in. Adult rooms stay off this list (it's on the kids' front
-// door); grown-ups join those with the code or the game's own QR code.
+// everyone's in. Adult games are listed too (it's for parties), marked and
+// locked: joining one needs the lobby password its host made up.
 // Also: the address phones should use, and QR codes for it.
 
 const os = require('node:os');
@@ -11,7 +11,7 @@ const express = require('express');
 const QRCode = require('qrcode');
 
 const GAMES = {
-  rambler: { label: 'Rambler', emoji: '🎲', page: 'rambler.html' },
+  rambler: { label: 'Rambler', emoji: '🥾', page: 'rambler.html' },
   shortfuse: { label: 'Short Fuse', emoji: '💣', page: 'shortfuse.html' },
   chess: { label: 'Chess', emoji: '♞', page: 'chess.html' },
   trivia: { label: 'Know-It-All', emoji: '🧠', page: 'trivia.html' }
@@ -26,22 +26,23 @@ function collect() {
 
   const rambler = require('../rambler/rooms');
   for (const r of rambler._rooms.values()) {
-    if (r.settings.profile === 'adult') continue;
     const host = r.players.get(r.hostId);
     add('rambler', {
+      adult: r.settings.profile === 'adult', locked: !!r.password,
       code: r.code, host: host ? host.name : '', players: r.players.size, max: rambler.MAX_PLAYERS,
       status: r.players.size >= rambler.MAX_PLAYERS ? 'full' : r.state === 'lobby' ? 'open' : 'playing',
-      detail: `${r.settings.size === 5 ? '5x5' : '4x4'} board`
+      detail: `${r.settings.size === 5 ? '5x5' : '4x4'} board${r.settings.profile === 'adult' ? ' · Unfiltered' : ''}`
     });
   }
 
   const sf = require('../shortfuse/tables');
   const cards = require('../shortfuse/cards');
   for (const t of sf._tables.values()) {
-    if (t.mode !== 'room' || cards.LEVELS[t.level].adult) continue;
+    if (t.mode !== 'room') continue;
     const host = t.players.get(t.hostId);
     const running = t.game && t.game.phase !== 'over';
     add('shortfuse', {
+      adult: cards.LEVELS[t.level].adult, locked: !!t.password,
       code: t.id, host: host ? host.name : '', players: t.players.size, max: sf.MAX_PLAYERS,
       status: t.players.size >= sf.MAX_PLAYERS ? 'full' : running ? 'playing' : 'open',
       detail: `${cards.LEVELS[t.level].label} deck`
@@ -59,12 +60,12 @@ function collect() {
   const trivia = require('../trivia/rooms');
   const bank = require('../trivia/bank');
   for (const r of trivia._rooms.values()) {
-    if (bank.LEVELS[r.settings.level].adult) continue;
     const host = r.players.find(p => p.id === r.hostId);
     add('trivia', {
+      adult: bank.LEVELS[r.settings.level].adult, locked: !!r.password,
       code: r.code, host: host ? host.name : '', players: r.players.length, max: 12,
       status: r.players.length >= 12 ? 'full' : r.phase === 'lobby' ? 'open' : 'playing',
-      detail: `${r.settings.count} questions`
+      detail: `${r.settings.count} questions${bank.LEVELS[r.settings.level].adult ? ' · ' + bank.LEVELS[r.settings.level].label : ''}`
     });
   }
 

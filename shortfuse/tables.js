@@ -9,6 +9,7 @@
 const crypto = require('node:crypto');
 const engine = require('./engine');
 const cards = require('./cards');
+const roomPassword = require('../arcade/room-password');
 
 const tables = new Map();
 
@@ -125,8 +126,9 @@ function addPlayer(t, rawName) {
   return player;
 }
 
-function createRoom({ name, level }) {
+function createRoom({ name, level, password }) {
   makeRoomForMore();
+  const lockWith = cards.LEVELS[cards.levelOf(level)].adult ? roomPassword.requireNew(password) : null;
   const t = {
     id: makeCode(),
     mode: 'room',
@@ -136,7 +138,8 @@ function createRoom({ name, level }) {
     hostId: null,
     game: null,
     reactionTimer: null,
-    lastActivity: Date.now()
+    lastActivity: Date.now(),
+    password: lockWith
   };
   tables.set(t.id, t);
   const host = addPlayer(t, name || 'Host');
@@ -154,8 +157,9 @@ function requireHost(t, p) {
   if (t.hostId !== p.id) throw fail('Only the host can do that.', 403);
 }
 
-function joinRoom(code, name) {
+function joinRoom(code, name, password) {
   const t = room(code);
+  roomPassword.check(t, password);
   if (t.game && t.game.phase !== 'over') throw fail('That game has already started. Wait for the next one.', 409);
   if (t.players.size >= MAX_PLAYERS) throw fail(`That game is full (${MAX_PLAYERS} players).`, 409);
   const player = addPlayer(t, name);
@@ -163,12 +167,15 @@ function joinRoom(code, name) {
   return { table: t, player };
 }
 
-function setLevel(code, playerId, token, level) {
+function setLevel(code, playerId, token, level, password) {
   const t = room(code);
   const p = authenticate(t, playerId, token);
   requireHost(t, p);
   if (t.game && t.game.phase !== 'over') throw fail('Not while a game is running.', 409);
-  t.level = cards.levelOf(level);
+  const next = cards.levelOf(level);
+  // Switching to an adult deck locks the lobby; back to Kids unlocks it.
+  if (cards.LEVELS[next].adult) { if (!t.password) t.password = roomPassword.requireNew(password); } else t.password = null;
+  t.level = next;
   touch(t);
   broadcast(t);
 }
@@ -208,6 +215,8 @@ function roomSnapshot(t, viewerId) {
     level: t.level,
     hostId: t.hostId,
     youAreHost: t.hostId === viewerId,
+    locked: !!t.password,
+    lobbyPassword: t.hostId === viewerId ? t.password : null,
     you: viewerId,
     maxPlayers: MAX_PLAYERS,
     reactionMs: REACTION_MS,

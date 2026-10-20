@@ -76,15 +76,12 @@ module.exports = function triviaRoutes({ requireAdmin, notify }) {
       const body = req.body || {};
       const settings = rooms.cleanSettings(body.settings || {});
       requireLevel(settings.level, req);
-      res.status(201).json(rooms.create({ name: body.name, settings }));
+      res.status(201).json(rooms.create({ name: body.name, settings, password: body.password }));
     } catch (e) { next(e); }
   });
+  // Guests don't need the adult PIN: an adult game's own lobby password lets them in.
   router.post('/rooms/:code/join', createLimiter, (req, res, next) => {
-    try {
-      const r = rooms.room(req.params.code);
-      requireLevel(r.settings.level, req);
-      res.json(rooms.join(req.params.code, (req.body || {}).name));
-    } catch (e) { next(e); }
+    try { res.json(rooms.join(req.params.code, (req.body || {}).name, (req.body || {}).password)); } catch (e) { next(e); }
   });
   router.post('/rooms/:code/start', (req, res, next) => { try { rooms.start(...creds(req)); res.json({ ok: true }); } catch (e) { next(e); } });
   router.post('/rooms/:code/answer', (req, res, next) => { try { rooms.answer(...creds(req), (req.body || {}).choice); res.json({ ok: true }); } catch (e) { next(e); } });
@@ -140,6 +137,6 @@ module.exports = function triviaRoutes({ requireAdmin, notify }) {
   });
 
   router.use('/admin', admin);
-  router.use((err, req, res, next) => { res.status(err.status || 500).json({ error: err.message }); });
+  router.use((err, req, res, next) => { res.status(err.status || 500).json({ error: err.message, ...require('../arcade/room-password').extra(err) }); });
   return router;
 };

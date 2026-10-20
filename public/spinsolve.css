@@ -273,3 +273,10 @@ body::before {
   font-family: var(--show-font); font-size: 11px; font-weight: 800; letter-spacing: 1px; color: #fff; text-shadow: 0 1px 2px #000;
 }
 .turn-timer.paused .tt-fill { filter: saturate(0.3) brightness(0.8); }
+
+/* The logo is a little copy of the real wheel */
+.logo-wheel { width: 26px; height: 26px; vertical-align: -6px; margin-right: 2px; animation: logoSpin 12s linear infinite; }
+.btn-wheel { width: 20px; height: 20px; vertical-align: -4px; }
+.actions #spinBtn:not(:disabled):hover .btn-wheel { animation: logoSpin 1s linear infinite; }
+@keyframes logoSpin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .logo-wheel { animation: none; } }

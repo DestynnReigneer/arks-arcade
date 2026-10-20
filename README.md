@@ -155,6 +155,7 @@ Questions come from a built-in bank (`trivia/bank.js`), packs built from an AI p
 ### Shared
 
 - Ships as a single Docker image with a SQLite file as its only state
+- The home page's Join a game board lists every hosted room in any game, with scan-to-join QR codes in each game's lobby and walkthrough. Adult rooms are listed too but locked: hosting one needs the adult PIN and a lobby password the host makes up; guests only need that password
 - Spin & Solve, Chess and Dino Dash share one high-score table (`/api/scores/:game`); new #1s post to the Comm Center
 - Everything is American English, word lists included: `words/british.txt` is refused everywhere
 

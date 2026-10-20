@@ -82,14 +82,14 @@ router.post('/rooms', createLimiter, (req, res, next) => {
   try {
     const body = req.body || {};
     assertLevelAllowed(body.level, req);
-    const { table, player } = tables.createRoom({ name: body.name, level: body.level });
+    const { table, player } = tables.createRoom({ name: body.name, level: body.level, password: body.password });
     res.status(201).json({ code: table.id, playerId: player.id, token: player.token });
   } catch (e) { next(e); }
 });
 
 router.post('/rooms/:code/join', (req, res, next) => {
   try {
-    const { table, player } = tables.joinRoom(req.params.code, (req.body || {}).name);
+    const { table, player } = tables.joinRoom(req.params.code, (req.body || {}).name, (req.body || {}).password);
     res.status(201).json({ code: table.id, playerId: player.id, token: player.token });
   } catch (e) { next(e); }
 });
@@ -98,7 +98,7 @@ router.post('/rooms/:code/level', (req, res, next) => {
   try {
     const { playerId, token } = creds(req);
     assertLevelAllowed((req.body || {}).level, req);
-    tables.setLevel(req.params.code, playerId, token, (req.body || {}).level);
+    tables.setLevel(req.params.code, playerId, token, (req.body || {}).level, (req.body || {}).password);
     res.json({ ok: true });
   } catch (e) { next(e); }
 });
@@ -141,7 +141,7 @@ router.get('/rooms/:code/events', (req, res, next) => {
 });
 
 router.use((err, req, res, next) => {
-  res.status(err.status || 500).json({ error: err.message });
+  res.status(err.status || 500).json({ error: err.message, ...require('../arcade/room-password').extra(err) });
 });
 
 module.exports = router;

@@ -8,6 +8,7 @@ const crypto = require('node:crypto');
 const store = require('./store');
 const bank = require('./bank');
 const Rules = require('../public/trivia-rules');
+const roomPassword = require('../arcade/room-password');
 
 const rooms = new Map();
 const MAX_ROOMS = 200;
@@ -48,14 +49,17 @@ function cleanSettings(s = {}) {
   };
 }
 
-function create({ name, settings }) {
+function create({ name, settings, password }) {
   if (rooms.size >= MAX_ROOMS) throw fail('Too many trivia games running. Try again later.', 503);
   const host = { id: makeId(), token: makeToken(), name: cleanName(name, 'Host'), score: 0, streak: 0, clients: 0 };
   const r = {
     code: makeCode(), hostId: host.id, players: [host], settings: cleanSettings(settings),
     phase: 'lobby', qIndex: -1, questions: [], answers: {}, qEndsAt: 0, qStartedAt: 0,
-    reveal: null, finale: null, timer: null, clients: new Set(), lastActivity: Date.now()
+    reveal: null, finale: null, timer: null, clients: new Set(), lastActivity: Date.now(),
+    password: null
   };
+  // Adult games get a lobby password the host makes up; guests need it to join.
+  if (bank.LEVELS[r.settings.level].adult) r.password = roomPassword.requireNew(password);
   rooms.set(r.code, r);
   return { code: r.code, playerId: host.id, token: host.token };
 }
@@ -72,8 +76,9 @@ function authenticate(r, playerId, token) {
   return p;
 }
 
-function join(code, name) {
+function join(code, name, password) {
   const r = room(code);
+  roomPassword.check(r, password);
   if (r.phase !== 'lobby') throw fail('That game has already started.', 409);
   if (r.players.length >= MAX_PLAYERS) throw fail('That game is full.', 409);
   const used = new Set(r.players.map(p => p.name.toLowerCase()));
@@ -186,6 +191,8 @@ function snapshot(r, viewerId) {
     phase: r.phase,
     you: viewerId,
     host: r.hostId === viewerId,
+    locked: !!r.password,
+    lobbyPassword: r.hostId === viewerId ? r.password : null,
     hostName: (r.players.find(p => p.id === r.hostId) || {}).name,
     settings: { ...r.settings, levelLabel: bank.LEVELS[r.settings.level].label },
     players: r.players.map(p => ({ id: p.id, name: p.name, score: p.score, streak: p.streak, online: p.clients > 0, answered: !!r.answers[p.id] })),
