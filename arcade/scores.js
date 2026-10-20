@@ -34,6 +34,11 @@ db.db.exec(`
   );
   CREATE INDEX IF NOT EXISTS arcade_scores_board ON arcade_scores (game, board, score DESC);
 `);
+// Scores credited to an arcade profile show its name and avatar.
+for (const col of ['profile_id TEXT', 'profile_name TEXT', 'profile_avatar TEXT']) {
+  try { db.db.exec(`ALTER TABLE arcade_scores ADD COLUMN ${col}`); } catch { /* already there */ }
+}
+const initialsOf = name => (String(name).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 3) || 'P');
 
 function fail(message, status) {
   return Object.assign(new Error(message), { status });
@@ -52,28 +57,32 @@ function list(game, board, limit = 25) {
   return db.db.prepare(`
     SELECT * FROM arcade_scores WHERE game = ? AND board = ? ORDER BY score DESC, created_at ASC LIMIT ?
   `).all(game, key, cap).map(r => ({
-    id: r.id, initials: r.initials, score: r.score, detail: r.detail, board: r.board, createdAt: r.created_at
+    id: r.id, initials: r.initials, score: r.score, detail: r.detail, board: r.board, createdAt: r.created_at,
+    profileName: r.profile_name || null, profileAvatar: r.profile_avatar || null
   }));
 }
 
-function save(game, { initials, score, board, detail }) {
+function save(game, { initials, score, board, detail, profileToken }) {
   const { g, key } = boardOf(game, board);
-  const who = String(initials || '').toUpperCase().trim();
+  // Playing as a profile: the score is theirs, no initials needed.
+  const profile = profileToken ? require('./profiles').verify(profileToken) : null;
+  const who = profile ? initialsOf(profile.name) : String(initials || '').toUpperCase().trim();
   if (!INITIALS_RE.test(who)) throw fail('Initials must be 1-3 letters or numbers.', 400);
   const points = Math.round(Number(score));
   if (!Number.isFinite(points) || points < 1 || points > g.max) throw fail('That score does not look right.', 400);
   const info = db.db.prepare(`
-    INSERT INTO arcade_scores (game, board, initials, score, detail) VALUES (?, ?, ?, ?, ?)
-  `).run(game, key, who, points, String(detail || '').slice(0, 80));
+    INSERT INTO arcade_scores (game, board, initials, score, detail, profile_id, profile_name, profile_avatar) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(game, key, who, points, String(detail || '').slice(0, 80), profile ? profile.id : null, profile ? profile.name : null, profile ? profile.avatar : null);
   const rank = db.db.prepare(`
     SELECT COUNT(*) AS c FROM arcade_scores WHERE game = ? AND board = ? AND score > ?
   `).get(game, key, points).c + 1;
   if (rank === 1 && !(g.adultBoards || []).includes(key)) {
     const where = Object.keys(g.boards).length > 1 ? ` (${g.boards[key]})` : '';
+    const shout = profile ? profile.name : who;
     comm.safePost({
       kind: 'highscore', emoji: '🏆', game,
-      title: `${who} took #1 on ${g.label}${where}`,
-      body: `${who} just set the top score on ${g.label}${where} with ${points.toLocaleString('en-US')}. Think you can beat it?`
+      title: `${shout} took #1 on ${g.label}${where}`,
+      body: `${shout} just set the top score on ${g.label}${where} with ${points.toLocaleString('en-US')}. Think you can beat it?`
     });
   }
   return { id: Number(info.lastInsertRowid), score: points, rank, board: key };

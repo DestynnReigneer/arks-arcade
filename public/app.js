@@ -602,7 +602,9 @@
     finalScoreDetail.textContent = `${DIFFICULTIES[lastResult.difficulty].label} · ` + (lastResult.won
       ? `${lastResult.guesses} guess${lastResult.guesses === 1 ? '' : 'es'} · ${lastResult.hintsUsed} hint${lastResult.hintsUsed === 1 ? '' : 's'} · ${secs}s`
       : `Not solved — word was ${lastResult.word.toUpperCase()}`);
-    initialBoxes.forEach(b => { b.value = ''; b.classList.remove('error'); });
+    // Playing as a profile: their initials are already filled in.
+    const mine = typeof ArcadeProfile !== 'undefined' ? ArcadeProfile.initials() : '';
+    initialBoxes.forEach((b, i) => { b.value = mine[i] || ''; b.classList.remove('error'); });
     initialsOverlay.classList.remove('hidden');
     initialBoxes[0].focus();
   }
@@ -641,7 +643,8 @@
         hintsUsed: lastResult.hintsUsed,
         word: lastResult.word,
         elapsedMs: lastResult.elapsedMs,
-        difficulty: lastResult.difficulty
+        difficulty: lastResult.difficulty,
+        profileToken: typeof ArcadeProfile !== 'undefined' ? ArcadeProfile.token() : null
       });
       initialsOverlay.classList.add('hidden');
       await openLeaderboard(lastResult.themeId, id, lastResult.difficulty);
@@ -699,10 +702,16 @@
         : `${level} · ${row.themeEmoji} ${row.themeLabel} · DNF`;
       div.innerHTML = `
         <div class="lb-rank">#${i + 1}</div>
-        <div class="lb-initials">${escapeHtml(row.initials)}</div>
+        <div class="lb-initials"></div>
         <div class="lb-meta">${escapeHtml(metaText)}</div>
         <div class="lb-score">${row.score}</div>
       `;
+      // A profile's score shows its avatar and name instead of initials.
+      const who = div.querySelector('.lb-initials');
+      if (row.profileName && typeof ArcadeProfile !== 'undefined') {
+        who.style.cssText = 'display:flex;align-items:center;gap:6px;white-space:nowrap;letter-spacing:0';
+        who.append(ArcadeProfile.avatarEl(row.profileAvatar, 22), row.profileName);
+      } else who.textContent = row.initials;
       if (row.id === highlightId) {
         div.style.outline = '2px solid var(--accent)';
       }

@@ -10,7 +10,7 @@
   const COLOR_HEX = { red: '#e5383b', yellow: '#f6c90e', green: '#2fbf71', blue: '#2e86de' };
 
   const S = {
-    config: null, level: 'kids', mode: 'local', names: ['', ''],
+    config: null, level: 'kids', mode: 'local', names: [typeof ArcadeProfile !== 'undefined' ? ArcadeProfile.name() : '', ''],
     pin: (() => { try { return sessionStorage.getItem('pd.pin') || ''; } catch { return ''; } })(),
     adultOk: (() => { try { return sessionStorage.getItem('pd.adultOk') === 'yes'; } catch { return false; } })(),
     table: null,       // { kind: 'local', id, token } or { kind: 'room', code, playerId, token }

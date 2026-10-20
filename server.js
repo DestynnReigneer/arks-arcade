@@ -117,6 +117,7 @@ app.use('/api/trivia', require('./trivia/routes')({ requireAdmin, notify: notify
 app.use('/api/partdeux', require('./partdeux/routes'));
 app.use('/api/daredevil', require('./daredevil/routes'));
 app.use('/api', require('./arcade/lobby').router);
+app.use('/api/profiles', require('./arcade/profiles')({ requireAdmin, notify: notifyDiscord }));
 app.use('/api/scores', require('./arcade/scores').router);
 
 // ---- Comm Center (home page message board) ----
@@ -311,7 +312,11 @@ app.get('/api/leaderboard', (req, res) => {
 
 app.post('/api/leaderboard', leaderboardLimiter, (req, res) => {
   const body = req.body || {};
-  const initials = String(body.initials || '').toUpperCase().trim();
+  // Playing as an arcade profile: the score is theirs, initials come from the name.
+  const profile = body.profileToken ? require('./arcade/profiles').verify(body.profileToken) : null;
+  const initials = profile
+    ? (profile.name.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 3) || 'P')
+    : String(body.initials || '').toUpperCase().trim();
   const themeId = String(body.themeId || '');
   const won = !!body.won;
   const guesses = Math.max(0, Math.min(20, parseInt(body.guesses, 10) || 0));
@@ -328,13 +333,13 @@ app.post('/api/leaderboard', leaderboardLimiter, (req, res) => {
     return res.status(400).json({ error: 'Unknown theme.' });
   }
 
-  const result = db.insertScore({ initials, themeId, won, guesses, hintsUsed, word, elapsedMs, difficulty });
+  const result = db.insertScore({ initials, themeId, won, guesses, hintsUsed, word, elapsedMs, difficulty, profile });
   if (won && result.rank === 1 && !theme.adult) {
     const level = difficulty[0].toUpperCase() + difficulty.slice(1);
     comm.safePost({
       kind: 'highscore', emoji: '🏆', game: 'wordless',
-      title: `${initials} took #1 on Wordless ${level}`,
-      body: `${initials} just set the top Wordless ${level} score: ${result.score} points in ${guesses} guess${guesses === 1 ? '' : 'es'}. Think you can beat it?`
+      title: `${profile ? profile.name : initials} took #1 on Wordless ${level}`,
+      body: `${profile ? profile.name : initials} just set the top Wordless ${level} score: ${result.score} points in ${guesses} guess${guesses === 1 ? '' : 'es'}. Think you can beat it?`
     });
   }
   res.status(201).json(result);

@@ -7,7 +7,7 @@
   const { $, toast } = ArcadeKit;
   const API = '/api/daredevil';
   const S = {
-    config: null, level: 'kids', length: 'standard', mode: 'local', names: ['', ''],
+    config: null, level: 'kids', length: 'standard', mode: 'local', names: [typeof ArcadeProfile !== 'undefined' ? ArcadeProfile.name() : '', ''],
     pin: (() => { try { return sessionStorage.getItem('dd.pin') || ''; } catch { return ''; } })(),
     adultOk: (() => { try { return sessionStorage.getItem('dd.adultOk') === 'yes'; } catch { return false; } })(),
     table: null, snap: null, es: null, seenCallout: 0, overShown: false

@@ -11,7 +11,7 @@
 
   const S = {
     config: null, level: 'kids', drinking: false, couples: false, genres: new Set(), pack: '',
-    difficulty: 'mixed', count: 10, seconds: 20, mode: 'solo', names: ['', ''],
+    difficulty: 'mixed', count: 10, seconds: 20, mode: 'solo', names: [typeof ArcadeProfile !== 'undefined' ? ArcadeProfile.name() : '', ''],
     pin: (() => { try { return sessionStorage.getItem('trivia.adultPin') || ''; } catch { return ''; } })(),
     adultOk: (() => { try { return sessionStorage.getItem('trivia.adultOk') === 'yes'; } catch { return false; } })(),
     game: null,      // a solo / one-phone game

@@ -192,7 +192,7 @@ exactly this, and publishing to GHCR depends on it passing.
 ## Running with Docker
 
 ```bash
-cp .env.example .env   # ADMIN_TOKEN (required for admin), DISCORD_WEBHOOK_URL and ADULT_PIN (both optional)
+cp .env.example .env   # set ADMIN_PASSWORD at least; see docs/SETUP.md for the rest
 docker compose up -d --build
 ```
 
@@ -218,41 +218,43 @@ Set `TZ` — daily challenges and streaks roll over at local midnight.
 
 Once the GitHub Actions workflow (`.github/workflows/docker-publish.yml`) has published an image to GHCR, deploy anywhere with just this file — no need to clone the repo:
 
-```yaml
-services:
-  wordless-arcade:
-    image: ghcr.io/YOUR_GITHUB_USERNAME/wordless-arcade:latest
-    container_name: wordless-arcade
-    restart: unless-stopped
-    ports:
-      - "3000:3000"
-    environment:
-      - ADMIN_TOKEN=${ADMIN_TOKEN}
-      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
-      - ADULT_PIN=${ADULT_PIN}
-    volumes:
-      - ./data:/app/data
-```
+Copy [`docker-compose.prod.yml`](docker-compose.prod.yml) next to your `.env` (save it as `docker-compose.yml`), then:
 
 ```bash
 docker compose pull
 docker compose up -d
 ```
 
-Put this behind a reverse proxy (Caddy/Traefik/NPM) for HTTPS before exposing it to the internet — see the deployment guide for details.
+Put this behind a reverse proxy (Nginx Proxy Manager, Caddy, Traefik) for HTTPS, and use Tailscale or WireGuard rather than opening ports. See [docs/SETUP.md](docs/SETUP.md).
 
 ## Environment variables
 
-| Variable | Required | Purpose |
-|---|---|---|
-| `ADMIN_TOKEN` | Yes, for admin features | Shared secret for `public/admin.html`. Without it, theme creation/deletion and viewing theme requests are disabled entirely. |
-| `DISCORD_WEBHOOK_URL` | No | Discord incoming webhook URL. When set, a message is posted whenever a kid submits a theme suggestion. |
-| `ADULT_PIN` | No | Locks Rambler's Unfiltered dictionary behind a PIN. Leave it blank and a confirmation tap is the only thing guarding it, which is fine on a LAN — set it once the server is reachable from outside. |
-| `PORT` | No | Defaults to `3000`. |
+See **[docs/SETUP.md](docs/SETUP.md)** for every setting in `.env`, a step-by-step home setup (Docker Compose, Nginx Proxy Manager, Tailscale), party tips, profiles, and security notes.
+
+| Variable | Purpose |
+|---|---|
+| `ADMIN_PASSWORD` | Password for `/admin.html`. Blank keeps admin locked. |
+| `ARCADE_NAME` | "<name> Arcade" on the home page. |
+| `ADULT_PIN` | Optional PIN for adult content (changeable from admin). |
+| `TZ` | Your timezone, for daily resets. |
+| `PUBLIC_URL` | The address QR codes use (e.g. `https://arcade.example.com`). |
+| `TRUST_PROXY` | `1` when behind one reverse proxy like Nginx Proxy Manager. |
+| `TRIVIA_ONLINE` | `off` to skip downloading Open Trivia DB questions. |
+| `DISCORD_WEBHOOK_URL` | Optional Discord notifications for requests. |
+| `PORT` | Defaults to `3000`. |
+
+## Profiles
+
+Like streaming-service profiles for the family. **Who's playing?** on the home page lets you pick a profile, or play as a guest (type a name, or get "Guest 1", "Guest 2"…). **New profile** asks for one with a name and an avatar (Shibas, blocky, toons, movies, music, space and animals); an admin approves it. A PIN on a profile is optional and can be added, changed or removed later by its owner. Scores, Rambler stats and player names in every game follow the profile, and the leaderboards show each profile's avatar.
 
 ## Admin panel
 
-Visit `/admin.html` and enter your `ADMIN_TOKEN`. Two tabs.
+Visit `/admin.html` and enter your `ADMIN_PASSWORD`.
+
+**Arcade:**
+- Profiles: approve or turn down "New profile" requests, rename, clear a forgotten PIN, or remove a profile (their old scores stay on the boards)
+- Set, change or remove the adult PIN
+- Comm Center, high-score boards, Spin & Solve and Know-It-All packs and requests
 
 **Rambler:**
 - See the current season, how long is left, and rename it ("Spooky Season")
