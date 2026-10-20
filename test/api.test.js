@@ -703,10 +703,10 @@ async function run({ base, root }) {
 
   // ---- home page game order -------------------------------------------------------
   const startInfo = (await wl('/arcade-info')).data;
-  ok('the home page gets every game in an order', startInfo.games.order.length === 7 && startInfo.games.hidden.length === 0);
+  ok('the home page gets every game in an order', startInfo.games.order.length === 9 && startInfo.games.hidden.length === 0);
   const reordered = await asAdmin('/comm/admin/home-games', 'POST', { order: ['dino', 'chess'], hidden: ['shortfuse'] });
   ok('the admin can reorder and hide games', reordered.status === 200 && reordered.data.order[0] === 'dino' &&
-    reordered.data.order.length === 7 && reordered.data.hidden.join() === 'shortfuse', JSON.stringify(reordered.data));
+    reordered.data.order.length === 9 && reordered.data.hidden.join() === 'shortfuse', JSON.stringify(reordered.data));
   ok('the home page sees the new order', (await wl('/arcade-info')).data.games.order[0] === 'dino');
   ok('hiding every game is refused', (await asAdmin('/comm/admin/home-games', 'POST', {
     order: startInfo.games.order, hidden: startInfo.games.order })).status === 400);
@@ -934,6 +934,38 @@ async function run({ base, root }) {
   const qrRes = await fetch(base + '/api/qr?text=' + encodeURIComponent(base + '/trivia.html?join=ABCD'));
   ok('QR codes come back as SVG for arcade links', qrRes.status === 200 && (await qrRes.text()).includes('<svg'));
   ok('QR codes for other websites are refused', (await fetch(base + '/api/qr?text=' + encodeURIComponent('https://example.com/'))).status === 400);
+
+  // ---- Uh-Oh: Part Deux and Dare Devil ------------------------------------------------
+  const party = async (game, p, method = 'GET', body, headers = {}) => {
+    const res = await fetch(`${base}/api/${game}${p}`, { method, headers: { ...(body ? { 'Content-Type': 'application/json' } : {}), ...headers }, body: body ? JSON.stringify(body) : undefined });
+    return { status: res.status, data: await res.json().catch(() => null) };
+  };
+  const pdLocal = await party('partdeux', '/local', 'POST', { names: ['Ann', 'Bo'], level: 'kids' });
+  ok('Uh-Oh: a one-phone game deals 7 cards each', pdLocal.status === 201 && Object.values(pdLocal.data.game.hands).every(h => h.length === 7));
+  const pdTurn = pdLocal.data.game.turn;
+  const pdDraw = await party('partdeux', `/local/${pdLocal.data.id}/act`, 'POST', { action: 'draw', as: pdTurn }, { 'X-Table-Token': pdLocal.data.token });
+  ok('Uh-Oh: the player whose turn it is can draw', pdDraw.status === 200);
+  ok('Uh-Oh: a spicy deck needs the adult PIN', (await party('partdeux', '/local', 'POST', { names: ['A', 'B'], level: 'spicy' })).status === 403);
+  const pdRoom = (await party('partdeux', '/rooms', 'POST', { name: 'Host', level: 'filthy', drinking: true, password: 'lime' }, { 'X-Adult-Pin': '2468' })).data;
+  ok('Uh-Oh: an adult room locks with a password', (await party('partdeux', `/rooms/${pdRoom.code}/join`, 'POST', { name: 'Kid' })).status === 401);
+  const pdGuest = (await party('partdeux', `/rooms/${pdRoom.code}/join`, 'POST', { name: 'Pal', password: 'lime' })).data;
+  ok('…and lets a guest in with it', !!pdGuest.playerId);
+  ok('Uh-Oh rooms show on the arcade lobby, locked', (await wl('/lobby')).data.rooms.some(r => r.game === 'partdeux' && r.code === pdRoom.code && r.locked && r.adult));
+  await party('partdeux', `/rooms/${pdRoom.code}/start`, 'POST', { playerId: pdRoom.playerId, token: pdRoom.token });
+  const pdSnap = (await party('partdeux', `/rooms/${pdRoom.code}?playerId=${pdGuest.playerId}&token=${pdGuest.token}`)).data;
+  ok('Uh-Oh: each phone sees only its own hand', pdSnap.game.hand.length === 7 && pdSnap.game.hands === undefined && pdSnap.game.drinking === true);
+
+  const ddLocal = await party('daredevil', '/local', 'POST', { names: ['Ann', 'Bo', 'Cy'], level: 'kids', options: { length: 'quick' } });
+  ok('Dare Devil: a one-phone game starts with a 15-card deck', ddLocal.status === 201 && ddLocal.data.game.total === 15);
+  const ddAct = (body) => party('daredevil', `/local/${ddLocal.data.id}/act`, 'POST', body, { 'X-Table-Token': ddLocal.data.token });
+  const ddDrawn = await ddAct({ action: 'draw', as: ddLocal.data.game.turn });
+  ok('Dare Devil: drawing reveals a card', ddDrawn.status === 200 && !!ddDrawn.data.game.card.text);
+  const ddDone = await ddAct({ action: 'done', as: ddLocal.data.game.turn });
+  ok('Dare Devil: doing it scores and passes the turn', ddDone.data.game.players[0].score > 0 && ddDone.data.game.turn !== ddLocal.data.game.turn);
+  ok('Dare Devil: filthy needs the PIN to host', (await party('daredevil', '/rooms', 'POST', { name: 'H', level: 'filthy' })).status === 403);
+  const ddRoom = (await party('daredevil', '/rooms', 'POST', { name: 'H', level: 'filthy', password: 'wild' }, { 'X-Adult-Pin': '2468' })).data;
+  ok('Dare Devil: an adult room needs its password to join', (await party('daredevil', `/rooms/${ddRoom.code}/join`, 'POST', { name: 'X', password: 'nope' })).status === 401 &&
+    (await party('daredevil', `/rooms/${ddRoom.code}/join`, 'POST', { name: 'X', password: 'wild' })).status === 201);
 
   // ---- Short Fuse -----------------------------------------------------------------
   const SF = base + '/api/shortfuse';

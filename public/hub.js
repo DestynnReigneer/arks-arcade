@@ -12,7 +12,9 @@
     spinsolve: { label: 'Spin & Solve', href: 'spinsolve.html' },
     chess: { label: 'Chess', href: 'chess.html' },
     dino: { label: 'Dino Dash', href: 'dino.html' },
-    trivia: { label: 'Know-It-All', href: 'trivia.html' }
+    trivia: { label: 'Know-It-All', href: 'trivia.html' },
+    partdeux: { label: 'Uh-Oh: Part Deux', href: 'partdeux.html' },
+    daredevil: { label: 'Dare Devil', href: 'daredevil.html' }
   };
 
   // ---- join a game -----------------------------------------------------------

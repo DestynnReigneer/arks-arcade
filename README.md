@@ -152,6 +152,16 @@ Multiple-choice trivia. Solo (high-score board), take turns on one phone, or a r
 
 Questions come from a built-in bank (`trivia/bank.js`), packs built from an AI prompt in the admin Trivia tab (with player topic requests), and Open Trivia DB (opentdb.com, CC BY-SA 4.0), which the server downloads in the background and saves for offline play (`TRIVIA_ONLINE=off` to skip it). Cheeky, Spicy and Filthy levels sit behind the adult PIN, with optional Drinking rules and Couples dares that get raunchier with the level.
 
+### Uh-Oh: Part Deux (`/partdeux.html`)
+
+A shedding card game for 2-8: match the top card by color or number and be first to empty your hand. Skips, Draw Twos, Reverses, Nopes (bounce a draw penalty), Gifts (give a card away), Wilds and the 💣 Draw Four wear Short Fuse's funny names at every level. Say "Uh-Oh!" before your last card or get caught for +2. One phone or a phone each; adult decks behind the PIN with an optional Drinking mode.
+
+### Dare Devil (`/daredevil.html`)
+
+A party deck for 2-12: draw a card and do the dare, answer the truth, follow the new rule, or chicken out (lose a point, or drink). Family, Cheeky, Spicy and Filthy decks (`daredevil/cards.js`), quick/standard/long games, one phone or a phone each.
+
+Both card games share their one-phone and room plumbing (`arcade/party-tables.js`, `arcade/party-routes.js`).
+
 ### Shared
 
 - Ships as a single Docker image with a SQLite file as its only state
