@@ -400,7 +400,7 @@
     if (m.promo) text += ` and becomes a ${PIECE_NAME[m.promo.toLowerCase()]}!`;
     if (/#$/.test(m.san)) text += ' <b>Checkmate!</b>';
     else if (/\+$/.test(m.san)) text += ' <b>Check!</b>';
-    box.innerHTML = `${pieceHtml(m.piece, m.by)}<span><b>${who}:</b> ${text}</span>`;
+    box.innerHTML = `${pieceHtml(m.piece, m.by)}<span><b>${escapeHtml(who)}:</b> ${text}</span>`;
     if (fresh) { box.classList.remove('fresh'); void box.offsetWidth; box.classList.add('fresh'); }
   }
 
@@ -471,7 +471,7 @@
     if (S.mode === 'room' && S.snap) {
       const p = S.snap.players[color];
       if (!p) return 'Waiting…';
-      return `${p.name}${color === S.me ? ' (you)' : ''}<span class="dot${p.online ? '' : ' off'}" title="${p.online ? 'Connected' : 'Not connected'}"></span>`;
+      return `${escapeHtml(p.name)}${color === S.me ? ' (you)' : ''}<span class="dot${p.online ? '' : ' off'}" title="${p.online ? 'Connected' : 'Not connected'}"></span>`;
     }
     return COLOR_NAME[color];
   }
@@ -511,7 +511,9 @@
     }
     return `Draw: ${ended.reason}.`;
   }
-  const stripTags = s => s.replace(/<[^>]*>/g, '');
+  // Back to plain text (names were escaped for HTML in seatName).
+  const stripTags = s => { const d = document.createElement('div'); d.innerHTML = s; return d.textContent; };
+  const escapeHtml = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
   function renderStatus() {
     const line = $('statusLine');

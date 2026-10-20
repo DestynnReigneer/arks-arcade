@@ -401,7 +401,12 @@ function beginTurn() {
 
   const alone = S.mode === 'solo' || S.mode === 'daily';
   const tabletop = S.mode === 'tabletop';
-  $('turnName').innerHTML = alone || tabletop ? '' : `<b>${player.name}</b>'s turn`;
+  $('turnName').innerHTML = '';
+  if (!(alone || tabletop)) {
+    const b = document.createElement('b');
+    b.textContent = player.name;
+    $('turnName').append(b, "'s turn");
+  }
   $('playRoster').classList.add('hidden');   // single-device modes have no roster
   $('typeRow').classList.toggle('hidden', tabletop);
   $('traceBar').classList.toggle('hidden', tabletop);
@@ -1792,7 +1797,7 @@ function renderSetup() {
     : '';
 
   $('startBtn').textContent =
-    S.mode === 'room' ? 'Open a room' : S.mode === 'marathon' ? 'Start the run' : 'Start rambling';
+    S.mode === 'room' ? 'Open a room' : S.mode === 'marathon' ? 'Start the run' : 'Slide to victory';
 }
 
 function pickProfile(value) {
