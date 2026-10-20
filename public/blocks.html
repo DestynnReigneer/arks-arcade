@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Block Drop</title>
+<link rel="stylesheet" href="arcade-ui.css">
+<link rel="stylesheet" href="game-shell.css">
+<link rel="stylesheet" href="tutorial.css">
+<style>
+  :root { --accent: #c86bff; --on-accent: #16081f; }
+  .pad { grid-template-columns: repeat(4, 1fr); }
+  .pad .wide { grid-column: span 2; }
+  .pad-btn { height: 56px; }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <a href="/" class="icon-btn" title="Back to the arcade">←</a>
+  <h1>🟪 BLOCK <span>DROP</span></h1>
+  <div class="btns">
+    <button class="icon-btn" id="pauseBtn" title="Pause (P)">⏸</button>
+    <button class="icon-btn" id="muteBtn" title="Sound">🔊</button>
+    <button class="icon-btn" id="scoresBtn" title="High scores">🏆</button>
+    <button class="icon-btn" id="helpBtn" title="How to play">?</button>
+  </div>
+</header>
+
+<div class="hud">
+  <div><small>Score</small><b id="score">0</b></div>
+  <div><small>Lines</small><b id="lines">0</b></div>
+  <div><small id="levelLabel">Level</small><b id="level">1</b></div>
+  <div><small>Best</small><b id="best">0</b></div>
+</div>
+
+<div class="options" id="options">
+  <div class="seg" id="modeSeg" role="group" aria-label="Mode"></div>
+</div>
+
+<div class="stage" id="stage">
+  <canvas id="canvas" aria-label="Block Drop well. Tap to turn the piece, drag to move it, flick down to drop it."></canvas>
+  <div class="stage-msg" id="stageMsg"><b>Ready?</b><span>Tap the well or press any key to start.</span></div>
+</div>
+
+<div class="pad" id="pad">
+  <button class="pad-btn" data-act="hold">⇆<small>Hold</small></button>
+  <button class="pad-btn" data-act="ccw">⟲<small>Turn</small></button>
+  <button class="pad-btn" data-act="cw">⟳<small>Turn</small></button>
+  <button class="pad-btn" data-act="drop">⤓<small>Drop</small></button>
+  <button class="pad-btn" data-act="left">◀<small>Left</small></button>
+  <button class="pad-btn wide" data-act="soft">▼<small>Down</small></button>
+  <button class="pad-btn" data-act="right">▶<small>Right</small></button>
+</div>
+<p class="hint center keys-hint"><b>← →</b> move · <b>↓</b> down · <b>↑</b>/<b>X</b> turn · <b>Z</b> turn back · <b>Space</b> drop · <b>C</b> hold · <b>P</b> pause</p>
+
+<script src="avatars.js"></script>
+<script src="profile.js"></script>
+<script src="stats.js"></script>
+<script src="tutorial.js"></script>
+<script src="blip.js"></script>
+<script src="arcade-kit.js"></script>
+<script src="game-shell.js"></script>
+<script src="blocks-engine.js"></script>
+<script src="blocks.js"></script>
+</body>
+</html>

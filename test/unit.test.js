@@ -387,6 +387,60 @@ async function run() {
   }
   ok('an autopilot paddle can clear every level, and the ball never escapes', clearedLevels === BR.LEVELS.length, problem);
 
+  console.log('\n-- block drop --');
+  const BD = require(path.join(ROOT, 'public/blocks-engine.js'));
+  const key = cells => cells.map(c => c.join(',')).sort().join(' ');
+  ok('every piece has four squares in every turn', BD.TYPES.every(t => BD.ROTATIONS[t].every(st => st.length === 4)));
+  ok('four turns bring a piece back to where it started', BD.TYPES.every(t => {
+    const r = BD.ROTATIONS[t];
+    return key(r[0].map(([x, y]) => [BD.SHAPES[t].size - 1 - y, x]).map(([x, y]) => [BD.SHAPES[t].size - 1 - y, x]).map(([x, y]) => [BD.SHAPES[t].size - 1 - y, x]).map(([x, y]) => [BD.SHAPES[t].size - 1 - y, x])) === key(r[0]);
+  }));
+  const bagG = BD.create({ rand: Math.random });
+  const firstSeven = [bagG.piece.type, ...bagG.queue.slice(0, 6)];
+  ok('pieces come from a bag of all seven', new Set(firstSeven).size === 7);
+  const kick = BD.create();
+  kick.piece = { type: 'I', rot: 1, x: -2, y: 5 };
+  ok('a standing long piece fits against the left wall', BD.fits(kick, kick.piece));
+  ok('…and still turns there (wall kick)', BD.rotate(kick, 1) && BD.cellsOf(kick.piece).every(([x]) => x >= 0));
+  const clear = BD.create({ rand: () => 0 });
+  for (let x = 0; x < 9; x++) for (const y of [18, 19, 20, 21]) clear.board[y][x] = 'Z';
+  clear.piece = { type: 'I', rot: 1, x: 7, y: 0 };
+  const dropped = BD.hardDrop(clear);
+  ok('a hard drop scores 2 per row fallen', clear.score >= dropped * 2 && dropped > 10);
+  ok('four rows at once clears them all', clear.lines === 4 && clear.board.slice(18).every(r => r.every(c => !c)));
+  ok('…and scores the big bonus (800 x level, plus the perfect clear)', clear.score === dropped * 2 + 800 + 2000);
+  const lockG = BD.create({ rand: () => 0.3 });
+  const firstPiece = lockG.piece.type;
+  for (let i = 0; i < 400 && lockG.piece.type === firstPiece && lockG.lines === 0; i++) BD.update(lockG, 0.05);
+  ok('a piece that lands locks after a short delay and the next appears', lockG.board.some(r => r.some(Boolean)));
+  const holdG = BD.create({ rand: () => 0.6 });
+  const was = holdG.piece.type, nextUp = holdG.queue[0];
+  BD.hold(holdG);
+  ok('hold keeps the piece and brings out the next', holdG.hold === was && holdG.piece.type === nextUp);
+  ok('…but only once per piece', BD.hold(holdG) === false);
+  const top = BD.create({ rand: () => 0.1 });
+  for (let y = 2; y < BD.ROWS; y++) for (let x = 0; x < BD.COLS; x++) if (x !== y % BD.COLS) top.board[y][x] = 'J';
+  BD.hardDrop(top);
+  for (let i = 0; i < 5 && !top.over; i++) BD.hardDrop(top);
+  ok('filling up to the top ends the game', top.over);
+  const rush = BD.create({ mode: 'rush' });
+  for (let i = 0; i < 300 && !rush.over; i++) { BD.update(rush, 0.5); if (!rush.over && i % 3 === 0) BD.hardDrop(rush); }
+  ok('the rush ends at two minutes (or a top-out)', rush.over && (rush.timeUp || rush.time < BD.RUSH_SECONDS));
+  ok('pieces fall faster at higher levels', BD.fallSeconds(10) < BD.fallSeconds(1) / 5);
+  let sane = 0;
+  for (let n = 0; n < 40; n++) {
+    const g = BD.create();
+    for (let i = 0; i < 2000 && !g.over; i++) {
+      const r = Math.random();
+      if (r < 0.2) BD.move(g, -1); else if (r < 0.4) BD.move(g, 1); else if (r < 0.55) BD.rotate(g, 1);
+      else if (r < 0.6) BD.rotate(g, -1); else if (r < 0.62) BD.hold(g); else if (r < 0.7) BD.hardDrop(g);
+      BD.update(g, 0.05, { soft: r > 0.95 });
+      if (!g.over && !BD.fits(g, g.piece)) break;
+    }
+    if (Number.isFinite(g.score) && (g.over || BD.fits(g, g.piece))) sane++;
+  }
+  ok('40 random games never leave a piece overlapping the stack', sane === 40);
+
   console.log(`\n  ${pass} passed, ${fail} failed`);
   return { pass, fail };
 }
