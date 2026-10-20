@@ -20,7 +20,7 @@ const GAMES = {
   trivia: { label: 'Know-It-All', boards: { solo: 'Family', adult: 'Adult' }, adultBoards: ['adult'], max: 30000 },
   snake: { label: 'Snake', boards: { classic: 'Classic', wrap: 'Wrap-around' }, max: 200000 },
   bricks: { label: 'Brick Breaker', boards: { classic: 'Classic' }, max: 9999999 },
-  blocks: { label: 'Block Drop', boards: { marathon: 'Marathon', sprint: 'Sprint' }, max: 99999999 },
+  blocks: { label: 'Block Drop', boards: { marathon: 'Marathon', rush: '2-Minute Rush' }, max: 99999999 },
   towers: { label: 'Tower Defense', boards: { meadow: 'Meadow', canyon: 'Canyon', castle: 'Castle' }, max: 9999999 }
 };
 
