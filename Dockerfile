@@ -19,6 +19,8 @@ COPY shortfuse ./shortfuse
 COPY chess ./chess
 COPY spinsolve ./spinsolve
 COPY trivia ./trivia
+COPY partdeux ./partdeux
+COPY daredevil ./daredevil
 COPY words ./words
 COPY public ./public
 

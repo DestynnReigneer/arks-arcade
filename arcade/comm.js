@@ -10,7 +10,7 @@ const rateLimit = require('express-rate-limit');
 const db = require('../db');
 const adultPin = require('./adult-pin');
 
-const GAMES = ['wordless', 'rambler', 'shortfuse', 'spinsolve', 'chess', 'dino', 'trivia'];
+const GAMES = ['wordless', 'rambler', 'shortfuse', 'spinsolve', 'chess', 'dino', 'trivia', 'partdeux', 'daredevil'];
 const FEEDBACK_KINDS = ['feature', 'issue', 'message'];
 const STATUSES = ['new', 'pending', 'in-progress', 'completed', 'canceled'];
 

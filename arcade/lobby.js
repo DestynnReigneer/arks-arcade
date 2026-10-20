@@ -14,7 +14,9 @@ const GAMES = {
   rambler: { label: 'Rambler', emoji: '🔠', icon: 'rambler-logo.svg', page: 'rambler.html' },
   shortfuse: { label: 'Short Fuse', emoji: '💣', page: 'shortfuse.html' },
   chess: { label: 'Chess', emoji: '♞', page: 'chess.html' },
-  trivia: { label: 'Know-It-All', emoji: '🧠', page: 'trivia.html' }
+  trivia: { label: 'Know-It-All', emoji: '🧠', page: 'trivia.html' },
+  partdeux: { label: 'Uh-Oh: Part Deux', emoji: '🚨', page: 'partdeux.html' },
+  daredevil: { label: 'Dare Devil', emoji: '😈', page: 'daredevil.html' }
 };
 
 // Each game keeps its rooms in its own module; this reads them without
@@ -67,6 +69,22 @@ function collect() {
       status: r.players.length >= 12 ? 'full' : r.phase === 'lobby' ? 'open' : 'playing',
       detail: `${r.settings.count} questions${bank.LEVELS[r.settings.level].adult ? ' · ' + bank.LEVELS[r.settings.level].label : ''}`
     });
+  }
+
+  // The party card games share one kind of table.
+  for (const [game, mod] of [['partdeux', '../partdeux/tables'], ['daredevil', '../daredevil/tables']]) {
+    const t = require(mod);
+    for (const r of t._tables.values()) {
+      if (r.kind !== 'room') continue;
+      const host = r.players.get(r.hostId);
+      const running = r.game && r.game.phase !== 'over';
+      add(game, {
+        adult: t.isAdult(r.level), locked: !!r.password,
+        code: r.id, host: host ? host.name : '', players: r.players.size, max: t.MAX_PLAYERS,
+        status: r.players.size >= t.MAX_PLAYERS ? 'full' : running ? 'playing' : 'open',
+        detail: `${r.level[0].toUpperCase() + r.level.slice(1)} deck${r.drinking ? ' · 🍺' : ''}`
+      });
+    }
   }
 
   const rank = { open: 0, playing: 1, full: 2 };

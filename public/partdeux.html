@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Uh-Oh: Part Deux</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&display=swap">
+<link rel="stylesheet" href="arcade-ui.css">
+<link rel="stylesheet" href="partdeux.css">
+<link rel="stylesheet" href="tutorial.css">
+<link rel="stylesheet" href="adult-mode.css">
+</head>
+<body>
+
+<header class="top">
+  <a href="/" class="icon-btn" title="Back to the arcade">←</a>
+  <h1>🚨 UH-OH: <span>DEUX</span></h1>
+  <div class="btns">
+    <button class="icon-btn" id="muteBtn" title="Sound">🔊</button>
+    <button class="icon-btn" id="helpBtn" title="How to play">?</button>
+  </div>
+</header>
+
+<!-- ============ setup ============ -->
+<section id="setup">
+  <div class="panel">
+    <h2>Which deck?</h2>
+    <div class="levels" id="levelList"></div>
+    <label class="toggle hidden" id="drinkRow"><input type="checkbox" id="drinkingOpt"> 🍺 <b>Drinking</b>: draws, catches and wins come with drinks</label>
+  </div>
+  <div class="panel">
+    <h2>How are you playing?</h2>
+    <div class="seg" id="modeSeg">
+      <button data-mode="local" aria-pressed="true">📱 Share a phone</button>
+      <button data-mode="host" aria-pressed="false">📡 Host</button>
+      <button data-mode="join" aria-pressed="false">🔗 Join</button>
+    </div>
+    <div id="localSetup">
+      <p class="hint">Pass the phone around. The screen hides your hand between turns.</p>
+      <div id="nameList"></div>
+      <button class="ghost" id="addPlayerBtn">+ Add player</button>
+    </div>
+    <div id="hostSetup" class="hidden">
+      <p class="hint">Everyone plays on their own phone. You'll get a code to share.</p>
+      <label>Your name<input id="hostName" maxlength="16" placeholder="e.g. Sam"></label>
+    </div>
+    <div id="joinSetup" class="hidden">
+      <p class="hint">Get the 4-letter code from whoever is hosting.</p>
+      <label>Game code<input id="joinCode" maxlength="4" placeholder="ABCD" autocapitalize="characters" class="code-input"></label>
+      <label>Your name<input id="joinName" maxlength="16" placeholder="e.g. Alex"></label>
+    </div>
+    <div class="msg" id="setupMsg"></div>
+    <button class="primary big" id="goBtn">Deal 'em</button>
+  </div>
+</section>
+
+<!-- ============ lobby ============ -->
+<section id="lobby" class="hidden">
+  <div class="panel center">
+    <div class="hint">Game code</div>
+    <div class="code" id="lobbyCode">----</div>
+    <img class="join-qr hidden" id="joinQr" width="150" height="150" alt="QR code to join"
+         style="width:150px;height:150px;background:#fff;padding:6px;border-radius:10px;margin:10px auto 2px;display:block">
+    <div class="join-link" id="joinLink" style="font-size:11px;opacity:0.65;word-break:break-all"></div>
+    <div class="hint" id="lobbyInfo"></div>
+  </div>
+  <div class="panel">
+    <h2>Players <span id="lobbyCount"></span></h2>
+    <ul class="people" id="lobbyPlayers"></ul>
+    <div id="hostControls" class="hidden">
+      <div class="levels small" id="lobbyLevels"></div>
+      <label class="toggle hidden" id="lobbyDrinkRow"><input type="checkbox" id="lobbyDrinking"> 🍺 Drinking</label>
+      <button class="primary big" id="startBtn">Start the game</button>
+    </div>
+    <div class="hint" id="waitHost">Waiting for the host to start…</div>
+    <div class="msg" id="lobbyMsg"></div>
+    <button class="ghost" id="leaveBtn" style="width:100%;margin-top:8px">Leave</button>
+  </div>
+</section>
+
+<!-- ============ game ============ -->
+<section id="game" class="hidden">
+  <ul class="opponents" id="opponents"></ul>
+  <div class="table">
+    <button class="pile" id="drawPile" title="Draw a card"><span class="pile-back">🚨</span><span class="pile-count" id="deckCount"></span></button>
+    <div class="discard" id="discard"></div>
+    <div class="dir" id="dirArrow" title="Turn order">↻</div>
+  </div>
+  <div class="pending hidden" id="pendingBanner"></div>
+  <div class="turn-line" id="turnLine"></div>
+  <div class="hand" id="hand"></div>
+  <div class="row-btns game-btns">
+    <button class="primary hidden" id="uhohBtn">🚨 Say "Uh-Oh!"</button>
+    <button class="ghost" id="drawBtn">Draw a card</button>
+    <button class="ghost hidden" id="keepBtn">Keep it, end turn</button>
+  </div>
+  <div class="log" id="log"></div>
+  <button class="ghost big" id="quitBtn">Leave game</button>
+</section>
+
+<!-- ============ overlays ============ -->
+<div class="overlay hidden" id="passCover">
+  <div class="card-panel center">
+    <div class="big-emoji">📱</div>
+    <h2 id="passTitle">Pass the phone</h2>
+    <p class="hint">No peeking, everyone else.</p>
+    <div id="passCatch" class="hidden">
+      <p class="catch-note" id="passCatchText"></p>
+      <button class="ghost" id="passCatchBtn" style="width:100%;margin-bottom:8px"></button>
+    </div>
+    <button class="primary big" id="passReady">I'm ready</button>
+    <button class="ghost" id="passLeave" style="margin-top:8px;width:100%">🚪 Leave game</button>
+  </div>
+</div>
+
+<div class="overlay hidden" id="colorPick">
+  <div class="card-panel center">
+    <h2>Pick the next color</h2>
+    <div class="colors" id="colorRow"></div>
+    <button class="ghost" id="colorCancel" style="width:100%;margin-top:10px">Cancel</button>
+  </div>
+</div>
+
+<div class="overlay hidden" id="giftPick">
+  <div class="card-panel center">
+    <h2 id="giftTitle">Give a card</h2>
+    <p class="hint" id="giftHint">Pick one of your other cards to give away.</p>
+    <div class="hand mini" id="giftCards"></div>
+    <div class="stack" id="giftTargets"></div>
+    <button class="ghost" id="giftCancel" style="width:100%;margin-top:10px">Cancel</button>
+  </div>
+</div>
+
+<div class="overlay hidden" id="cardSheet">
+  <div class="card-panel center">
+    <div class="sheet-card" id="sheetCard"></div>
+    <h2 id="sheetName"></h2>
+    <p class="hint" id="sheetQuip"></p>
+    <p id="sheetRule"></p>
+    <p class="msg" id="sheetWhy"></p>
+    <button class="ghost" id="sheetClose" style="width:100%">Close</button>
+  </div>
+</div>
+
+<div class="overlay hidden" id="calloutView">
+  <div class="card-panel center drink-card">
+    <div class="big-emoji">🍺</div>
+    <div class="callout-who" id="calloutWho"></div>
+    <h2 id="calloutText"></h2>
+    <button class="primary big" id="calloutOk">Cheers!</button>
+  </div>
+</div>
+
+<div class="overlay hidden" id="overView">
+  <div class="card-panel center">
+    <div class="big-emoji">🏆</div>
+    <h2 id="overTitle"></h2>
+    <p class="hint" id="overHint"></p>
+    <div class="stack">
+      <button class="primary" id="againBtn">Play again</button>
+      <button class="ghost" id="menuBtn">Back to setup</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="pinView">
+  <div class="card-panel center">
+    <div class="big-emoji">🔞</div>
+    <h2>Adults only</h2>
+    <p class="hint">Enter the adult PIN.</p>
+    <input type="password" id="pinInput" inputmode="numeric" maxlength="8" class="code-input" autocomplete="off">
+    <div class="msg" id="pinMsg"></div>
+    <div class="stack">
+      <button class="primary" id="pinOk">Unlock</button>
+      <button class="ghost" id="pinCancel">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script src="tutorial.js"></script>
+<script src="blip.js"></script>
+<script src="arcade-kit.js"></script>
+<script src="arcade-qr.js"></script>
+<script src="room-password.js"></script>
+<script src="partdeux.js"></script>
+</body>
+</html>

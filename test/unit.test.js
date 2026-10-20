@@ -322,6 +322,55 @@ async function run() {
   ok('couples: someone who missed gets a dare', calls.some(c => c.kind === 'dare' && c.who === 'a'));
   ok('no drinking, no dares when they are off', TR.afterQuestion([{ id: 'a', correct: false, streak: 0 }], { drinks: tbank.DRINKS.spicy, dares: tbank.DARES.spicy }).length === 0);
 
+  console.log('\n-- uh-oh: part deux --');
+  const PD = require(path.join(ROOT, 'partdeux/engine.js'));
+  let pdDone = 0, pdProblem = '';
+  for (let n = 0; n < 200 && !pdProblem; n++) {
+    const g = PD.createGame({ players: Array.from({ length: 2 + n % 5 }, (_, i) => ({ id: 'p' + i, name: 'P' + i })), level: ['kids', 'cheeky', 'spicy', 'filthy'][n % 4], drinking: true });
+    try {
+      for (let guard = 0; g.phase !== 'over' && guard < 5000; guard++) {
+        const me = g.players[g.turn];
+        if (me.hand.length === 2 && guard % 3) PD.callUhOh(g, me.id);
+        const s = PD.snapshot(g, me.id);
+        // Gifts need another card to give away; with none left, draw instead.
+        const pick = s.playable.find(c => g.cards[c].kind !== 'gift' || me.hand.length > 1) || null;
+        if (pick) {
+          const card = g.cards[pick];
+          const opts = card.kind === 'wild' || card.kind === 'wild4' ? { color: PD.COLORS[guard % 4] }
+            : card.kind === 'gift' ? { giftCardId: me.hand.find(c => c !== pick), target: g.players.find(p => p.id !== me.id).id } : {};
+          PD.play(g, me.id, pick, opts);
+          if (g.vulnerable) PD.catchUhOh(g, g.players.find(p => p.id !== g.vulnerable).id, g.vulnerable);
+        } else { PD.draw(g, me.id); if (g.drew) PD.pass(g, me.id); }
+        const total = g.deck.length + g.discard.length + g.players.reduce((a, p) => a + p.hand.length, 0);
+        if (total !== 116) throw new Error('lost or duplicated a card: ' + total);
+      }
+      if (g.phase === 'over') pdDone++; else pdProblem = 'game ' + n + ' never ended';
+    } catch (e) { pdProblem = 'game ' + n + ': ' + e.message; }
+  }
+  ok('200 random games all end with a winner and no lost cards', pdDone === 200, pdProblem);
+  const pd = PD.createGame({ players: [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }] });
+  const notMine = pd.players[1].hand[0];
+  ok('you can only play your own cards on your turn', (() => { try { PD.play(pd, 'b', notMine); return false; } catch (e) { return e.status === 409; } })());
+  ok('action cards wear Short Fuse names', PD.view({ kind: 'wild4', color: null, variant: 0 }, 'filthy').name.length > 3);
+
+  console.log('\n-- dare devil --');
+  const DD = require(path.join(ROOT, 'daredevil/engine.js'));
+  const DDC = require(path.join(ROOT, 'daredevil/cards.js'));
+  for (const lv of ['kids', 'cheeky', 'spicy', 'filthy']) {
+    const g = DD.createGame({ players: [{ id: 'a', name: 'Ann' }, { id: 'b', name: 'Bo' }, { id: 'c', name: 'Cy' }], level: lv, drinking: true, length: 'quick' });
+    let leftover = false;
+    for (let i = 0; g.phase !== 'over' && i < 100; i++) {
+      const pid = g.players[g.turn].id;
+      DD.draw(g, pid);
+      if (/\{other\}/.test(g.card.text) || g.card.text.includes(g.players[g.turn].name + ' ') && g.card.other === pid) leftover = true;
+      if (i % 4) DD.done(g, pid); else DD.chicken(g, pid);
+    }
+    ok(`${lv}: a quick game plays to a winner, names filled in`, g.phase === 'over' && !!g.winner && !leftover);
+  }
+  const kidsTexts = DDC.pool('kids').map(c => c.text).join(' ');
+  ok('the family deck has nothing rude in it', !/sex|naked|strip|kiss|drink|clothing|orgasm|fuck|shit/i.test(kidsTexts));
+  ok('every card type is known', Object.values(DDC.DECK).flat().every(([type]) => DDC.TYPES[type]));
+
   console.log(`\n  ${pass} passed, ${fail} failed`);
   return { pass, fail };
 }
