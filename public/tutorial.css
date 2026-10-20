@@ -46,3 +46,12 @@
 }
 .tut-back { background: transparent; color: inherit; border: 1px solid rgba(244, 236, 208, 0.18); }
 .tut-next { background: var(--accent, #ffc72c); color: #1a1405; border: 1px solid var(--accent, #ffc72c); }
+
+/* Open this game on another phone */
+.tut-share {
+  display: block; width: 100%; margin-top: 12px; padding: 9px; border-radius: 10px; cursor: pointer;
+  background: transparent; color: inherit; border: 1px dashed rgba(255, 255, 255, 0.25); font: inherit; font-size: 13px; opacity: 0.85;
+}
+.tut-qr { text-align: center; margin-top: 10px; }
+.tut-qr img { width: 150px; height: 150px; background: #fff; padding: 6px; border-radius: 10px; }
+.tut-qr-link { font-size: 11px; opacity: 0.65; word-break: break-all; margin-top: 4px; }

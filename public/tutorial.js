@@ -40,11 +40,14 @@ const Tutorial = (() => {
             <button class="tut-back" type="button">Back</button>
             <button class="tut-next" type="button">Next</button>
           </div>
+          <button class="tut-share" type="button">📱 Open this game on another phone</button>
+          <div class="tut-qr" hidden><img alt="QR code for this game" width="150" height="150"><div class="tut-qr-link"></div></div>
         </div>`;
       root.querySelector('.tut-x').onclick = close;
       root.querySelector('.tut-back').onclick = () => show(index - 1);
       root.querySelector('.tut-next').onclick = () => (index === steps.length - 1 ? close() : show(index + 1));
       root.addEventListener('click', e => { if (e.target === root) close(); });
+      root.querySelector('.tut-share').onclick = showQr;
       document.addEventListener('keydown', e => {
         if (!root || root.hidden) return;
         if (e.key === 'Escape') close();
@@ -61,6 +64,22 @@ const Tutorial = (() => {
         dots.appendChild(d);
       });
       document.body.appendChild(root);
+    }
+
+    // A QR code for this game's page, so another phone can open it. The
+    // address is the one this page was opened on, or (on localhost) the
+    // server's LAN address.
+    async function showQr() {
+      const box = root.querySelector('.tut-qr');
+      if (!box.hidden) { box.hidden = true; return; }
+      let base = location.origin;
+      if (/^(localhost|127\.|\[::1\])/.test(location.hostname)) {
+        try { base = (await (await fetch('/api/arcade-info')).json()).publicUrl || base; } catch { /* keep origin */ }
+      }
+      const link = base + location.pathname;
+      box.querySelector('img').src = '/api/qr?text=' + encodeURIComponent(link);
+      box.querySelector('.tut-qr-link').textContent = link.replace(/^https?:\/\//, '');
+      box.hidden = false;
     }
 
     function show(i) {

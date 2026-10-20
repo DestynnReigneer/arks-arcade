@@ -153,23 +153,18 @@
     try {
       if (S.mode === 'solo' || S.mode === 'local') return await startLocal();
       if (S.mode === 'host') {
-        const r = await api('/api/trivia/rooms', { name: $('hostName').value, settings: settings() }, pinHeaders());
-        return enterRoom(r);
+        const r = await RoomPassword.withPassword(password =>
+          api('/api/trivia/rooms', { name: $('hostName').value, settings: settings(), password }, pinHeaders()));
+        if (r) enterRoom(r);
+        return;
       }
       const code = $('joinCode').value.trim().toUpperCase();
       if (code.length !== 4) { $('setupMsg').textContent = 'Type the 4-letter code.'; return; }
-      try {
-        enterRoom(await api(`/api/trivia/rooms/${code}/join`, { name: $('joinName').value }, pinHeaders()));
-      } catch (e) {
-        // An adult room: unlock, then try again.
-        if (!/PIN/.test(e.message) || !(await unlockAdultFor())) throw e;
-        enterRoom(await api(`/api/trivia/rooms/${code}/join`, { name: $('joinName').value }, pinHeaders()));
-      }
+      // A grown-ups game asks for its lobby password (not the adult PIN).
+      const r = await RoomPassword.withPassword(password =>
+        api(`/api/trivia/rooms/${code}/join`, { name: $('joinName').value, password }));
+      if (r) enterRoom(r);
     } catch (e) { $('setupMsg').textContent = e.message; }
-  }
-  async function unlockAdultFor() {
-    if (!S.config) await loadConfig();
-    return unlockAdult();
   }
 
   // ---- solo and one-phone games ------------------------------------------------------
@@ -324,7 +319,7 @@
     if ($('joinQr').dataset.code !== snap.code) { $('joinQr').dataset.code = snap.code; ArcadeQR.forGame($('joinQr'), 'trivia.html', snap.code, $('joinLink')); }
     const s = snap.settings;
     $('lobbyLevel').textContent = `${s.levelLabel} · ${s.count} questions · ${s.seconds}s each` +
-      (s.drinking ? ' · 🍺 Drinking' : '') + (s.couples ? ' · 💋 Dares' : '');
+      (s.drinking ? ' · 🍺 Drinking' : '') + (s.couples ? ' · 💋 Dares' : '') + (snap.lobbyPassword ? ` · 🔒 Password: ${snap.lobbyPassword}` : snap.locked ? ' · 🔒 Locked' : '');
     $('lobbyCount').textContent = `(${snap.players.length})`;
     const list = $('lobbyPlayers');
     list.innerHTML = '';

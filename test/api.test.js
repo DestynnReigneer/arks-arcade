@@ -895,14 +895,35 @@ async function run({ base, root }) {
 
   // ---- join-a-game lobby and QR codes ---------------------------------------------
   const lobbyHost = (await wl('/trivia/rooms', 'POST', { name: 'Robin', settings: { level: 'kids', count: 5 } })).data;
-  const adultRoom = await fetch(base + '/api/trivia/rooms', {
-    method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Adult-Pin': '2468' },
-    body: JSON.stringify({ name: 'Grown', settings: { level: 'filthy' } })
-  }).then(r => r.json());
+  const hostAdult = body => fetch(base + '/api/trivia/rooms', {
+    method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Adult-Pin': '2468' }, body: JSON.stringify(body)
+  }).then(async r => ({ status: r.status, data: await r.json() }));
+  const noPw = await hostAdult({ name: 'Grown', settings: { level: 'filthy' } });
+  ok('hosting an adult game asks the host to make a lobby password', noPw.status === 400 && noPw.data.needsPassword === 'create');
+  const adultRoom = (await hostAdult({ name: 'Grown', settings: { level: 'filthy' }, password: 'tacos' })).data;
+  ok('with a password, the adult game is made', !!adultRoom.code);
   let lobbyNow = (await wl('/lobby')).data;
   const robin = lobbyNow.rooms.find(r => r.code === lobbyHost.code);
   ok('a hosted game shows on the lobby, open to join', !!robin && robin.status === 'open' && robin.href === `trivia.html?join=${lobbyHost.code}` && robin.host === 'Robin');
-  ok('adult games stay off the public lobby', !lobbyNow.rooms.some(r => r.code === adultRoom.code));
+  const listedAdult = lobbyNow.rooms.find(r => r.code === adultRoom.code);
+  ok('adult games are on the lobby too, marked and locked', !!listedAdult && listedAdult.adult && listedAdult.locked);
+  const joinAdult = pw => wl(`/trivia/rooms/${adultRoom.code}/join`, 'POST', { name: 'Kid', password: pw });
+  const noPwJoin = await joinAdult('');
+  ok('joining a locked game asks for its password', noPwJoin.status === 401 && noPwJoin.data.needsPassword === 'join');
+  ok('the wrong password is refused', (await joinAdult('pizza')).status === 401);
+  ok('the right password lets a guest in, no adult PIN needed', (await joinAdult('tacos')).status === 200);
+  const adultHostView = (await wl(`/trivia/rooms/${adultRoom.code}?playerId=${adultRoom.playerId}&token=${adultRoom.token}`)).data;
+  ok('the host can see the password to tell guests', adultHostView.lobbyPassword === 'tacos');
+
+  // Short Fuse and Rambler lock their adult games the same way
+  const sfAdult = await fetch(base + '/api/shortfuse/rooms', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Adult-Pin': '2468' },
+    body: JSON.stringify({ name: 'H', level: 'spicy', password: 'secret' }) }).then(r => r.json());
+  ok('Short Fuse: a spicy room needs its password to join', (await wl(`/shortfuse/rooms/${sfAdult.code}/join`, 'POST', { name: 'X' })).status === 401 &&
+    (await wl(`/shortfuse/rooms/${sfAdult.code}/join`, 'POST', { name: 'X', password: 'secret' })).status === 201);
+  const rbAdult = await fetch(base + '/api/rambler/rooms', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Adult-Pin': '2468' },
+    body: JSON.stringify({ name: 'H', profile: 'adult', password: 'secret' }) }).then(r => r.json());
+  ok('Rambler: an Unfiltered room needs its password to join', (await wl(`/rambler/rooms/${rbAdult.code}/join`, 'POST', { name: 'X' })).status === 401 &&
+    (await wl(`/rambler/rooms/${rbAdult.code}/join`, 'POST', { name: 'X', password: 'secret' })).status === 201);
   ok('the lobby says where phones should go', /^https?:\/\//.test(lobbyNow.publicUrl));
   await wl(`/trivia/rooms/${lobbyHost.code}/start`, 'POST', { playerId: lobbyHost.playerId, token: lobbyHost.token });
   lobbyNow = (await wl('/lobby')).data;

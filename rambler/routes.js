@@ -385,7 +385,8 @@ router.post('/rooms', roomLimiter, (req, res, next) => {
       hostName: body.name,
       size: body.size,
       profile,
-      durationSec: body.durationSec
+      durationSec: body.durationSec,
+      password: body.password
     });
     res.status(201).json({
       code: room.code,
@@ -400,7 +401,7 @@ router.post('/rooms', roomLimiter, (req, res, next) => {
 
 router.post('/rooms/:code/join', (req, res, next) => {
   try {
-    const { room, player } = rooms.joinRoom(req.params.code, (req.body || {}).name);
+    const { room, player } = rooms.joinRoom(req.params.code, (req.body || {}).name, (req.body || {}).password);
     res.status(201).json({
       code: room.code,
       playerId: player.id,
@@ -427,7 +428,8 @@ router.post('/rooms/:code/settings', (req, res, next) => {
     const room = rooms.updateSettings(req.params.code, body.playerId, body.token, {
       size: body.size,
       profile: body.profile,
-      durationSec: body.durationSec
+      durationSec: body.durationSec,
+      password: body.password
     });
     res.json(rooms.snapshot(room, body.playerId));
   } catch (e) {
@@ -708,7 +710,7 @@ router.delete('/players/:id', (req, res, next) => {
 router.use((err, req, res, _next) => {
   const status = err.status || 500;
   if (status >= 500) console.error('rambler:', err);
-  res.status(status).json({ error: status >= 500 ? 'Something went wrong.' : err.message });
+  res.status(status).json({ error: status >= 500 ? 'Something went wrong.' : err.message, ...require('../arcade/room-password').extra(err) });
 });
 
 module.exports = router;

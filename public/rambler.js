@@ -70,7 +70,7 @@ async function api(path, { method = 'GET', body } = {}) {
   }
   let data = null;
   try { data = await res.json(); } catch { /* empty body */ }
-  if (!res.ok) throw new Error((data && data.error) || `Request failed (${res.status})`);
+  if (!res.ok) throw Object.assign(new Error((data && data.error) || `Request failed (${res.status})`), { data: data || {} });
   return data;
 }
 
@@ -186,7 +186,7 @@ function paintTrace(state = '') {
   const word = traceWord();
   bar.className = `trace-bar${state ? ' ' + state : ''}`;
   if (!word) {
-    bar.innerHTML = '<span class="placeholder">Drag across the dice</span>';
+    bar.innerHTML = '<span class="placeholder">Drag across the letters</span>';
   } else {
     bar.textContent = word;
   }
@@ -1422,6 +1422,7 @@ function renderPlayRoster(snap) {
 }
 
 function renderLobby(snap) {
+  $('lobbyPassword').textContent = snap.lobbyPassword ? `🔒 Lobby password: ${snap.lobbyPassword}` : snap.locked ? '🔒 This game is locked with a password.' : '';
   $('roomCode').textContent = snap.code;
   if ($('joinQr').dataset.code !== snap.code) { $('joinQr').dataset.code = snap.code; ArcadeQR.forGame($('joinQr'), 'rambler.html', snap.code, $('joinLink')); }
   const roster = $('lobbyRoster');
@@ -1448,7 +1449,7 @@ function renderLobby(snap) {
 }
 
 function pushRoomSettings(patch) {
-  api(`/rooms/${S.creds.code}/settings`, { method: 'POST', body: { ...S.creds, ...patch } })
+  RoomPassword.withPassword(password => api(`/rooms/${S.creds.code}/settings`, { method: 'POST', body: { ...S.creds, ...patch, password } }))
     .catch(e => alert(e.message));
 }
 
@@ -1791,7 +1792,7 @@ function renderSetup() {
     : '';
 
   $('startBtn').textContent =
-    S.mode === 'room' ? 'Open a room' : S.mode === 'marathon' ? 'Start the run' : 'Shake the dice';
+    S.mode === 'room' ? 'Open a room' : S.mode === 'marathon' ? 'Start the run' : 'Start rambling';
 }
 
 function pickProfile(value) {
@@ -1817,16 +1818,19 @@ async function startPressed() {
     }
 
     if (S.mode === 'room') {
-      const data = await api('/rooms', {
+      // An Unfiltered room gets a lobby password the host makes up.
+      const data = await RoomPassword.withPassword(password => api('/rooms', {
         method: 'POST',
         body: {
           name: $('nameInput').value,
           size: S.size,
           profile: S.profile,
           durationSec: S.duration,
-          adultPin: S.adultPin
+          adultPin: S.adultPin,
+          password
         }
-      });
+      }));
+      if (!data) return;
       S.creds = { code: data.code, playerId: data.playerId, token: data.token };
       openStream();
       return;
@@ -1851,10 +1855,11 @@ async function joinPressed() {
   const code = $('joinCodeInput').value.trim().toUpperCase();
   if (code.length !== 4) return say($('setupMsg'), 'Room codes are four characters.', 'err');
   try {
-    const data = await api(`/rooms/${code}/join`, {
+    const data = await RoomPassword.withPassword(password => api(`/rooms/${code}/join`, {
       method: 'POST',
-      body: { name: $('nameInput').value }
-    });
+      body: { name: $('nameInput').value, password }
+    }));
+    if (!data) return;
     S.creds = { code: data.code, playerId: data.playerId, token: data.token };
     S.mode = 'room';
     openStream();

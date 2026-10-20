@@ -89,3 +89,6 @@
 /* Locked answers stay bright; after the reveal, only the others fade */
 .answers button:disabled { opacity: 1; }
 .answers.revealed button:not(.right):not(.wrong) { opacity: 0.4; }
+/* The wobbling emoji used to poke past the card and flash a scrollbar */
+.overlay .callout-card { overflow: visible; max-height: none; }
+.callout-card .big-emoji { display: inline-block; }

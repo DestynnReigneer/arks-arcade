@@ -55,7 +55,7 @@ async function api(path, { method = 'GET', body, headers = {} } = {}) {
     throw new Error('Could not reach the game server.');
   }
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || `Something went wrong (${res.status}).`);
+  if (!res.ok) throw Object.assign(new Error(data.error || `Something went wrong (${res.status}).`), { data });
   return data;
 }
 
@@ -192,13 +192,16 @@ async function go() {
       S.viewer = null;
       enterGame(r);
     } else if (S.mode === 'host') {
-      const r = await api('/rooms', { method: 'POST', body: { name: $('hostName').value, level: S.level }, headers: pinHeader() });
-      joinedRoom(r);
+      const r = await RoomPassword.withPassword(password =>
+        api('/rooms', { method: 'POST', body: { name: $('hostName').value, level: S.level, password }, headers: pinHeader() }));
+      if (r) joinedRoom(r);
     } else {
       const code = $('joinCode').value.trim().toUpperCase();
       if (code.length !== 4) { $('setupMsg').textContent = 'Codes are 4 letters.'; return; }
-      const r = await api(`/rooms/${code}/join`, { method: 'POST', body: { name: $('joinName').value } });
-      joinedRoom(r);
+      // Adult decks ask for the lobby password the host made up.
+      const r = await RoomPassword.withPassword(password =>
+        api(`/rooms/${code}/join`, { method: 'POST', body: { name: $('joinName').value, password } }));
+      if (r) joinedRoom(r);
     }
   } catch (e) {
     $('setupMsg').textContent = e.message;
@@ -268,14 +271,15 @@ function renderLobby(snap) {
     list.appendChild(li);
   }
   const lv = levelInfo(snap.level);
-  $('lobbyLevel').textContent = `Deck: ${lv.emoji} ${lv.label}`;
+  $('lobbyLevel').textContent = `Deck: ${lv.emoji} ${lv.label}` + (snap.lobbyPassword ? ` · 🔒 Password: ${snap.lobbyPassword}` : snap.locked ? ' · 🔒 Locked' : '');
   $('hostControls').classList.toggle('hidden', !snap.youAreHost);
   $('waitHost').classList.toggle('hidden', snap.youAreHost);
   if (snap.youAreHost) {
     renderLevels($('lobbyLevels'), snap.level, async id => {
       if (levelInfo(id).adult && !(await unlockAdult())) return;
       try {
-        await api(`/rooms/${snap.code}/level`, { method: 'POST', body: { ...roomCreds(), level: id }, headers: pinHeader() });
+        await RoomPassword.withPassword(password =>
+          api(`/rooms/${snap.code}/level`, { method: 'POST', body: { ...roomCreds(), level: id, password }, headers: pinHeader() }));
       } catch (e) { $('lobbyMsg').textContent = e.message; }
     });
     $('startBtn').disabled = snap.players.length < 2;
