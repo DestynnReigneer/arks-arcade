@@ -699,6 +699,7 @@ function stopDailyCountdown() {
 // choose the board, the shape, the difficulty or the clock -- that is what
 // makes the standings mean anything.
 async function playDaily() {
+  if (window.ArcadeStats) ArcadeStats.play();
   say($('dailyMsg'), '');
   try {
     const d = await loadDaily();
@@ -1042,6 +1043,7 @@ function viceOn(on) {
 }
 
 async function startMarathon() {
+  if (window.ArcadeStats) ArcadeStats.play();
   Sound.arm();
   const diff = S.config.difficulties.find(d => d.id === S.difficulty);
   $('maraHintCost').textContent = diff ? `(${diff.hintCost})` : '';
@@ -1827,6 +1829,7 @@ function pickProfile(value) {
 // ------------------------------------------------------------------- start
 
 async function startPressed() {
+  if (window.ArcadeStats) ArcadeStats.play();
   say($('setupMsg'), '');
   try {
     if (S.mode === 'marathon') {

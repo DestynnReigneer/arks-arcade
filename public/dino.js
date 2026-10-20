@@ -164,6 +164,7 @@
   const onGround = () => S.y >= 0;
 
   function reset() {
+    if (window.ArcadeStats) ArcadeStats.play();
     Object.assign(S, {
       mode: 'running', y: 0, vy: 0, ducking: false, dist: 0, speed: START_SPEED,
       obstacles: [], nextGap: 380, groundShift: 0, time: 0, night: 0, flash: 0, lastMilestone: 0

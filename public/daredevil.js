@@ -105,6 +105,7 @@
     try {
       if (S.mode === 'local') {
         const names = S.names.map((n, i) => n.trim() || `Player ${i + 1}`);
+        if (window.ArcadeStats) ArcadeStats.play();
         const r = await api('/local', { method: 'POST', body: { names, level: S.level, drinking, options }, headers: pinHeaders() });
         S.table = { kind: 'local', id: r.id, token: r.token };
         S.seenCallout = 0;
@@ -339,7 +340,7 @@
   $('deckBtn').onclick = () => { Blip.tone([300, 900], 0.15, { type: 'triangle' }); send('draw'); };
   $('doneBtn').onclick = () => { Blip.tune([[660, 0.08], [990, 0.14]], { type: 'triangle' }); send('done'); };
   $('chickenBtn').onclick = () => { Blip.tune([[500, 0.08], [380, 0.08], [300, 0.14]], { type: 'square', volume: 0.06 }); send('chicken'); };
-  $('startBtn').onclick = async () => { try { await api(`/rooms/${S.table.code}/start`, { method: 'POST', body: roomCreds() }); } catch (e) { $('lobbyMsg').textContent = e.message; } };
+  $('startBtn').onclick = async () => { if (window.ArcadeStats) ArcadeStats.play(); try { await api(`/rooms/${S.table.code}/start`, { method: 'POST', body: roomCreds() }); } catch (e) { $('lobbyMsg').textContent = e.message; } };
   $('lobbyDrinking').onchange = () => api(`/rooms/${S.table.code}/settings`, { method: 'POST', body: { ...roomCreds(), drinking: $('lobbyDrinking').checked } }).catch(e => toast(e.message));
   $('leaveBtn').onclick = leave;
   $('quitBtn').onclick = () => { if (confirm('Leave this game?')) leave(); };

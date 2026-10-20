@@ -994,6 +994,45 @@ async function run({ base, root }) {
   const mayaWordless = await wl('/leaderboard', 'POST', { themeId: 'classic', won: true, guesses: 2, hintsUsed: 0, word: 'apple', elapsedMs: 5000, difficulty: 'easy', profileToken: mayaTok });
   ok('Wordless credits a profile too', mayaWordless.status === 201 && (await wl('/leaderboard?difficulty=easy')).data.some(r => r.profileName === 'Maya'));
 
+  // ---- stats and the error log ----------------------------------------------------------
+  const phoneUA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1';
+  const statsPost = (p, body, ua) => fetch(base + '/api/stats' + p, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(ua ? { 'User-Agent': ua } : {}) }, body: JSON.stringify(body) })
+    .then(async r => ({ status: r.status, data: await r.json().catch(() => null) }));
+  const visit = await statsPost('/visit', { game: 'chess', token: mayaTok, name: 'Someone Else' }, phoneUA);
+  ok('a game page opens a visit', visit.status === 201 && !!visit.data.id);
+  ok('an unknown game is refused', (await statsPost('/visit', { game: 'nope' })).status === 400);
+  await statsPost('/beat', { id: visit.data.id, activeMs: 45000, plays: 2 });
+  await statsPost('/beat', { id: visit.data.id, activeMs: 99999999, plays: 1 });
+  const guestVisit = await statsPost('/visit', { game: 'dino', name: 'Guest 7' });
+  await statsPost('/beat', { id: guestVisit.data.id, activeMs: 12000 });
+  ok('the summary needs the admin password', (await wl('/stats/admin/summary')).status === 401);
+  const sum = (await asAdmin('/stats/admin/summary?days=7')).data;
+  const chessRow = sum.visits.find(v => sum.games[v[2]] === 'chess' && sum.players[v[3]] === 'Maya');
+  ok('a visit is credited to the verified profile, not the typed name', !!chessRow, JSON.stringify(sum.players));
+  ok('on-screen time adds up, and one heartbeat cannot claim hours', chessRow && chessRow[1] === 45 + 90);
+  ok('plays are counted', chessRow && chessRow[5] === 3);
+  ok('the device is recorded', chessRow && sum.devices[chessRow[4]] === 'phone');
+  ok('guests show by name', sum.visits.some(v => sum.players[v[3]] === 'Guest 7' && v[1] === 12));
+
+  const err1 = await statsPost('/error', { game: 'spinsolve', message: "Cannot read properties of undefined (reading 'x') at 12", location: '/spinsolve.js:412:17', stack: 'TypeError: boom\n  at spin (/spinsolve.js:412:17)', name: 'Maya' }, phoneUA);
+  const err2 = await statsPost('/error', { game: 'spinsolve', message: "Cannot read properties of undefined (reading 'x') at 99", location: '/spinsolve.js:415:3' }, phoneUA);
+  ok('a browser crash gets a code', err1.status === 201 && /^E-[0-9A-F]{6}$/.test(err1.data.code));
+  ok('the same bug gets the same code', err1.data.code === err2.data.code);
+  const errs = (await asAdmin('/stats/admin/errors')).data;
+  const e1 = errs.find(e => e.code === err1.data.code);
+  ok('…and is counted, not listed twice', e1 && e1.count === 2 && errs.filter(e => e.code === err1.data.code).length === 1);
+  ok('the error log says which browser', e1 && /Safari on iOS \(phone\)/.test(e1.browser), e1 && e1.browser);
+  const boom = await wl('/stats/_boom');
+  ok('a server crash tells the player a code', boom.status === 500 && /^E-[0-9A-F]{6}$/.test(boom.data.code) && boom.data.error.includes(boom.data.code));
+  ok('…and lands in the error log with its stack', (await asAdmin('/stats/admin/errors')).data.some(e => e.code === boom.data.code && e.source === 'server' && e.stack.includes('Test explosion')));
+  await asAdmin(`/stats/admin/errors/${err1.data.code}/resolve`, 'POST', {});
+  ok('an error can be marked fixed', (await asAdmin('/stats/admin/errors')).data.find(e => e.code === err1.data.code).resolved === true);
+  await statsPost('/error', { game: 'spinsolve', message: "Cannot read properties of undefined (reading 'x') at 5", location: '/spinsolve.js:412:1' });
+  ok('…and comes back if it happens again', (await asAdmin('/stats/admin/errors')).data.find(e => e.code === err1.data.code).resolved === false);
+  ok('marking needs the admin password', (await wl(`/stats/admin/errors/${err1.data.code}/resolve`, 'POST', {})).status === 401);
+  await asAdmin('/stats/admin/visits', 'DELETE');
+  ok('the admin can reset the visit stats', (await asAdmin('/stats/admin/summary')).data.visits.length === 0);
+
   await asAdmin('/comm/admin/adult-pin', 'POST', { pin: '' });
   ok('the PIN can be removed', (await api('/board', 'POST', { size: 4, profile: 'adult' })).status === 201);
 
