@@ -10,7 +10,7 @@ fs.mkdirSync(DATA_DIR, { recursive: true });
 // first and behaved differently, which is exactly the kind of flake that
 // teaches people to ignore red builds.
 const DB_FILE = process.env.RAMBLER_DB
-  || (process.env.NODE_ENV === 'test' ? 'test.db' : 'wordless.db');
+  || (process.env.NODE_ENV === 'test' ? 'test.db' : 'arcade.db');
 const db = new DatabaseSync(path.join(DATA_DIR, DB_FILE));
 
 db.exec(`

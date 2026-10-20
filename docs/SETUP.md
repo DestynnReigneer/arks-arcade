@@ -32,7 +32,7 @@ docker compose ps  # STATUS should say "healthy" after about 20 seconds
 ```
 
 Open `http://<server-ip>:3000`. Everything the arcade saves (scores,
-profiles, themes, packs) lives in `./data/wordless.db` next to the compose
+profiles, themes, packs) lives in `./data/arcade.db` next to the compose
 file. Back that one file up and you've backed up the arcade.
 
 To update later: `docker compose pull && docker compose up -d`.
@@ -146,7 +146,7 @@ What's up to you:
   password travels with every admin request.
 - If it shares a Docker host with other services, give it its own network and
   don't mount the Docker socket into it.
-- Back up `./data/wordless.db`.
+- Back up `./data/arcade.db`.
 
 ## 9. Troubleshooting
 
