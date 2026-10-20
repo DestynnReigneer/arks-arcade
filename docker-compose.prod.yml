@@ -1,7 +1,7 @@
 # Homelab deployment: pulls the image CI already built, never builds locally.
 # This is the only file you need on the server -- no checkout required.
 #
-#   mkdir wordless-arcade && cd wordless-arcade
+#   mkdir arks-arcade && cd arks-arcade
 #   curl -O <raw url of this file>          # or just paste it
 #   cp .env.example .env && edit it
 #   docker compose pull && docker compose up -d
@@ -9,9 +9,9 @@
 # TZ matters: daily challenges and streaks roll over at local midnight.
 
 services:
-  wordless-arcade:
-    image: ghcr.io/YOUR_GITHUB_USERNAME/wordless-arcade:latest
-    container_name: wordless-arcade
+  arks-arcade:
+    image: ghcr.io/destynnreigneer/arks-arcade:latest
+    container_name: arks-arcade
     restart: unless-stopped
     ports:
       - "3000:3000"

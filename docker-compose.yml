@@ -1,8 +1,8 @@
 services:
-  wordless-arcade:
+  arks-arcade:
     build: .
-    image: wordless-arcade:local
-    container_name: wordless-arcade
+    image: arks-arcade:local
+    container_name: arks-arcade
     restart: unless-stopped
     ports:
       - "3000:3000"
