@@ -47,6 +47,7 @@ const ArcadeKit = (() => {
       reset() {
         let last = '';
         try { last = localStorage.getItem('arcade.initials') || ''; } catch { /* unavailable */ }
+        if (typeof ArcadeProfile !== 'undefined' && ArcadeProfile.initials()) last = ArcadeProfile.initials();
         boxes.forEach((b, i) => { b.value = last[i] || ''; });
         boxes[0].focus();
       },
@@ -65,7 +66,11 @@ const ArcadeKit = (() => {
       li.className = (i === 0 ? 'top1' : '') + (r.id === highlightId ? ' me' : '');
       li.innerHTML = '<span class="rk"></span><span class="who"></span><span class="det"></span><span class="pts"></span>';
       li.querySelector('.rk').textContent = `#${i + 1}`;
-      li.querySelector('.who').textContent = r.initials;
+      const who = li.querySelector('.who');
+      if (r.profileName && typeof ArcadeProfile !== 'undefined') {
+        who.style.cssText = 'display:flex;align-items:center;gap:6px;width:auto;letter-spacing:0;white-space:nowrap';
+        who.append(ArcadeProfile.avatarEl(r.profileAvatar, 22), r.profileName);
+      } else who.textContent = r.initials;
       li.querySelector('.det').textContent = r.detail || '';
       li.querySelector('.pts').textContent = r.score.toLocaleString('en-US');
       list.appendChild(li);
@@ -81,7 +86,10 @@ const ArcadeKit = (() => {
     }
   }
 
-  const saveScore = (game, entry) => api(`/api/scores/${game}`, entry);
+  // A signed-in profile gets the credit (the server checks its token).
+  const saveScore = (game, entry) => api(`/api/scores/${game}`, {
+    ...entry, profileToken: typeof ArcadeProfile !== 'undefined' ? ArcadeProfile.token() : null
+  });
 
   return { $, toast, api, wireInitials, renderScores, loadScores, saveScore };
 })();

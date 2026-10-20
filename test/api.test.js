@@ -967,6 +967,37 @@ async function run({ base, root }) {
   ok('Dare Devil: an adult room needs its password to join', (await party('daredevil', `/rooms/${ddRoom.code}/join`, 'POST', { name: 'X', password: 'nope' })).status === 401 &&
     (await party('daredevil', `/rooms/${ddRoom.code}/join`, 'POST', { name: 'X', password: 'wild' })).status === 201);
 
+  // ---- arcade profiles ---------------------------------------------------------------
+  const asked = await wl('/profiles', 'POST', { name: 'Maya', avatar: 'shiba:2' });
+  ok('anyone can ask for a profile', asked.status === 201 && asked.data.status === 'pending');
+  ok('…but it waits for approval', !(await wl('/profiles')).data.some(p => p.name === 'Maya'));
+  ok('guest names are reserved for guests', (await wl('/profiles', 'POST', { name: 'Guest 4' })).status === 400);
+  ok('profile requests are listed for the admin', (await asAdmin('/profiles/admin')).data.some(p => p.name === 'Maya' && p.status === 'pending'));
+  ok('approving needs the admin password', (await wl(`/profiles/admin/${asked.data.id}/approve`, 'POST', {})).status === 401);
+  await asAdmin(`/profiles/admin/${asked.data.id}/approve`, 'POST', {});
+  ok('approved profiles show in the picker', (await wl('/profiles')).data.some(p => p.name === 'Maya' && p.avatar === 'shiba:2' && !p.hasPin));
+  const maya = (await wl(`/profiles/${asked.data.id}/use`, 'POST', {})).data;
+  ok('a profile without a PIN can be picked straight away', !!maya.token);
+  const mayaScore = await wl('/scores/dino', 'POST', { score: 321, board: 'run', profileToken: maya.token });
+  ok('a score saved as a profile needs no initials', mayaScore.status === 201);
+  ok('…and shows the profile name and avatar', (await wl('/scores/dino?board=run')).data.some(r => r.profileName === 'Maya' && r.profileAvatar === 'shiba:2' && r.score === 321));
+  ok('a fake token gets no credit', (await wl('/scores/dino', 'POST', { score: 50, board: 'run', profileToken: 'x.y' })).status === 400);
+  const mayaPinned = (await wl(`/profiles/${asked.data.id}/pin`, 'POST', { token: maya.token, pin: '4321' })).data;
+  ok('Maya can add her own PIN', mayaPinned.profile.hasPin && !!mayaPinned.token);
+  ok('…after which the old token stops working', (await wl('/scores/dino', 'POST', { score: 60, board: 'run', profileToken: maya.token })).status === 400);
+  ok('picking her profile now needs the PIN', (await wl(`/profiles/${asked.data.id}/use`, 'POST', {})).status === 401 &&
+    (await wl(`/profiles/${asked.data.id}/use`, 'POST', { pin: '9999' })).status === 401);
+  ok('the right PIN works', !!(await wl(`/profiles/${asked.data.id}/use`, 'POST', { pin: '4321' })).data.token);
+  await asAdmin(`/profiles/admin/${asked.data.id}/clear-pin`, 'POST', {});
+  ok('the admin can clear a forgotten PIN', !!(await wl(`/profiles/${asked.data.id}/use`, 'POST', {})).data.token);
+  ok('an approved profile becomes a Rambler player with the same id', !!(await wl(`/rambler/players/${asked.data.id}`)).data);
+  const g1 = (await wl('/profiles/guest', 'POST', {})).data.name;
+  const g2 = (await wl('/profiles/guest', 'POST', {})).data.name;
+  ok('guests get numbered names', /^Guest \d+$/.test(g1) && g1 !== g2);
+  const mayaTok = (await wl(`/profiles/${asked.data.id}/use`, 'POST', {})).data.token;
+  const mayaWordless = await wl('/leaderboard', 'POST', { themeId: 'classic', won: true, guesses: 2, hintsUsed: 0, word: 'apple', elapsedMs: 5000, difficulty: 'easy', profileToken: mayaTok });
+  ok('Wordless credits a profile too', mayaWordless.status === 201 && (await wl('/leaderboard?difficulty=easy')).data.some(r => r.profileName === 'Maya'));
+
   // ---- Short Fuse -----------------------------------------------------------------
   const SF = base + '/api/shortfuse';
   const sf = async (p, method = 'GET', body, headers = {}) => {

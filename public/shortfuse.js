@@ -12,7 +12,7 @@ const S = {
   config: null,
   level: 'kids',
   mode: 'local',
-  names: ['', ''],
+  names: [typeof ArcadeProfile !== 'undefined' ? ArcadeProfile.name() : '', ''],
   pin: sessionGet('sf.pin') || '',
   adultOk: sessionGet('sf.adultOk') === 'yes',
   table: null,        // { kind: 'local', id, token } | { kind: 'room', code, playerId, token }

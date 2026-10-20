@@ -118,6 +118,14 @@
   .hidden { display: none !important; }
 
   /* ---- Comm Center ---- */
+  /* ---- who's playing ---- */
+  .player-chip {
+    display: inline-flex; align-items: center; gap: 8px; margin: -6px 0 18px; padding: 6px 14px 6px 6px; border-radius: 999px;
+    background: var(--card); border: 1px solid var(--border); color: var(--text); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer;
+  }
+  .player-chip:hover { border-color: var(--accent); }
+  .player-chip small { color: var(--dim); font-weight: 600; }
+
   /* ---- join a game ---- */
   .lobby {
     width: 100%; max-width: 680px; margin: 0 0 22px;
@@ -243,7 +251,8 @@
 <body>
 
 <h1 id="arcadeTitle"><span id="arcadeName"></span><span class="lit">ARCADE</span></h1>
-<div class="tagline">No accounts, no ads, no internet required.</div>
+<div class="tagline">No ads, no sign-ups, no internet required.</div>
+<button class="player-chip" id="playerChip" type="button"></button>
 
 <!-- Games being hosted right now, and a QR code to get other phones here -->
 <section class="lobby" aria-label="Join a game">
@@ -405,6 +414,8 @@
   </div>
 </div>
 
+<script src="avatars.js"></script>
+<script src="profile.js"></script>
 <script src="arcade-qr.js"></script>
 <script src="hub.js"></script>
 

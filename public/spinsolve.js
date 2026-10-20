@@ -25,7 +25,7 @@
   const SLICE = 360 / WEDGES.length;
 
   const S = {
-    names: ['', ''], rounds: 3, players: [], cur: 0, round: 0, puzzle: null,
+    names: [typeof ArcadeProfile !== 'undefined' ? ArcadeProfile.name() : '', ''], rounds: 3, players: [], cur: 0, round: 0, puzzle: null,
     revealed: new Set(), used: new Set(), strikes: 0, wedge: null, busy: false,
     rotation: 0, usedPuzzles: new Set(),
     config: null, level: 'kids', pack: 'all', pool: [], banter: null,

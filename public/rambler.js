@@ -660,7 +660,7 @@ function renderDailyStandings(host, standings, { mineId = null } = {}) {
       '<span class="r"></span><span class="av"></span><span class="nm"></span>' +
       '<span class="tag"></span><span class="s"></span>';
     row.querySelector('.r').textContent = String(i + 1);
-    row.querySelector('.av').textContent = r.avatar;
+    showAvatar(row.querySelector('.av'), r.avatar);
     row.querySelector('.nm').textContent = r.name;
     row.querySelector('.tag').textContent = r.profile === 'adult' ? 'unfiltered' : 'kids';
     row.querySelector('.s').textContent = String(r.score);
@@ -767,6 +767,19 @@ function showDailyResult(daily) {
 // only the chosen id kept locally.
 const PROFILE_KEY = 'rambler.playerId';
 
+// Arcade profiles use drawn avatars ("shiba:3"); older Rambler ones are emoji.
+function showAvatar(el, avatar) {
+  if (typeof Avatars !== 'undefined' && /^[a-z]+:/.test(String(avatar))) {
+    el.textContent = '';
+    el.style.display = 'inline-block';
+    el.style.width = el.style.height = '1.6em';
+    el.style.verticalAlign = 'middle';
+    Avatars.put(el, avatar);
+  } else {
+    el.textContent = avatar;
+  }
+}
+
 async function loadProfiles() {
   try {
     const data = await api('/players');
@@ -805,7 +818,7 @@ function profileMeta(p) {
 function renderProfileChip() {
   const chip = $('profileBtn');
   chip.classList.toggle('signed', !!S.player);
-  $('pcAvatar').textContent = S.player ? S.player.avatar : '\u{1F464}';
+  showAvatar($('pcAvatar'), S.player ? S.player.avatar : '\u{1F464}');
   $('pcName').textContent = S.player ? S.player.name : 'Guest';
   $('pcMeta').textContent = S.player ? profileMeta(S.player) : 'tap to pick';
 }
@@ -820,7 +833,7 @@ async function showProfilePicker() {
     tile.type = 'button';
     tile.className = 'who-tile' + (S.player && S.player.id === p.id ? ' current' : '');
     tile.innerHTML = '<span class="av"></span><span class="nm"></span><span class="sub"></span>';
-    tile.querySelector('.av').textContent = p.avatar;
+    showAvatar(tile.querySelector('.av'), p.avatar);
     tile.querySelector('.nm').textContent = p.name;
     tile.querySelector('.sub').textContent = p.games ? profileMeta(p) : 'new';
     tile.onclick = () => {
@@ -914,7 +927,7 @@ async function openProfileDetail() {
   S.player = { ...S.player, ...full };
   renderProfileChip();
 
-  $('pdTitle').textContent = `${full.avatar} ${full.name}`;
+  $('pdTitle').textContent = full.name;
 
   const stats = [
     ['Streak', full.streak + (full.streak === 1 ? ' day' : ' days')],

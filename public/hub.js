@@ -17,6 +17,23 @@
     daredevil: { label: 'Dare Devil', href: 'daredevil.html' }
   };
 
+  // ---- who's playing ---------------------------------------------------------
+  function paintChip() {
+    const chip = $('playerChip');
+    const p = ArcadeProfile.get();
+    chip.innerHTML = '';
+    chip.appendChild(ArcadeProfile.avatarEl(p ? p.avatar : 'emoji:👤', 30));
+    const label = document.createElement('span');
+    label.textContent = p ? `Playing as ${p.name}` : 'Who\'s playing?';
+    chip.appendChild(label);
+    chip.insertAdjacentHTML('beforeend', '<small>▾</small>');
+  }
+  $('playerChip').onclick = () => ArcadeProfile.open();
+  ArcadeProfile.onChange(paintChip);
+  paintChip();
+  // First visit on this device: ask.
+  if (!ArcadeProfile.get()) setTimeout(() => ArcadeProfile.open(), 600);
+
   // ---- join a game -----------------------------------------------------------
   // Every room being hosted anywhere in the arcade, refreshed every few seconds.
   const STATUS = { open: 'Join', playing: 'Playing now', full: 'Full' };

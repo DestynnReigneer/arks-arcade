@@ -246,6 +246,11 @@ ensureColumn('themes', 'clues', "TEXT NOT NULL DEFAULT '{}'");
 // any-length game, which is closest to Normal.
 ensureColumn('scores', 'difficulty', "TEXT NOT NULL DEFAULT 'normal'");
 
+// Scores credited to an arcade profile.
+ensureColumn('scores', 'profile_id', 'TEXT');
+ensureColumn('scores', 'profile_name', 'TEXT');
+ensureColumn('scores', 'profile_avatar', 'TEXT');
+
 // The feedback status used to be spelled the British way.
 db.exec("UPDATE comm_feedback SET status = 'canceled' WHERE status = 'cancelled'");
 
@@ -423,12 +428,12 @@ function computeScore({ won, guesses, hintsUsed, elapsedMs }) {
   return Math.max(0, Math.round(raw / 10) * 10);
 }
 
-function insertScore({ initials, themeId, won, guesses, hintsUsed, word, elapsedMs, difficulty = 'normal' }) {
+function insertScore({ initials, themeId, won, guesses, hintsUsed, word, elapsedMs, difficulty = 'normal', profile = null }) {
   const theme = getTheme(themeId);
   const score = computeScore({ won, guesses, hintsUsed, elapsedMs });
   const info = db.prepare(`
-    INSERT INTO scores (initials, score, theme_id, theme_label, theme_emoji, won, guesses, hints_used, word, elapsed_ms, difficulty)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO scores (initials, score, theme_id, theme_label, theme_emoji, won, guesses, hints_used, word, elapsed_ms, difficulty, profile_id, profile_name, profile_avatar)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     initials,
     score,
@@ -440,7 +445,10 @@ function insertScore({ initials, themeId, won, guesses, hintsUsed, word, elapsed
     hintsUsed,
     word,
     elapsedMs,
-    difficulty
+    difficulty,
+    profile ? profile.id : null,
+    profile ? profile.name : null,
+    profile ? profile.avatar : null
   );
   // Each difficulty is its own board, so rank within it.
   const rank = db.prepare('SELECT COUNT(*) AS c FROM scores WHERE score > ? AND difficulty = ?').get(score, difficulty).c + 1;
@@ -472,7 +480,9 @@ function listLeaderboard({ themeId, difficulty, limit, includeAdult = false }) {
     word: r.word,
     elapsedMs: r.elapsed_ms,
     difficulty: r.difficulty,
-    createdAt: r.created_at
+    createdAt: r.created_at,
+    profileName: r.profile_name || null,
+    profileAvatar: r.profile_avatar || null
   }));
 }
 
