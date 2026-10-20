@@ -337,6 +337,56 @@ async function run() {
   }
   ok('50 random games never overlap the snake or leave the board', filled === 50);
 
+  console.log('\n-- brick breaker --');
+  const BR = require(path.join(ROOT, 'public/bricks-engine.js'));
+  ok('every level is 12 bricks wide and has something to break', BR.LEVELS.every((l, i) => BR.bricksFor(i).some(b => !b.steel)));
+  const serveG = BR.create({ rand: () => 0.5 });
+  BR.step(serveG, 0.1, { x: 100 });
+  ok('the ball rides on the paddle until launched', serveG.balls[0].stuck && Math.abs(serveG.balls[0].x - 100) < 0.01);
+  BR.step(serveG, 0.01, { x: 100, launch: true });
+  ok('launching sends it up', serveG.phase === 'play' && serveG.balls[0].vy < 0);
+  const edge = BR.create();
+  edge.phase = 'play';
+  edge.paddle.x = 180;
+  edge.balls = [{ x: 180 + 30, y: edge.paddle.y - 12, vx: 0, vy: 200, r: 5 }];
+  BR.step(edge, 0.02, { x: 180 });
+  ok('hitting the end of the paddle sends the ball off at an angle', edge.balls[0].vy < 0 && edge.balls[0].vx > 100);
+  const drop = BR.create();
+  drop.phase = 'play';
+  drop.balls = [{ x: 20, y: BR.H - 10, vx: 0, vy: 300, r: 5 }];
+  drop.paddle.x = 300;
+  BR.step(drop, 0.1, { x: 300 });
+  ok('missing the ball costs a life and serves again', drop.lives === 2 && drop.phase === 'serve');
+  drop.lives = 1;
+  drop.phase = 'play';
+  drop.balls = [{ x: 20, y: BR.H - 10, vx: 0, vy: 300, r: 5 }];
+  BR.step(drop, 0.1, { x: 300 });
+  ok('…and the last life ends the game', drop.phase === 'over');
+  const rocket = BR.create();
+  rocket.phase = 'play';
+  const bricksBefore = rocket.bricks.length;
+  rocket.balls = [{ x: 100, y: 400, vx: 0, vy: -4000, r: 5 }];
+  BR.step(rocket, 0.1, { x: 100 });
+  ok('even a very fast ball cannot pass through a brick', rocket.bricks.length === bricksBefore - 1 && rocket.balls[0].vy > 0);
+  const split = BR.create();
+  split.phase = 'play';
+  split.balls = [{ x: 180, y: 300, vx: 50, vy: -200, r: 5 }];
+  BR.applyPower(split, 'multi');
+  ok('the three-ball power-up splits the ball', split.balls.length === 3);
+  let clearedLevels = 0, problem = '';
+  for (let L = 0; L < BR.LEVELS.length; L++) {
+    let seed = L + 1;
+    const g = BR.create({ level: L, rand: () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; } });
+    for (let t = 0; t < 600 && g.phase !== 'cleared' && g.phase !== 'over'; t += 1 / 120) {
+      const ball = g.balls.reduce((a, b) => (!a || b.y > a.y ? b : a), null);
+      BR.step(g, 1 / 120, { x: ball ? ball.x + Math.sin(t * 1.7) * 20 : 180, launch: true });
+      if (g.balls.some(b => !(b.x >= 0 && b.x <= BR.W) || Number.isNaN(b.y))) { problem = 'a ball left the field on level ' + (L + 1); break; }
+    }
+    if (g.phase === 'cleared') clearedLevels++;
+    else if (!problem) problem = `level ${L + 1} not cleared (${BR.breakable(g)} left)`;
+  }
+  ok('an autopilot paddle can clear every level, and the ball never escapes', clearedLevels === BR.LEVELS.length, problem);
+
   console.log(`\n  ${pass} passed, ${fail} failed`);
   return { pass, fail };
 }
