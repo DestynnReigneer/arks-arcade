@@ -284,6 +284,59 @@ async function run() {
   ok('the family deck has nothing rude in it', !/sex|naked|strip|kiss|drink|clothing|orgasm|fuck|shit/i.test(kidsTexts));
   ok('every card type is known', Object.values(DDC.DECK).flat().every(([type]) => DDC.TYPES[type]));
 
+  console.log('\n-- snake --');
+  const SN = require(path.join(ROOT, 'public/snake-engine.js'));
+  const sg = SN.create({ cols: 10, rows: 10, rand: () => 0 });
+  const head0 = { ...sg.snake[0] };
+  SN.step(sg);
+  ok('the snake moves one square each tick', sg.snake[0].x === head0.x + 1 && sg.snake.length === 3);
+  ok('it cannot reverse into itself', SN.turn(sg, 'left') === false);
+  ok('a turn is queued', SN.turn(sg, 'down') && SN.turn(sg, 'left') && sg.queue.join() === 'down,left');
+  SN.step(sg); SN.step(sg);
+  ok('quick double turns both happen', sg.dir === 'left');
+  const eat = SN.create({ cols: 10, rows: 10 });
+  eat.food = { x: eat.snake[0].x + 1, y: eat.snake[0].y };
+  SN.step(eat); SN.step(eat);
+  ok('eating an apple scores and grows the snake', eat.apples === 1 && eat.score === 20 && eat.snake.length === 4 && !!eat.food);
+  const wall = SN.create({ cols: 10, rows: 10 });
+  wall.food = { x: 0, y: 0 };
+  for (let i = 0; i < 10 && !wall.over; i++) SN.step(wall);
+  ok('classic: hitting a wall ends the game', wall.over && wall.events.includes('wall'));
+  const wrap = SN.create({ cols: 10, rows: 10, mode: 'wrap' });
+  wrap.food = { x: 0, y: 0 };
+  for (let i = 0; i < 6; i++) SN.step(wrap);
+  ok('wrap-around: walls take you to the other side', !wrap.over && wrap.snake[0].x === 1);
+  const coil = SN.create({ cols: 10, rows: 10 });
+  coil.food = { x: 0, y: 9 };
+  coil.grow = 3;
+  SN.step(coil);
+  for (const d of ['down', 'left', 'up']) { SN.turn(coil, d); SN.step(coil); }
+  ok('running into your own body ends the game', coil.over && coil.events.includes('self'));
+  const chase = SN.create({ cols: 10, rows: 10 });
+  chase.food = { x: 0, y: 9 };
+  for (const d of ['down', 'left', 'up']) { SN.turn(chase, d); SN.step(chase); }
+  ok('…but chasing your own tail is fine (it moves out of the way)', !chase.over);
+  const gold = SN.create({ cols: 10, rows: 10 });
+  gold.apples = 4;
+  gold.food = { x: gold.snake[0].x + 1, y: gold.snake[0].y };
+  SN.step(gold);
+  ok('every 5th apple brings a golden star', !!gold.gold && gold.events.includes('gold-appears'));
+  for (let i = 0; i < SN.GOLD_TICKS + 2 && gold.gold; i++) { gold.mode = 'wrap'; SN.step(gold); if (gold.over) break; }
+  ok('…which disappears if you are too slow', !gold.gold);
+  const fast = SN.create({ speed: 'fast' }), slow = SN.create({ speed: 'chill' });
+  ok('faster speeds tick faster', SN.interval(fast) < SN.interval(slow));
+  let filled = 0;
+  for (let n = 0; n < 50; n++) {
+    const r = SN.create({ cols: 12, rows: 12, mode: n % 2 ? 'wrap' : 'classic' });
+    for (let i = 0; i < 3000 && !r.over; i++) {
+      if (Math.random() < 0.3) SN.turn(r, ['up', 'down', 'left', 'right'][Math.floor(Math.random() * 4)]);
+      SN.step(r);
+    }
+    const cells = new Set(r.snake.map(p => p.x + ',' + p.y));
+    if (cells.size === r.snake.length && r.snake.every(p => p.x >= 0 && p.y >= 0 && p.x < 12 && p.y < 12)) filled++;
+  }
+  ok('50 random games never overlap the snake or leave the board', filled === 50);
+
   console.log(`\n  ${pass} passed, ${fail} failed`);
   return { pass, fail };
 }
