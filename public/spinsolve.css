@@ -222,7 +222,7 @@ body::before {
 .name-row input { margin: 0; }
 .name-row button { width: 42px; border-radius: 9px; border: 1px solid var(--border); background: var(--bg); color: var(--text); cursor: pointer; flex: none; }
 
-/* Level picker, same as Short Fuse */
+/* Level picker, same as the party card games */
 .levels { display: grid; gap: 8px; grid-template-columns: repeat(2, 1fr); }
 .level {
   text-align: left; padding: 10px; border-radius: 12px; cursor: pointer; background: var(--bg);

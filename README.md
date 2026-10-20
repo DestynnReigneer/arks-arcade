@@ -128,15 +128,11 @@ Edit these by hand — they are plain text, one word per line, `#` for comments:
 
 Validation always uses the full list, so a real word is never rejected as fake — only the blocked ones are. Slurs aimed at race, sexuality, or disability are in neither list.
 
-### Short Fuse (`/shortfuse.html`)
-
-An Exploding Kittens-style card game for 2-8 players on one phone or several, with a Kids deck and three adult decks behind the adult PIN.
-
 ### Spin & Solve (`/spinsolve.html`)
 
 A wheel-and-phrase puzzle game. Spin, call consonants, buy vowels for $250, solve. Solo gets three strikes a round and goes on the high-score board; 2-4 players pass one phone. 200+ built-in family-friendly puzzles in `public/spin-puzzles.js`.
 
-Levels run Kids, Cheeky, Spicy, Filthy like Short Fuse; the three adult levels have their own built-in banks (`spinsolve/puzzles.js`), sit behind the adult PIN, switch on the adult look, and keep their own unannounced high-score board. Players can suggest a theme from the game; the admin builds packs at any level in the Spin & Solve tab by copying a prompt and pasting the AI's answer, and every pasted puzzle is checked to fit the board and use American spelling.
+Levels run Kids, Cheeky, Spicy, Filthy like the party card games; the three adult levels have their own built-in banks (`spinsolve/puzzles.js`), sit behind the adult PIN, switch on the adult look, and keep their own unannounced high-score board. Players can suggest a theme from the game; the admin builds packs at any level in the Spin & Solve tab by copying a prompt and pasting the AI's answer, and every pasted puzzle is checked to fit the board and use American spelling.
 
 ### Chess (`/chess.html`)
 
@@ -154,7 +150,7 @@ Questions come from a built-in bank (`trivia/bank.js`), packs built from an AI p
 
 ### Uh-Oh: Part Deux (`/partdeux.html`)
 
-A shedding card game for 2-8: match the top card by color or number and be first to empty your hand. Skips, Draw Twos, Reverses, Nopes (bounce a draw penalty), Gifts (give a card away), Wilds and the 💣 Draw Four wear Short Fuse's funny names at every level. Say "Uh-Oh!" before your last card or get caught for +2. One phone or a phone each; adult decks behind the PIN with an optional Drinking mode.
+A shedding card game for 2-8: match the top card by color or number and be first to empty your hand. Skips, Draw Twos, Reverses, Nopes (bounce a draw penalty), Gifts (give a card away), Wilds and the 💣 Draw Four wear funny names at every level. Say "Uh-Oh!" before your last card or get caught for +2. One phone or a phone each; adult decks behind the PIN with an optional Drinking mode.
 
 ### Dare Devil (`/daredevil.html`)
 
@@ -287,7 +283,6 @@ rambler/                   Rambler, self-contained
   rooms.js                In-memory multi-device rooms over Server-Sent Events
   routes.js               Everything under /api/rambler
 
-shortfuse/                Short Fuse engine, cards and rooms
 chess/                    Two-phone chess rooms (/api/chess)
 spinsolve/                Spin & Solve levels, adult banks, packs and requests (/api/spinsolve)
 trivia/                   Know-It-All questions, packs, Open Trivia DB download, rooms (/api/trivia)
@@ -298,7 +293,6 @@ words/                    Dictionaries, baked into the image (see above)
 public/index.html         The arcade hub
 public/wordless.html/.js  Wordless
 public/rambler.html/.js    Rambler
-public/shortfuse.*        Short Fuse
 public/spinsolve.*        Spin & Solve (puzzles in spin-puzzles.js)
 public/chess.*            Chess (chess-engine.js, chess-worker.js)
 public/dino.*             Dino Dash

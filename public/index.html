@@ -48,7 +48,7 @@
   }
   h1 .lit { color: var(--accent); }
   .tagline {
-    margin-top: 8px;
+    margin: 8px 0 22px;
     font-size: 13px;
     color: var(--muted);
     letter-spacing: 1px;
@@ -86,7 +86,6 @@
   }
   .game.rambler h2 { color: var(--accent); }
   .game.wordless h2 { color: var(--accent-2); }
-  .game.shortfuse h2 { color: #ff5e5e; }
   .game.spinsolve h2 { color: #ff4fa3; }
   .game.chess h2 { color: #e9dcb8; }
   .game.dino h2 { color: #3ddc84; }
@@ -119,10 +118,13 @@
 
   /* ---- Comm Center ---- */
   /* ---- who's playing ---- */
+  /* Who's playing: tucked in the top corner, above the title */
   .player-chip {
-    display: inline-flex; align-items: center; gap: 8px; margin: -6px 0 18px; padding: 6px 14px 6px 6px; border-radius: 999px;
-    background: var(--card); border: 1px solid var(--border); color: var(--text); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer;
+    position: absolute; top: 6px; right: 10px; z-index: 5;
+    display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 3px; border-radius: 999px;
+    background: var(--card); border: 1px solid var(--border); color: var(--text); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
   }
+  .player-chip span { max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .player-chip:hover { border-color: var(--accent); }
   .player-chip small { color: var(--dim); font-weight: 600; }
 
@@ -268,7 +270,6 @@
         <option value="/">The whole arcade</option>
         <option value="wordless.html">🔤 Wordless</option>
         <option value="rambler.html">🔠 Rambler</option>
-        <option value="shortfuse.html">💣 Short Fuse</option>
         <option value="spinsolve.html">🎡 Spin &amp; Solve</option>
         <option value="chess.html">♞ Chess</option>
         <option value="dino.html">🦖 Dino Dash</option>
@@ -297,13 +298,6 @@
     <h2>Rambler</h2>
     <p>Ramble across a grid of letters, chaining them into every word you can find before the timer runs out. Play solo, share a phone, or everyone on their own.</p>
     <div class="meta">1–8 players · Timed · Kids &amp; adult word lists</div>
-  </a>
-
-  <a class="game shortfuse" href="shortfuse.html">
-    <div class="emoji">💣</div>
-    <h2>Short Fuse</h2>
-    <p>Draw cards and pray it isn't the bomb. Defuse, dodge, and stitch up your friends. Share a phone or play on your own.</p>
-    <div class="meta">2–8 players · Cards · Kids to 🌶️🌶️🌶️</div>
   </a>
 
   <a class="game spinsolve" href="spinsolve.html">
@@ -394,7 +388,6 @@
       <option value="">The whole arcade</option>
       <option value="wordless">Wordless</option>
       <option value="rambler">Rambler</option>
-      <option value="shortfuse">Short Fuse</option>
       <option value="spinsolve">Spin &amp; Solve</option>
       <option value="chess">Chess</option>
       <option value="dino">Dino Dash</option>

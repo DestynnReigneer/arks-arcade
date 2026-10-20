@@ -8,7 +8,7 @@
 const dictionary = require('../rambler/dictionary');
 const KIDS = require('../public/spin-puzzles');
 
-// Same scale as Short Fuse.
+// Same scale as the party card games.
 const LEVELS = {
   kids: { id: 'kids', label: 'Kids', emoji: '🧒', adult: false, blurb: 'Family-friendly puzzles for everyone.' },
   cheeky: { id: 'cheeky', label: 'Cheeky', emoji: '🌶️', adult: true, blurb: 'Innuendo and date-night giggles.' },
