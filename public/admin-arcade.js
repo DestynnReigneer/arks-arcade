@@ -214,7 +214,7 @@
 
   // ---- home page games -------------------------------------------------------
 
-  const GAME_EMOJI = { wordless: '🔤', rambler: '🥾', shortfuse: '💣', spinsolve: '🎡', chess: '♞', dino: '🦖', trivia: '🧠' };
+  const GAME_EMOJI = { wordless: '🔤', rambler: '🔠', shortfuse: '💣', spinsolve: '🎡', chess: '♞', dino: '🦖', trivia: '🧠' };
   let home = null;
 
   async function loadHomeGames() {

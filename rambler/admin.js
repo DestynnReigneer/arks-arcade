@@ -18,8 +18,7 @@ function fail(message, status) {
 }
 
 router.use((req, res, next) => {
-  const supplied = req.get('X-Admin-Token') || '';
-  if (!ADMIN_TOKEN || supplied !== ADMIN_TOKEN) {
+  if (!require('../arcade/security').sameSecret(req.get('X-Admin-Token'), ADMIN_TOKEN)) {
     return res.status(401).json({ error: 'Admin token missing or incorrect.' });
   }
   next();

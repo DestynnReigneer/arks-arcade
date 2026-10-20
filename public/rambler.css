@@ -1443,3 +1443,6 @@ body.in-vice .screen { position: relative; z-index: 1; }
 }
 .d-row.mine .nm { color: var(--accent); }
 .d-row.first .r { color: var(--accent); }
+
+/* The logo: a line tracing a word through a grid of tiles, like the game */
+.logo-grid { width: 26px; height: 26px; vertical-align: -5px; margin-right: 6px; }

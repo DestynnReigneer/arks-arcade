@@ -24,8 +24,11 @@ const PORT = process.env.PORT || 3000;
 const ADMIN_TOKEN = process.env.ADMIN_PASSWORD || process.env.ADMIN_TOKEN || '';
 const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL || '';
 
-app.set('trust proxy', 1);
-app.use(express.json());
+const security = require('./arcade/security');
+app.set('trust proxy', security.trustProxySetting());
+app.disable('x-powered-by');
+app.use(security.headers);
+app.use(express.json({ limit: '200kb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Rambler lives behind its own router; everything it needs is under
@@ -40,8 +43,7 @@ const INITIALS_RE = /^[A-Z0-9]{1,3}$/;
 // Lightweight shared-token gate for a solo/family admin, not a full account system.
 // If ADMIN_TOKEN isn't configured, admin routes are disabled entirely (deny by default).
 function requireAdmin(req, res, next) {
-  const supplied = req.get('X-Admin-Token') || '';
-  if (!ADMIN_TOKEN || supplied !== ADMIN_TOKEN) {
+  if (!security.sameSecret(req.get('X-Admin-Token'), ADMIN_TOKEN)) {
     return res.status(401).json({ error: 'Admin token missing or incorrect.' });
   }
   next();
@@ -201,7 +203,7 @@ app.get('/api/themes', (req, res) => {
     return res.status(403).json({ error: 'That PIN is not right.' });
   }
   // The admin page lists every theme, so adult ones can be deleted too.
-  const isAdmin = !!ADMIN_TOKEN && req.get('X-Admin-Token') === ADMIN_TOKEN;
+  const isAdmin = security.sameSecret(req.get('X-Admin-Token'), ADMIN_TOKEN);
   res.json(db.listThemes({ includeAdult: isAdmin || adultUnlocked(req) }).map(t =>
     t.id === 'classic' ? { ...t, words: [...new Set([...t.words, ...getClassicExtras()])] }
       : t.adult && !isAdmin && t.words.filter(w => w.length <= 4).length < 10

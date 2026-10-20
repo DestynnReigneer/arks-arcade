@@ -28,7 +28,13 @@
         const li = document.createElement('li');
         li.className = r.status;
         li.innerHTML = '<span class="l-emoji"></span><span class="l-main"><div class="l-title"></div><div class="l-sub"></div></span><a class="l-join"></a>';
-        li.querySelector('.l-emoji').textContent = r.emoji;
+        if (r.icon) {
+          const img = document.createElement('img');
+          img.src = r.icon;
+          img.alt = '';
+          img.style.cssText = 'width:26px;height:26px;display:block';
+          li.querySelector('.l-emoji').appendChild(img);
+        } else li.querySelector('.l-emoji').textContent = r.emoji;
         li.querySelector('.l-title').textContent = `${r.adult ? '🔞 ' : ''}${r.label} · ${r.host || 'someone'}'s game${r.locked ? ' 🔒' : ''}`;
         li.querySelector('.l-sub').textContent = `Code ${r.code} · ${r.players}/${r.max} players · ${r.detail}${r.status === 'playing' ? ' · game in progress' : ''}`;
         const join = li.querySelector('.l-join');

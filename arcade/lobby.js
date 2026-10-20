@@ -11,7 +11,7 @@ const express = require('express');
 const QRCode = require('qrcode');
 
 const GAMES = {
-  rambler: { label: 'Rambler', emoji: '🥾', page: 'rambler.html' },
+  rambler: { label: 'Rambler', emoji: '🔠', icon: 'rambler-logo.svg', page: 'rambler.html' },
   shortfuse: { label: 'Short Fuse', emoji: '💣', page: 'shortfuse.html' },
   chess: { label: 'Chess', emoji: '♞', page: 'chess.html' },
   trivia: { label: 'Know-It-All', emoji: '🧠', page: 'trivia.html' }
