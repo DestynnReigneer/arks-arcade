@@ -13,7 +13,11 @@
     dino: { label: 'Dino Dash', href: 'dino.html' },
     trivia: { label: 'Know-It-All', href: 'trivia.html' },
     partdeux: { label: 'Uh-Oh: Part Deux', href: 'partdeux.html' },
-    daredevil: { label: 'Dare Devil', href: 'daredevil.html' }
+    daredevil: { label: 'Dare Devil', href: 'daredevil.html' },
+    snake: { label: 'Snake', href: 'snake.html' },
+    bricks: { label: 'Brick Breaker', href: 'bricks.html' },
+    blocks: { label: 'Block Drop', href: 'blocks.html' },
+    towers: { label: 'Tower Defense', href: 'towers.html' }
   };
 
   // ---- who's playing ---------------------------------------------------------

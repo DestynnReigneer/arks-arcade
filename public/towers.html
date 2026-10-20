@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Tower Defense</title>
+<link rel="stylesheet" href="arcade-ui.css">
+<link rel="stylesheet" href="game-shell.css">
+<link rel="stylesheet" href="tutorial.css">
+<style>
+  :root { --accent: #ffc72c; --on-accent: #1a0f05; }
+  .stage { cursor: pointer; }
+  .wave-bar { display: flex; gap: 8px; margin-top: 10px; }
+  .wave-bar .primary { flex: 1; }
+  .wave-bar .ghost { width: 74px; }
+  .info { margin-top: 10px; min-height: 92px; }
+  .info .hint { margin: 0; }
+  .build-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .build-grid button, .tower-actions button {
+    display: flex; align-items: center; gap: 8px; text-align: left; padding: 9px 10px; border-radius: 10px; cursor: pointer;
+    background: var(--bg); color: var(--text); border: 1px solid var(--border); font: inherit; font-size: 13px;
+  }
+  .build-grid button:disabled { opacity: 0.45; cursor: default; }
+  .build-grid .em { font-size: 24px; }
+  .build-grid b { display: block; }
+  .build-grid small { color: var(--dim); font-size: 11px; line-height: 1.3; display: block; }
+  .build-grid .cost { margin-left: auto; color: var(--accent); font-weight: 800; white-space: nowrap; }
+  .tower-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .tower-head .em { font-size: 28px; }
+  .tower-head small { color: var(--dim); display: block; font-size: 12px; }
+  .tower-stats { display: flex; gap: 12px; font-size: 12.5px; color: var(--muted); margin-bottom: 10px; flex-wrap: wrap; }
+  .tower-actions { display: flex; gap: 8px; }
+  .tower-actions button { flex: 1; justify-content: center; font-weight: 700; }
+  .tower-actions button:disabled { opacity: 0.45; cursor: default; }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <a href="/" class="icon-btn" title="Back to the arcade">←</a>
+  <h1><i class="t-emoji">🏰 </i>TOWER <span>DEFENSE</span></h1>
+  <div class="btns">
+    <button class="icon-btn" id="pauseBtn" title="Pause (P)">⏸</button>
+    <button class="icon-btn" id="muteBtn" title="Sound">🔊</button>
+    <button class="icon-btn" id="scoresBtn" title="High scores">🏆</button>
+    <button class="icon-btn" id="helpBtn" title="How to play">?</button>
+  </div>
+</header>
+
+<div class="hud">
+  <div><small>Gold</small><b id="gold">0</b></div>
+  <div><small>Lives</small><b id="lives">20</b></div>
+  <div><small>Wave</small><b id="wave">0/25</b></div>
+  <div><small>Score</small><b id="score">0</b></div>
+</div>
+
+<div class="options" id="options">
+  <div class="seg" id="mapSeg" role="group" aria-label="Map"></div>
+</div>
+
+<div class="stage" id="stage">
+  <canvas id="canvas" aria-label="The map. Tap a grass square to build a tower, or a tower to upgrade it."></canvas>
+  <div class="stage-msg hidden" id="stageMsg"><b></b><span></span></div>
+</div>
+
+<div class="wave-bar">
+  <button class="primary" id="waveBtn">▶ Start wave 1</button>
+  <button class="ghost" id="speedBtn" title="Game speed (F)">⏩ 1×</button>
+</div>
+<div class="panel info" id="info"></div>
+<p class="hint center keys-hint">Keyboard: <b>1-4</b> build on the picked square · <b>U</b> upgrade · <b>S</b> sell · <b>Space</b> next wave · <b>F</b> speed · <b>P</b> pause</p>
+
+<script src="avatars.js"></script>
+<script src="profile.js"></script>
+<script src="stats.js"></script>
+<script src="tutorial.js"></script>
+<script src="blip.js"></script>
+<script src="arcade-kit.js"></script>
+<script src="game-shell.js"></script>
+<script src="towers-engine.js"></script>
+<script src="towers.js"></script>
+</body>
+</html>
