@@ -1,6 +1,6 @@
-# Wordless Arcade
+# ARKS Arcade
 
-A self-hosted arcade of two word games, served from one Node.js + Express + SQLite container. No external database, no internet access at runtime, no accounts.
+A self-hosted family and party game arcade: word games, card games, trivia, chess and more, served from one Node.js + Express + SQLite container. No external database, no ads, no sign-ups; it runs fine with no internet at all.
 
 `/` is the arcade hub; each game lives on its own page.
 
@@ -198,7 +198,7 @@ docker compose up -d --build
 pulls the image CI built rather than building anything locally:
 
 ```bash
-mkdir wordless-arcade && cd wordless-arcade
+mkdir arks-arcade && cd arks-arcade
 # copy docker-compose.prod.yml here as docker-compose.yml, and .env.example as .env
 docker compose pull && docker compose up -d
 docker compose ps          # STATUS should read "healthy"
