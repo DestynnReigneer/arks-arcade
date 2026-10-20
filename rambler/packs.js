@@ -11,7 +11,7 @@ const dictionary = require('./dictionary');
 //   1. its words become valid, so ENDERMAN actually scores;
 //   2. they are flagged, so finding one is an event rather than a quiet +5;
 //   3. boards are re-rolled until they genuinely contain some of them;
-//   4. the season wears its colours.
+//   4. the season wears its colors.
 // This file owns 1 and 2; round.js does 3; the client does 4.
 
 // The theme the current season is wearing, if any.

@@ -101,13 +101,13 @@ function growBoard(board, spec, side, rng = Math.random) {
   return { board: next, cols: cols + 1, rows, added: strip.length };
 }
 
-// Neighbour indices for every cell, precomputed once per shape. Boggle
+// Neighbor indices for every cell, precomputed once per shape. Boggle
 // adjacency is all 8 directions.
-const neighbourCache = new Map();
-function neighbours(spec) {
+const neighborCache = new Map();
+function neighbors(spec) {
   const { cols, rows } = dims(spec);
   const key = `${cols}x${rows}`;
-  if (neighbourCache.has(key)) return neighbourCache.get(key);
+  if (neighborCache.has(key)) return neighborCache.get(key);
 
   const table = [];
   for (let r = 0; r < rows; r++) {
@@ -125,7 +125,7 @@ function neighbours(spec) {
       table.push(list);
     }
   }
-  neighbourCache.set(key, table);
+  neighborCache.set(key, table);
   return table;
 }
 
@@ -134,7 +134,7 @@ function neighbours(spec) {
 // actually on the board — never trust the path the client drew.
 function findPath(board, spec, word) {
   const target = word.toUpperCase();
-  const adj = neighbours(spec);
+  const adj = neighbors(spec);
   const used = new Array(board.length).fill(false);
   const path = [];
 
@@ -163,5 +163,5 @@ function findPath(board, spec, word) {
 
 module.exports = {
   DICE_4, DICE_5, SIDES,
-  dims, cellCount, rollBoard, rollStrip, growBoard, neighbours, findPath
+  dims, cellCount, rollBoard, rollStrip, growBoard, neighbors, findPath
 };

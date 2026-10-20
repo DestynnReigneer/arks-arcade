@@ -1,6 +1,6 @@
 'use strict';
 
-// Every sound in Rambler is synthesised in the browser. Nothing is downloaded,
+// Every sound in Rambler is synthesized in the browser. Nothing is downloaded,
 // nothing is licensed, and the container works with no internet — which is the
 // whole point of a self-hosted arcade.
 //

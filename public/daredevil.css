@@ -1,0 +1,66 @@
+/* Dare Devil: one big card in the middle of the party. */
+:root { --accent: #ff3860; --on-accent: #fff; --gold: #ffd23f; --show-font: "Orbitron", var(--font); }
+.levels { display: grid; gap: 8px; grid-template-columns: repeat(2, 1fr); }
+.levels.small { margin: 10px 0; }
+.level { text-align: left; padding: 10px; border-radius: 12px; cursor: pointer; background: var(--bg); border: 2px solid var(--border); color: var(--text); }
+.level[aria-pressed="true"] { border-color: var(--accent); }
+.level .l-name { font-weight: 800; font-size: 14px; }
+.level .l-blurb { font-size: 11px; color: var(--dim); margin-top: 4px; line-height: 1.35; }
+.level .l-lock { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: #ff4fa3; margin-top: 6px; }
+.toggle { display: flex; align-items: center; gap: 8px; color: var(--text); font-size: 13.5px; margin: 12px 0 0; cursor: pointer; }
+.toggle input { width: 20px; height: 20px; margin: 0; flex: none; }
+.name-row { display: flex; gap: 6px; margin-bottom: 6px; }
+.name-row input { margin: 0; }
+.name-row button { width: 42px; border-radius: 9px; border: 1px solid var(--border); background: var(--bg); color: var(--text); cursor: pointer; flex: none; }
+.people { list-style: none; padding: 0; margin: 0 0 10px; }
+.people li { padding: 9px 4px; border-bottom: 1px solid var(--border); font-size: 15px; }
+.people li .tag { font-size: 11px; color: var(--accent); margin-left: 6px; }
+.people li.offline { opacity: 0.5; }
+
+.scores-strip { list-style: none; margin: 0 0 10px; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.scores-strip li { padding: 5px 10px; border-radius: 999px; background: var(--card); border: 1px solid var(--border); font-size: 13px; }
+.scores-strip li b { font-family: var(--show-font); color: var(--gold); margin-left: 4px; }
+.scores-strip li.now { border-color: var(--accent); box-shadow: 0 0 10px rgba(255, 56, 96, 0.4); }
+.rule {
+  margin: 0 auto 10px; padding: 8px 12px; border-radius: 12px; text-align: center; font-size: 13px; font-weight: 700;
+  background: rgba(255, 210, 63, 0.12); border: 1px dashed var(--gold); color: #ffe9a8;
+}
+.turn { text-align: center; font-family: var(--show-font); font-weight: 900; font-size: 18px; letter-spacing: 1px; margin: 6px 0 12px; }
+.turn span { color: var(--accent); }
+
+.deck {
+  position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  width: min(260px, 80vw); height: 340px; margin: 0 auto; border-radius: 22px; cursor: pointer; color: #fff;
+  border: 3px solid #ff3860; background: repeating-linear-gradient(135deg, #2a0a14 0 14px, #3a0d1c 14px 28px);
+  box-shadow: 0 0 28px rgba(255, 56, 96, 0.4), 6px 6px 0 #0007; animation: bob 2.4s ease-in-out infinite;
+}
+.deck:disabled { opacity: 0.6; cursor: default; animation: none; }
+@keyframes bob { 50% { transform: translateY(-5px) rotate(-1deg); } }
+.deck-face { font-size: 80px; filter: drop-shadow(0 0 12px rgba(255, 56, 96, 0.8)); }
+.deck-tap { font-family: var(--show-font); font-weight: 900; letter-spacing: 2px; }
+.deck-left { position: absolute; bottom: 12px; font-size: 12px; opacity: 0.75; }
+
+.dare-card {
+  width: min(320px, 88vw); min-height: 340px; margin: 0 auto; border-radius: 22px; padding: 18px; text-align: center;
+  display: flex; flex-direction: column; background: linear-gradient(160deg, #fff7f9, #ffe3ea); color: #2a0a14;
+  border: 4px solid var(--accent); box-shadow: 0 0 30px rgba(255, 56, 96, 0.45); animation: flip 0.45s ease;
+}
+@keyframes flip { from { transform: rotateY(90deg); } to { transform: rotateY(0); } }
+.dc-type { font-family: var(--show-font); font-weight: 900; letter-spacing: 2px; font-size: 15px; text-transform: uppercase; color: var(--accent); }
+.dc-type #dcEmoji { font-size: 22px; font-family: var(--font); }
+.dc-pts { color: #b88400; font-size: 12px; }
+.dc-text { flex: 1; display: flex; align-items: center; justify-content: center; font-size: clamp(19px, 5.4vw, 24px); font-weight: 800; line-height: 1.35; padding: 14px 4px; }
+.dare-card .row-btns button { padding: 12px 6px; font-size: 14px; }
+.dare-card .ghost { color: #2a0a14; border-color: #e2a3b2; }
+.dare-card.bomb { background: linear-gradient(160deg, #2a0a14, #4a0f22); color: #fff; animation: flip 0.45s ease, shake 0.5s 0.45s; }
+.dare-card.bomb .ghost { color: #fff; border-color: #ff7a93; }
+@keyframes shake { 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
+.log { margin-top: 14px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 8px 12px; font-size: 12.5px; color: var(--muted); line-height: 1.6; max-height: 100px; overflow-y: auto; }
+.log div:last-child { color: var(--text); }
+#quitBtn { margin-top: 12px; }
+.final { text-align: left; padding-left: 24px; margin: 10px 0; }
+.final li { padding: 6px 0; font-size: 15px; }
+.final li b { float: right; font-family: var(--show-font); color: var(--gold); }
+.drink-card { border: 2px solid var(--gold); box-shadow: 0 0 30px rgba(255, 210, 63, 0.35); overflow: visible; }
+.callout-who { font-family: var(--show-font); letter-spacing: 2px; color: var(--gold); margin-top: 6px; }
+.drink-card h2 { font-size: 20px; line-height: 1.35; margin: 10px 0 16px; }

@@ -36,7 +36,7 @@ as one product.
 
 ### How Rambler switches
 
-Every colour in `rambler.css` reads from the token block at the top of the
+Every color in `rambler.css` reads from the token block at the top of the
 file. The 8-Bit values sit on bare `:root`; the Vice values sit on
 `:root.unfiltered`, and `paintPalette()` in `rambler.js` toggles that class
 from the dictionary actually in play. A guest joining a room gets the host's
@@ -65,15 +65,15 @@ orange accent sitting on yellow-tinted highlights. That is gone.
 
 ### What changed besides the hex values
 
-- **Text is warm cream now** (`#F4ECD0`), and the secondary and caption greys
+- **Text is warm cream now** (`#F4ECD0`), and the secondary and caption grays
   are gold-tinted. The earlier version of this doc listed only five swaps
   and missed these — they are the biggest visible difference.
 - **The clock's low-time warning uses `--warn`**, not the accent. Gold is the
-  coin colour; it was standing in for a warning colour the old palette did
+  coin color; it was standing in for a warning color the old palette did
   not have.
 - **The "season closing soon" strip uses `--warn` and gained an hourglass**,
-  because status is colour + icon + word, never colour alone.
-- **Traced dice are blue** — the spec's "player two" colour — where they were
+  because status is color + icon + word, never color alone.
+- **Traced dice are blue** — the spec's "player two" color — where they were
   sky blue before. Accepted and rejected dice are tints of the spec's good
   and bad.
 
@@ -96,7 +96,7 @@ Not a token swap, and it needs a decision rather than a guess:
    seed values would not reach an existing database either — it needs a
    migration.
 2. **The "present" tile is gold**, and the 8-Bit accent is gold. Buttons and
-   half-right letters would be the same colour. One of them has to move, and
+   half-right letters would be the same color. One of them has to move, and
    which one is a design call.
 
 ## Rules inherited from the spec
@@ -104,12 +104,12 @@ Not a token swap, and it needs a decision rather than a guess:
 These are not negotiable per-project — they come from the spec and apply here
 on day one:
 
-- Status colours are **reserved**. Never a chart series, never decoration.
-- Status is **never colour alone** — always colour + icon + word. The results
-  screen already obeys this: a cancelled word is struck through *and* labelled
-  "everyone found it", not merely greyed.
+- Status colors are **reserved**. Never a chart series, never decoration.
+- Status is **never color alone** — always color + icon + word. The results
+  screen already obeys this: a canceled word is struck through *and* labeled
+  "everyone found it", not merely grayed.
 - Charts sit on the chart plate, never directly on a panel.
-- Nothing hard-coded. If a colour appears twice, it is a token.
-- The chart series is validated for colour-vision deficiency as a set.
+- Nothing hard-coded. If a color appears twice, it is a token.
+- The chart series is validated for color-vision deficiency as a set.
   **Never re-tint it per theme** — there is no way to tell by eye that you
   have broken it.

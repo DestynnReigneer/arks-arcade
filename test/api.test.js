@@ -52,7 +52,7 @@ async function run({ base, root }) {
   ok('config responds', cfg.status === 200);
   ok('three difficulties', cfg.data.difficulties.length === 3);
   ok('timers stretch to 10 minutes for younger players', cfg.data.durations.includes(600));
-  ok('milestone catalogue is published', cfg.data.milestones.length >= 15);
+  ok('milestone catalog is published', cfg.data.milestones.length >= 15);
 
   console.log('\n-- a classic round --');
   const board = await api('/board', 'POST', { size: 4, profile: 'kids' });
@@ -438,7 +438,7 @@ async function run({ base, root }) {
     themedCfg.data.theme && themedCfg.data.theme.label === 'Minecraft');
   ok('the word list still is not exposed', themedCfg.data.theme.words === undefined);
 
-  // The four behaviours the pack is supposed to have.
+  // The four behaviors the pack is supposed to have.
   const themeBoard = await api('/board', 'POST', { size: 4, profile: 'kids' });
   const check = await api('/check', 'POST', { boardId: themeBoard.data.boardId, word: 'ENDERMAN' });
   ok('a theme word is a real word now (1: it scores)',
@@ -588,7 +588,7 @@ async function run({ base, root }) {
   await new Promise(r => setTimeout(r, 300));
   const overlap = aWords.filter(w => bWords.includes(w));
   ok(`shared words cancel (${overlap.join(',')})`,
-    overlap.every(w => events[events.length - 1].results.cancelled.includes(w)));
+    overlap.every(w => events[events.length - 1].results.canceled.includes(w)));
   ok('late words are refused',
     (await api(`/rooms/${host.code}/words`, 'POST', { ...host, words: ['CAT'] })).status === 409);
   ok('the host can reset to the lobby',
@@ -603,6 +603,399 @@ async function run({ base, root }) {
   await api('/players/' + pid, 'DELETE');
   await api('/players/' + skint.data.id, 'DELETE');
   ok('profiles can be deleted', (await api('/players/' + pid)).status === 404);
+
+  // ---- Wordless difficulty --------------------------------------------------
+  const wl = async (p, method = 'GET', body) => {
+    const res = await fetch(base + '/api' + p, {
+      method,
+      headers: body ? { 'Content-Type': 'application/json' } : undefined,
+      body: body ? JSON.stringify(body) : undefined
+    });
+    return { status: res.status, data: await res.json().catch(() => null) };
+  };
+
+  const classic = (await wl('/themes')).data.find(t => t.id === 'classic');
+  // Regression: Rambler's theme packs once had a same-named row mapper that
+  // silently replaced this one, and every Wordless theme lost its subject.
+  ok('Wordless themes keep their subject and font', classic.subject === 'word' && !!classic.font);
+  ok('classic has words for every difficulty',
+    [[3, 4], [5, 6], [7, 8], [9, 10]].every(([lo, hi]) => classic.words.some(w => w.length >= lo && w.length <= hi)));
+
+  const wlScore = (initials, difficulty) => wl('/leaderboard', 'POST', {
+    initials, themeId: 'classic', won: true, guesses: 2, hintsUsed: 0, word: 'cat', elapsedMs: 5000, difficulty
+  });
+  const easySave = await wlScore('EZY', 'easy');
+  await wlScore('LUD', 'ludicrous');
+  const sneaky = await wlScore('BAD', 'impossible');
+  ok('a Wordless score keeps its difficulty', easySave.status === 201 && easySave.data.difficulty === 'easy');
+  ok('an unknown difficulty is filed as normal', sneaky.data.difficulty === 'normal');
+
+  const easyBoard = (await wl('/leaderboard?difficulty=easy')).data;
+  ok('each difficulty has its own board',
+    easyBoard.some(r => r.initials === 'EZY') && easyBoard.every(r => r.difficulty === 'easy'));
+
+  ok('the arcade name endpoint answers', typeof (await wl('/arcade-info')).data.name === 'string');
+
+  // ---- Comm Center ------------------------------------------------------------
+  const asAdmin = async (p, method = 'GET', body, token = ADMIN) => {
+    const res = await fetch(base + '/api' + p, {
+      method,
+      headers: { ...(body ? { 'Content-Type': 'application/json' } : {}), 'X-Admin-Token': token },
+      body: body ? JSON.stringify(body) : undefined
+    });
+    return { status: res.status, data: await res.json().catch(() => null) };
+  };
+
+  ok('a new #1 Wordless score is announced',
+    (await wl('/comm/posts')).data.some(p => p.kind === 'highscore' && p.title.includes('EZY')));
+
+  const req = await wl('/theme-requests', 'POST', { topic: 'Bluey', requestedBy: 'Ava' });
+  const madeTheme = await asAdmin('/themes', 'POST', {
+    label: 'Bluey', emoji: '🐶', words: ['bluey', 'bingo', 'muffin', 'chilli', 'bandit', 'socks'], requestId: req.data.id
+  });
+  ok('creating a theme from a request closes the request',
+    madeTheme.status === 201 && !(await asAdmin('/theme-requests?status=pending')).data.some(r => r.id === req.data.id));
+  ok('a new theme is announced, crediting who asked',
+    (await wl('/comm/posts')).data.some(p => p.kind === 'theme' && p.body.includes('Ava')));
+
+  const fb = await wl('/comm/feedback', 'POST', { kind: 'issue', message: 'The dice are sticky', game: 'rambler' });
+  ok('players can send feedback', fb.status === 201);
+  ok('empty feedback is refused', (await wl('/comm/feedback', 'POST', { message: '  ' })).status === 400);
+  ok('the inbox is admin-only', (await asAdmin('/comm/admin/feedback', 'GET', null, 'wrong')).status === 401);
+  const moved = await asAdmin(`/comm/admin/feedback/${fb.data.id}`, 'PATCH', { status: 'completed', note: 'Wiped them' });
+  ok('the admin can change a message status', moved.data.status === 'completed' && moved.data.note === 'Wiped them');
+  ok('an unknown status is refused',
+    (await asAdmin(`/comm/admin/feedback/${fb.data.id}`, 'PATCH', { status: 'lol' })).status === 400);
+
+  const ann = await asAdmin('/comm/admin/posts', 'POST', { emoji: '🍀', title: 'GLHF', body: 'Good luck!', game: 'wordless' });
+  const feed = (await wl('/comm/posts')).data;
+  ok('the admin can post an announcement', ann.status === 201 && feed[0].title === 'GLHF' && feed[0].game === 'wordless');
+  await asAdmin(`/comm/admin/posts/${ann.data.id}`, 'DELETE');
+  ok('the admin can take a post down', !(await wl('/comm/posts')).data.some(p => p.id === ann.data.id));
+
+  // ---- adult PIN from the admin page -------------------------------------------
+  ok('a PIN must be 4-8 digits', (await asAdmin('/comm/admin/adult-pin', 'POST', { pin: '12' })).status === 400);
+  await asAdmin('/comm/admin/adult-pin', 'POST', { pin: '2468' });
+  ok('the admin can set the adult PIN', (await asAdmin('/comm/admin/adult-pin')).data.source === 'admin');
+  const lockedOut = await api('/board', 'POST', { size: 4, profile: 'adult' });
+  const pinned = await fetch(API + '/board', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Adult-Pin': '2468' },
+    body: JSON.stringify({ size: 4, profile: 'adult' })
+  });
+  ok('the new PIN guards adult boards', lockedOut.status === 403 && pinned.status === 201);
+  // ---- Wordless hints -------------------------------------------------------------
+  const hintRes = await wl('/wordless/hints?theme=classic&word=apple');
+  ok('the hints endpoint answers for Classic', hintRes.status === 200 && !!hintRes.data.clue && !!hintRes.data.category);
+  ok('an unknown theme is refused', (await wl('/wordless/hints?theme=nope&word=apple')).status === 400);
+  const clueTheme = await asAdmin('/themes', 'POST', {
+    label: 'Clue Test', subject: 'farm animal', emoji: '🐄',
+    words: ['cow', 'pig', 'goat', 'sheep', 'horse'],
+    clues: { cow: { category: 'Animal', clue: 'Says moo' }, pig: 'Rolls in mud', goat: 'A goat thing' }
+  });
+  ok('a new theme keeps its clues (minus give-aways)', Object.keys(clueTheme.data.clues || {}).sort().join() === 'cow,pig',
+    JSON.stringify(clueTheme.data.clues));
+  const cowHint = (await wl(`/wordless/hints?theme=${clueTheme.data.id}&word=cow`)).data;
+  ok('the theme clue and category are what the player sees', cowHint.clue === 'Says moo' && cowHint.category === 'Animal');
+  const added = await asAdmin(`/themes/${clueTheme.data.id}/clues`, 'POST', { clues: { sheep: 'Gives us wool' } });
+  ok('clues can be added to an existing theme', added.status === 200 && added.data.total === 3, JSON.stringify(added.data));
+  ok('adding clues needs the admin password', (await wl(`/themes/${clueTheme.data.id}/clues`, 'POST', { clues: { horse: 'Neigh' } })).status === 401);
+
+  // ---- home page game order -------------------------------------------------------
+  const startInfo = (await wl('/arcade-info')).data;
+  ok('the home page gets every game in an order', startInfo.games.order.length === 8 && startInfo.games.hidden.length === 0);
+  const reordered = await asAdmin('/comm/admin/home-games', 'POST', { order: ['dino', 'chess'], hidden: ['spinsolve'] });
+  ok('the admin can reorder and hide games', reordered.status === 200 && reordered.data.order[0] === 'dino' &&
+    reordered.data.order.length === 8 && reordered.data.hidden.join() === 'spinsolve', JSON.stringify(reordered.data));
+  ok('the home page sees the new order', (await wl('/arcade-info')).data.games.order[0] === 'dino');
+  ok('hiding every game is refused', (await asAdmin('/comm/admin/home-games', 'POST', {
+    order: startInfo.games.order, hidden: startInfo.games.order })).status === 400);
+  ok('reordering needs the admin password', (await wl('/comm/admin/home-games', 'POST', { order: ['chess'] })).status === 401);
+  await asAdmin('/comm/admin/home-games', 'POST', { order: startInfo.games.order, hidden: [] });
+
+  // ---- arcade high scores ---------------------------------------------------------
+  const savedRun = await wl('/scores/dino', 'POST', { initials: 'dd1', score: 1234, board: 'run' });
+  ok('a Dino Dash score saves and ranks', savedRun.status === 201 && savedRun.data.rank === 1);
+  ok('…and shows on its board', (await wl('/scores/dino?board=run')).data.some(r => r.initials === 'DD1' && r.score === 1234));
+  ok('a new #1 is announced in the Comm Center', (await wl('/comm/posts')).data.some(p => p.title.includes('DD1') && p.game === 'dino'));
+  ok('bad initials are refused', (await wl('/scores/dino', 'POST', { initials: '!!', score: 5 })).status === 400);
+  ok('an impossible score is refused', (await wl('/scores/chess', 'POST', { initials: 'AB', score: 999999, board: 'hard' })).status === 400);
+  ok('an unknown game is a 404', (await wl('/scores/pong', 'POST', { initials: 'AB', score: 5 })).status === 404);
+  await wl('/scores/chess', 'POST', { initials: 'CHE', score: 700, board: 'hard' });
+  ok('chess boards are kept apart by level',
+    (await wl('/scores/chess?board=hard')).data.some(r => r.initials === 'CHE') &&
+    !(await wl('/scores/chess?board=easy')).data.some(r => r.initials === 'CHE'));
+
+  // ---- two-phone chess -------------------------------------------------------------
+  const hostChess = (await wl('/chess/rooms', 'POST', { name: 'Sam', color: 'w' })).data;
+  ok('a chess room has a code and a color', /^[A-Z0-9]{4}$/.test(hostChess.code) && hostChess.color === 'w');
+  const guestChess = (await wl(`/chess/rooms/${hostChess.code}/join`, 'POST', { name: 'Alex' })).data;
+  ok('the guest gets the other color', guestChess.color === 'b');
+  ok('a third player is turned away', (await wl(`/chess/rooms/${hostChess.code}/join`, 'POST', { name: 'Kim' })).status === 409);
+  const cmove = (who, from, to) => wl(`/chess/rooms/${hostChess.code}/move`, 'POST', { playerId: who.playerId, token: who.token, from, to });
+  ok('Black cannot move first', (await cmove(guestChess, 'e7', 'e5')).status === 409);
+  ok('an illegal move is refused', (await cmove(hostChess, 'e2', 'e5')).status === 400);
+  ok('a legal move is played', (await cmove(hostChess, 'f2', 'f3')).data.moves[0] === 'f3');
+  ok('a wrong token cannot move', (await wl(`/chess/rooms/${hostChess.code}/move`, 'POST', { playerId: guestChess.playerId, token: 'nope', from: 'e7', to: 'e5' })).status === 403);
+  await cmove(guestChess, 'e7', 'e5');
+  await cmove(hostChess, 'g2', 'g4');
+  const mated = (await cmove(guestChess, 'd8', 'h4')).data;
+  ok('checkmate ends the game for both', mated.ended && mated.ended.reason === 'checkmate' && mated.ended.winner === 'b');
+  const act = (who, action) => wl(`/chess/rooms/${hostChess.code}/act`, 'POST', { playerId: who.playerId, token: who.token, action });
+  await act(hostChess, 'rematch');
+  const again = (await act(guestChess, 'rematch')).data;
+  ok('a rematch swaps colors and starts fresh', again.you === 'w' && again.moves.length === 0 && !again.ended);
+
+  // ---- adult Wordless themes ---------------------------------------------------
+  await asAdmin('/themes', 'POST', {
+    label: 'Naughty', emoji: '😈', words: ['booty', 'cheeky', 'frisky', 'spank', 'naughty'], adult: true
+  });
+  const pinGet = async (p, pin) => {
+    const res = await fetch(base + '/api' + p, { headers: pin ? { 'X-Adult-Pin': pin } : {} });
+    return { status: res.status, data: await res.json().catch(() => null) };
+  };
+  ok('adult themes are hidden by default', !(await wl('/themes')).data.some(t => t.adult));
+  ok('a wrong PIN does not show them', (await pinGet('/themes?adult=1', '0000')).status === 403);
+  ok('the right PIN shows them', (await pinGet('/themes?adult=1', '2468')).data.some(t => t.label === 'Naughty'));
+  const naughtyPlayed = (await pinGet('/themes?adult=1', '2468')).data.find(t => t.label === 'Naughty');
+  ok('adult Easy gets plenty of short rude words', naughtyPlayed.words.filter(w => w.length <= 4).length >= 40);
+  ok('the theme keeps its own words too', naughtyPlayed.words.includes('cheeky'));
+  ok('the admin always sees them', (await asAdmin('/themes')).data.some(t => t.label === 'Naughty'));
+  ok('the admin list shows only the theme\'s own words',
+    (await asAdmin('/themes')).data.find(t => t.label === 'Naughty').words.length === 5);
+  ok('adult themes are never announced', !(await wl('/comm/posts')).data.some(p => p.title.includes('Naughty')));
+  const naughtyId = (await asAdmin('/themes')).data.find(t => t.label === 'Naughty').id;
+  await wl('/leaderboard', 'POST', { initials: 'XXX', themeId: naughtyId, won: true, guesses: 1, hintsUsed: 0, word: 'spank', elapsedMs: 1000, difficulty: 'normal' });
+  ok('adult-theme scores stay off the kids board', !(await wl('/leaderboard?difficulty=normal')).data.some(r => r.initials === 'XXX'));
+  ok('…and show once unlocked', (await pinGet('/leaderboard?difficulty=normal&adult=1', '2468')).data.some(r => r.initials === 'XXX'));
+
+  // ---- built-in adult Wordless themes ----------------------------------------------
+  ok('built-in adult themes stay hidden from kids', !(await wl('/themes')).data.some(t => t.id === 'naughty-bits'));
+  const adultBuiltins = (await pinGet('/themes?adult=1', '2468')).data.filter(t => t.builtin && t.adult).map(t => t.id).sort();
+  ok('four built-in adult themes appear with the PIN', adultBuiltins.join() === 'bachelorette,bar-crawl,naughty-bits,swear-jar', adultBuiltins.join());
+  const barHint = (await pinGet('/wordless/hints?theme=bar-crawl&word=tequila&adult=1', '2468')).data;
+  ok('they come with clues', barHint.clue === 'Salt, shot, lime' && barHint.category === 'Drink', JSON.stringify(barHint));
+  ok('their hints need the PIN too', (await wl('/wordless/hints?theme=bar-crawl&word=tequila')).status === 403);
+
+    // ---- Spin & Solve: levels, packs, requests --------------------------------------
+  const spinCfg = (await wl('/spinsolve/config')).data;
+  ok('Spin & Solve has the four levels', spinCfg.levels.map(l => l.id).join() === 'kids,cheeky,spicy,filthy');
+  ok('…with built-in puzzles at every level', spinCfg.levels.every(l => l.builtin >= 30));
+  const kidsPuzzles = await wl('/spinsolve/puzzles?level=kids');
+  ok('kids puzzles need no PIN', kidsPuzzles.status === 200 && kidsPuzzles.data.puzzles.length >= 150);
+  ok('adult puzzles need the PIN', (await wl('/spinsolve/puzzles?level=filthy')).status === 403);
+  ok('a wrong PIN is refused', (await pinGet('/spinsolve/puzzles?level=filthy', '0000')).status === 403);
+  ok('the right PIN opens them', (await pinGet('/spinsolve/puzzles?level=filthy', '2468')).data.puzzles.length >= 30);
+  const kidsBanter = kidsPuzzles.data.banter;
+  ok('kids games come with jokes and hecklers', kidsBanter.jokes.length >= 20 && kidsBanter.heckles.length >= 5);
+  ok('…and no rude gestures or swearing', !kidsBanter.comebacks.some(c => c.startsWith('🖕')) &&
+    !JSON.stringify(kidsBanter).match(/fuck|shit|damn|hell\b/i));
+  const filthyBanter = (await pinGet('/spinsolve/puzzles?level=filthy', '2468')).data.banter;
+  ok('filthy games get the adult jokes and the finger', filthyBanter.comebacks.every(c => c.startsWith('🖕')) &&
+    filthyBanter.jokes.some(([a, b]) => /fuck/i.test(a + b)));
+  ok('the unlock check works', (await wl('/spinsolve/unlock', 'POST', { pin: '2468' })).data.ok === true &&
+    (await wl('/spinsolve/unlock', 'POST', { pin: '1111' })).data.ok === false);
+
+  const spinReq = await wl('/spinsolve/requests', 'POST', { topic: 'Camping', requestedBy: 'Kid' });
+  ok('players can request a puzzle theme', spinReq.status === 201);
+  ok('requests need a topic', (await wl('/spinsolve/requests', 'POST', { topic: ' ' })).status === 400);
+  const spinPending = await asAdmin('/spinsolve/admin/requests');
+  ok('the admin sees the request', spinPending.data.some(r => r.topic === 'Camping'));
+  ok('requests are admin-only', (await wl('/spinsolve/admin/requests')).status === 401);
+
+  const campPuzzles = [
+    { category: 'Thing', answer: 'Sleeping bag' }, { category: 'Thing', answer: 'TENT STAKES' },
+    { category: 'Food & Drink', answer: 'TOASTED MARSHMALLOWS' }, { category: 'Place', answer: 'NATIONAL FOREST' },
+    { category: 'Phrase', answer: 'HAPPY CAMPER' }, { category: 'Thing', answer: 'CAMPFIRE' },
+    { category: 'Thing', answer: 'SUPERCALIFRAGILISTIC' }, { category: 'Thing', answer: 'GREY SQUIRREL' },
+    { category: 'Thing', answer: 'CAMPFIRE' }
+  ];
+  const kidPack = await asAdmin('/spinsolve/admin/packs', 'POST', {
+    label: 'Camping', emoji: '🏕️', level: 'kids', puzzles: campPuzzles, requestId: spinReq.data.id
+  });
+  ok('a kids pack is created from pasted puzzles', kidPack.status === 201 && kidPack.data.pack.count === 6,
+    JSON.stringify(kidPack.data));
+  ok('…skipping ones too long for the board or British', kidPack.data.skipped.length === 2);
+  ok('…which closes the request', !(await asAdmin('/spinsolve/admin/requests')).data.some(r => r.topic === 'Camping'));
+  ok('…and is announced on the home page', (await wl('/comm/posts')).data.some(p => p.title.includes('Camping')));
+  const packPlay = (await wl(`/spinsolve/puzzles?pack=${kidPack.data.pack.id}`)).data;
+  ok('you can play just that pack', packPlay.puzzles.length === 6 && packPlay.puzzles.every(p => p.pack === 'Camping'));
+  ok('…and its puzzles join the full kids list', (await wl('/spinsolve/puzzles?level=kids')).data.puzzles.some(p => p.answer === 'HAPPY CAMPER'));
+
+  const adultPack = await asAdmin('/spinsolve/admin/packs', 'POST', {
+    label: 'Hen Night', emoji: '👰', level: 'spicy', puzzles: campPuzzles.slice(0, 6)
+  });
+  ok('an adult pack can be made', adultPack.status === 201);
+  ok('adult packs are hidden from the kids', !(await wl('/spinsolve/config')).data.packs.some(p => p.label === 'Hen Night'));
+  ok('…shown once unlocked', (await pinGet('/spinsolve/config', '2468')).data.packs.some(p => p.label === 'Hen Night'));
+  ok('…locked when played without the PIN', (await wl(`/spinsolve/puzzles?pack=${adultPack.data.pack.id}`)).status === 403);
+  ok('…and never announced', !(await wl('/comm/posts')).data.some(p => p.title.includes('Hen Night')));
+  ok('too few good puzzles is refused', (await asAdmin('/spinsolve/admin/packs', 'POST', { label: 'X', puzzles: [{ answer: 'HI THERE' }] })).status === 400);
+
+  await wl('/scores/spinsolve', 'POST', { initials: 'XXX', score: 99999, board: 'adult' });
+  ok('the adult score board needs the PIN', (await wl('/scores/spinsolve?board=adult')).status === 403);
+  ok('…shows with it', (await pinGet('/scores/spinsolve?board=adult', '2468')).data.some(r => r.initials === 'XXX'));
+  ok('…and adult #1s are never announced', !(await wl('/comm/posts')).data.some(p => p.title.includes('XXX took #1 on Spin')));
+
+  // ---- Know-It-All (trivia) --------------------------------------------------------
+  const tcfg = (await wl('/trivia/config')).data;
+  ok('trivia has four levels', tcfg.levels.map(l => l.id).join() === 'kids,cheeky,spicy,filthy');
+  ok('…with family genres listed and adult ones hidden until unlocked', tcfg.levels[0].genres.length >= 8 && tcfg.levels[3].genres.length === 0);
+  ok('the Open Trivia DB credit is shown', /opentdb\.com/.test(tcfg.credit));
+  const famQs = (await wl('/trivia/questions?level=kids&count=10&genres=Animals,Science')).data;
+  ok('family questions come dealt, answers shuffled with the right one marked', famQs.questions.length === 10 &&
+    famQs.questions.every(q => q.answers[q.correctIndex] === q.correct && ['Animals', 'Science'].includes(q.genre)));
+  ok('family games get no drinks or dares', famQs.drinks === null && famQs.dares === null);
+  ok('filthy questions need the PIN', (await wl('/trivia/questions?level=filthy')).status === 403);
+  const filthyQs = (await pinGet('/trivia/questions?level=filthy&count=5', '2468')).data;
+  ok('…and come with drinking rules and dares', filthyQs.questions.length === 5 && !!filthyQs.drinks.wrong && filthyQs.dares.length >= 5);
+  ok('topic requests are accepted', (await wl('/trivia/requests', 'POST', { topic: 'Pokemon' })).status === 201);
+  ok('…and show up for the admin', (await asAdmin('/trivia/admin/requests')).data.some(r => r.topic === 'Pokemon'));
+  const tpack = await asAdmin('/trivia/admin/packs', 'POST', {
+    label: 'Space', emoji: '🚀', genre: 'Space', level: 'kids', questions: [
+      { question: 'What planet do we live on?', correct: 'Earth', wrong: ['Mars', 'Venus', 'Pluto'], difficulty: 'easy' },
+      { question: 'What is the biggest planet?', correct: 'Jupiter', wrong: ['Saturn', 'Earth', 'Mars'], difficulty: 'easy' },
+      { question: 'How many moons does Mars have?', correct: '2', wrong: ['0', '1', '4'], difficulty: 'medium' },
+      { question: 'What is the hottest planet?', correct: 'Venus', wrong: ['Mercury', 'Mars', 'Jupiter'], difficulty: 'medium' },
+      { question: 'Which planet has a Great Red Spot?', correct: 'Jupiter', wrong: ['Mars', 'Saturn', 'Neptune'], difficulty: 'hard' },
+      { question: 'What colour is the Moon?', correct: 'Gray', wrong: ['Red', 'Blue', 'Green'] },
+      { question: 'Broken?', correct: 'A', wrong: ['A'] }
+    ]
+  });
+  ok('a pack is made from pasted questions', tpack.status === 201 && tpack.data.pack.count === 6, JSON.stringify(tpack.data));
+  ok('…skipping broken ones (trivia keeps titles and spellings as they are)', tpack.data.skipped.length === 1);
+  ok('…and it is announced', (await wl('/comm/posts')).data.some(p => p.title.includes('Know-It-All questions: Space')));
+  ok('you can play just that pack', (await wl(`/trivia/questions?pack=${tpack.data.pack.id}&count=10`)).data.questions.length === 6);
+
+  // A room game from start to finish
+  const th = (await wl('/trivia/rooms', 'POST', { name: 'Sam', settings: { level: 'kids', count: 5, seconds: 30 } })).data;
+  const tg = (await wl(`/trivia/rooms/${th.code}/join`, 'POST', { name: 'Alex' })).data;
+  ok('players can join a trivia room', !!tg.playerId);
+  ok('an adult room needs the PIN to make', (await wl('/trivia/rooms', 'POST', { name: 'X', settings: { level: 'spicy' } })).status === 403);
+  const troom = async who => (await wl(`/trivia/rooms/${th.code}?playerId=${who.playerId}&token=${who.token}`)).data;
+  const tpost = (who, path, body = {}) => wl(`/trivia/rooms/${th.code}/${path}`, 'POST', { playerId: who.playerId, token: who.token, ...body });
+  ok('only the host can start', (await tpost(tg, 'start')).status === 403);
+  await tpost(th, 'start');
+  let snapT = await troom(th);
+  ok('the game starts on question 1, with no answer key sent', snapT.phase === 'question' && snapT.question.index === 0 &&
+    snapT.reveal === null && !('correctIndex' in snapT.question));
+  for (let i = 0; i < 5; i++) {
+    await tpost(th, 'answer', { choice: 0 });
+    await tpost(tg, 'answer', { choice: 1 });
+    snapT = await troom(th);
+    if (i === 0) {
+      ok('everyone answering reveals the answer right away', snapT.phase === 'reveal' && Number.isInteger(snapT.reveal.correctIndex));
+      ok('…and scores the right answer', snapT.reveal.results.every(r => r.correct ? r.points >= 100 : r.points === 0));
+      ok('answering twice is refused', (await tpost(th, 'answer', { choice: 2 })).status === 409);
+    }
+    await tpost(th, 'next');
+  }
+  snapT = await troom(tg);
+  ok('after the last question the game is over with standings', snapT.phase === 'over' && snapT.finale.standings.length === 2);
+
+  // ---- join-a-game lobby and QR codes ---------------------------------------------
+  const lobbyHost = (await wl('/trivia/rooms', 'POST', { name: 'Robin', settings: { level: 'kids', count: 5 } })).data;
+  const hostAdult = body => fetch(base + '/api/trivia/rooms', {
+    method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Adult-Pin': '2468' }, body: JSON.stringify(body)
+  }).then(async r => ({ status: r.status, data: await r.json() }));
+  const noPw = await hostAdult({ name: 'Grown', settings: { level: 'filthy' } });
+  ok('hosting an adult game asks the host to make a lobby password', noPw.status === 400 && noPw.data.needsPassword === 'create');
+  const adultRoom = (await hostAdult({ name: 'Grown', settings: { level: 'filthy' }, password: 'tacos' })).data;
+  ok('with a password, the adult game is made', !!adultRoom.code);
+  let lobbyNow = (await wl('/lobby')).data;
+  const robin = lobbyNow.rooms.find(r => r.code === lobbyHost.code);
+  ok('a hosted game shows on the lobby, open to join', !!robin && robin.status === 'open' && robin.href === `trivia.html?join=${lobbyHost.code}` && robin.host === 'Robin');
+  const listedAdult = lobbyNow.rooms.find(r => r.code === adultRoom.code);
+  ok('adult games are on the lobby too, marked and locked', !!listedAdult && listedAdult.adult && listedAdult.locked);
+  const joinAdult = pw => wl(`/trivia/rooms/${adultRoom.code}/join`, 'POST', { name: 'Kid', password: pw });
+  const noPwJoin = await joinAdult('');
+  ok('joining a locked game asks for its password', noPwJoin.status === 401 && noPwJoin.data.needsPassword === 'join');
+  ok('the wrong password is refused', (await joinAdult('pizza')).status === 401);
+  ok('the right password lets a guest in, no adult PIN needed', (await joinAdult('tacos')).status === 200);
+  const adultHostView = (await wl(`/trivia/rooms/${adultRoom.code}?playerId=${adultRoom.playerId}&token=${adultRoom.token}`)).data;
+  ok('the host can see the password to tell guests', adultHostView.lobbyPassword === 'tacos');
+
+  // Rambler locks its adult games the same way
+  const rbAdult = await fetch(base + '/api/rambler/rooms', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Adult-Pin': '2468' },
+    body: JSON.stringify({ name: 'H', profile: 'adult', password: 'secret' }) }).then(r => r.json());
+  ok('Rambler: an Unfiltered room needs its password to join', (await wl(`/rambler/rooms/${rbAdult.code}/join`, 'POST', { name: 'X' })).status === 401 &&
+    (await wl(`/rambler/rooms/${rbAdult.code}/join`, 'POST', { name: 'X', password: 'secret' })).status === 201);
+  ok('the lobby says where phones should go', /^https?:\/\//.test(lobbyNow.publicUrl));
+  await wl(`/trivia/rooms/${lobbyHost.code}/start`, 'POST', { playerId: lobbyHost.playerId, token: lobbyHost.token });
+  lobbyNow = (await wl('/lobby')).data;
+  ok('a game that has started shows as playing', lobbyNow.rooms.find(r => r.code === lobbyHost.code).status === 'playing');
+  const chessFull = (await wl('/chess/rooms', 'POST', { name: 'A' })).data;
+  await wl(`/chess/rooms/${chessFull.code}/join`, 'POST', { name: 'B' });
+  ok('a chess game with two players shows as full', (await wl('/lobby')).data.rooms.find(r => r.code === chessFull.code).status === 'full');
+  const qrRes = await fetch(base + '/api/qr?text=' + encodeURIComponent(base + '/trivia.html?join=ABCD'));
+  ok('QR codes come back as SVG for arcade links', qrRes.status === 200 && (await qrRes.text()).includes('<svg'));
+  ok('QR codes for other websites are refused', (await fetch(base + '/api/qr?text=' + encodeURIComponent('https://example.com/'))).status === 400);
+
+  // ---- Uh-Oh: Part Deux and Dare Devil ------------------------------------------------
+  const party = async (game, p, method = 'GET', body, headers = {}) => {
+    const res = await fetch(`${base}/api/${game}${p}`, { method, headers: { ...(body ? { 'Content-Type': 'application/json' } : {}), ...headers }, body: body ? JSON.stringify(body) : undefined });
+    return { status: res.status, data: await res.json().catch(() => null) };
+  };
+  const pdLocal = await party('partdeux', '/local', 'POST', { names: ['Ann', 'Bo'], level: 'kids' });
+  ok('Uh-Oh: a one-phone game deals 7 cards each', pdLocal.status === 201 && Object.values(pdLocal.data.game.hands).every(h => h.length === 7));
+  const pdTurn = pdLocal.data.game.turn;
+  const pdDraw = await party('partdeux', `/local/${pdLocal.data.id}/act`, 'POST', { action: 'draw', as: pdTurn }, { 'X-Table-Token': pdLocal.data.token });
+  ok('Uh-Oh: the player whose turn it is can draw', pdDraw.status === 200);
+  ok('Uh-Oh: a spicy deck needs the adult PIN', (await party('partdeux', '/local', 'POST', { names: ['A', 'B'], level: 'spicy' })).status === 403);
+  const pdRoom = (await party('partdeux', '/rooms', 'POST', { name: 'Host', level: 'filthy', drinking: true, password: 'lime' }, { 'X-Adult-Pin': '2468' })).data;
+  ok('Uh-Oh: an adult room locks with a password', (await party('partdeux', `/rooms/${pdRoom.code}/join`, 'POST', { name: 'Kid' })).status === 401);
+  const pdGuest = (await party('partdeux', `/rooms/${pdRoom.code}/join`, 'POST', { name: 'Pal', password: 'lime' })).data;
+  ok('…and lets a guest in with it', !!pdGuest.playerId);
+  ok('Uh-Oh rooms show on the arcade lobby, locked', (await wl('/lobby')).data.rooms.some(r => r.game === 'partdeux' && r.code === pdRoom.code && r.locked && r.adult));
+  await party('partdeux', `/rooms/${pdRoom.code}/start`, 'POST', { playerId: pdRoom.playerId, token: pdRoom.token });
+  const pdSnap = (await party('partdeux', `/rooms/${pdRoom.code}?playerId=${pdGuest.playerId}&token=${pdGuest.token}`)).data;
+  ok('Uh-Oh: each phone sees only its own hand', pdSnap.game.hand.length === 7 && pdSnap.game.hands === undefined && pdSnap.game.drinking === true);
+
+  const ddLocal = await party('daredevil', '/local', 'POST', { names: ['Ann', 'Bo', 'Cy'], level: 'kids', options: { length: 'quick' } });
+  ok('Dare Devil: a one-phone game starts with a 15-card deck', ddLocal.status === 201 && ddLocal.data.game.total === 15);
+  const ddAct = (body) => party('daredevil', `/local/${ddLocal.data.id}/act`, 'POST', body, { 'X-Table-Token': ddLocal.data.token });
+  const ddDrawn = await ddAct({ action: 'draw', as: ddLocal.data.game.turn });
+  ok('Dare Devil: drawing reveals a card', ddDrawn.status === 200 && !!ddDrawn.data.game.card.text);
+  const ddDone = await ddAct({ action: 'done', as: ddLocal.data.game.turn });
+  ok('Dare Devil: doing it scores and passes the turn', ddDone.data.game.players[0].score > 0 && ddDone.data.game.turn !== ddLocal.data.game.turn);
+  ok('Dare Devil: filthy needs the PIN to host', (await party('daredevil', '/rooms', 'POST', { name: 'H', level: 'filthy' })).status === 403);
+  const ddRoom = (await party('daredevil', '/rooms', 'POST', { name: 'H', level: 'filthy', password: 'wild' }, { 'X-Adult-Pin': '2468' })).data;
+  ok('Dare Devil: an adult room needs its password to join', (await party('daredevil', `/rooms/${ddRoom.code}/join`, 'POST', { name: 'X', password: 'nope' })).status === 401 &&
+    (await party('daredevil', `/rooms/${ddRoom.code}/join`, 'POST', { name: 'X', password: 'wild' })).status === 201);
+
+  // ---- arcade profiles ---------------------------------------------------------------
+  const asked = await wl('/profiles', 'POST', { name: 'Maya', avatar: 'shiba:2' });
+  ok('anyone can ask for a profile', asked.status === 201 && asked.data.status === 'pending');
+  ok('…but it waits for approval', !(await wl('/profiles')).data.some(p => p.name === 'Maya'));
+  ok('guest names are reserved for guests', (await wl('/profiles', 'POST', { name: 'Guest 4' })).status === 400);
+  ok('profile requests are listed for the admin', (await asAdmin('/profiles/admin')).data.some(p => p.name === 'Maya' && p.status === 'pending'));
+  ok('approving needs the admin password', (await wl(`/profiles/admin/${asked.data.id}/approve`, 'POST', {})).status === 401);
+  await asAdmin(`/profiles/admin/${asked.data.id}/approve`, 'POST', {});
+  ok('approved profiles show in the picker', (await wl('/profiles')).data.some(p => p.name === 'Maya' && p.avatar === 'shiba:2' && !p.hasPin));
+  const maya = (await wl(`/profiles/${asked.data.id}/use`, 'POST', {})).data;
+  ok('a profile without a PIN can be picked straight away', !!maya.token);
+  const mayaScore = await wl('/scores/dino', 'POST', { score: 321, board: 'run', profileToken: maya.token });
+  ok('a score saved as a profile needs no initials', mayaScore.status === 201);
+  ok('…and shows the profile name and avatar', (await wl('/scores/dino?board=run')).data.some(r => r.profileName === 'Maya' && r.profileAvatar === 'shiba:2' && r.score === 321));
+  ok('a fake token gets no credit', (await wl('/scores/dino', 'POST', { score: 50, board: 'run', profileToken: 'x.y' })).status === 400);
+  const mayaPinned = (await wl(`/profiles/${asked.data.id}/pin`, 'POST', { token: maya.token, pin: '4321' })).data;
+  ok('Maya can add her own PIN', mayaPinned.profile.hasPin && !!mayaPinned.token);
+  ok('…after which the old token stops working', (await wl('/scores/dino', 'POST', { score: 60, board: 'run', profileToken: maya.token })).status === 400);
+  ok('picking her profile now needs the PIN', (await wl(`/profiles/${asked.data.id}/use`, 'POST', {})).status === 401 &&
+    (await wl(`/profiles/${asked.data.id}/use`, 'POST', { pin: '9999' })).status === 401);
+  ok('the right PIN works', !!(await wl(`/profiles/${asked.data.id}/use`, 'POST', { pin: '4321' })).data.token);
+  await asAdmin(`/profiles/admin/${asked.data.id}/clear-pin`, 'POST', {});
+  ok('the admin can clear a forgotten PIN', !!(await wl(`/profiles/${asked.data.id}/use`, 'POST', {})).data.token);
+  ok('an approved profile becomes a Rambler player with the same id', !!(await wl(`/rambler/players/${asked.data.id}`)).data);
+  const g1 = (await wl('/profiles/guest', 'POST', {})).data.name;
+  const g2 = (await wl('/profiles/guest', 'POST', {})).data.name;
+  ok('guests get numbered names', /^Guest \d+$/.test(g1) && g1 !== g2);
+  const mayaTok = (await wl(`/profiles/${asked.data.id}/use`, 'POST', {})).data.token;
+  const mayaWordless = await wl('/leaderboard', 'POST', { themeId: 'classic', won: true, guesses: 2, hintsUsed: 0, word: 'apple', elapsedMs: 5000, difficulty: 'easy', profileToken: mayaTok });
+  ok('Wordless credits a profile too', mayaWordless.status === 201 && (await wl('/leaderboard?difficulty=easy')).data.some(r => r.profileName === 'Maya'));
+
+  await asAdmin('/comm/admin/adult-pin', 'POST', { pin: '' });
+  ok('the PIN can be removed', (await api('/board', 'POST', { size: 4, profile: 'adult' })).status === 201);
 
   console.log(`\n  ${pass} passed, ${fail} failed`);
   return { pass, fail };

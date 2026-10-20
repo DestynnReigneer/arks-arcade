@@ -6,9 +6,21 @@
 <title>Arcade Admin</title>
 <link rel="stylesheet" href="style.css">
 <style>
-  body { align-items: stretch; }
+  /* Same width on every tab: the shared stylesheet centers body in a flex
+     column, which would shrink it to whatever the current tab holds. */
+  html { scrollbar-gutter: stable; }
+  body { align-items: stretch; width: 100%; }
   main { width: 100%; max-width: 700px; margin: 0 auto; padding: 20px 16px 60px; }
   .admin-header { text-align: center; padding: 20px 0; }
+  /* Its own row above the title, so it can never sit on top of it. */
+  .back-row { text-align: left; margin-bottom: 14px; }
+  .back-link {
+    display: inline-block;
+    color: var(--text); opacity: 0.75; text-decoration: none;
+    font-size: 13px; font-weight: 600; padding: 6px 10px;
+    border: 1px solid var(--tile-border); border-radius: 8px;
+  }
+  .back-link:hover { opacity: 1; border-color: var(--accent); }
   .admin-header h1 { margin: 0; font-size: 22px; }
   .admin-section {
     background: #171922;
@@ -56,7 +68,7 @@
     border-radius: 7px; padding: 8px 9px; font-family: inherit; font-size: 13px;
   }
   .field-row input[type="number"] { width: 74px; }
-  .board-tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+  .board-tabs { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
   .board-tabs button {
     padding: 7px 12px; border-radius: 8px; font-size: 12px; cursor: pointer;
     background: #10121a; border: 1px solid var(--tile-border); color: var(--text); font-family: inherit;
@@ -67,6 +79,34 @@
     border: 1px solid var(--tile-border); border-radius: 20px; padding: 3px 9px; margin: 0 5px 5px 0;
   }
   .badge-chip.gold { border-color: #d4a02a; color: #ffd76a; }
+  .field-row .grow { flex: 1; min-width: 180px; }
+  .admin-textarea {
+    width: 100%; background: #10121a; border: 1px solid var(--tile-border); color: var(--text);
+    border-radius: 7px; padding: 8px 9px; font-family: inherit; font-size: 13px; resize: vertical;
+  }
+  .admin-note { font-size: 12px; opacity: 0.7; margin: 0 0 8px; line-height: 1.5; }
+  .check-row { display: flex; align-items: center; gap: 8px; font-size: 13px; margin: 10px 0 6px; cursor: pointer; }
+  .quick-posts { display: flex; gap: 6px; flex-wrap: wrap; }
+  .quick-posts button {
+    padding: 5px 10px; border-radius: 20px; font-size: 12px; cursor: pointer;
+    background: #10121a; border: 1px solid var(--tile-border); color: var(--text); font-family: inherit;
+  }
+  .quick-posts button:hover { border-color: var(--accent); }
+  .fb-card { border: 1px solid var(--tile-border); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; }
+  .fb-head { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; font-size: 11px; opacity: 0.75; }
+  .fb-kind { font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; opacity: 1; }
+  .fb-msg { margin: 6px 0 8px; font-size: 13.5px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .fb-controls { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .fb-controls select, .fb-controls input {
+    background: #10121a; border: 1px solid var(--tile-border); color: var(--text);
+    border-radius: 6px; padding: 5px 7px; font-family: inherit; font-size: 12px;
+  }
+  .fb-controls input { flex: 1; min-width: 140px; }
+  .fb-controls button {
+    background: var(--key-bg); border: 1px solid var(--tile-border); color: var(--text);
+    border-radius: 6px; padding: 5px 9px; font-size: 11.5px; cursor: pointer;
+  }
+  .fb-controls button.danger { border-color: #7a2a2a; color: #ff9a9a; }
   .danger-zone { border-color: #4a2020; }
   .danger-zone h2 { color: #ff9a9a; }
   .req-card {
@@ -131,13 +171,14 @@
 <body>
 <main>
   <div class="admin-header">
+    <div class="back-row"><a href="index.html" class="back-link">← Back to arcade</a></div>
     <h1>🛠️ Arcade Admin</h1>
-    <div style="opacity:0.5; font-size:12px;">Theme requests · theme management</div>
+    <div style="opacity:0.5; font-size:12px;">Comm Center · games · settings</div>
   </div>
 
   <div id="lockScreen" class="admin-section">
-    <h2>Enter admin token</h2>
-    <input type="password" id="tokenInput" placeholder="Admin token" autocomplete="off">
+    <h2>Enter admin password</h2>
+    <input type="password" id="tokenInput" placeholder="Admin password" autocomplete="current-password">
     <button id="unlockBtn" class="primary-btn" style="border:none;border-radius:8px;padding:10px 16px;font-weight:700;cursor:pointer;">Unlock</button>
     <div id="lockError" class="status-msg error"></div>
   </div>
@@ -145,11 +186,93 @@
   <div id="adminContent" class="hidden">
 
   <div class="tabs">
-    <button id="tabRambler" aria-pressed="true">🎲 Rambler</button>
+    <button id="tabArcade" aria-pressed="true">📡 Arcade</button>
+    <button id="tabRambler" aria-pressed="false">🔠 Rambler</button>
     <button id="tabWordless" aria-pressed="false">🔤 Wordless</button>
+    <button id="tabSpin" aria-pressed="false">🎡 Spin &amp; Solve</button>
+    <button id="tabTrivia" aria-pressed="false">🧠 Trivia</button>
   </div>
 
-  <div id="ramblerPanel">
+  <div id="arcadePanel">
+    <div class="admin-section">
+      <h2>📡 Comm Center inbox</h2>
+      <div class="board-tabs" id="feedbackTabs"></div>
+      <div id="feedbackList">Loading…</div>
+      <div id="feedbackMsg" class="admin-msg"></div>
+    </div>
+
+    <div class="admin-section">
+      <h2>📣 Post an announcement</h2>
+      <div class="quick-posts" id="quickPosts"></div>
+      <div class="field-row">
+        <div>
+          <label for="postEmoji">Emoji</label>
+          <input type="text" id="postEmoji" maxlength="8" value="📣" style="width:64px">
+        </div>
+        <div class="grow">
+          <label for="postTitle">Title</label>
+          <input type="text" id="postTitle" maxlength="80" placeholder="e.g. Good luck, have fun!" style="width:100%">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="grow">
+          <label for="postBody">Details (shown when someone opens it)</label>
+          <textarea id="postBody" rows="3" maxlength="1000" class="admin-textarea"></textarea>
+        </div>
+      </div>
+      <div class="field-row">
+        <div>
+          <label for="postGame">"Play" button goes to</label>
+          <select id="postGame">
+            <option value="">No button</option>
+            <option value="wordless">Wordless</option>
+            <option value="rambler">Rambler</option>
+            <option value="spinsolve">Spin &amp; Solve</option>
+            <option value="chess">Chess</option>
+            <option value="dino">Dino Dash</option>
+            <option value="trivia">Know-It-All</option>
+            <option value="partdeux">Uh-Oh: Part Deux</option>
+            <option value="daredevil">Dare Devil</option>
+          </select>
+        </div>
+        <button class="small-btn" id="postBtn">Post to home page</button>
+      </div>
+      <div id="postMsg" class="admin-msg"></div>
+      <h2 style="margin-top:18px">On the home page now</h2>
+      <div id="postList"></div>
+    </div>
+
+    <div class="admin-section">
+      <h2>👪 Profiles</h2>
+      <p class="admin-note">Family profiles for "Who's playing?" on the home page. New ones wait here for you to approve. A PIN is optional; whoever owns the profile can add one, and you can clear a forgotten one.</p>
+      <div id="profileList">Loading…</div>
+    </div>
+
+    <div class="admin-section">
+      <h2>🏠 Home page games</h2>
+      <p class="admin-note">Move games up and down to change their order on the home page, or hide ones you don't want showing. Hidden games still work if someone has the link.</p>
+      <div id="homeGames">Loading…</div>
+      <div id="homeGamesMsg" class="admin-msg"></div>
+    </div>
+
+    <div class="admin-section">
+      <h2>🔞 Adult PIN</h2>
+      <p class="admin-note">Locks every adult option in the arcade: adult Wordless themes, Rambler's Unfiltered words, the adult Uh-Oh and Dare Devil decks and Spin &amp; Solve's adult levels.
+        Changing it here overrides <code>ADULT_PIN</code> in <code>.env</code>.</p>
+      <div id="pinStatus" class="admin-note">Loading…</div>
+      <div class="field-row">
+        <div>
+          <label for="pinInput">New PIN (4–8 digits)</label>
+          <input type="password" id="pinInput" inputmode="numeric" maxlength="8" autocomplete="new-password" style="width:140px">
+        </div>
+        <button class="small-btn" id="savePinBtn">Save PIN</button>
+        <button class="small-btn" id="clearPinBtn">Remove PIN</button>
+      </div>
+      <div id="pinMsg" class="admin-msg"></div>
+    </div>
+  </div>
+
+  <div id="ramblerPanel" class="hidden">
     <div class="admin-section">
       <h2>🏆 Season</h2>
       <div id="seasonBox">Loading…</div>
@@ -281,6 +404,96 @@
     </div>
   </div>
 
+  <div id="spinPanel" class="hidden">
+    <div class="admin-section">
+      <h2>💡 Puzzle pack requests</h2>
+      <div id="spinRequests">Loading…</div>
+    </div>
+
+    <div class="admin-section">
+      <h2>🛠️ Create a puzzle pack</h2>
+      <div class="admin-note" id="spinBuildingFor"></div>
+      <div class="field-row" style="margin-top:0">
+        <div class="grow">
+          <label for="spinTopic">Topic</label>
+          <input type="text" id="spinTopic" maxlength="60" placeholder="e.g. Disney movies, camping, bachelorette party" style="width:100%">
+        </div>
+        <div>
+          <label for="spinLevel">Level</label>
+          <select id="spinLevel">
+            <option value="kids">🧒 Kids</option>
+            <option value="cheeky">🌶️ Cheeky (adult)</option>
+            <option value="spicy">🌶️🌶️ Spicy (adult)</option>
+            <option value="filthy">🌶️🌶️🌶️ Filthy (adult)</option>
+          </select>
+        </div>
+        <button class="small-btn" id="spinCopyPrompt">📋 Copy prompt</button>
+      </div>
+      <p class="admin-note">Paste the prompt into any AI chatbot, then paste its answer below. Adult packs stay hidden behind the adult PIN and never show on the home page. Puzzles that won't fit the board or use British spelling are skipped, and you'll see which.</p>
+      <textarea id="spinJson" rows="6" class="admin-textarea" placeholder='{"label":"Camping","emoji":"🏕️","puzzles":[{"category":"Thing","answer":"SLEEPING BAG"}]}'></textarea>
+      <button id="spinCreate" class="primary-btn" style="border:none;border-radius:8px;padding:10px 16px;font-weight:700;cursor:pointer;margin-top:8px;">Create pack</button>
+      <div id="spinStatus" class="status-msg"></div>
+    </div>
+
+    <div class="admin-section">
+      <h2>🎡 All puzzle packs</h2>
+      <div id="spinPacks"></div>
+    </div>
+  </div>
+
+  <div id="triviaPanel" class="hidden">
+    <div class="admin-section">
+      <h2>💡 Topic requests</h2>
+      <div id="triviaRequests">Loading…</div>
+    </div>
+
+    <div class="admin-section">
+      <h2>🛠️ Create a question pack</h2>
+      <div class="admin-note" id="triviaBuildingFor"></div>
+      <div class="field-row" style="margin-top:0">
+        <div class="grow">
+          <label for="triviaTopic">Topic</label>
+          <input type="text" id="triviaTopic" maxlength="60" placeholder="e.g. Harry Potter, '90s music, sex positions" style="width:100%">
+        </div>
+        <div>
+          <label for="triviaLevel">Level</label>
+          <select id="triviaLevel">
+            <option value="kids">🧒 Family</option>
+            <option value="cheeky">🌶️ Cheeky (adult)</option>
+            <option value="spicy">🌶️🌶️ Spicy (adult)</option>
+            <option value="filthy">🌶️🌶️🌶️ Filthy (adult)</option>
+          </select>
+        </div>
+        <div>
+          <label for="triviaDifficulty">Difficulty</label>
+          <select id="triviaDifficulty">
+            <option value="mixed">Mixed</option>
+            <option value="easy">Easy</option>
+            <option value="medium">Medium</option>
+            <option value="hard">Hard</option>
+          </select>
+        </div>
+        <button class="small-btn" id="triviaCopyPrompt">📋 Copy prompt</button>
+      </div>
+      <p class="admin-note">Paste the prompt into any AI chatbot, then paste its answer below. Adult packs stay behind the adult PIN and never show on the home page. Questions with broken answers are skipped, and you'll see which.</p>
+      <textarea id="triviaJson" rows="6" class="admin-textarea" placeholder='{"label":"Space","emoji":"🚀","genre":"Science","questions":[{"question":"…","correct":"…","wrong":["…","…","…"],"difficulty":"easy"}]}'></textarea>
+      <button id="triviaCreate" class="primary-btn" style="border:none;border-radius:8px;padding:10px 16px;font-weight:700;cursor:pointer;margin-top:8px;">Create pack</button>
+      <div id="triviaStatus" class="status-msg"></div>
+    </div>
+
+    <div class="admin-section">
+      <h2>🧠 All question packs</h2>
+      <div id="triviaPacks"></div>
+    </div>
+
+    <div class="admin-section">
+      <h2>🌐 Open Trivia DB</h2>
+      <p class="admin-note">Free family-friendly questions (opentdb.com, CC BY-SA 4.0), downloaded in the background and saved so they work offline. It refreshes once a month by itself.</p>
+      <div class="admin-note" id="triviaOnline">Loading…</div>
+      <button class="small-btn" id="triviaSync">⬇️ Download now</button>
+    </div>
+  </div>
+
   <div id="wordlessPanel" class="hidden">
     <div class="admin-section">
       <h2>💬 Pending Theme Requests</h2>
@@ -288,9 +501,18 @@
     </div>
 
     <div class="admin-section">
-      <h2>✨ Create Theme From JSON</h2>
+      <h2>✨ Create a Theme</h2>
+      <div class="field-row" style="margin-top:0">
+        <div class="grow">
+          <label for="newTopic">Topic</label>
+          <input type="text" id="newTopic" maxlength="60" placeholder="e.g. Bluey, Pokémon, 90s movies" style="width:100%">
+        </div>
+        <button class="small-btn" id="copyNewPromptBtn">📋 Copy prompt</button>
+      </div>
+      <label class="check-row"><input type="checkbox" id="newAdult"> 🔞 Adult theme: naughty words, hidden behind the adult PIN</label>
+      <p class="admin-note">Paste the prompt into any AI chatbot, then paste its answer below.</p>
       <p style="font-size:12px; opacity:0.7; margin-top:0;">Paste the JSON a chatbot (or you, by hand) generated for a topic.</p>
-      <textarea id="jsonInput" rows="6" placeholder='{"label":"Bluey","subject":"Bluey character","emoji":"🐶","accent":"#4fb8e8","bg":"#0d1a22","fontKey":"comic","words":["bluey","bingo","muffin","chilli","bandit","socks"]}'></textarea>
+      <textarea id="jsonInput" rows="6" placeholder='{"label":"Bluey","subject":"Bluey character","emoji":"🐶","accent":"#4fb8e8","bg":"#0d1a22","fontKey":"comic","words":["bluey","bingo","muffin","chili","bandit","socks"]}'></textarea>
       <button id="createFromJsonBtn" class="primary-btn" style="border:none;border-radius:8px;padding:10px 16px;font-weight:700;cursor:pointer;margin-top:8px;">Create Theme</button>
       <div id="jsonStatus" class="status-msg"></div>
     </div>
@@ -305,7 +527,12 @@
 </main>
   </div>
 
+<script src="avatars.js"></script>
 <script src="admin.js"></script>
 <script src="admin-rambler.js"></script>
+<script src="admin-arcade.js"></script>
+<script src="admin-spinsolve.js"></script>
+<script src="admin-trivia.js"></script>
+<script src="admin-profiles.js"></script>
 </body>
 </html>

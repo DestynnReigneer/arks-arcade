@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Know-It-All</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&display=swap">
+<link rel="stylesheet" href="arcade-ui.css">
+<link rel="stylesheet" href="trivia.css">
+<link rel="stylesheet" href="tutorial.css">
+<link rel="stylesheet" href="adult-mode.css">
+</head>
+<body>
+
+<header class="top">
+  <a href="/" class="icon-btn" title="Back to the arcade">←</a>
+  <h1>🧠 KNOW-IT-<span>ALL</span></h1>
+  <div class="btns">
+    <button class="icon-btn" id="muteBtn" title="Sound">🔊</button>
+    <button class="icon-btn" id="scoresBtn" title="High scores">🏆</button>
+    <button class="icon-btn" id="helpBtn" title="How to play">?</button>
+  </div>
+</header>
+
+<!-- ============ setup ============ -->
+<section id="setup">
+  <div class="panel">
+    <h2>How spicy?</h2>
+    <div class="levels" id="levelList"></div>
+    <div id="adultOptions" class="hidden">
+      <label class="toggle"><input type="checkbox" id="drinkingOpt"> 🍺 <b>Drinking</b>: wrong answers drink, streaks give drinks</label>
+      <label class="toggle"><input type="checkbox" id="couplesOpt"> 💋 <b>Couples dares</b>: miss one, do a dare</label>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>What about?</h2>
+    <p class="hint">Pick genres, or leave them all off for a mix of everything.</p>
+    <div class="chips" id="genreChips"></div>
+    <label style="margin-top:12px">Or play one question pack
+      <select id="packSelect"></select>
+    </label>
+    <div class="row-two">
+      <div>
+        <div class="hint">Difficulty</div>
+        <div class="seg" id="diffSeg">
+          <button data-v="mixed" aria-pressed="true">Mixed</button>
+          <button data-v="easy" aria-pressed="false">Easy</button>
+          <button data-v="medium" aria-pressed="false">Medium</button>
+          <button data-v="hard" aria-pressed="false">Hard</button>
+        </div>
+      </div>
+    </div>
+    <div class="hint">Questions <span id="countHint"></span></div>
+    <div class="seg" id="countSeg">
+      <button data-v="5" aria-pressed="false">5</button>
+      <button data-v="10" aria-pressed="true">10</button>
+      <button data-v="15" aria-pressed="false">15</button>
+      <button data-v="20" aria-pressed="false">20</button>
+    </div>
+    <div class="hint">Seconds to answer</div>
+    <div class="seg" id="secsSeg">
+      <button data-v="10" aria-pressed="false">10</button>
+      <button data-v="15" aria-pressed="false">15</button>
+      <button data-v="20" aria-pressed="true">20</button>
+      <button data-v="30" aria-pressed="false">30</button>
+    </div>
+    <button class="ghost" id="suggestBtn" style="width:100%;margin-top:6px">💡 Suggest a topic</button>
+  </div>
+
+  <div class="panel">
+    <h2>Who's playing?</h2>
+    <div class="seg" id="modeSeg">
+      <button data-mode="solo" aria-pressed="true">🙂 Solo</button>
+      <button data-mode="local" aria-pressed="false">📱 Share a phone</button>
+      <button data-mode="host" aria-pressed="false">📡 Host</button>
+      <button data-mode="join" aria-pressed="false">🔗 Join</button>
+    </div>
+    <div id="soloSetup"><p class="hint">Just you. Score high to get on the 🏆 board.</p></div>
+    <div id="localSetup" class="hidden">
+      <p class="hint">Take turns: each player gets their own questions.</p>
+      <div id="nameList"></div>
+      <button class="ghost" id="addPlayerBtn">+ Add player</button>
+    </div>
+    <div id="hostSetup" class="hidden">
+      <p class="hint">Everyone answers on their own phone at the same time. You get a code to share.</p>
+      <label>Your name<input id="hostName" maxlength="16" placeholder="e.g. Sam"></label>
+    </div>
+    <div id="joinSetup" class="hidden">
+      <p class="hint">Get the 4-letter code from whoever is hosting.</p>
+      <label>Game code<input id="joinCode" maxlength="4" placeholder="ABCD" autocapitalize="characters" class="code-input"></label>
+      <label>Your name<input id="joinName" maxlength="16" placeholder="e.g. Alex"></label>
+    </div>
+    <div class="msg" id="setupMsg"></div>
+    <button class="primary big" id="goBtn">Let's play</button>
+  </div>
+  <p class="credit" id="credit"></p>
+</section>
+
+<!-- ============ lobby ============ -->
+<section id="lobby" class="hidden">
+  <div class="panel center">
+    <div class="hint">Game code</div>
+    <div class="code" id="lobbyCode">----</div>
+    <img class="join-qr hidden" id="joinQr" width="150" height="150" alt="QR code to join"
+         style="width:150px;height:150px;background:#fff;padding:6px;border-radius:10px;margin:10px auto 2px;display:block">
+    <div class="join-link" id="joinLink" style="font-size:11px;opacity:0.65;text-align:center;word-break:break-all"></div>
+    <div style="font-size:12px;opacity:0.75;text-align:center">Scan to join from another phone</div>
+    <div class="hint">On the other phones: Know-It-All → Join, and type this in.</div>
+    <div class="hint" id="lobbyLevel"></div>
+  </div>
+  <div class="panel">
+    <h2>Players <span id="lobbyCount"></span></h2>
+    <ul class="people" id="lobbyPlayers"></ul>
+    <button class="primary big hidden" id="startBtn">Start the game</button>
+    <div class="hint" id="waitHost">Waiting for the host to start…</div>
+    <button class="ghost" id="lobbyLeave" style="width:100%;margin-top:8px">Leave</button>
+  </div>
+</section>
+
+<!-- ============ play ============ -->
+<section id="play" class="hidden">
+  <div class="q-top">
+    <span id="qProgress"></span>
+    <span class="tags"><span class="tag" id="qGenre"></span><span class="tag" id="qDiff"></span></span>
+  </div>
+  <div class="turn-banner hidden" id="turnBanner"></div>
+  <div class="q-timer"><div id="qTimerFill"></div></div>
+  <div class="q-card">
+    <div class="q-text" id="qText"></div>
+  </div>
+  <div class="answers" id="answers"></div>
+  <div class="status-line" id="qStatus"></div>
+  <ul class="score-strip" id="scoreStrip"></ul>
+  <div class="row-btns">
+    <button class="primary hidden" id="nextBtn">Next question →</button>
+  </div>
+  <button class="ghost big" id="quitBtn">Quit</button>
+</section>
+
+<!-- ============ overlays ============ -->
+<div class="overlay hidden" id="calloutView">
+  <div class="card-panel center callout-card" id="calloutCard">
+    <div class="big-emoji" id="calloutEmoji">🍺</div>
+    <div class="callout-who" id="calloutWho"></div>
+    <h2 id="calloutText"></h2>
+    <button class="primary big" id="calloutOk">Done!</button>
+  </div>
+</div>
+
+<div class="overlay hidden" id="passView">
+  <div class="card-panel center">
+    <div class="big-emoji">📱</div>
+    <h2 id="passTitle"></h2>
+    <p class="hint">Hand over the phone. Ready when they are.</p>
+    <button class="primary big" id="passOk">I'm ready</button>
+  </div>
+</div>
+
+<div class="overlay hidden" id="overView">
+  <div class="card-panel center">
+    <div class="big-emoji">🏆</div>
+    <h2 id="overTitle"></h2>
+    <ol class="final" id="finalList"></ol>
+    <div id="overScore" class="hidden">
+      <p class="hint">Get on the board and see where you stack up.</p>
+      <div class="initials">
+        <input maxlength="1" class="ini" autocomplete="off"><input maxlength="1" class="ini" autocomplete="off"><input maxlength="1" class="ini" autocomplete="off">
+      </div>
+      <button class="primary big" id="saveScoreBtn">Save score</button>
+      <div class="msg" id="scoreMsg"></div>
+    </div>
+    <div class="stack">
+      <button class="primary" id="againBtn">Play again</button>
+      <button class="ghost" id="menuBtn">Back to setup</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="pinView">
+  <div class="card-panel center">
+    <div class="big-emoji">🔞</div>
+    <h2>Adults only</h2>
+    <p class="hint">Enter the adult PIN.</p>
+    <input type="password" id="pinInput" inputmode="numeric" maxlength="8" class="code-input" autocomplete="off">
+    <div class="msg" id="pinMsg"></div>
+    <div class="stack">
+      <button class="primary" id="pinOk">Unlock</button>
+      <button class="ghost" id="pinCancel">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="requestView">
+  <div class="card-panel">
+    <h2>💡 Suggest a topic</h2>
+    <p class="hint">What should the next question pack be about?</p>
+    <div id="requestForm">
+      <label>Topic<input id="reqTopic" maxlength="60" placeholder="e.g. Harry Potter, '90s music, NFL"></label>
+      <label>Anything else? (optional)<input id="reqNote" maxlength="200"></label>
+      <label>Your name (optional)<input id="reqBy" maxlength="30"></label>
+      <div class="msg" id="reqMsg"></div>
+      <div class="stack">
+        <button class="primary" id="reqSend">Send idea</button>
+        <button class="ghost" id="reqCancel">Cancel</button>
+      </div>
+    </div>
+    <div id="reqThanks" class="hidden center"><div class="big-emoji">🙌</div><p>Thanks! Your idea is on its way.</p></div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="scoresView">
+  <div class="card-panel">
+    <h2>🏆 Solo high scores</h2>
+    <div class="seg hidden" id="scoreBoardSeg">
+      <button data-board="solo" aria-pressed="true">🧒 Family</button>
+      <button data-board="adult" aria-pressed="false">🔞 Adult</button>
+    </div>
+    <ul class="scores" id="scoreList"></ul>
+    <div class="stack"><button class="ghost" id="scoresClose">Close</button></div>
+  </div>
+</div>
+
+<script src="avatars.js"></script>
+<script src="profile.js"></script>
+<script src="tutorial.js"></script>
+<script src="blip.js"></script>
+<script src="arcade-kit.js"></script>
+<script src="trivia-rules.js"></script>
+<script src="arcade-qr.js"></script>
+<script src="room-password.js"></script>
+<script src="trivia.js"></script>
+</body>
+</html>

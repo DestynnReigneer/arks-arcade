@@ -1,0 +1,118 @@
+/* Chess. The board is a CSS grid of 64 buttons, sized to the screen. */
+:root { --accent: #ffc72c; --light-sq: #e9dcb8; --dark-sq: #7d6a4c; --pick: #2e9bff; }
+
+.board-wrap { position: relative; display: flex; justify-content: center; }
+.board {
+  --size: min(calc(100vw - 32px), 480px, calc(100vh - 290px));
+  width: var(--size); height: var(--size);
+  display: grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr);
+  border: 3px solid var(--card-2); border-radius: 6px; overflow: hidden;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
+  min-width: 260px; min-height: 260px;
+}
+.sq {
+  position: relative; border: 0; padding: 0; margin: 0; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: calc(var(--size) / 8 * 0.74); line-height: 1;
+  font-family: "Segoe UI Symbol", "DejaVu Sans", "Noto Sans Symbols 2", "Apple Symbols", serif;
+  -webkit-tap-highlight-color: transparent;
+}
+.sq.light { background: var(--light-sq); }
+.sq.dark { background: var(--dark-sq); }
+.sq.last::before { content: ''; position: absolute; inset: 0; background: rgba(255, 199, 44, 0.42); }
+.sq.picked::before { content: ''; position: absolute; inset: 0; background: rgba(46, 155, 255, 0.55); }
+.sq.check::before {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(circle, rgba(255, 60, 60, 0.95) 0%, rgba(255, 60, 60, 0.35) 55%, transparent 75%);
+}
+/* Where the picked piece can go: a dot, or a ring around something to take */
+.sq.to::after {
+  content: ''; position: absolute; width: 28%; height: 28%; border-radius: 50%; background: rgba(20, 20, 30, 0.38);
+}
+.sq.to.take::after { width: 88%; height: 88%; background: transparent; border: 5px solid rgba(20, 20, 30, 0.38); }
+.sq .pc { position: relative; z-index: 1; pointer-events: none; }
+.pc.w { color: #fffdf6; text-shadow: 0 0 1px #000, 0 0 2px #000, 0 2px 2px rgba(0, 0, 0, 0.6); }
+.pc.b { color: #1b1626; text-shadow: 0 0 1px rgba(255, 255, 255, 0.55), 0 2px 2px rgba(0, 0, 0, 0.35); }
+.sq .coord {
+  position: absolute; font-size: 9px; font-family: var(--font); font-weight: 700; opacity: 0.75; pointer-events: none;
+}
+.sq .coord.file { right: 3px; bottom: 1px; }
+.sq .coord.rank { left: 3px; top: 2px; }
+.sq.light .coord { color: var(--dark-sq); }
+.sq.dark .coord { color: var(--light-sq); }
+
+.player-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  max-width: 480px; margin: 8px auto; padding: 6px 10px; border-radius: 10px;
+  background: var(--card); border: 1px solid var(--border); font-size: 14px; min-height: 36px;
+}
+.player-bar.turn { border-color: var(--accent); }
+.player-bar .p-name { font-weight: 700; }
+.player-bar .p-name .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-left: 6px; background: var(--ok); }
+.player-bar .p-name .dot.off { background: var(--dim); }
+.player-bar .p-taken { font-size: 17px; letter-spacing: -2px; color: var(--muted); font-family: "Segoe UI Symbol", "DejaVu Sans", serif; }
+.player-bar .p-taken b { font-size: 12px; letter-spacing: 0; margin-left: 6px; font-family: var(--font); color: var(--accent); }
+
+.status-line { text-align: center; font-weight: 700; min-height: 22px; margin: 6px 0 10px; }
+.status-line.alert { color: var(--danger); }
+.status-line .thinking::after { content: '…'; animation: dots 1s steps(3) infinite; }
+@keyframes dots { 0% { content: ''; } 33% { content: '.'; } 66% { content: '..'; } 100% { content: '...'; } }
+
+.moves {
+  margin: 12px auto 0; max-width: 480px; max-height: 110px; overflow-y: auto;
+  background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px;
+  font-size: 13px; line-height: 1.7; color: var(--muted); font-variant-numeric: tabular-nums;
+}
+.moves:empty { display: none; }
+.moves .n { color: var(--dim); margin-right: 4px; }
+.moves .m { margin-right: 10px; }
+.moves .m:last-child { color: var(--text); font-weight: 700; }
+#gameBtns { max-width: 480px; margin: 0 auto; }
+#gameBtns button { padding: 9px 6px; font-size: 13px; }
+#quitBtn { max-width: 480px; display: block; margin: 12px auto 0; }
+
+.promo-row { display: flex; gap: 8px; justify-content: center; }
+.promo-row button {
+  width: 64px; height: 64px; font-size: 44px; border-radius: 12px; cursor: pointer;
+  background: var(--light-sq); border: 2px solid var(--border);
+  font-family: "Segoe UI Symbol", "DejaVu Sans", serif;
+}
+.final-score { font-size: 40px; font-weight: 800; color: var(--accent); margin-top: 10px; }
+
+/* What just happened, in words, above the board */
+.last-move {
+  max-width: 480px; margin: 0 auto 8px; min-height: 34px; padding: 6px 10px; border-radius: 10px;
+  display: flex; align-items: center; gap: 8px; font-size: 13.5px; line-height: 1.3;
+  background: var(--card); border: 1px solid var(--border); color: var(--muted);
+}
+.last-move:empty { visibility: hidden; }
+.last-move.fresh { animation: lastIn 0.5s ease; }
+.last-move.capture { border-color: var(--danger); color: var(--text); background: color-mix(in srgb, var(--danger) 12%, var(--card)); }
+.last-move .g { font-size: 20px; font-family: "Segoe UI Symbol", "DejaVu Sans", "Noto Sans Symbols 2", serif; line-height: 1; }
+.last-move .g.w { color: #fffdf6; text-shadow: 0 0 1px #000, 0 0 2px #000; }
+.last-move .g.b { color: #1b1626; text-shadow: 0 0 1px rgba(255, 255, 255, 0.8), 0 0 2px rgba(255, 255, 255, 0.5); }
+.last-move b { color: var(--text); }
+.last-move .taken { color: var(--danger); font-weight: 800; }
+@keyframes lastIn { from { transform: translateY(-4px); opacity: 0.2; } to { transform: none; opacity: 1; } }
+
+/* A piece gliding across the board, lifted up while it travels */
+.glide {
+  position: absolute; z-index: 5; display: flex; align-items: center; justify-content: center; pointer-events: none;
+  font-family: "Segoe UI Symbol", "DejaVu Sans", "Noto Sans Symbols 2", "Apple Symbols", serif; line-height: 1;
+  transform-origin: center;
+}
+.glide.moving { filter: drop-shadow(0 8px 6px rgba(0, 0, 0, 0.55)); }
+/* The piece that got taken: a red flash, then gone */
+.glide.taken { animation: taken 0.55s ease-in forwards; }
+@keyframes taken {
+  0% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(255, 60, 60, 0)); }
+  35% { transform: scale(1.25); filter: drop-shadow(0 0 10px rgba(255, 60, 60, 1)); }
+  100% { transform: scale(0.2) rotate(25deg); opacity: 0; }
+}
+.sq.arrive::before { content: ''; position: absolute; inset: 0; animation: arrive 0.7s ease-out; }
+@keyframes arrive { from { background: rgba(255, 199, 44, 0.85); } to { background: rgba(255, 199, 44, 0.42); } }
+.sq.from-ring::after {
+  content: ''; position: absolute; inset: 14%; border-radius: 50%; border: 3px dashed rgba(255, 199, 44, 0.75);
+}
+.p-taken.bump { animation: bump 0.6s ease; }
+@keyframes bump { 30% { transform: scale(1.25); color: var(--danger); } }

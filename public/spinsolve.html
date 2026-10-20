@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spin &amp; Solve</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&display=swap">
+<link rel="stylesheet" href="arcade-ui.css">
+<link rel="stylesheet" href="spinsolve.css">
+<link rel="stylesheet" href="tutorial.css">
+<link rel="stylesheet" href="adult-mode.css">
+</head>
+<body>
+
+<header class="top">
+  <a href="/" class="icon-btn" title="Back to the arcade">←</a>
+  <h1><img src="spin-wheel-logo.svg" alt="" class="logo-wheel"> SPIN <span>&amp; SOLVE</span></h1>
+  <div class="btns">
+    <button class="icon-btn" id="muteBtn" title="Sound">🔊</button>
+    <button class="icon-btn" id="scoresBtn" title="High scores">🏆</button>
+    <button class="icon-btn" id="helpBtn" title="How to play">?</button>
+  </div>
+</header>
+
+<!-- ============ setup ============ -->
+<section id="setup">
+  <div class="panel">
+    <h2>How spicy?</h2>
+    <div class="levels" id="levelList"></div>
+    <label style="margin-top:14px">Puzzles
+      <select id="packSelect"></select>
+    </label>
+    <button class="ghost" id="suggestBtn" style="width:100%">💡 Suggest a theme</button>
+  </div>
+
+  <div class="panel">
+    <h2>Who's playing?</h2>
+    <p class="hint">One player plays solo for the 🏆 board. Two to four take turns on this phone.</p>
+    <div id="nameList"></div>
+    <button class="ghost" id="addPlayerBtn">+ Add player</button>
+    <h2 style="margin-top:18px">How many rounds?</h2>
+    <div class="seg" id="roundSeg">
+      <button data-rounds="3" aria-pressed="true">3 rounds</button>
+      <button data-rounds="5" aria-pressed="false">5 rounds</button>
+    </div>
+    <h2 style="margin-top:18px">Turn timer</h2>
+    <p class="hint">How long each player gets to make a move before the turn passes.</p>
+    <div class="seg" id="timerSeg">
+      <button data-secs="30" aria-pressed="false">30s</button>
+      <button data-secs="45" aria-pressed="true">45s</button>
+      <button data-secs="60" aria-pressed="false">60s</button>
+      <button data-secs="90" aria-pressed="false">90s</button>
+      <button data-secs="0" aria-pressed="false">Off</button>
+    </div>
+    <button class="primary big" id="goBtn">Let's play</button>
+  </div>
+</section>
+
+<!-- ============ game ============ -->
+<section id="game" class="hidden">
+  <div class="round-line"><span id="roundLabel"></span><span id="strikes" class="strikes"></span></div>
+
+  <!-- The stage: the puzzle wall, and this round's robot host gliding along underneath it -->
+  <div class="stage">
+    <div class="puzzle-board" id="puzzleBoard"></div>
+    <div class="host-lane" id="hostLane">
+      <div class="host heckler hidden" id="heckler" data-pose="idle" aria-hidden="true">
+        <div class="host-say" id="hecklerSay"></div>
+        <div class="host-art" id="hecklerArt"></div>
+      </div>
+      <div class="host" id="host" data-pose="idle" aria-hidden="true">
+        <div class="gesture" id="hostGesture"></div>
+        <div class="host-say" id="hostSay"></div>
+        <div class="host-art" id="hostArt"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="category" id="categoryLabel"></div>
+
+  <ul class="players" id="playerList"></ul>
+
+  <div class="wheel-area">
+    <svg class="wheel" id="wheel" viewBox="-116 -116 232 232" aria-hidden="true">
+      <defs id="wheelDefs"></defs>
+      <g id="wheelSpin" filter="url(#wheel-blur)"></g>
+      <g id="wheelStatic"></g>
+    </svg>
+    <div class="flapper" id="flapper"></div>
+    <div class="landed hidden" id="landed"></div>
+  </div>
+
+  <div class="turn-line" id="turnLine"></div>
+  <div class="turn-timer hidden" id="turnTimer"><div class="tt-fill" id="ttFill"></div><span id="ttText"></span></div>
+  <div class="row-btns actions">
+    <button class="primary" id="spinBtn"><img src="spin-wheel-logo.svg" alt="" class="btn-wheel"> Spin</button>
+    <button class="ghost" id="vowelBtn">🅰️ Buy a vowel <small>$250</small></button>
+    <button class="ghost" id="solveBtn">💡 Solve</button>
+  </div>
+  <div class="used" id="usedLetters"></div>
+  <button class="ghost big" id="quitBtn">Back to setup</button>
+</section>
+
+<!-- ============ overlays ============ -->
+<div class="overlay hidden" id="letterView">
+  <div class="card-panel center">
+    <h2 id="letterTitle">Pick a consonant</h2>
+    <p class="hint" id="letterHint"></p>
+    <div class="letter-grid" id="letterGrid"></div>
+    <button class="ghost" id="letterCancel" style="margin-top:10px;width:100%">Cancel</button>
+  </div>
+</div>
+
+<div class="overlay hidden" id="solveView">
+  <div class="card-panel center">
+    <h2>Solve the puzzle</h2>
+    <p class="hint" id="solveCategory"></p>
+    <input id="solveInput" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Type the whole answer">
+    <div class="msg" id="solveMsg"></div>
+    <div class="stack">
+      <button class="primary" id="solveOk">That's my answer</button>
+      <button class="ghost" id="solveCancel">Not yet</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="roundView">
+  <div class="card-panel center">
+    <div class="big-emoji" id="roundEmoji">🎉</div>
+    <h2 id="roundTitle"></h2>
+    <p class="answer" id="roundAnswer"></p>
+    <p class="hint" id="roundHint"></p>
+    <button class="primary big" id="nextRoundBtn">Next round</button>
+  </div>
+</div>
+
+<div class="overlay hidden" id="overView">
+  <div class="card-panel center">
+    <div class="big-emoji">🏆</div>
+    <h2 id="overTitle"></h2>
+    <ul class="final" id="finalList"></ul>
+    <div id="overScore" class="hidden">
+      <p class="hint">Get on the board and see where you stack up.</p>
+      <div class="initials">
+        <input maxlength="1" class="ini" autocomplete="off"><input maxlength="1" class="ini" autocomplete="off"><input maxlength="1" class="ini" autocomplete="off">
+      </div>
+      <button class="primary big" id="saveScoreBtn">Save score</button>
+      <div class="msg" id="scoreMsg"></div>
+    </div>
+    <div class="stack">
+      <button class="primary" id="againBtn">Play again</button>
+      <button class="ghost" id="menuBtn">Back to setup</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="pinView">
+  <div class="card-panel center">
+    <div class="big-emoji">🔞</div>
+    <h2>Adults only</h2>
+    <p class="hint" id="pinHint">Enter the adult PIN.</p>
+    <input type="password" id="pinInput" inputmode="numeric" maxlength="8" class="code-input" autocomplete="off">
+    <div class="msg" id="pinMsg"></div>
+    <div class="stack">
+      <button class="primary" id="pinOk">Unlock</button>
+      <button class="ghost" id="pinCancel">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="requestView">
+  <div class="card-panel">
+    <h2>💡 Suggest a theme</h2>
+    <p class="hint">What should the next puzzle pack be about? The arcade's owner gets your idea.</p>
+    <div id="requestForm">
+      <label>Theme idea<input id="reqTopic" maxlength="60" placeholder="e.g. Pokémon, Disney movies, camping"></label>
+      <label>Anything else? (optional)<input id="reqNote" maxlength="200"></label>
+      <label>Your name (optional)<input id="reqBy" maxlength="30"></label>
+      <div class="msg" id="reqMsg"></div>
+      <div class="stack">
+        <button class="primary" id="reqSend">Send idea</button>
+        <button class="ghost" id="reqCancel">Cancel</button>
+      </div>
+    </div>
+    <div id="reqThanks" class="hidden center">
+      <div class="big-emoji">🙌</div>
+      <p>Thanks! Your idea is on its way.</p>
+    </div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="scoresView">
+  <div class="card-panel">
+    <h2>🏆 Solo high scores</h2>
+    <div class="seg hidden" id="scoreBoardSeg">
+      <button data-board="solo" aria-pressed="true">🧒 Kids</button>
+      <button data-board="adult" aria-pressed="false">🔞 Adult</button>
+    </div>
+    <ul class="scores" id="scoreList"></ul>
+    <div class="stack"><button class="ghost" id="scoresClose">Close</button></div>
+  </div>
+</div>
+
+<script src="avatars.js"></script>
+<script src="profile.js"></script>
+<script src="tutorial.js"></script>
+<script src="blip.js"></script>
+<script src="arcade-kit.js"></script>
+<script src="spin-hosts.js"></script>
+<script src="spinsolve.js"></script>
+</body>
+</html>

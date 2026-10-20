@@ -21,7 +21,7 @@ function wordPoints(word, spec, min = minLength(spec), { themed = false } = {}) 
 // applies when more than one player is in the round.
 //
 // players: [{ id, name, words: string[] }]
-// Returns per-player breakdowns plus the set of cancelled words.
+// Returns per-player breakdowns plus the set of canceled words.
 function scoreRound({ players, size, min, validator, isThemed = () => false }) {
   const multi = players.length > 1;
   const counts = new Map();
@@ -40,10 +40,10 @@ function scoreRound({ players, size, min, validator, isThemed = () => false }) {
     return { player: p, rows };
   });
 
-  const cancelled = new Set();
+  const canceled = new Set();
   if (multi) {
     for (const [word, n] of counts) {
-      if (n > 1) cancelled.add(word);
+      if (n > 1) canceled.add(word);
     }
   }
 
@@ -52,17 +52,17 @@ function scoreRound({ players, size, min, validator, isThemed = () => false }) {
     let valid = 0;
     let best = null;
     const words = rows.map(row => {
-      if (!row.valid) return { ...row, points: 0, cancelled: false };
-      const isCancelled = cancelled.has(row.word);
+      if (!row.valid) return { ...row, points: 0, canceled: false };
+      const isCanceled = canceled.has(row.word);
       const themed = isThemed(row.word);
-      const points = isCancelled ? 0 : wordPoints(row.word, size, min, { themed });
+      const points = isCanceled ? 0 : wordPoints(row.word, size, min, { themed });
       score += points;
       valid++;
       if (points > 0 && (!best || points > best.points ||
           (points === best.points && row.word.length > best.word.length))) {
         best = { word: row.word, points };
       }
-      return { ...row, points, cancelled: isCancelled, themed };
+      return { ...row, points, canceled: isCanceled, themed };
     });
 
     words.sort((a, b) => b.points - a.points || a.word.localeCompare(b.word));
@@ -91,7 +91,7 @@ function scoreRound({ players, size, min, validator, isThemed = () => false }) {
     r.rank = rank;
   });
 
-  return { results, cancelled: [...cancelled].sort() };
+  return { results, canceled: [...canceled].sort() };
 }
 
 module.exports = { wordPoints, scoreRound, THEME_MULTIPLIER };

@@ -55,14 +55,22 @@ async function api(path, { method = 'GET', body } = {}) {
   if (body) headers['Content-Type'] = 'application/json';
   if (S.adultPin) headers['X-Adult-Pin'] = S.adultPin;
 
-  const res = await fetch(API + path, {
-    method,
-    headers: Object.keys(headers).length ? headers : undefined,
-    body: body ? JSON.stringify(body) : undefined
-  });
+  // A server that has gone away can leave a request hanging forever, which
+  // looks to the player like the game froze. Give up and say so instead.
+  let res;
+  try {
+    res = await fetch(API + path, {
+      method,
+      headers: Object.keys(headers).length ? headers : undefined,
+      body: body ? JSON.stringify(body) : undefined,
+      signal: AbortSignal.timeout(15000)
+    });
+  } catch {
+    throw new Error('Could not reach the game server. Check it is running and try again.');
+  }
   let data = null;
   try { data = await res.json(); } catch { /* empty body */ }
-  if (!res.ok) throw new Error((data && data.error) || `Request failed (${res.status})`);
+  if (!res.ok) throw Object.assign(new Error((data && data.error) || `Request failed (${res.status})`), { data: data || {} });
   return data;
 }
 
@@ -178,15 +186,27 @@ function paintTrace(state = '') {
   const word = traceWord();
   bar.className = `trace-bar${state ? ' ' + state : ''}`;
   if (!word) {
-    bar.innerHTML = '<span class="placeholder">Drag across the dice</span>';
+    bar.innerHTML = '<span class="placeholder">Drag across the letters</span>';
   } else {
     bar.textContent = word;
   }
 }
 
-function dieIndexAt(x, y) {
+// While dragging, a die only counts once the finger is near its middle.
+// Going diagonally means passing right by the corners of the two dice beside
+// the one you want; with the whole square as the target, those get picked up
+// by accident. A circle a bit smaller than the die leaves the corners alone.
+const DRAG_HIT_RADIUS = 0.36;   // of the die's width
+
+function dieIndexAt(x, y, strict = false) {
   const el = document.elementFromPoint(x, y);
   if (!el || !el.classList.contains('die')) return -1;
+  if (strict) {
+    const r = el.getBoundingClientRect();
+    const dx = x - (r.left + r.width / 2);
+    const dy = y - (r.top + r.height / 2);
+    if (Math.hypot(dx, dy) > Math.min(r.width, r.height) * DRAG_HIT_RADIUS) return -1;
+  }
   return Number(el.dataset.i);
 }
 
@@ -247,7 +267,7 @@ function bindTracing() {
     wrap.addEventListener('pointermove', e => {
       if (!trace.active || trace.ctx !== ctx) return;
       e.preventDefault();
-      extendTrace(dieIndexAt(e.clientX, e.clientY));
+      extendTrace(dieIndexAt(e.clientX, e.clientY, true));
     });
   }
 
@@ -381,7 +401,12 @@ function beginTurn() {
 
   const alone = S.mode === 'solo' || S.mode === 'daily';
   const tabletop = S.mode === 'tabletop';
-  $('turnName').innerHTML = alone || tabletop ? '' : `<b>${player.name}</b>'s turn`;
+  $('turnName').innerHTML = '';
+  if (!(alone || tabletop)) {
+    const b = document.createElement('b');
+    b.textContent = player.name;
+    $('turnName').append(b, "'s turn");
+  }
   $('playRoster').classList.add('hidden');   // single-device modes have no roster
   $('typeRow').classList.toggle('hidden', tabletop);
   $('traceBar').classList.toggle('hidden', tabletop);
@@ -635,7 +660,7 @@ function renderDailyStandings(host, standings, { mineId = null } = {}) {
       '<span class="r"></span><span class="av"></span><span class="nm"></span>' +
       '<span class="tag"></span><span class="s"></span>';
     row.querySelector('.r').textContent = String(i + 1);
-    row.querySelector('.av').textContent = r.avatar;
+    showAvatar(row.querySelector('.av'), r.avatar);
     row.querySelector('.nm').textContent = r.name;
     row.querySelector('.tag').textContent = r.profile === 'adult' ? 'unfiltered' : 'kids';
     row.querySelector('.s').textContent = String(r.score);
@@ -742,6 +767,19 @@ function showDailyResult(daily) {
 // only the chosen id kept locally.
 const PROFILE_KEY = 'rambler.playerId';
 
+// Arcade profiles use drawn avatars ("shiba:3"); older Rambler ones are emoji.
+function showAvatar(el, avatar) {
+  if (typeof Avatars !== 'undefined' && /^[a-z]+:/.test(String(avatar))) {
+    el.textContent = '';
+    el.style.display = 'inline-block';
+    el.style.width = el.style.height = '1.6em';
+    el.style.verticalAlign = 'middle';
+    Avatars.put(el, avatar);
+  } else {
+    el.textContent = avatar;
+  }
+}
+
 async function loadProfiles() {
   try {
     const data = await api('/players');
@@ -780,7 +818,7 @@ function profileMeta(p) {
 function renderProfileChip() {
   const chip = $('profileBtn');
   chip.classList.toggle('signed', !!S.player);
-  $('pcAvatar').textContent = S.player ? S.player.avatar : '\u{1F464}';
+  showAvatar($('pcAvatar'), S.player ? S.player.avatar : '\u{1F464}');
   $('pcName').textContent = S.player ? S.player.name : 'Guest';
   $('pcMeta').textContent = S.player ? profileMeta(S.player) : 'tap to pick';
 }
@@ -795,7 +833,7 @@ async function showProfilePicker() {
     tile.type = 'button';
     tile.className = 'who-tile' + (S.player && S.player.id === p.id ? ' current' : '');
     tile.innerHTML = '<span class="av"></span><span class="nm"></span><span class="sub"></span>';
-    tile.querySelector('.av').textContent = p.avatar;
+    showAvatar(tile.querySelector('.av'), p.avatar);
     tile.querySelector('.nm').textContent = p.name;
     tile.querySelector('.sub').textContent = p.games ? profileMeta(p) : 'new';
     tile.onclick = () => {
@@ -889,7 +927,7 @@ async function openProfileDetail() {
   S.player = { ...S.player, ...full };
   renderProfileChip();
 
-  $('pdTitle').textContent = `${full.avatar} ${full.name}`;
+  $('pdTitle').textContent = full.name;
 
   const stats = [
     ['Streak', full.streak + (full.streak === 1 ? ' day' : ' days')],
@@ -1402,7 +1440,9 @@ function renderPlayRoster(snap) {
 }
 
 function renderLobby(snap) {
+  $('lobbyPassword').textContent = snap.lobbyPassword ? `🔒 Lobby password: ${snap.lobbyPassword}` : snap.locked ? '🔒 This game is locked with a password.' : '';
   $('roomCode').textContent = snap.code;
+  if ($('joinQr').dataset.code !== snap.code) { $('joinQr').dataset.code = snap.code; ArcadeQR.forGame($('joinQr'), 'rambler.html', snap.code, $('joinLink')); }
   const roster = $('lobbyRoster');
   roster.innerHTML = '';
   for (const p of snap.players) {
@@ -1427,7 +1467,7 @@ function renderLobby(snap) {
 }
 
 function pushRoomSettings(patch) {
-  api(`/rooms/${S.creds.code}/settings`, { method: 'POST', body: { ...S.creds, ...patch } })
+  RoomPassword.withPassword(password => api(`/rooms/${S.creds.code}/settings`, { method: 'POST', body: { ...S.creds, ...patch, password } }))
     .catch(e => alert(e.message));
 }
 
@@ -1480,8 +1520,8 @@ function showResults(results) {
     }
     for (const w of r.words) {
       const line = document.createElement('div');
-      line.className = `word-line${!w.valid ? ' bad' : w.cancelled ? ' dead' : ''}`;
-      const label = !w.valid ? w.reason : w.cancelled ? 'everyone found it' : '';
+      line.className = `word-line${!w.valid ? ' bad' : w.canceled ? ' dead' : ''}`;
+      const label = !w.valid ? w.reason : w.canceled ? 'everyone found it' : '';
       line.innerHTML = `<span class="w"></span><span class="p${w.points ? '' : ' zero'}"></span>`;
       line.querySelector('.w').textContent = w.word;
       line.querySelector('.p').textContent = w.points ? `+${w.points}` : label;
@@ -1491,10 +1531,10 @@ function showResults(results) {
     standings.appendChild(d);
   });
 
-  const cancelled = results.cancelled || [];
-  $('cancelledPanel').classList.toggle('hidden', cancelled.length === 0);
-  if (cancelled.length) {
-    chips($('cancelledChips'), cancelled.map(w => ({ word: w, points: 0 })));
+  const canceled = results.canceled || [];
+  $('canceledPanel').classList.toggle('hidden', canceled.length === 0);
+  if (canceled.length) {
+    chips($('canceledChips'), canceled.map(w => ({ word: w, points: 0 })));
   }
 
   $('missedPanel').classList.toggle('hidden', results.missed.length === 0);
@@ -1513,6 +1553,9 @@ function showResults(results) {
   showArcadePanel(results.arcade, scoreTarget() ? scoreTarget().score : 0);
   refreshSeason();
   $('saveScoreBtn').classList.toggle('hidden', !canSaveScore());
+  // A score that made the board is only kept once initials go on it, and a
+  // button alone was easy to walk past. Ask straight after the banner.
+  if (canSaveScore()) setTimeout(() => { if (S.results === results) openInitials(); }, 2100);
   $('againBtn').textContent = S.mode === 'room'
     ? (S.room && S.room.youAreHost ? 'New round' : 'Back to lobby')
     : S.mode === 'daily' ? 'Back to today\u2019s board'
@@ -1589,8 +1632,8 @@ function renderSeasonStrip() {
   if (!el) return;
   const text = seasonStripText(S.season);
   const soon = !!(S.season && S.season.closingSoon);
-  // The spec's rule: status is colour + icon + word, never colour alone.
-  // The words were already there; the warn colour and the hourglass make
+  // The spec's rule: status is color + icon + word, never color alone.
+  // The words were already there; the warn color and the hourglass make
   // the third.
   el.textContent = soon && text ? '⏳ ' + text : text;
   el.classList.toggle('hidden', !text);
@@ -1727,6 +1770,7 @@ function renderPlayersEditor() {
 // mode it is in before anyone reads a word on it.
 function paintPalette() {
   document.documentElement.classList.toggle('unfiltered', S.profile === 'adult');
+  document.documentElement.classList.toggle('adult-mode', S.profile === 'adult');
 }
 
 function renderSetup() {
@@ -1766,7 +1810,7 @@ function renderSetup() {
     : '';
 
   $('startBtn').textContent =
-    S.mode === 'room' ? 'Open a room' : S.mode === 'marathon' ? 'Start the run' : 'Shake the dice';
+    S.mode === 'room' ? 'Open a room' : S.mode === 'marathon' ? 'Start the run' : 'Slide to victory';
 }
 
 function pickProfile(value) {
@@ -1792,16 +1836,19 @@ async function startPressed() {
     }
 
     if (S.mode === 'room') {
-      const data = await api('/rooms', {
+      // An Unfiltered room gets a lobby password the host makes up.
+      const data = await RoomPassword.withPassword(password => api('/rooms', {
         method: 'POST',
         body: {
           name: $('nameInput').value,
           size: S.size,
           profile: S.profile,
           durationSec: S.duration,
-          adultPin: S.adultPin
+          adultPin: S.adultPin,
+          password
         }
-      });
+      }));
+      if (!data) return;
       S.creds = { code: data.code, playerId: data.playerId, token: data.token };
       openStream();
       return;
@@ -1826,10 +1873,11 @@ async function joinPressed() {
   const code = $('joinCodeInput').value.trim().toUpperCase();
   if (code.length !== 4) return say($('setupMsg'), 'Room codes are four characters.', 'err');
   try {
-    const data = await api(`/rooms/${code}/join`, {
+    const data = await RoomPassword.withPassword(password => api(`/rooms/${code}/join`, {
       method: 'POST',
-      body: { name: $('nameInput').value }
-    });
+      body: { name: $('nameInput').value, password }
+    }));
+    if (!data) return;
     S.creds = { code: data.code, playerId: data.playerId, token: data.token };
     S.mode = 'room';
     openStream();
@@ -1892,6 +1940,9 @@ async function saveInitials() {
     ? { ...S.creds, initials, profileId }
     : { boardId: S.boardId, playerId: target.playerId, mode: S.mode, durationSec: S.duration, initials, profileId };
 
+  if (S.savingInitials) return;
+  S.savingInitials = true;
+  say($('initialsMsg'), 'Saving…');
   try {
     const saved = await api('/leaderboard', { method: 'POST', body });
     if (!saved.made) {
@@ -1908,6 +1959,8 @@ async function saveInitials() {
     setTimeout(() => $('initialsOverlay').classList.add('hidden'), 1400);
   } catch (e) {
     say($('initialsMsg'), e.message, 'err');
+  } finally {
+    S.savingInitials = false;
   }
 }
 
@@ -2049,6 +2102,8 @@ function bind() {
   // Browsers will not make a sound until the page has been interacted with,
   // so the very first tap anywhere is what wakes the audio engine.
   document.addEventListener('pointerdown', () => Sound.arm(), { once: true });
+  $('helpBtn').onclick = () => window.ramblerTutorial.open();
+  window.ramblerTutorial.autoOpen();
 
   $('lobbyStartBtn').onclick = () => {
     api(`/rooms/${S.creds.code}/start`, { method: 'POST', body: S.creds })
@@ -2105,6 +2160,16 @@ async function boot() {
   renderSeasonStrip();
   renderSetup();
   refreshDailyCard();
+
+  // A link like rambler.html?join=ABCD (from a QR code or the arcade's
+  // "Join a game" list) lands on Own Phones with the code filled in.
+  const joinParam = new URLSearchParams(location.search).get('join');
+  if (joinParam) {
+    S.mode = 'room';
+    renderSetup();
+    $('joinCodeInput').value = joinParam.toUpperCase().slice(0, 4);
+    $('joinCodeInput').scrollIntoView({ block: 'center' });
+  }
 
   // First visit with profiles already on the server and none chosen: ask who
   // is playing rather than silently banking nothing.

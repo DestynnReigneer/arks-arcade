@@ -4,21 +4,21 @@ const express = require('express');
 const db = require('../db');
 const seasons = require('./seasons');
 const packs = require('./packs');
+const comm = require('../arcade/comm');
 
 // Admin routes for Rambler. Mounted under /api/rambler/admin and gated by the
 // same ADMIN_TOKEN the Wordless admin already uses -- deny by default: if the
 // token is not configured, none of this exists.
 
 const router = express.Router();
-const ADMIN_TOKEN = process.env.ADMIN_TOKEN || '';
+const ADMIN_TOKEN = process.env.ADMIN_PASSWORD || process.env.ADMIN_TOKEN || '';
 
 function fail(message, status) {
   return Object.assign(new Error(message), { status });
 }
 
 router.use((req, res, next) => {
-  const supplied = req.get('X-Admin-Token') || '';
-  if (!ADMIN_TOKEN || supplied !== ADMIN_TOKEN) {
+  if (!require('../arcade/security').sameSecret(req.get('X-Admin-Token'), ADMIN_TOKEN)) {
     return res.status(401).json({ error: 'Admin token missing or incorrect.' });
   }
   next();
@@ -140,6 +140,14 @@ router.post('/themes', (req, res, next) => {
     const parsed = packs.parsePack(body.json !== undefined ? body.json : body);
     const created = db.createRamblerTheme(parsed);
     packs.refresh({ force: true });
+    // The home page is the kids' front door too, so adult packs stay quiet.
+    if (created.audience !== 'adult') {
+      comm.safePost({
+        kind: 'theme', emoji: created.emoji || '🎭', game: 'rambler',
+        title: `New Rambler theme pack: ${created.label}`,
+        body: `${created.label} has been added to Rambler. When it's the active pack, its words score bonus points.`
+      });
+    }
     res.status(201).json({
       theme: { ...created, words: undefined },
       skipped: parsed.skipped,

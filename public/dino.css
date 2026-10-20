@@ -1,0 +1,24 @@
+/* Dino Dash: one wide canvas and two big thumb buttons. */
+:root { --accent: #3ddc84; --on-accent: #08130c; }
+
+.stage {
+  border: 2px solid var(--border); border-radius: 12px; overflow: hidden; background: #171623;
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.45);
+}
+#canvas { display: block; width: 100%; height: auto; touch-action: none; cursor: pointer; }
+
+.pad { display: flex; gap: 10px; margin-top: 12px; }
+.pad-btn {
+  flex: 1; height: 84px; border-radius: 14px; font-size: 30px; line-height: 1; cursor: pointer;
+  background: var(--card); color: var(--text); border: 2px solid var(--border);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  touch-action: none; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
+}
+.pad-btn small { font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--dim); }
+.pad-btn.primary-pad { border-color: var(--accent); }
+.pad-btn.held { background: color-mix(in srgb, var(--accent) 25%, var(--card)); }
+.keys-hint { margin-top: 10px; }
+@media (hover: none) { .keys-hint { display: none; } }
+
+#overPanel { margin-top: 14px; }
+.final-score { font-size: 40px; font-weight: 800; color: var(--accent); font-variant-numeric: tabular-nums; }
