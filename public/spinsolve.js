@@ -147,6 +147,7 @@
   }
 
   async function startGame() {
+    if (window.ArcadeStats) ArcadeStats.play();
     Blip.unlock();
     try {
       const q = S.pack === 'all' ? `level=${S.level}` : `pack=${encodeURIComponent(S.pack)}`;

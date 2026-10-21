@@ -89,6 +89,10 @@
   .game.spinsolve h2 { color: #ff4fa3; }
   .game.chess h2 { color: #e9dcb8; }
   .game.dino h2 { color: #3ddc84; }
+  .game.snake h2 { color: #3ddc84; }
+  .game.bricks h2 { color: #ff9f2c; }
+  .game.blocks h2 { color: #c86bff; }
+  .game.towers h2 { color: #ffc72c; }
   .game.trivia h2 { color: #2de2e6; }
   .game.partdeux h2 { color: #ffd23f; }
   .game.daredevil h2 { color: #ff3860; }
@@ -276,6 +280,10 @@
         <option value="trivia.html">🧠 Know-It-All</option>
         <option value="partdeux.html">🚨 Uh-Oh: Part Deux</option>
         <option value="daredevil.html">😈 Dare Devil</option>
+        <option value="snake.html">🐍 Snake</option>
+        <option value="bricks.html">🧱 Brick Breaker</option>
+        <option value="blocks.html">🟪 Block Drop</option>
+        <option value="towers.html">🏰 Tower Defense</option>
       </select>
       <div class="qr-link" id="arcadeLink"></div>
       <p>Every game's lobby has its own code too, to jump straight into that game.</p>
@@ -319,6 +327,34 @@
     <h2>Dino Dash</h2>
     <p>Run, jump the cactuses, duck the birds. It only gets faster. How far can you go?</p>
     <div class="meta">1 player · Endless runner · One-thumb</div>
+  </a>
+
+  <a class="game snake" href="snake.html">
+    <div class="emoji">🐍</div>
+    <h2>Snake</h2>
+    <p>Eat the apples, grow longer, and don&#39;t bite your own tail. Swipe, tap the arrows, or use the keyboard.</p>
+    <div class="meta">1 player · Classic · Swipe or keys</div>
+  </a>
+
+  <a class="game bricks" href="bricks.html">
+    <div class="emoji">🧱</div>
+    <h2>Brick Breaker</h2>
+    <p>Bounce the ball, smash every brick, and catch the power-ups. Eight levels that keep getting faster.</p>
+    <div class="meta">1 player · Arcade · One finger</div>
+  </a>
+
+  <a class="game blocks" href="blocks.html">
+    <div class="emoji">🟪</div>
+    <h2>Block Drop</h2>
+    <p>Turn and drop the falling pieces to fill whole rows. Clear four at once for big points. Endless or a two-minute rush.</p>
+    <div class="meta">1 player · Puzzle · Marathon or rush</div>
+  </a>
+
+  <a class="game towers" href="towers.html">
+    <div class="emoji">🏰</div>
+    <h2>Tower Defense</h2>
+    <p>Build archers, cannons, frost and lightning towers to stop 25 waves of monsters before they reach your castle.</p>
+    <div class="meta">1 player · Strategy · Three maps</div>
   </a>
 
   <a class="game trivia" href="trivia.html">
@@ -394,6 +430,10 @@
       <option value="trivia">Know-It-All</option>
       <option value="partdeux">Uh-Oh: Part Deux</option>
       <option value="daredevil">Dare Devil</option>
+      <option value="snake">Snake</option>
+      <option value="bricks">Brick Breaker</option>
+      <option value="blocks">Block Drop</option>
+      <option value="towers">Tower Defense</option>
     </select>
     <label for="fbMessage">Your message</label>
     <textarea id="fbMessage" maxlength="1000"></textarea>
@@ -409,6 +449,7 @@
 
 <script src="avatars.js"></script>
 <script src="profile.js"></script>
+<script src="stats.js"></script>
 <script src="arcade-qr.js"></script>
 <script src="hub.js"></script>
 

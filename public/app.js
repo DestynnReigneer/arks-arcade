@@ -339,6 +339,7 @@
   }
 
   function newGame() {
+    if (window.ArcadeStats) ArcadeStats.play();
     answer = pickAnswer();
     wordLen = answer.length;
     guesses = [];

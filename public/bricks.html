@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Brick Breaker</title>
+<link rel="stylesheet" href="arcade-ui.css">
+<link rel="stylesheet" href="game-shell.css">
+<link rel="stylesheet" href="tutorial.css">
+<style>
+  :root { --accent: #ff9f2c; --on-accent: #1a0f05; }
+  .stage { cursor: none; }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <a href="/" class="icon-btn" title="Back to the arcade">←</a>
+  <h1><i class="t-emoji">🧱 </i>BRICK <span>BREAKER</span></h1>
+  <div class="btns">
+    <button class="icon-btn" id="pauseBtn" title="Pause (P)">⏸</button>
+    <button class="icon-btn" id="muteBtn" title="Sound">🔊</button>
+    <button class="icon-btn music-btn" id="musicBtn" title="Music">🎵</button>
+    <button class="icon-btn" id="scoresBtn" title="High scores">🏆</button>
+    <button class="icon-btn" id="helpBtn" title="How to play">?</button>
+  </div>
+</header>
+
+<div class="hud">
+  <div><small>Score</small><b id="score">0</b></div>
+  <div><small>Level</small><b id="level">1</b></div>
+  <div><small>Lives</small><b id="lives">♥♥♥</b></div>
+  <div><small>Best</small><b id="best">0</b></div>
+</div>
+
+<div class="stage" id="stage">
+  <canvas id="canvas" aria-label="Brick Breaker. Slide your finger or mouse to move the paddle; tap to launch the ball."></canvas>
+  <div class="stage-msg" id="stageMsg"><b>Level 1</b><span>Tap to launch</span></div>
+</div>
+<p class="hint center keys-hint">Mouse or <b>← →</b> to move, <b>Space</b> or click to launch, <b>P</b> to pause.</p>
+
+<script src="avatars.js"></script>
+<script src="profile.js"></script>
+<script src="stats.js"></script>
+<script src="tutorial.js"></script>
+<script src="blip.js"></script>
+<script src="arcade-kit.js"></script>
+<script src="game-shell.js"></script>
+<script src="bricks-engine.js"></script>
+<script src="bricks.js"></script>
+</body>
+</html>

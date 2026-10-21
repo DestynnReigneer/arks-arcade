@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Tower Defense</title>
+<link rel="stylesheet" href="arcade-ui.css">
+<link rel="stylesheet" href="game-shell.css">
+<link rel="stylesheet" href="tutorial.css">
+<style>
+  :root { --accent: #ffc72c; --on-accent: #1a0f05; }
+  .stage { cursor: pointer; }
+  .wave-bar { display: flex; gap: 8px; margin-top: 10px; align-items: stretch; }
+  .wave-bar .primary { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; line-height: 1.15; position: relative; overflow: hidden; }
+  .wave-bar .primary small { font-size: 11.5px; font-weight: 600; opacity: 0.85; }
+  .wave-bar .primary .timer { position: absolute; left: 0; bottom: 0; height: 4px; background: rgba(0,0,0,0.35); transition: width 0.2s linear; }
+  .speed { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+  .speed small { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--dim); }
+  .speed div { display: flex; align-items: center; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .speed button { width: 36px; height: 36px; border: 0; background: var(--card); color: var(--text); font-size: 20px; font-weight: 800; cursor: pointer; }
+  .speed button:disabled { opacity: 0.35; cursor: default; }
+  .speed b { min-width: 34px; text-align: center; font-variant-numeric: tabular-nums; color: var(--accent); }
+  .next-up { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: center; margin-top: 8px; font-size: 13px; color: var(--muted); min-height: 22px; }
+  .next-up span { background: var(--card); border: 1px solid var(--border); border-radius: 999px; padding: 1px 8px; white-space: nowrap; }
+  .map-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; width: 100%; }
+  .map-grid button {
+    padding: 7px 4px; border-radius: 10px; cursor: pointer; font: inherit; font-size: 13px; font-weight: 700; line-height: 1.2;
+    background: var(--card); color: var(--text); border: 1px solid var(--border);
+  }
+  .map-grid button small { display: block; font-size: 10.5px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
+  .map-grid button[aria-pressed="true"] { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 18%, var(--card)); }
+  .lvl-easy { color: #3ddc84; } .lvl-medium { color: #ffc72c; } .lvl-hard { color: #ff5e5e; }
+  .info { margin-top: 10px; min-height: 92px; }
+  .info .hint { margin: 0; }
+  .build-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .build-grid button, .tower-actions button {
+    display: flex; align-items: center; gap: 8px; text-align: left; padding: 9px 10px; border-radius: 10px; cursor: pointer;
+    background: var(--bg); color: var(--text); border: 1px solid var(--border); font: inherit; font-size: 13px;
+  }
+  .build-grid button:disabled { opacity: 0.45; cursor: default; }
+  .build-grid .em { font-size: 24px; }
+  .build-grid b { display: block; }
+  .build-grid small { color: var(--dim); font-size: 11px; line-height: 1.3; display: block; }
+  .build-grid .cost { margin-left: auto; color: var(--accent); font-weight: 800; white-space: nowrap; }
+  .tower-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .tower-head .em { font-size: 28px; }
+  .tower-head small { color: var(--dim); display: block; font-size: 12px; }
+  .tower-stats { display: flex; gap: 12px; font-size: 12.5px; color: var(--muted); margin-bottom: 10px; flex-wrap: wrap; }
+  .tower-actions { display: flex; gap: 8px; }
+  .tower-actions button { flex: 1; justify-content: center; font-weight: 700; }
+  .tower-actions button:disabled { opacity: 0.45; cursor: default; }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <a href="/" class="icon-btn" title="Back to the arcade">←</a>
+  <h1><i class="t-emoji">🏰 </i>TOWER <span>DEFENSE</span></h1>
+  <div class="btns">
+    <button class="icon-btn" id="pauseBtn" title="Pause (P)">⏸</button>
+    <button class="icon-btn" id="muteBtn" title="Sound">🔊</button>
+    <button class="icon-btn music-btn" id="musicBtn" title="Music">🎵</button>
+    <button class="icon-btn" id="scoresBtn" title="High scores">🏆</button>
+    <button class="icon-btn" id="helpBtn" title="How to play">?</button>
+  </div>
+</header>
+
+<div class="hud">
+  <div><small>Gold</small><b id="gold">0</b></div>
+  <div><small>Lives</small><b id="lives">20</b></div>
+  <div><small>Wave</small><b id="wave">0/25</b></div>
+  <div><small>Score</small><b id="score">0</b></div>
+</div>
+
+<div class="options" id="options">
+  <div class="map-grid" id="mapSeg" role="group" aria-label="Map"></div>
+</div>
+
+<div class="stage" id="stage">
+  <canvas id="canvas" aria-label="The map. Tap a grass square to build a tower, or a tower to upgrade it."></canvas>
+  <div class="stage-msg hidden" id="stageMsg"><b></b><span></span></div>
+</div>
+
+<div class="wave-bar">
+  <button class="primary" id="waveBtn"><b>▶ Start wave 1</b><small></small><i class="timer"></i></button>
+  <div class="speed" role="group" aria-label="Game speed"><small>Speed</small><div><button id="slowerBtn" title="Slower (-)" aria-label="Slower">−</button><b id="speedVal">1×</b><button id="fasterBtn" title="Faster (+)" aria-label="Faster">+</button></div></div>
+</div>
+<div class="next-up" id="nextUp"></div>
+<div class="panel info" id="info"></div>
+<p class="hint center keys-hint">Keyboard: <b>1-4</b> build on the picked square · <b>U</b> upgrade · <b>S</b> sell · <b>Space</b> call the next wave now · <b>+</b>/<b>−</b> speed · <b>P</b> pause</p>
+
+<script src="avatars.js"></script>
+<script src="profile.js"></script>
+<script src="stats.js"></script>
+<script src="tutorial.js"></script>
+<script src="blip.js"></script>
+<script src="arcade-kit.js"></script>
+<script src="game-shell.js"></script>
+<script src="towers-engine.js"></script>
+<script src="towers.js"></script>
+</body>
+</html>

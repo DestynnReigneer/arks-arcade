@@ -117,6 +117,7 @@
     try {
       if (S.mode === 'local') {
         const names = S.names.map((n, i) => n.trim() || `Player ${i + 1}`);
+        if (window.ArcadeStats) ArcadeStats.play();
         const r = await api('/local', { method: 'POST', body: { names, level: S.level, drinking }, headers: pinHeaders() });
         S.table = { kind: 'local', id: r.id, token: r.token };
         S.viewer = null;
@@ -505,7 +506,7 @@
   $('keepBtn').onclick = () => send({ action: 'pass' });
   $('uhohBtn').onclick = () => { Blip.tune([[880, 0.08], [660, 0.08], [880, 0.12]], { type: 'square', volume: 0.07 }); send({ action: 'uhoh' }); };
   $('sheetClose').onclick = () => $('cardSheet').classList.add('hidden');
-  $('startBtn').onclick = async () => { try { await api(`/rooms/${S.table.code}/start`, { method: 'POST', body: roomCreds() }); } catch (e) { $('lobbyMsg').textContent = e.message; } };
+  $('startBtn').onclick = async () => { if (window.ArcadeStats) ArcadeStats.play(); try { await api(`/rooms/${S.table.code}/start`, { method: 'POST', body: roomCreds() }); } catch (e) { $('lobbyMsg').textContent = e.message; } };
   $('lobbyDrinking').onchange = () => api(`/rooms/${S.table.code}/settings`, { method: 'POST', body: { ...roomCreds(), drinking: $('lobbyDrinking').checked } }).catch(e => toast(e.message));
   $('leaveBtn').onclick = leave;
   $('quitBtn').onclick = () => { if (confirm('Leave this game?')) leave(); };

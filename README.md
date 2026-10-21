@@ -142,6 +142,24 @@ Against the computer (Easy, Medium, Hard), two players on one phone, or two phon
 
 An endless runner: jump cactuses, duck birds, and it gets faster (and then dark). Tap or Space to jump, hold Duck or ↓ to duck. Original pixel art drawn from text bitmaps; all sounds synthesized.
 
+### Snake (`/snake.html`)
+
+Classic Snake on a 24x24 board, gliding smoothly between squares: Classic (walls end it) or Wrap-around, three speeds that score ×1/×2/×3, and a golden star every fifth apple that vanishes if you're slow. Swipe, the on-screen arrows, or arrow keys/WASD. Rules in `public/snake-engine.js`.
+
+### Brick Breaker (`/bricks.html`)
+
+Paddle-and-ball brick smashing: eight hand-made levels (looping faster), bricks that take one to three hits plus unbreakable gold, and power-ups (wide paddle, three balls, slow ball, fireball, extra life). A finger or mouse moves the paddle. The ball moves in small steps so it can't tunnel through bricks; the tests let an autopilot clear every level. Rules and physics in `public/bricks-engine.js`.
+
+### Block Drop (`/blocks.html`)
+
+Falling four-square pieces in a 10x20 well, with standard rotation and wall kicks, a shuffled bag of all seven pieces, hold, ghost piece, lock delay, combos, T-spins and back-to-back bonuses. Marathon (endless, faster every 10 rows) or a 2-Minute Rush. Tap to turn, drag to move, pull down to speed up (keep holding a moment to drop all the way; the ↓ key and Down button work the same), swipe up to hold, or use the buttons/keyboard. Rules in `public/blocks-engine.js`.
+
+### Tower Defense (`/towers.html`)
+
+Six maps from easy to hard (Meadow, Frozen Lake, Canyon, Swamp, Castle, Volcano; Swamp and Volcano have two roads), four towers with two upgrades each (Archer, Cannon, Frost, Tesla), five monsters including flying bats, armored knights and an ogre boss every fifth wave, and 25 waves to win. Waves come on their own: wave 1 arrives 30 seconds after your first tower, then there's a 15-second break after each wave. Calling the next wave early pays bonus gold, more the earlier you call it. Rules in `public/towers-engine.js`; the difficulty was tuned by letting bots of different skill play every map.
+
+The four share `public/game-shell.js` (game-over panel, saving scores, high-score boards, personal bests) and `public/game-shell.css`. Each has its own soft background music, generated in the browser like the sound effects (`public/blip.js`): the 🎵 button turns it off and on, the browser remembers the choice, and 🔊/🔇 mutes everything. It stops while the game is paused or over.
+
 ### Know-It-All (`/trivia.html`)
 
 Multiple-choice trivia. Solo (high-score board), take turns on one phone, or a room where everyone answers on their own phone at the same time and faster right answers score more. Pick genres, difficulty, how many questions and how long to answer.
@@ -247,6 +265,11 @@ Like streaming-service profiles for the family. **Who's playing?** on the home p
 
 Visit `/admin.html` and enter your `ADMIN_PASSWORD`.
 
+**Stats:**
+- What gets played, how often and for how long (only on-screen, recently-touched time counts), who plays what, and a day-by-hour chart of when
+- A log of every visit, filterable by game and player
+- The error log: crashes from browsers and the server, grouped by a code like `E-3F9A2C` (players see the code when the server fails). **Copy for chat** copies everything needed to get it fixed
+
 **Arcade:**
 - Profiles: approve or turn down "New profile" requests, rename, clear a forgotten PIN, or remove a profile (their old scores stay on the boards)
 - Set, change or remove the adult PIN
@@ -286,7 +309,7 @@ rambler/                   Rambler, self-contained
 chess/                    Two-phone chess rooms (/api/chess)
 spinsolve/                Spin & Solve levels, adult banks, packs and requests (/api/spinsolve)
 trivia/                   Know-It-All questions, packs, Open Trivia DB download, rooms (/api/trivia)
-arcade/                   Arcade-wide pieces: Comm Center, adult PIN, high scores, Wordless hints
+arcade/                   Arcade-wide pieces: Comm Center, adult PIN, high scores, profiles, stats and the error log, Wordless hints
 
 words/                    Dictionaries, baked into the image (see above)
 
@@ -296,6 +319,8 @@ public/rambler.html/.js    Rambler
 public/spinsolve.*        Spin & Solve (puzzles in spin-puzzles.js)
 public/chess.*            Chess (chess-engine.js, chess-worker.js)
 public/dino.*             Dino Dash
+public/snake*, bricks*, blocks*, towers*   Snake, Brick Breaker, Block Drop, Tower Defense (each with an -engine.js for its rules)
+public/game-shell.*       Shared game-over panel and high scores for those four
 public/arcade-ui.css      Shared look for the newer games, with arcade-kit.js and blip.js
 public/admin.html/.js     Admin panel
 

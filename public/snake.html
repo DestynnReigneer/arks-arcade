@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Snake</title>
+<link rel="stylesheet" href="arcade-ui.css">
+<link rel="stylesheet" href="game-shell.css">
+<link rel="stylesheet" href="tutorial.css">
+<style>
+  :root { --accent: #3ddc84; --on-accent: #08130c; }
+  .pad { grid-template-columns: repeat(3, 1fr); max-width: 300px; margin-inline: auto; }
+  .pad .up { grid-column: 2; }
+  .pad .left { grid-column: 1; grid-row: 2; }
+  .pad .down { grid-column: 2; grid-row: 2; }
+  .pad .right { grid-column: 3; grid-row: 2; }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <a href="/" class="icon-btn" title="Back to the arcade">←</a>
+  <h1><i class="t-emoji">🐍 </i><span>SNAKE</span></h1>
+  <div class="btns">
+    <button class="icon-btn" id="pauseBtn" title="Pause (P)">⏸</button>
+    <button class="icon-btn" id="muteBtn" title="Sound">🔊</button>
+    <button class="icon-btn music-btn" id="musicBtn" title="Music">🎵</button>
+    <button class="icon-btn" id="scoresBtn" title="High scores">🏆</button>
+    <button class="icon-btn" id="helpBtn" title="How to play">?</button>
+  </div>
+</header>
+
+<div class="hud">
+  <div><small>Score</small><b id="score">0</b></div>
+  <div><small>Apples</small><b id="apples">0</b></div>
+  <div><small>Best</small><b id="best">0</b></div>
+</div>
+
+<div class="options" id="options">
+  <div class="seg" id="modeSeg" role="group" aria-label="Mode"></div>
+  <div class="seg" id="speedSeg" role="group" aria-label="Speed"></div>
+</div>
+
+<div class="stage" id="stage">
+  <canvas id="canvas" aria-label="Snake game board. Use the arrow keys, swipe, or the buttons to steer."></canvas>
+  <div class="stage-msg" id="stageMsg"><b>Ready?</b><span>Swipe, tap a button, or press an arrow key to go.</span></div>
+</div>
+
+<div class="pad" id="pad">
+  <button class="pad-btn up" data-dir="up" aria-label="Up">▲</button>
+  <button class="pad-btn left" data-dir="left" aria-label="Left">◀</button>
+  <button class="pad-btn down" data-dir="down" aria-label="Down">▼</button>
+  <button class="pad-btn right" data-dir="right" aria-label="Right">▶</button>
+</div>
+<p class="hint center keys-hint">Keyboard: <b>arrow keys</b> or <b>WASD</b> to steer, <b>P</b> to pause.</p>
+
+<script src="avatars.js"></script>
+<script src="profile.js"></script>
+<script src="stats.js"></script>
+<script src="tutorial.js"></script>
+<script src="blip.js"></script>
+<script src="arcade-kit.js"></script>
+<script src="game-shell.js"></script>
+<script src="snake-engine.js"></script>
+<script src="snake.js"></script>
+</body>
+</html>
