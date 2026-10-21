@@ -28,6 +28,18 @@ a plan changes, so the next session can pick up from here.
 2. **Open the PR** `feat/stats-and-games` → `main` once the audio is OK. The
    owner merges it.
 
+## Deployment
+
+**Not deployed to the homelab yet.** The target host, port and proxy name are
+tracked in the private `arks-family-hub` repo (`docs/SPEC.md` and
+`docs/SERVICES.md`), not here, because this repo is public. Two things known
+from there:
+
+- The arcade's homelab port **can't be 3000**: another service already uses it
+  on that host. Map a different host port in the compose file.
+- The Family Hub will show an ARKS Arcade tile with a live status chip read
+  from `/healthz`. Keep that endpoint working and cheap.
+
 ## Smaller to-dos
 
 - Dependabot has three open branches (Docker node-26-alpine, GitHub Actions,
