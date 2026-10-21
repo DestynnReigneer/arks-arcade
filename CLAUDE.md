@@ -20,7 +20,9 @@ Where things are documented (read these rather than guessing):
   (`words/british.txt`). Never reword real titles, names or quotes (trivia keeps
   "Fifty Shades of Grey").
 - **Branch, then PR to `main`.** Never commit to `main` directly. Claude opens the
-  PR; the owner reviews and merges it themselves.
+  PR, waits for CI, and once every check is green merges it and deletes the
+  branch (`gh pr merge <n> --merge --delete-branch`), then tells the owner. If a
+  check fails, fix it or say so; never merge red.
 - **`npm test` is the gate.** Run it before committing; CI runs the same thing
   plus a Docker build.
 - **Local test server: port 3001**, not the default 3000:

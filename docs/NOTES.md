@@ -25,8 +25,8 @@ a plan changes, so the next session can pick up from here.
    but the audio hasn't been heard yet. Check: the 🎵 toggle (and that it's
    remembered), the volume against sound effects, whether any loop gets
    annoying, and that music stops on pause, game over and leaving the game.
-2. **Open the PR** `feat/stats-and-games` → `main` once the audio is OK. The
-   owner merges it.
+2. **Open the PR** `feat/stats-and-games` → `main` once the audio is OK, then
+   merge it when CI is green.
 
 ## Deployment
 
