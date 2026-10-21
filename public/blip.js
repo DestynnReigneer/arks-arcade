@@ -65,10 +65,13 @@ const Blip = (() => {
   // A short generated loop per game: a pad, a bass note, a gentle arpeggio and
   // now and then a little tune, all through a low-pass filter so it sits under
   // the sound effects. It has its own switch (remembered per browser), and the
-  // main mute silences it too. Chords are semitones from the root note; the
-  // tune is 4 bars of 8 steps, in semitones from two octaves up, null = rest.
+  // main mute silences it too. Chords are semitones from the root note, one per
+  // bar; the tune is bars of 8 steps, in semitones from two octaves up,
+  // null = rest, H = hold the note before. Most songs play their tune now and
+  // then over the arpeggio; a song with `lead` plays it every time round, over
+  // a bouncing eighth-note bass instead.
   let musicOn = (() => { try { return localStorage.getItem('arcade.music') !== 'no'; } catch { return true; } })();
-  const _ = null;
+  const _ = null, H = 'hold';
   const SONGS = {
     snake: {
       bpm: 108, root: 48, wave: 'triangle', hat: true, arp: [0, 1, 2, 1, 3, 1, 2, 1],
@@ -80,10 +83,12 @@ const Blip = (() => {
       chords: [[0, 3, 7], [-4, 0, 3], [3, 7, 10], [-2, 2, 5]],
       tune: [7, _, 12, _, 10, 7, _, 3,  8, _, 7, _, 3, _, 0, _,  3, _, 7, 10, 12, _, 10, _,  10, _, 5, _, 2, _, _, _]
     },
+    // Korobeiniki, the 1861 Russian folk song (public domain), in A minor.
     blocks: {
-      bpm: 100, root: 50, wave: 'triangle', hat: false, arp: [0, 2, 1, 2, 3, 2, 1, 2],
-      chords: [[0, 3, 7], [-4, 0, 3], [3, 7, 10], [-2, 2, 5]],
-      tune: [7, _, 5, 3, _, 0, _, _,  3, _, 5, _, 7, _, 5, _,  10, _, 12, _, 7, _, 3, _,  2, _, 5, _, 10, _, _, _]
+      bpm: 140, root: 45, wave: 'triangle', hat: false, lead: true,
+      chords: [[0, 3, 7], [0, 3, 7], [-5, -1, 2], [0, 3, 7], [-7, -4, 0], [3, 7, 10], [-5, -1, 2], [0, 3, 7]],
+      tune: [7, H, 2, 3, 5, H, 3, 2,   0, H, 0, 3, 7, H, 5, 3,   2, H, H, 3, 5, H, 7, H,   3, H, 0, H, 0, H, H, H,
+             _, 5, H, 8, 12, H, 10, 8,  7, H, H, 3, 7, H, 5, 3,   2, H, 2, 3, 5, H, 7, H,   3, H, 0, H, 0, H, _, _]
     },
     towers: {
       bpm: 84, root: 52, wave: 'triangle', hat: false, arp: [0, 1, 2, 3, 2, 1, 0, 1],
@@ -133,12 +138,21 @@ const Blip = (() => {
       const chord = st.chords[bar % st.chords.length].map(n => n + st.root);
       const tones = [...chord, chord[0] + 12];
       if (pos === 0) for (const n of chord) voice(a, s.out, n + 12, t, step * 8.6, 'sine', 0.045, step * 2);
-      if (pos === 0 || pos === 4) voice(a, s.out, chord[0], t, step * 3.6, 'triangle', 0.15, 0.02);
-      const lift = Math.floor(bar / 4) % 2 ? 24 : 12;
-      voice(a, s.out, tones[st.arp[pos] % tones.length] + lift, t, step * 1.6, st.wave, st.wave === 'square' ? 0.025 : 0.055);
-      const phrase = Math.floor(bar / 4) % 4;
-      const note = st.tune[(bar % 4) * 8 + pos];
-      if ((phrase === 1 || phrase === 2) && note != null) voice(a, s.out, st.root + 24 + note, t, step * 2.4, 'sine', 0.07, 0.02);
+      const at = s.step % st.tune.length, note = st.tune[at];
+      if (st.lead) {
+        voice(a, s.out, chord[0] + (pos % 2 ? 12 : 0), t, step * 0.9, 'triangle', 0.1, 0.01);
+        if (typeof note === 'number') {
+          let held = 1;
+          while (st.tune[(at + held) % st.tune.length] === H) held++;
+          voice(a, s.out, st.root + 24 + note, t, step * (held - 0.1), st.wave, 0.09, 0.02);
+        }
+      } else {
+        if (pos === 0 || pos === 4) voice(a, s.out, chord[0], t, step * 3.6, 'triangle', 0.15, 0.02);
+        const lift = Math.floor(bar / 4) % 2 ? 24 : 12;
+        voice(a, s.out, tones[st.arp[pos] % tones.length] + lift, t, step * 1.6, st.wave, st.wave === 'square' ? 0.025 : 0.055);
+        const phrase = Math.floor(bar / 4) % 4;
+        if ((phrase === 1 || phrase === 2) && typeof note === 'number') voice(a, s.out, st.root + 24 + note, t, step * 2.4, 'sine', 0.07, 0.02);
+      }
       if (st.hat && pos % 2 === 1) shaker(a, s.out, t, 0.05);
       s.next += step;
       s.step++;
