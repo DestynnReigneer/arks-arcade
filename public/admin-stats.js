@@ -7,10 +7,9 @@
 
 (() => {
   const $ = id => document.getElementById(id);
-  const token = () => window.ADMIN_TOKEN || (() => { try { return localStorage.getItem('wordless_admin_token') || ''; } catch { return ''; } })();
   async function api(path, { method = 'GET', body } = {}) {
     const res = await fetch('/api/stats' + path, {
-      method, headers: { ...(body ? { 'Content-Type': 'application/json' } : {}), 'X-Admin-Token': token() },
+      method, headers: body ? { 'Content-Type': 'application/json' } : {},
       body: body ? JSON.stringify(body) : undefined
     });
     const data = await res.json().catch(() => ({}));

@@ -15,9 +15,8 @@
   };
   const state = { requestId: null };
 
-  const token = () => window.ADMIN_TOKEN || (() => { try { return localStorage.getItem('wordless_admin_token') || ''; } catch { return ''; } })();
   async function api(path, { method = 'GET', body } = {}) {
-    const res = await fetch(API + path, { method, headers: { ...(body ? { 'Content-Type': 'application/json' } : {}), 'X-Admin-Token': token() }, body: body ? JSON.stringify(body) : undefined });
+    const res = await fetch(API + path, { method, headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
     return data;

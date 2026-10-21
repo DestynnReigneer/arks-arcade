@@ -25,15 +25,10 @@
 
   const state = { filter: 'all' };
 
-  function token() {
-    if (window.ADMIN_TOKEN) return window.ADMIN_TOKEN;
-    try { return localStorage.getItem('wordless_admin_token') || ''; } catch { return ''; }
-  }
-
   async function api(path, { method = 'GET', body } = {}) {
     const res = await fetch(API + path, {
       method,
-      headers: { ...(body ? { 'Content-Type': 'application/json' } : {}), 'X-Admin-Token': token() },
+      headers: body ? { 'Content-Type': 'application/json' } : {},
       body: body ? JSON.stringify(body) : undefined
     });
     let data = null;

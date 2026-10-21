@@ -12,10 +12,9 @@ services:
       - PUBLIC_URL=${PUBLIC_URL:-}
       - TRUST_PROXY=${TRUST_PROXY:-}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
-      - ADMIN_TOKEN=${ADMIN_TOKEN:-}
       - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
       - ADULT_PIN=${ADULT_PIN}
-      - TZ=${TZ:-Europe/London}
+      - TZ=${TZ:-America/Los_Angeles}
     volumes:
       - ./data:/app/data
     healthcheck:
