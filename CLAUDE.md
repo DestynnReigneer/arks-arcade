@@ -42,9 +42,20 @@ Where things are documented (read these rather than guessing):
 - **The server decides every score.** Clients never send their own score.
 - **The adult word list is deliberately uncensored.** Don't soften it.
   `words/blocklist-kids.txt` is what protects the kids list.
-- **Celebrations, yes; fake near-misses, no.** Confetti, coin showers and big
-  win banners are welcome, but a "so close!" must always be real (the ladder
-  climbs the actual leaderboard).
+- **Celebrations, yes; fake near-misses, no.** The look the owner wants is
+  modern Las Vegas slot-game energy: confetti, coin showers, big win banners.
+  But a "so close!" must always be real (the ladder climbs the actual
+  leaderboard).
+- **Built for family and parties.** Adult games and levels are wanted (with a
+  raunchiness scale), and they're listed openly on the Join a game board so
+  guests can get in easily. Kids are kept out by the adult PIN and a per-lobby
+  password the host makes up, not by hiding things. When in doubt, make joining
+  easier for guests, not harder.
+- **Every game has a How to play section** that can be reopened mid-game. New
+  games need one too.
+- **The repo stays public.** Making it private was considered and turned down.
+  So the defaults are generic (`ARCADE_NAME` blank), and the owner's own setup
+  (ARKS) lives in their `.env`.
 - **The daily board is seeded by the date alone**, and the kids and unfiltered
   dictionaries are deliberately not made equal (standings tag each row).
 - **Theme-pack words must be short**: board geometry makes 7+ letter words
