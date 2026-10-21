@@ -5,28 +5,27 @@ a plan changes, so the next session can pick up from here.
 
 ## Where things stand
 
-- `main` has everything through PR #10 (`feat/difficulty-and-polish`):
-  arcade-wide profiles, the setup guide, the rename to ARKS Arcade, data in
-  `data/arcade.db`.
-- **`feat/stats-and-games`** is pushed and has **no PR yet**. It adds:
-  - Admin Stats
-  - Four new games: Snake, Brick Breaker, Block Drop, Tower Defense
-  - Polish: Snake on 24x24 with smooth gliding; Brick Breaker metal walls;
-    Block Drop tap-down = one row, hold about 0.35s = drop all the way; Tower
-    Defense timed waves (30s first, 15s breaks, early-call bonus), six maps,
-    1×–3× speed stepper; new art for all four
-  - Soft background music for those four games (`public/blip.js`), with a 🎵
-    toggle in the top bar
-  - The New Profile button reads "Create profile" (was "Ask for it")
+- `main` has everything through PR #10 (`feat/difficulty-and-polish`) plus
+  `feat/stats-and-games` (Admin Stats; Snake, Brick Breaker, Block Drop, Tower
+  Defense; soft background music with a 🎵 toggle, Block Drop's being the
+  Korobeiniki folk tune). The music has been listened to and approved.
 
 ## Next up
 
-1. **Test the music** on `feat/stats-and-games`. The games have been played,
-   but the audio hasn't been heard yet. Check: the 🎵 toggle (and that it's
-   remembered), the volume against sound effects, whether any loop gets
-   annoying, and that music stops on pause, game over and leaving the game.
-2. **Open the PR** `feat/stats-and-games` → `main` once the audio is OK, then
-   merge it when CI is green.
+1. **Repo cleanup from an architecture review**, on its own branch and PR:
+   compose and `.env.example` defaults, Dockerfile build strictness and file
+   ownership, admin sign-in storage, and CI triggers.
+2. **Party-game polish**, on its own branch:
+   - Uh-Oh: Part Deux: a cleaner, Uno-like table (clearer "your turn", draw
+     pile apart from the played pile, less cluttered cards). Rename or explain
+     the Water Balloon Bomb card. Occasional "womp womp" when a card hits a
+     player, a truck-reversing beep for Reverse, and comedy pop-ups at every
+     spice level.
+   - Spin & Solve and Uh-Oh: jokes stay on screen long enough to read.
+   - Dare Devil: timed dares ("do it in 10 seconds") get a 4-5 second reading
+     grace, then a visible countdown.
+   - An original "thinking" countdown tune (not the Jeopardy one) that games
+     can use.
 
 ## Deployment
 
@@ -51,8 +50,8 @@ from there:
 
 ## Smaller to-dos
 
-- Dependabot has three open branches (Docker node-26-alpine, GitHub Actions,
-  npm). Review them after the PR above.
+- Dependabot has three open PRs (#2 Docker node-26-alpine, #3 npm, #4 GitHub
+  Actions). Review them.
 - The local branch `feat/difficulty-and-polish` is merged (PR #10) and can be
   deleted.
 - The `package.json` description still says "an arcade of word games: Wordless
