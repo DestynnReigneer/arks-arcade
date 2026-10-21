@@ -42,6 +42,13 @@ a plan changes, so the next session can pick up from here.
   They need `localhost` or HTTPS. Plan: `@simplewebauthn/server` (rather than
   hand-rolling the crypto), a credentials table, register/sign-in endpoints
   that issue the same session cookie, and a "Manage passkeys" list in admin.
+- **Shared family accounts ("ARKS ID")** are being designed on the Family Hub
+  side: accounts in the Hub first, built to move into a shared ARKS ID that
+  the arcade can use later (sign in once, same user on both). Check there
+  before building passkeys here. Arcade constraints: it must keep working
+  standalone (ARKS sign-in is an optional `.env` setting, built-in profiles
+  stay the default), kids need PIN sign-in, guests stay accountless, and the
+  Hub and arcade are on different hostnames under the same domain.
 
 ## Deployment
 
