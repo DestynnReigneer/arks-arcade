@@ -44,14 +44,11 @@ const HEX_COLOR_RE = /^#[0-9a-fA-F]{3,8}$/;
 const INITIALS_RE = /^[A-Z0-9]{1,3}$/;
 
 // ---- Admin auth ----
-// Lightweight shared-token gate for a solo/family admin, not a full account system.
-// If ADMIN_TOKEN isn't configured, admin routes are disabled entirely (deny by default).
-function requireAdmin(req, res, next) {
-  if (!security.sameSecret(req.get('X-Admin-Token'), ADMIN_TOKEN)) {
-    return res.status(401).json({ error: 'Admin token missing or incorrect.' });
-  }
-  next();
-}
+// One shared password for a solo/family admin, not a full account system.
+// Signing in sets a session cookie; see arcade/admin-session.js.
+const adminSession = require('./arcade/admin-session');
+const { requireAdmin } = adminSession;
+app.use('/api/admin', adminSession.routes());
 
 // ---- Rate limiting for public write endpoints ----
 const leaderboardLimiter = rateLimit({
@@ -209,7 +206,7 @@ app.get('/api/themes', (req, res) => {
     return res.status(403).json({ error: 'That PIN is not right.' });
   }
   // The admin page lists every theme, so adult ones can be deleted too.
-  const isAdmin = security.sameSecret(req.get('X-Admin-Token'), ADMIN_TOKEN);
+  const isAdmin = adminSession.isAdmin(req);
   res.json(db.listThemes({ includeAdult: isAdmin || adultUnlocked(req) }).map(t =>
     t.id === 'classic' ? { ...t, words: [...new Set([...t.words, ...getClassicExtras()])] }
       : t.adult && !isAdmin && t.words.filter(w => w.length <= 4).length < 10

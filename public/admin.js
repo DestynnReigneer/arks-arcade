@@ -1,5 +1,6 @@
 (function() {
-  const TOKEN_KEY = 'wordless_admin_token';
+  // Older versions kept the password here; it's cleared on load.
+  const OLD_TOKEN_KEY = 'wordless_admin_token';
 
   const lockScreen = document.getElementById('lockScreen');
   const adminContent = document.getElementById('adminContent');
@@ -13,8 +14,6 @@
   const jsonInput = document.getElementById('jsonInput');
   const createFromJsonBtn = document.getElementById('createFromJsonBtn');
   const jsonStatus = document.getElementById('jsonStatus');
-
-  let token = '';
 
   // Same shape, but for grown-ups: the words are the joke.
   function buildAdultPrompt(topic) {
@@ -68,7 +67,7 @@ ${theme.words.join(', ')}`;
   }
 
   async function apiGet(url) {
-    const res = await fetch(url, { headers: { 'X-Admin-Token': token } });
+    const res = await fetch(url);
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
     return data;
@@ -76,7 +75,7 @@ ${theme.words.join(', ')}`;
   async function apiPost(url, body) {
     const res = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Admin-Token': token },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body || {})
     });
     const data = await res.json().catch(() => ({}));
@@ -84,7 +83,7 @@ ${theme.words.join(', ')}`;
     return data;
   }
   async function apiDelete(url) {
-    const res = await fetch(url, { method: 'DELETE', headers: { 'X-Admin-Token': token } });
+    const res = await fetch(url, { method: 'DELETE' });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
     return data;
@@ -276,32 +275,22 @@ ${theme.words.join(', ')}`;
     }
   });
 
-  function safeStorageGet(key) {
-    try { return localStorage.getItem(key); } catch (e) { return null; }
-  }
-  function safeStorageSet(key, value) {
-    try { localStorage.setItem(key, value); } catch (e) { /* unavailable */ }
-  }
-  function safeStorageRemove(key) {
-    try { localStorage.removeItem(key); } catch (e) { /* unavailable */ }
+  async function showAdmin() {
+    lockScreen.classList.add('hidden');
+    adminContent.classList.remove('hidden');
+    await Promise.all([loadRequests(), loadThemes()]);
   }
 
-  async function tryUnlock(candidateToken, { quiet = false } = {}) {
-    token = candidateToken;
+  // The server checks the password once and answers with a session cookie the
+  // page itself can't read; every admin request after that carries it.
+  async function tryUnlock(password) {
+    lockError.textContent = '';
     try {
-      await apiGet('/api/theme-requests?status=pending');
-      safeStorageSet(TOKEN_KEY, candidateToken);
-      // The Rambler admin panel shares this token rather than asking twice.
-      window.ADMIN_TOKEN = candidateToken;
-      lockScreen.classList.add('hidden');
-      adminContent.classList.remove('hidden');
-      await Promise.all([loadRequests(), loadThemes()]);
+      await apiPost('/api/admin/login', { password });
+      tokenInput.value = '';
+      await showAdmin();
     } catch (e) {
-      token = '';
-      // A remembered password that stopped working means it was changed in
-      // .env. Forget it quietly rather than greet the page with an error.
-      if (quiet) safeStorageRemove(TOKEN_KEY);
-      else lockError.textContent = 'Wrong password.';
+      lockError.textContent = e.message || 'Wrong password.';
     }
   }
 
@@ -310,17 +299,17 @@ ${theme.words.join(', ')}`;
     if (e.key === 'Enter') tryUnlock(tokenInput.value.trim());
   });
 
-  lockBtn.addEventListener('click', () => {
-    safeStorageRemove(TOKEN_KEY);
-    token = '';
-    window.ADMIN_TOKEN = '';
+  lockBtn.addEventListener('click', async () => {
+    try { await apiPost('/api/admin/logout'); } catch (e) { /* signed out either way */ }
     adminContent.classList.add('hidden');
     lockScreen.classList.remove('hidden');
     tokenInput.value = '';
   });
 
-  (function init() {
-    const saved = safeStorageGet(TOKEN_KEY);
-    if (saved) tryUnlock(saved, { quiet: true });
+  (async function init() {
+    try { localStorage.removeItem(OLD_TOKEN_KEY); } catch (e) { /* unavailable */ }
+    try {
+      if ((await apiGet('/api/admin/session')).admin) await showAdmin();
+    } catch (e) { /* stay on the lock screen */ }
   })();
 })();

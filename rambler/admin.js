@@ -7,22 +7,16 @@ const packs = require('./packs');
 const comm = require('../arcade/comm');
 
 // Admin routes for Rambler. Mounted under /api/rambler/admin and gated by the
-// same ADMIN_TOKEN the Wordless admin already uses -- deny by default: if the
-// token is not configured, none of this exists.
+// same admin sign-in as the rest of the arcade -- deny by default: if no
+// password is configured, none of this exists.
 
 const router = express.Router();
-const ADMIN_TOKEN = process.env.ADMIN_PASSWORD || process.env.ADMIN_TOKEN || '';
 
 function fail(message, status) {
   return Object.assign(new Error(message), { status });
 }
 
-router.use((req, res, next) => {
-  if (!require('../arcade/security').sameSecret(req.get('X-Admin-Token'), ADMIN_TOKEN)) {
-    return res.status(401).json({ error: 'Admin token missing or incorrect.' });
-  }
-  next();
-});
+router.use(require('../arcade/admin-session').requireAdmin);
 
 // ---- overview ---------------------------------------------------------------
 
