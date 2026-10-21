@@ -33,6 +33,16 @@ a plan changes, so the next session can pick up from here.
 3. Ask which other games should use the countdown tune (Know-It-All's answer
    clock, Spin & Solve's turn clock).
 
+## Parked until closer to finished
+
+- **Passkey sign-in for admin** (fingerprint, face or phone instead of typing
+  the password). The `.env` password stays as the recovery; no email
+  recovery, by design. Passkeys are tied to the site's name, so one made on
+  `localhost` won't work on the homelab's name: register a new one there.
+  They need `localhost` or HTTPS. Plan: `@simplewebauthn/server` (rather than
+  hand-rolling the crypto), a credentials table, register/sign-in endpoints
+  that issue the same session cookie, and a "Manage passkeys" list in admin.
+
 ## Deployment
 
 **Not deployed to the homelab yet.** The target host, port and proxy name are
