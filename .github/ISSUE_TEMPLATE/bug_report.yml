@@ -46,5 +46,5 @@ body:
     id: logs
     attributes:
       label: Container logs
-      description: "`docker compose logs --tail=50` — redact your ADMIN_TOKEN before pasting."
+      description: "`docker compose logs --tail=50` — remove any passwords before pasting."
       render: shell
