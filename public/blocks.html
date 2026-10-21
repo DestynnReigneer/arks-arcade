@@ -22,6 +22,7 @@
   <div class="btns">
     <button class="icon-btn" id="pauseBtn" title="Pause (P)">⏸</button>
     <button class="icon-btn" id="muteBtn" title="Sound">🔊</button>
+    <button class="icon-btn music-btn" id="musicBtn" title="Music">🎵</button>
     <button class="icon-btn" id="scoresBtn" title="High scores">🏆</button>
     <button class="icon-btn" id="helpBtn" title="How to play">?</button>
   </div>
@@ -39,7 +40,7 @@
 </div>
 
 <div class="stage" id="stage">
-  <canvas id="canvas" aria-label="Block Drop well. Tap to turn the piece, drag to move it, flick down to drop it."></canvas>
+  <canvas id="canvas" aria-label="Block Drop well. Tap to turn the piece, drag to move it, pull down to speed it up and hold to drop it."></canvas>
   <div class="stage-msg" id="stageMsg"><b>Ready?</b><span>Tap the well or press any key to start.</span></div>
 </div>
 
@@ -52,7 +53,7 @@
   <button class="pad-btn wide" data-act="soft">▼<small>Down</small></button>
   <button class="pad-btn" data-act="right">▶<small>Right</small></button>
 </div>
-<p class="hint center keys-hint"><b>← →</b> move · <b>↓</b> down · <b>↑</b>/<b>X</b> turn · <b>Z</b> turn back · <b>Space</b> drop · <b>C</b> hold · <b>P</b> pause</p>
+<p class="hint center keys-hint"><b>← →</b> move · <b>↓</b> down (hold to drop) · <b>↑</b>/<b>X</b> turn · <b>Z</b> turn back · <b>Space</b> drop · <b>C</b> hold · <b>P</b> pause</p>
 
 <script src="avatars.js"></script>
 <script src="profile.js"></script>

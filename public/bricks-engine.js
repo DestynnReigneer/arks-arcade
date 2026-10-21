@@ -15,6 +15,8 @@
   const BRICK_W = (W - SIDE * 2) / COLS;
   const PADDLE_Y = H - 40, PADDLE_H = 12, PADDLE_W = 64;
   const BALL_R = 5;
+  const CEILING = 30;      // the top wall, under the bar showing the level
+  // The side walls are SIDE thick; the bottom is open.
 
   // Each level is rows of 12: '.' empty, 1-3 hits, '#' can't be broken,
   // '*' always drops a power-up. Levels loop, a little faster each time.
@@ -173,9 +175,9 @@
     for (let i = 0; i < steps; i++) {
       // Use the current speed every step: a bounce partway through counts at once.
       ball.x += ball.vx * h; ball.y += ball.vy * h;
-      if (ball.x < ball.r) { ball.x = ball.r; ball.vx = Math.abs(ball.vx); g.events.push('wall'); }
-      if (ball.x > W - ball.r) { ball.x = W - ball.r; ball.vx = -Math.abs(ball.vx); g.events.push('wall'); }
-      if (ball.y < ball.r + 30) { ball.y = ball.r + 30; ball.vy = Math.abs(ball.vy); g.events.push('wall'); }
+      if (ball.x < SIDE + ball.r) { ball.x = SIDE + ball.r; ball.vx = Math.abs(ball.vx); g.events.push('wall'); }
+      if (ball.x > W - SIDE - ball.r) { ball.x = W - SIDE - ball.r; ball.vx = -Math.abs(ball.vx); g.events.push('wall'); }
+      if (ball.y < ball.r + CEILING) { ball.y = ball.r + CEILING; ball.vy = Math.abs(ball.vy); g.events.push('wall'); }
       const p = g.paddle;
       if (ball.vy > 0 && circleRect(ball, { x: p.x - p.w / 2, y: p.y - p.h / 2, w: p.w, h: p.h })) paddleBounce(g, ball);
       if (ball.y > H + ball.r) { ball.lost = true; return; }
@@ -210,7 +212,7 @@
     p.w += (targetW - p.w) * Math.min(1, dt * 8);
     if (typeof input.x === 'number') p.x = input.x;
     else if (input.move) p.x += input.move * 420 * dt;
-    p.x = Math.max(p.w / 2, Math.min(W - p.w / 2, p.x));
+    p.x = Math.max(SIDE + p.w / 2, Math.min(W - SIDE - p.w / 2, p.x));
 
     if (g.phase === 'serve') {
       for (const b of g.balls) { b.x = p.x; b.y = p.y - p.h / 2 - b.r - 1; }
@@ -252,5 +254,5 @@
     return true;
   }
 
-  return { W, H, COLS, LEVELS, POWERS, BALL_R, create, step, launch, nextLevel, levelName, breakable, bricksFor, applyPower, baseSpeed };
+  return { W, H, SIDE, CEILING, COLS, LEVELS, POWERS, BALL_R, create, step, launch, nextLevel, levelName, breakable, bricksFor, applyPower, baseSpeed };
 });

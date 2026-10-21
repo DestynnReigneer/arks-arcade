@@ -441,6 +441,82 @@ async function run() {
   }
   ok('40 random games never leave a piece overlapping the stack', sane === 40);
 
+  ok('snake speeds give you time to think (Normal is 150ms+ a step)', SN.interval(SN.create()) >= 150 && SN.interval(SN.create({ speed: 'chill' })) >= 200);
+  const wallHit = BR.create();
+  wallHit.phase = 'play';
+  wallHit.balls = [{ x: BR.SIDE + 8, y: 400, vx: -300, vy: -10, r: 5 }];
+  BR.step(wallHit, 0.05, { x: 180 });
+  ok('brick breaker: the ball bounces off the side wall, not the screen edge', wallHit.balls[0].vx > 0 && wallHit.balls[0].x >= BR.SIDE + 5);
+  BR.step(wallHit, 0.01, { x: -50 });
+  ok('…and the paddle stays inside the walls', wallHit.paddle.x - wallHit.paddle.w / 2 >= BR.SIDE - 0.01);
+  const nudge = BD.create({ rand: () => 0.5 });
+  const y0 = nudge.piece.y;
+  ok('block drop: pressing down moves the piece one row and scores 1', BD.softStep(nudge) && nudge.piece.y === y0 + 1 && nudge.score === 1);
+  ok('…and holding down speeds it up without being instant', BD.SOFT_SECONDS >= 0.05 && BD.SOFT_SECONDS < BD.fallSeconds(1) / 5);
+
+  console.log('\n-- tower defense --');
+  const TD = require(path.join(ROOT, 'public/towers-engine.js'));
+  const mapIds = Object.keys(TD.MAPS);
+  ok('there are six maps, easy to hard', mapIds.length === 6 && ['Easy', 'Medium', 'Hard'].every(l => mapIds.some(id => TD.MAPS[id].level === l)));
+  let roadsOk = true, roadProblem = '';
+  for (const id of mapIds) {
+    const m = TD.parseMap(id);
+    m.tiles.forEach((row, y) => [...row].forEach((ch, x) => {
+      if ((ch === '#' || ch === 'S') && !m.pathSet.has(x + ',' + y)) { roadsOk = false; roadProblem = `${id} ${x},${y} is road nobody walks`; }
+    }));
+    for (const p of m.paths) for (let i = 1; i < p.length; i++) if (Math.abs(p[i][0] - p[i - 1][0]) + Math.abs(p[i][1] - p[i - 1][1]) !== 1) { roadsOk = false; roadProblem = id + ' road jumps'; }
+  }
+  ok('every map\'s roads lead to the castle, with no dead ends', roadsOk, roadProblem);
+  const twoRoads = mapIds.filter(id => TD.parseMap(id).paths.length === 2);
+  ok('Swamp and Volcano have two roads in', twoRoads.join() === 'swamp,volcano');
+  const sw = TD.create({ map: 'swamp' });
+  TD.startWave(sw);
+  for (let i = 0; i < 90; i++) TD.step(sw, 1 / 30);
+  ok('…and monsters take turns using each road', new Set(sw.enemies.map(e => e.road)).size === 2);
+  const tg = TD.create({ map: 'meadow' });
+  for (let i = 0; i < 30 * 60; i++) TD.step(tg, 1 / 30);
+  ok('the first wave waits until you build something', tg.wave === 0 && tg.countdown == null);
+  TD.build(tg, 'archer', 4, 1);
+  ok('…then its clock starts', tg.countdown === TD.FIRST_BREAK);
+  for (let i = 0; i < 30 * TD.FIRST_BREAK + 2; i++) TD.step(tg, 1 / 30);
+  ok('…and wave 1 comes by itself when the clock runs out', tg.wave === 1 && tg.phase === 'wave');
+  ok('a wave can\'t be called while it\'s still marching out', TD.canCall(tg) === false && TD.startWave(tg) === false);
+  for (let i = 0; i < 30 * 120 && tg.phase === 'wave'; i++) { if (tg.enemies[0]) tg.enemies[0].hp = 0; TD.step(tg, 1 / 30); }
+  ok('after a wave is cleared there\'s a break with a clock', tg.phase === 'build' && tg.countdown > TD.BREAK - 1);
+  const fullBonus = TD.earlyBonus(tg);
+  for (let i = 0; i < 30 * (TD.BREAK - 3); i++) TD.step(tg, 1 / 30);
+  ok('calling the next wave early pays more the earlier you call', fullBonus > TD.earlyBonus(tg) && TD.earlyBonus(tg) > 0);
+  const goldBefore = tg.gold, bonusNow = TD.earlyBonus(tg);
+  ok('…and calling it starts it right away with the bonus', TD.startWave(tg) && tg.wave === 2 && tg.gold === goldBefore + bonusNow);
+  const auto = TD.create({ map: 'meadow' });
+  TD.armFirstWave(auto);
+  for (let i = 0; i < 30 * 400 && auto.phase !== 'lost'; i++) TD.step(auto, 1 / 30);
+  ok('with no towers at all, the waves keep coming until the castle falls', auto.phase === 'lost' && auto.wave >= 2);
+  // A decent player (the same simple bot on every map) should win every map.
+  const coverage = (g, x, y) => g.map.paths.reduce((n, p) => n + p.filter(([px, py]) => Math.hypot(px - x, py - y) <= 2.4).length, 0);
+  const results = mapIds.map(id => {
+    const g = TD.create({ map: id });
+    const plan = ['archer', 'archer', 'frost', 'cannon', 'archer', 'tesla', 'cannon', 'frost', 'tesla'];
+    const spots = [];
+    for (let y = 0; y < g.map.rows; y++) for (let x = 0; x < g.map.cols; x++) if (TD.canBuild(g, x, y)) spots.push({ x, y, c: coverage(g, x, y) });
+    spots.sort((a, b) => b.c - a.c);
+    let k = 0;
+    for (let i = 0; i < 30 * 3000 && g.phase !== 'won' && g.phase !== 'lost'; i++) {
+      if (i % 30 === 0) for (let guard = 0; guard < 20; guard++) {
+        if (g.towers.length >= 6) {
+          const up = g.towers.filter(t => TD.upgradeCost(t) != null).sort((a, b) => TD.upgradeCost(a) - TD.upgradeCost(b))[0];
+          if (up && g.gold >= TD.upgradeCost(up) && (g.towers.length >= 10 || k % 2)) { TD.upgrade(g, up.id); continue; }
+        }
+        const type = plan[k % plan.length], spot = spots.find(p => TD.canBuild(g, p.x, p.y));
+        if (!spot || g.gold < TD.TOWERS[type].levels[0].cost) break;
+        TD.build(g, type, spot.x, spot.y); k++;
+      }
+      TD.step(g, 1 / 30);
+    }
+    return id + ':' + g.phase;
+  });
+  ok('a sensible player can win every map', results.every(r => r.endsWith(':won')), results.join(' '));
+
   console.log(`\n  ${pass} passed, ${fail} failed`);
   return { pass, fail };
 }

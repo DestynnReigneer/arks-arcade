@@ -59,6 +59,7 @@
 
   // ---- loop -------------------------------------------------------------------------------
   function frame(now) {
+    Blip.musicPlaying(state === 'playing' || state === 'ready');
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
     if ((state === 'ready' || state === 'playing') && !help.isOpen) {
@@ -139,60 +140,121 @@
     ctx.closePath();
   }
 
+  // Stars in the background, the same every time.
+  const STARS = (() => {
+    let s = 7;
+    const r = () => { s = (s * 9301 + 49297) % 233280; return s / 233280; };
+    return Array.from({ length: 70 }, () => ({ x: r() * E.W, y: E.CEILING + r() * (E.H - E.CEILING), r: 0.4 + r() * 1.1, tw: r() * 6 }));
+  })();
+  const LEVEL_TINTS = ['#1b1440', '#0f2340', '#2a1236', '#0f2e2a', '#2e1a10', '#301028', '#10243a', '#22202e'];
+
   function draw() {
     const { ctx } = view;
     const k = scale();
+    const now = performance.now() / 1000;
     ctx.save();
     ctx.scale(k, k);
     if (shake) ctx.translate((Math.random() - 0.5) * shake / k, (Math.random() - 0.5) * shake / k);
     const bg = ctx.createLinearGradient(0, 0, 0, E.H);
-    bg.addColorStop(0, '#120f22'); bg.addColorStop(1, '#0a0912');
+    bg.addColorStop(0, LEVEL_TINTS[g.level % LEVEL_TINTS.length]); bg.addColorStop(1, '#07060d');
     ctx.fillStyle = bg;
     ctx.fillRect(-10, -10, E.W + 20, E.H + 20);
-    // faint grid
-    ctx.strokeStyle = 'rgba(255,255,255,0.025)';
-    ctx.lineWidth = 1;
-    for (let x = 0; x < E.W; x += 30) { ctx.beginPath(); ctx.moveTo(x, 30); ctx.lineTo(x, E.H); ctx.stroke(); }
+    for (const s of STARS) {
+      ctx.globalAlpha = 0.35 + Math.sin(now * 1.5 + s.tw) * 0.25;
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
 
     // top bar: level name and active power-ups
-    ctx.fillStyle = 'rgba(255,255,255,0.06)';
-    ctx.fillRect(0, 0, E.W, 30);
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.fillRect(0, 0, E.W, E.CEILING);
     ctx.font = '700 12px system-ui, sans-serif';
     ctx.textBaseline = 'middle';
-    ctx.fillStyle = '#c9b98a';
-    ctx.fillText(`${g.level + 1}. ${E.levelName(g.level)}`, 10, 15);
-    let ex = E.W - 10;
+    ctx.fillStyle = '#ffd9a0';
+    ctx.fillText(`${g.level + 1}. ${E.levelName(g.level)}`, 12, 14);
+    let ex = E.W - 12;
     ctx.textAlign = 'right';
     for (const [type, t] of Object.entries(g.effects)) {
       if (t <= 0) continue;
       const label = `${E.POWERS[type].emoji} ${Math.ceil(t)}`;
       ctx.fillStyle = E.POWERS[type].color;
-      ctx.fillText(label, ex, 15);
+      ctx.fillText(label, ex, 14);
       ex -= ctx.measureText(label).width + 12;
     }
     ctx.textAlign = 'left';
 
+    // The walls: metal rails on three sides with a glowing inside edge, so
+    // you can see exactly where the ball bounces. The bottom is open.
+    const S = E.SIDE, C = E.CEILING;
+    const rail = (x, y, w, h, horizontal) => {
+      const gr = horizontal ? ctx.createLinearGradient(0, y, 0, y + h) : ctx.createLinearGradient(x, 0, x + w, 0);
+      gr.addColorStop(0, '#9aa3b8'); gr.addColorStop(0.5, '#e6ebf5'); gr.addColorStop(1, '#5d6478');
+      ctx.fillStyle = gr;
+      ctx.fillRect(x, y, w, h);
+    };
+    rail(0, C - S, E.W, S, true);
+    rail(0, C - S, S, E.H - C + S, false);
+    rail(E.W - S, C - S, S, E.H - C + S, false);
+    // rivets
+    ctx.fillStyle = 'rgba(60,66,84,0.8)';
+    for (let y = C + 20; y < E.H; y += 40) { ctx.fillRect(S / 2 - 1, y, 2, 2); ctx.fillRect(E.W - S / 2 - 1, y, 2, 2); }
+    for (let x = 20; x < E.W; x += 40) ctx.fillRect(x, C - S / 2 - 1, 2, 2);
+    ctx.save();
+    ctx.shadowColor = '#2de2e6'; ctx.shadowBlur = 8;
+    ctx.strokeStyle = 'rgba(45,226,230,0.85)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(S + 0.75, E.H); ctx.lineTo(S + 0.75, C + 0.75); ctx.lineTo(E.W - S - 0.75, C + 0.75); ctx.lineTo(E.W - S - 0.75, E.H);
+    ctx.stroke();
+    ctx.restore();
+    // the open bottom: a faint red glow where balls are lost
+    const pit = ctx.createLinearGradient(0, E.H - 26, 0, E.H);
+    pit.addColorStop(0, 'rgba(255,60,90,0)'); pit.addColorStop(1, 'rgba(255,60,90,0.28)');
+    ctx.fillStyle = pit;
+    ctx.fillRect(S, E.H - 26, E.W - S * 2, 26);
+
     // bricks
     for (const b of g.bricks) {
       let color;
-      if (b.steel) color = '#c9a227';
-      else if (b.max >= 3) color = '#8fa3b8';
+      if (b.steel) color = '#d4a92a';
+      else if (b.max >= 3) color = '#9fb2c6';
       else color = ROW_COLORS[b.row % ROW_COLORS.length];
+      ctx.fillStyle = 'rgba(0,0,0,0.35)';
+      rounded(ctx, b.x + 1.5, b.y + 2, b.w, b.h, 3);
+      ctx.fill();
       const grad = ctx.createLinearGradient(0, b.y, 0, b.y + b.h);
-      grad.addColorStop(0, shadeHex(color, 0.28));
-      grad.addColorStop(1, shadeHex(color, -0.25));
+      grad.addColorStop(0, shadeHex(color, 0.35));
+      grad.addColorStop(0.5, color);
+      grad.addColorStop(1, shadeHex(color, -0.35));
       ctx.fillStyle = grad;
       rounded(ctx, b.x, b.y, b.w, b.h, 3);
       ctx.fill();
-      if (b.max === 2 && b.hits === 2 || b.max >= 3 && !b.steel) {
-        ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+      // shine across the top
+      ctx.fillStyle = 'rgba(255,255,255,0.35)';
+      rounded(ctx, b.x + 2, b.y + 1.5, b.w - 4, b.h * 0.3, 2);
+      ctx.fill();
+      ctx.strokeStyle = shadeHex(color, -0.5);
+      ctx.lineWidth = 1;
+      rounded(ctx, b.x + 0.5, b.y + 0.5, b.w - 1, b.h - 1, 3);
+      ctx.stroke();
+      if (b.steel) {
+        // a moving glint on gold
+        const gx = b.x + ((now * 40 + b.col * 13) % (b.w + 30)) - 15;
+        ctx.save();
+        rounded(ctx, b.x, b.y, b.w, b.h, 3); ctx.clip();
+        ctx.fillStyle = 'rgba(255,255,255,0.45)';
+        ctx.beginPath(); ctx.moveTo(gx, b.y); ctx.lineTo(gx + 6, b.y); ctx.lineTo(gx, b.y + b.h); ctx.lineTo(gx - 6, b.y + b.h); ctx.fill();
+        ctx.restore();
+      } else if (b.max >= 2 && b.hits >= 2) {
+        ctx.strokeStyle = 'rgba(255,255,255,0.6)';
         ctx.lineWidth = 1.2;
-        rounded(ctx, b.x + 2, b.y + 2, b.w - 4, b.h - 4, 2);
+        rounded(ctx, b.x + 2.5, b.y + 2.5, b.w - 5, b.h - 5, 2);
         ctx.stroke();
       }
       if (b.hits < b.max && !b.steel) {
         // cracks
-        ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+        ctx.strokeStyle = 'rgba(0,0,0,0.6)';
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(b.x + b.w * 0.3, b.y); ctx.lineTo(b.x + b.w * 0.45, b.y + b.h * 0.5); ctx.lineTo(b.x + b.w * 0.35, b.y + b.h);
@@ -201,7 +263,7 @@
       }
       if (b.power) {
         ctx.fillStyle = '#fff';
-        ctx.globalAlpha = 0.6 + Math.sin(performance.now() / 150) * 0.4;
+        ctx.globalAlpha = 0.6 + Math.sin(now * 6.7) * 0.4;
         ctx.font = '700 10px system-ui, sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText('★', b.x + b.w / 2, b.y + b.h / 2 + 1);
@@ -213,45 +275,59 @@
     // power-up capsules
     for (const d of g.drops) {
       const p = E.POWERS[d.type];
-      ctx.fillStyle = p.color;
-      rounded(ctx, d.x - 15, d.y - 7, 30, 14, 7);
+      ctx.save();
+      ctx.shadowColor = p.color; ctx.shadowBlur = 10;
+      const cg = ctx.createLinearGradient(0, d.y - 8, 0, d.y + 8);
+      cg.addColorStop(0, shadeHex(p.color, 0.4)); cg.addColorStop(1, shadeHex(p.color, -0.3));
+      ctx.fillStyle = cg;
+      rounded(ctx, d.x - 16, d.y - 8, 32, 16, 8);
       ctx.fill();
+      ctx.restore();
       ctx.fillStyle = '#fff';
-      ctx.font = '700 10px system-ui, sans-serif';
+      ctx.font = '700 11px system-ui, sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText(p.emoji, d.x, d.y + 1);
       ctx.textAlign = 'left';
     }
 
-    // paddle
+    // paddle: a chrome capsule with glowing ends
     const pd = g.paddle;
+    const px = pd.x - pd.w / 2, py = pd.y - pd.h / 2;
     ctx.save();
-    ctx.shadowColor = g.effects.fire > 0 ? '#ff7a2c' : '#ff9f2c';
-    ctx.shadowBlur = 14;
-    const pg = ctx.createLinearGradient(0, pd.y - pd.h / 2, 0, pd.y + pd.h / 2);
-    pg.addColorStop(0, '#ffe2a8'); pg.addColorStop(1, '#ff8a1c');
+    ctx.shadowColor = g.effects.fire > 0 ? '#ff7a2c' : '#2de2e6';
+    ctx.shadowBlur = 16;
+    const pg = ctx.createLinearGradient(0, py, 0, py + pd.h);
+    pg.addColorStop(0, '#ffffff'); pg.addColorStop(0.45, '#b9c3d6'); pg.addColorStop(1, '#5a6378');
     ctx.fillStyle = pg;
-    rounded(ctx, pd.x - pd.w / 2, pd.y - pd.h / 2, pd.w, pd.h, pd.h / 2);
+    rounded(ctx, px, py, pd.w, pd.h, pd.h / 2);
     ctx.fill();
     ctx.restore();
+    const endColor = g.effects.fire > 0 ? '#ff7a2c' : '#ff4f7a';
+    ctx.fillStyle = endColor;
+    rounded(ctx, px, py, 12, pd.h, pd.h / 2); ctx.fill();
+    rounded(ctx, px + pd.w - 12, py, 12, pd.h, pd.h / 2); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.fillRect(px + 8, py + 2, pd.w - 16, 2);
 
     // balls with a short trail
     for (const b of g.balls) {
       let t = trails.get(b);
       if (!t) { t = []; trails.set(b, t); }
       t.push({ x: b.x, y: b.y });
-      if (t.length > 8) t.shift();
+      if (t.length > 10) t.shift();
       const fire = g.effects.fire > 0;
       t.forEach((p, i) => {
-        ctx.globalAlpha = (i / t.length) * 0.35;
-        ctx.fillStyle = fire ? '#ff7a2c' : '#ffffff';
-        ctx.beginPath(); ctx.arc(p.x, p.y, b.r * (0.5 + i / t.length / 2), 0, Math.PI * 2); ctx.fill();
+        ctx.globalAlpha = (i / t.length) * 0.4;
+        ctx.fillStyle = fire ? '#ff7a2c' : '#9ff6ff';
+        ctx.beginPath(); ctx.arc(p.x, p.y, b.r * (0.4 + i / t.length / 2), 0, Math.PI * 2); ctx.fill();
       });
       ctx.globalAlpha = 1;
       ctx.save();
-      ctx.shadowColor = fire ? '#ff5a00' : '#ffffff';
-      ctx.shadowBlur = fire ? 14 : 8;
-      ctx.fillStyle = fire ? '#ffd27a' : '#ffffff';
+      ctx.shadowColor = fire ? '#ff5a00' : '#9ff6ff';
+      ctx.shadowBlur = fire ? 16 : 10;
+      const bgr = ctx.createRadialGradient(b.x - b.r * 0.35, b.y - b.r * 0.35, 0.5, b.x, b.y, b.r);
+      bgr.addColorStop(0, '#ffffff'); bgr.addColorStop(1, fire ? '#ff9a3c' : '#c9d6ea');
+      ctx.fillStyle = bgr;
       ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2); ctx.fill();
       ctx.restore();
     }
@@ -305,6 +381,8 @@
   $('scoresBtn').addEventListener('click', () => shell.openScores('classic'));
   document.addEventListener('visibilitychange', () => { if (document.hidden) pause(true); });
   Blip.muteButton($('muteBtn'));
+  Blip.musicButton($('musicBtn'));
+  Blip.music('bricks');
 
   const help = Tutorial.create('bricks', [
     {
