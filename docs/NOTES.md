@@ -40,6 +40,15 @@ from there:
 - The Family Hub will show an ARKS Arcade tile with a live status chip read
   from `/healthz`. Keep that endpoint working and cheap.
 
+## Good to know
+
+- **Still in beta.** Local scores and profiles don't matter yet, so wiping or
+  renaming the local database is fine.
+- **Dropped ideas**, so they don't come back by accident: Short Fuse (replaced by
+  Uh-Oh: Part Deux and Dare Devil), the Kaleidoscope doodle pad (the kids are
+  too old for it), and making the repo private.
+- More games will be added over time.
+
 ## Smaller to-dos
 
 - Dependabot has three open branches (Docker node-26-alpine, GitHub Actions,
