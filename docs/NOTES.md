@@ -5,27 +5,33 @@ a plan changes, so the next session can pick up from here.
 
 ## Where things stand
 
-- `main` has everything through PR #10 (`feat/difficulty-and-polish`) plus
-  `feat/stats-and-games` (Admin Stats; Snake, Brick Breaker, Block Drop, Tower
-  Defense; soft background music with a 🎵 toggle, Block Drop's being the
-  Korobeiniki folk tune). The music has been listened to and approved.
+- `main` has everything through PR #12:
+  - #11: Admin Stats; Snake, Brick Breaker, Block Drop, Tower Defense; soft
+    background music with a 🎵 toggle (Block Drop plays the Korobeiniki folk
+    tune). The music has been listened to and approved.
+  - #12: admin sign-in by httpOnly session cookie (sign in again once after
+    updating), strict `npm ci` in the image, the app can only write to
+    `/app/data`, TZ defaults to America/Los_Angeles, CI runs on PRs only.
+- **`feat/party-polish`** is pushed, **waiting for the owner to play it**
+  before its PR:
+  - Uh-Oh: Part Deux: mobile-app table (players across the top, piles apart,
+    glowing "YOUR TURN" hand area), cards with one big symbol, new card names
+    that fit what each card does, truck beep on Reverse, an occasional
+    "womp womp", and server-picked jokes at the table's spice level.
+  - Jokes everywhere stay up by reading time (`ArcadeKit.readMs`, `ArcadeKit.joke`).
+  - Dare Devil: timed cards get a 5-second reading grace, then a countdown
+    with `Blip.think()` (our own tune) and a buzzer.
 
 ## Next up
 
-1. **Repo cleanup from an architecture review**, on its own branch and PR:
-   compose and `.env.example` defaults, Dockerfile build strictness and file
-   ownership, admin sign-in storage, and CI triggers.
-2. **Party-game polish**, on its own branch:
-   - Uh-Oh: Part Deux: a cleaner, Uno-like table (clearer "your turn", draw
-     pile apart from the played pile, less cluttered cards). Rename or explain
-     the Water Balloon Bomb card. Occasional "womp womp" when a card hits a
-     player, a truck-reversing beep for Reverse, and comedy pop-ups at every
-     spice level.
-   - Spin & Solve and Uh-Oh: jokes stay on screen long enough to read.
-   - Dare Devil: timed dares ("do it in 10 seconds") get a 4-5 second reading
-     grace, then a visible countdown.
-   - An original "thinking" countdown tune (not the Jeopardy one) that games
-     can use.
+1. **The owner plays `feat/party-polish`**, then fix what they find and open
+   the PR (merge when CI is green).
+2. **Get Claude in Chrome connected** so pages can be checked in a real
+   browser: everything on the machine is set up (extension installed, native
+   host registered for the native `claude.exe`); it needs a full Chrome
+   restart and the extension signed in to the same account.
+3. Ask which other games should use the countdown tune (Know-It-All's answer
+   clock, Spin & Solve's turn clock).
 
 ## Deployment
 
