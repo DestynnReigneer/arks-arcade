@@ -720,10 +720,11 @@
     if (!jokes || !jokes.length) return;
     const [setup, punch] = pick(jokes);
     const beeper = $('host').dataset.host === 'bleep';
-    Host.talk(beeper ? `Bwee-doo? (${setup})` : setup, 3200);
-    await wait(3000);
+    // Each line stays up long enough to read at a relaxed pace.
+    Host.talk(beeper ? `Bwee-doo? (${setup})` : setup, ArcadeKit.readMs(setup) + 400);
+    await wait(ArcadeKit.readMs(setup));
     if (clockPaused()) return;
-    Host.talk(beeper ? `Dweet! (${punch})` : punch, 4200, true);
+    Host.talk(beeper ? `Dweet! (${punch})` : punch, ArcadeKit.readMs(punch) + 1000, true);
     Host.pose('cheer', 900);
     // Ba-dum-tss.
     Blip.tone(150, 0.08, { type: 'sine', volume: 0.12 });
@@ -768,7 +769,7 @@
     const say = $('hecklerSay');
     say.textContent = pick(S.banter.heckles).replace(/\{host\}/g, hostName);
     say.classList.add('show');
-    await wait(2600);
+    await wait(ArcadeKit.readMs(say.textContent));
     say.classList.remove('show');
     // The comeback, with a gesture popping up over the host's head.
     const comeback = pick(S.banter.comebacks);
@@ -780,8 +781,8 @@
     g.classList.remove('show');
     void g.offsetWidth;
     g.classList.add('show');
-    Host.talk(text, 2200);
-    await wait(1700);
+    Host.talk(text, ArcadeKit.readMs(text) + 600);
+    await wait(ArcadeKit.readMs(text));
     h.dataset.pose = 'oops';
     await wait(500);
     h.style.transform = `translateX(${offstage}px)`;
