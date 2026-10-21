@@ -32,3 +32,27 @@ Where things are documented (read these rather than guessing):
   host, and keep the home page and game lobbies easy to link to.
 - **No secrets in the repo.** `.env` is gitignored; `.env.example` documents
   every setting.
+
+## Decisions already made (don't reopen unless the owner does)
+
+- **No server-side AI.** Themes, theme packs, trivia and Spin & Solve packs
+  come from a "copy prompt, paste into any chatbot, paste the answer back"
+  flow. Automatic AI generation was considered and turned down: it costs money
+  and opens an abuse surface on an internet-facing server.
+- **The server decides every score.** Clients never send their own score.
+- **The adult word list is deliberately uncensored.** Don't soften it.
+  `words/blocklist-kids.txt` is what protects the kids list.
+- **Celebrations, yes; fake near-misses, no.** Confetti, coin showers and big
+  win banners are welcome, but a "so close!" must always be real (the ladder
+  climbs the actual leaderboard).
+- **The daily board is seeded by the date alone**, and the kids and unfiltered
+  dictionaries are deliberately not made equal (standings tag each row).
+- **Theme-pack words must be short**: board geometry makes 7+ letter words
+  essentially unreachable (numbers in the README).
+
+## Naming traps (each one has caused a real bug)
+
+- `playerId` means a player in a round or a room member. A profile is always
+  `profileId`.
+- In the Rambler client, `S.players` is the pass-and-play roster and
+  `S.profiles` is the profile list. Keep them separate.
