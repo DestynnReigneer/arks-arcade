@@ -1,8 +1,13 @@
 'use strict';
 
-// Tower Defense's rules, with no idea how it's drawn: the map, the path,
+// Tower Defense's rules, with no idea how it's drawn: the map, the roads,
 // towers, enemies, waves, gold and lives. The page calls step() every frame;
 // the tests play whole games with it.
+//
+// Waves come on their own: after a wave is cleared there's a short break
+// (BREAK seconds) to build, then the next one starts. Calling it before the
+// timer runs out pays bonus gold, more the earlier you call. The first wave
+// waits until you've built something (or pressed start).
 //
 // Distances are in grid squares and times in seconds.
 
@@ -11,21 +16,36 @@
   else root.TowersEngine = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   const WAVES = 25;
+  const FIRST_BREAK = 30, BREAK = 15;
 
-  // '.' grass you can build on, '#' path, 'S' where enemies come from,
-  // 'E' the castle they're after, 'T' trees (no building).
+  // '.' ground you can build on, '#' road, 'S' where enemies come from (a map
+  // can have two), 'E' the castle they're after. 'T' trees or cactus, 'R'
+  // rocks, '~' water, ice or lava: nothing can be built on those.
+  // theme picks the colors and scenery on the page.
   const MAPS = {
     meadow: {
-      label: 'Meadow', blurb: 'A long, winding road. A good place to start.', gold: 180, lives: 20, hp: 0.9,
-      rows: ['S###......', '...#......', '...#...T..', '...######.', '........#.', '.T......#.', '.########.', '.#........', '.#....T...', '.#######..', '.......#..', '..T....#..', '.......E..']
+      label: 'Meadow', level: 'Easy', theme: 'grass', blurb: 'A long, winding road. A good place to start.', gold: 180, lives: 20, hp: 0.9,
+      rows: ['S###......', '...#....R.', '...#...T..', '...######.', '.R......#.', '.T......#.', '.########.', '.#......T.', '.#....T...', '.#######..', '.......#.R', '..T....#..', '.......E..']
+    },
+    lake: {
+      label: 'Frozen Lake', level: 'Easy', theme: 'snow', blurb: 'The road circles a frozen lake. Towers in the middle reach two roads at once.', gold: 170, lives: 20, hp: 1.3,
+      rows: ['S########.', '........#.', '.T..R...#.', '.######.#.', '.#..~~#.#.', '.#.E~~#.#.', '.#.#~~#.#.', '.#.#~~#.#.', '.#.#~~#.#.', '.#.####.#.', '.#......#.', '.########.', '..T....T..']
     },
     canyon: {
-      label: 'Canyon', blurb: 'Shorter road, tougher monsters.', gold: 150, lives: 20, hp: 1.15,
-      rows: ['..........', '..T....T..', 'S######...', '......#...', '.T....#..T', '......#...', '..#####...', '..#.......', '..#...T...', '..#.......', '..#######E', '.T........', '......T...']
+      label: 'Canyon', level: 'Medium', theme: 'desert', blurb: 'Shorter road, tougher monsters.', gold: 150, lives: 20, hp: 1.15,
+      rows: ['..R.......', '..T....T..', 'S######...', '......#.R.', '.T....#..T', '......#...', '..#####...', '..#....R..', '..#...T...', 'R.#.......', '..#######E', '.T......R.', '...R..T...']
+    },
+    swamp: {
+      label: 'Swamp', level: 'Medium', theme: 'swamp', blurb: 'Two roads in! Monsters take turns coming from each side.', gold: 190, lives: 20, hp: 1.0,
+      rows: ['.S......S.', '.#..~~..#.', '.#..~~..#.', '.#......#.', '.###..###.', '...#..#...', '.T.#..#.T.', '...####...', '....#.....', '.~..#..~..', '....####..', '.T.....#..', '.......E..']
     },
     castle: {
-      label: 'Castle', blurb: 'They\'re almost at the gate. Good luck!', gold: 190, lives: 20, hp: 1.2,
-      rows: ['.....S....', '..T..#..T.', '.....#....', '..####....', '..#.......', 'T.#....T..', '..#.......', '..#.......', '..######..', '.......#..', '.T.....#.T', '.......#..', '.......E..']
+      label: 'Castle', level: 'Hard', theme: 'stone', blurb: 'They\'re almost at the gate. Good luck!', gold: 190, lives: 20, hp: 1.2,
+      rows: ['.....S....', '..T..#..T.', '.....#....', '..####..R.', '..#.......', 'T.#....T..', '..#.......', '..#..R....', '..######..', '.......#..', '.T.....#.T', '.R.....#..', '.......E..']
+    },
+    volcano: {
+      label: 'Volcano', level: 'Hard', theme: 'lava', blurb: 'Two short roads over the lava. Only for experts.', gold: 230, lives: 20, hp: 1.15,
+      rows: ['~~~..R..~~', '~~...T...~', '..........', 'S###..###S', '...#..#...', '.~~#..#~~.', '.~~####~~.', '....#.....', '~~..#...R.', '~~..###...', '......#.~~', '.R....#.~~', '......E...']
     }
   };
 
@@ -75,26 +95,39 @@
 
   function fail(message, status = 400) { return Object.assign(new Error(message), { status }); }
 
-  // Walk the path from S to E so enemies know which way to go.
+  // Find the road from each S to the castle (the shortest way along road
+  // squares, so two roads can join up).
   function parseMap(id) {
     const def = MAPS[id];
     if (!def) throw fail('Unknown map.');
     const rows = def.rows.length, cols = def.rows[0].length;
-    let start = null;
-    def.rows.forEach((r, y) => { if (r.length !== cols) throw fail(`Map ${id} row ${y} is the wrong length`); const x = r.indexOf('S'); if (x >= 0) start = [x, y]; });
+    const starts = [];
+    let end = null;
+    def.rows.forEach((r, y) => {
+      if (r.length !== cols) throw fail(`Map ${id} row ${y} is the wrong length`);
+      [...r].forEach((ch, x) => { if (ch === 'S') starts.push([x, y]); if (ch === 'E') end = [x, y]; });
+    });
+    if (!starts.length || !end) throw fail(`Map ${id} needs an S and an E`);
     const at = (x, y) => (def.rows[y] || '')[x];
-    const path = [start];
-    const seen = new Set([start.join()]);
-    for (;;) {
-      const [x, y] = path[path.length - 1];
-      if (at(x, y) === 'E') break;
-      const next = [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([dx, dy]) => [x + dx, y + dy])
-        .find(([nx, ny]) => !seen.has(`${nx},${ny}`) && (at(nx, ny) === '#' || at(nx, ny) === 'E'));
-      if (!next) throw fail(`Map ${id}: the path stops at ${x},${y}`);
-      path.push(next);
-      seen.add(next.join());
-    }
-    return { id, cols, rows, tiles: def.rows, path, pathSet: seen };
+    const walkable = (x, y) => at(x, y) === '#' || at(x, y) === 'E';
+    const paths = starts.map(start => {
+      const prev = new Map([[start.join(), null]]);
+      const queue = [start];
+      while (queue.length) {
+        const [x, y] = queue.shift();
+        if (x === end[0] && y === end[1]) break;
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+          const nx = x + dx, ny = y + dy, k = `${nx},${ny}`;
+          if (!prev.has(k) && walkable(nx, ny)) { prev.set(k, [x, y]); queue.push([nx, ny]); }
+        }
+      }
+      if (!prev.has(end.join())) throw fail(`Map ${id}: no road from ${start} to the castle`);
+      const path = [];
+      for (let p = end; p; p = prev.get(p.join())) path.unshift(p);
+      return path;
+    });
+    const pathSet = new Set(paths.flat().map(p => p.join()));
+    return { id, cols, rows, tiles: def.rows, theme: def.theme, paths, path: paths[0], pathSet };
   }
 
   // Which monsters each wave sends.
@@ -126,7 +159,7 @@
     return {
       map: m, rand,
       gold: def.gold, lives: def.lives, startLives: def.lives,
-      wave: 0, phase: 'build', spawnQueue: [], spawnTimer: 0,
+      wave: 0, phase: 'build', countdown: null, spawnQueue: [], spawnTimer: 0, spawned: 0,
       towers: [], enemies: [], shots: [], fx: [],
       score: 0, kills: 0, leaked: 0, time: 0, nextId: 1, events: []
     };
@@ -134,22 +167,29 @@
 
   const tileAt = (g, x, y) => (g.map.tiles[y] || '')[x];
   const towerAt = (g, x, y) => g.towers.find(t => t.x === x && t.y === y);
+  const over = g => g.phase === 'won' || g.phase === 'lost';
 
   function canBuild(g, x, y) {
     return tileAt(g, x, y) === '.' && !towerAt(g, x, y);
   }
 
+  // The first wave's clock starts once there's something to defend with.
+  function armFirstWave(g) {
+    if (g.wave === 0 && g.countdown == null && !over(g)) g.countdown = FIRST_BREAK;
+  }
+
   function build(g, type, x, y) {
     const def = TOWERS[type];
     if (!def) throw fail('Unknown tower.');
-    if (g.phase === 'won' || g.phase === 'lost') throw fail('The game is over.');
+    if (over(g)) throw fail('The game is over.');
     if (!canBuild(g, x, y)) throw fail('You can\'t build there.');
     const cost = def.levels[0].cost;
     if (g.gold < cost) throw fail(`Not enough gold: ${def.label} costs ${cost}.`);
     g.gold -= cost;
-    const t = { id: g.nextId++, type, x, y, level: 0, spent: cost, cooldown: 0, kills: 0, aim: 0 };
+    const t = { id: g.nextId++, type, x, y, level: 0, spent: cost, cooldown: 0, kills: 0, aim: -Math.PI / 2 };
     g.towers.push(t);
     g.events.push('build');
+    armFirstWave(g);
     return t;
   }
 
@@ -180,24 +220,34 @@
     return sellValue(t);
   }
 
-  // Start the next wave. Calling it while the last one is still on the road
-  // earns a little bonus gold.
+  // Can the next wave be called now? Not while one is still marching out.
+  const canCall = g => !over(g) && !g.spawnQueue.length && g.wave < WAVES;
+
+  // Bonus gold for calling the next wave now: the full amount while monsters
+  // are still on the road, then less as the break's clock runs down.
+  function earlyBonus(g) {
+    if (!canCall(g) || g.wave === 0) return 0;
+    const max = 10 + g.wave * 2;
+    if (g.phase === 'wave') return max;
+    return Math.round(max * Math.max(0, Math.min(1, (g.countdown || 0) / BREAK)));
+  }
+
   function startWave(g) {
-    if (g.phase === 'won' || g.phase === 'lost') return false;
-    if (g.spawnQueue.length) return false;
-    if (g.wave >= WAVES) return false;
-    if (g.enemies.length) { const bonus = 10 + g.wave; g.gold += bonus; g.events.push('early:' + bonus); }
+    if (!canCall(g)) return false;
+    const bonus = earlyBonus(g);
+    if (bonus > 0) { g.gold += bonus; g.events.push('early:' + bonus); }
     g.wave++;
     g.spawnQueue = waveList(g.wave);
     g.spawnTimer = 0;
+    g.countdown = null;
     g.phase = 'wave';
     g.events.push('wave');
     return true;
   }
 
-  // A point along the path, from 0 (the start) to path.length - 1 (the castle).
-  function pointAt(g, d) {
-    const p = g.map.path;
+  // A point along a road, from 0 (the start) to path.length - 1 (the castle).
+  function pointAt(g, d, road = 0) {
+    const p = g.map.paths[road] || g.map.path;
     const i = Math.max(0, Math.min(p.length - 2, Math.floor(d)));
     const t = Math.max(0, Math.min(1, d - i));
     return { x: p[i][0] + (p[i + 1][0] - p[i][0]) * t + 0.5, y: p[i][1] + (p[i + 1][1] - p[i][1]) * t + 0.5 };
@@ -206,7 +256,9 @@
   function spawn(g, type) {
     const def = ENEMIES[type];
     const hp = Math.round(def.hp * hpScale(g.wave, g.map));
-    const e = { id: g.nextId++, type, hp, maxHp: hp, d: 0, slowFor: 0, slow: 0, ...pointAt(g, 0) };
+    // Two roads: monsters take turns.
+    const road = g.spawned++ % g.map.paths.length;
+    const e = { id: g.nextId++, type, hp, maxHp: hp, d: 0, road, face: 1, slowFor: 0, slow: 0, ...pointAt(g, 0, road) };
     g.enemies.push(e);
   }
 
@@ -214,13 +266,14 @@
     if (e.hp <= 0) return;
     const armor = ENEMIES[e.type].armor || 0;
     e.hp -= Math.max(1, amount - armor);
+    e.hurt = 0.12;
     if (e.hp <= 0) {
       const def = ENEMIES[e.type];
       g.gold += def.reward;
       g.score += def.reward * 10;
       g.kills++;
       if (tower) tower.kills++;
-      g.fx.push({ kind: 'pop', x: e.x, y: e.y, t: 0.4, emoji: def.emoji });
+      g.fx.push({ kind: 'pop', x: e.x, y: e.y, t: 0.5, reward: def.reward });
       g.events.push(def.boss ? 'boss-down' : 'kill');
     }
   }
@@ -232,8 +285,9 @@
     const c = { x: t.x + 0.5, y: t.y + 0.5 };
     const inRange = g.enemies.filter(e => e.hp > 0 && dist(c, e) <= s.range && !(t.type === 'cannon' && ENEMIES[e.type].flying));
     if (!inRange.length) return false;
-    // Aim at whoever is furthest along the road.
-    inRange.sort((a, b) => b.d - a.d);
+    // Aim at whoever is closest to the castle.
+    const left = e => (g.map.paths[e.road].length - 1) - e.d;
+    inRange.sort((a, b) => left(a) - left(b));
     const target = inRange[0];
     t.aim = Math.atan2(target.y - c.y, target.x - c.x);
     if (t.type === 'archer') {
@@ -271,11 +325,19 @@
 
   function step(g, dt) {
     g.events = [];
-    if (g.phase === 'won' || g.phase === 'lost') return g;
+    if (over(g)) return g;
     g.time += dt;
     for (const f of g.fx) f.t -= dt;
     g.fx = g.fx.filter(f => f.t > 0);
-    if (g.phase === 'build') return g;
+
+    // The break between waves: when the clock runs out, here they come.
+    if (g.phase === 'build') {
+      if (g.countdown != null) {
+        g.countdown -= dt;
+        if (g.countdown <= 0) { g.countdown = 0; startWave(g); }
+      }
+      if (g.phase === 'build') return g;
+    }
 
     // New monsters come out one by one.
     if (g.spawnQueue.length) {
@@ -287,12 +349,15 @@
     }
 
     // Move them along the road.
-    const end = g.map.path.length - 1;
     for (const e of g.enemies) {
       const def = ENEMIES[e.type];
+      const end = g.map.paths[e.road].length - 1;
       if (e.slowFor > 0) { e.slowFor -= dt; if (e.slowFor <= 0) e.slow = 0; }
+      if (e.hurt > 0) e.hurt -= dt;
       e.d += def.speed * (1 - e.slow) * dt;
-      Object.assign(e, pointAt(g, e.d));
+      const p = pointAt(g, e.d, e.road);
+      if (Math.abs(p.x - e.x) > 1e-4) e.face = p.x > e.x ? 1 : -1;
+      e.x = p.x; e.y = p.y;
       if (e.d >= end && e.hp > 0) {
         e.hp = 0;
         e.leaked = true;
@@ -323,7 +388,7 @@
         if (d <= stepLen + 0.05) {
           const tower = g.towers.find(t => t.id === s.tower);
           for (const e of g.enemies) if (e.hp > 0 && !ENEMIES[e.type].flying && Math.hypot(e.x - s.tx, e.y - s.ty) <= s.splash) damage(g, e, s.damage, tower);
-          g.fx.push({ kind: 'boom', x: s.tx, y: s.ty, r: s.splash, t: 0.3 });
+          g.fx.push({ kind: 'boom', x: s.tx, y: s.ty, r: s.splash, t: 0.35 });
           g.events.push('boom');
           s.done = true;
         } else { s.x += (s.tx - s.x) / d * stepLen; s.y += (s.ty - s.y) / d * stepLen; }
@@ -347,13 +412,16 @@
         g.score += 5000 + g.lives * 100;
         g.phase = 'won';
         g.events.push('won');
-      } else g.phase = 'build';
+      } else {
+        g.phase = 'build';
+        g.countdown = BREAK;
+      }
     }
     return g;
   }
 
   return {
-    WAVES, MAPS, TOWERS, ENEMIES, create, parseMap, canBuild, build, upgrade, sell, startWave, step,
-    stats, upgradeCost, sellValue, towerAt, tileAt, waveList, pointAt
+    WAVES, BREAK, FIRST_BREAK, MAPS, TOWERS, ENEMIES, create, parseMap, canBuild, build, upgrade, sell,
+    startWave, canCall, earlyBonus, armFirstWave, step, stats, upgradeCost, sellValue, towerAt, tileAt, waveList, pointAt
   };
 });

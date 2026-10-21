@@ -16,6 +16,7 @@
   const COLS = 10, ROWS = 22, HIDDEN = 2;
   const LOCK_DELAY = 0.5, MAX_LOCK_RESETS = 15;
   const RUSH_SECONDS = 120;
+  const SOFT_SECONDS = 0.06;     // seconds per row while holding down (about 16 rows a second)
   const MODES = { marathon: 'Marathon', rush: '2-Minute Rush' };
 
   const COLORS = { I: '#2de2e6', O: '#ffd23f', T: '#c86bff', S: '#3ddc84', Z: '#ff5e5e', J: '#2e9bff', L: '#ff9f2c' };
@@ -165,6 +166,21 @@
     return dist;
   }
 
+  // Down pressed: one row right away (the timer keeps going while it's held).
+  function softStep(g) {
+    if (g.over || !g.piece) return false;
+    const down = { ...g.piece, y: g.piece.y + 1 };
+    if (!fits(g, down)) return false;
+    g.piece = down;
+    g.lastMoveRotate = false;
+    g.score += 1;
+    if (down.y > g.lowest) { g.lowest = down.y; g.lockResets = 0; }
+    g.lockTimer = 0;
+    g.gravity = 0;
+    g.events.push('move');
+    return true;
+  }
+
   function hold(g) {
     if (g.over || !g.canHold) return false;
     const current = g.piece.type;
@@ -240,7 +256,7 @@
     if (g.over) return g;
     g.time += dt;
     if (g.mode === 'rush' && g.time >= RUSH_SECONDS) { g.over = true; g.timeUp = true; g.events.push('timeup', 'over'); return g; }
-    const perRow = soft ? Math.min(fallSeconds(g.level), 0.035) : fallSeconds(g.level);
+    const perRow = soft ? Math.min(fallSeconds(g.level), SOFT_SECONDS) : fallSeconds(g.level);
     g.gravity += dt;
     while (g.gravity >= perRow && !g.over) {
       g.gravity -= perRow;
@@ -262,6 +278,6 @@
 
   return {
     COLS, ROWS, HIDDEN, MODES, COLORS, TYPES, ROTATIONS, SHAPES, RUSH_SECONDS, LOCK_DELAY,
-    create, move, rotate, hardDrop, hold, update, ghostY, cellsOf, fits, fallSeconds, spawn
+    create, move, rotate, hardDrop, softStep, hold, SOFT_SECONDS, update, ghostY, cellsOf, fits, fallSeconds, spawn
   };
 });

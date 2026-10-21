@@ -13,14 +13,14 @@
   else root.SnakeEngine = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   const SPEEDS = {
-    chill: { label: 'Chill', ms: 150, mult: 1 },
-    normal: { label: 'Normal', ms: 105, mult: 2 },
-    fast: { label: 'Fast', ms: 72, mult: 3 }
+    chill: { label: 'Chill', ms: 210, mult: 1 },
+    normal: { label: 'Normal', ms: 155, mult: 2 },
+    fast: { label: 'Fast', ms: 112, mult: 3 }
   };
   const MODES = { classic: 'Classic', wrap: 'Wrap-around' };
   const DIRS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
   const OPPOSITE = { up: 'down', down: 'up', left: 'right', right: 'left' };
-  const GOLD_TICKS = 45;
+  const GOLD_TICKS = 55;
 
   function create({ cols = 20, rows = 20, mode = 'classic', speed = 'normal', rand = Math.random } = {}) {
     const x = Math.floor(cols / 2), y = Math.floor(rows / 2);
@@ -120,7 +120,7 @@
 
   // A little faster as the snake gets longer.
   function interval(g) {
-    return Math.round(SPEEDS[g.speed].ms * Math.max(0.62, 1 - g.apples * 0.006));
+    return Math.round(SPEEDS[g.speed].ms * Math.max(0.72, 1 - g.apples * 0.004));
   }
 
   return { SPEEDS, MODES, DIRS, create, turn, step, interval, GOLD_TICKS };

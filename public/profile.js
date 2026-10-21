@@ -194,7 +194,7 @@ const ArcadeProfile = (() => {
       '<label>Your name</label><input data-name maxlength="16" placeholder="e.g. Sam">' +
       '<label>Pick an avatar</label><div data-av></div>' +
       '<label>PIN (optional, 4–8 digits) to keep your profile yours</label><input data-pin type="password" inputmode="numeric" maxlength="8" autocomplete="new-password" placeholder="Leave blank for no PIN">' +
-      '<div class="apf-msg"></div><div class="apf-row"><button class="apf-btn" data-back>Back</button><button class="apf-btn apf-main" data-ok>Ask for it</button></div>';
+      '<div class="apf-msg"></div><div class="apf-row"><button class="apf-btn" data-back>Back</button><button class="apf-btn apf-main" data-ok>Create profile</button></div>';
     avatarPicker(c.querySelector('[data-av]'), chosen);
     c.querySelector('[data-back]').onclick = showList;
     c.querySelector('[data-ok]').onclick = async () => {
