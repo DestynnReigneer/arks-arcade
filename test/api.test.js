@@ -1036,6 +1036,24 @@ async function run({ base, root }) {
   await asAdmin('/comm/admin/adult-pin', 'POST', { pin: '' });
   ok('the PIN can be removed', (await api('/board', 'POST', { size: 4, profile: 'adult' })).status === 201);
 
+  // ---- admin sign-in cookie --------------------------------------------------------------
+  const login = password => fetch(base + '/api/admin/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password }) });
+  const withCookie = (cookie, p, method = 'GET') => fetch(base + p, { method, headers: cookie ? { Cookie: cookie } : {} });
+  const badLogin = await login('not-it');
+  ok('a wrong admin password is refused', badLogin.status === 401 && !badLogin.headers.get('set-cookie'));
+  const goodLogin = await login(ADMIN);
+  const setCookie = goodLogin.headers.get('set-cookie') || '';
+  ok('the right password sets a session cookie', goodLogin.status === 200 && /^arcade_admin=[\w-]{40,};/.test(setCookie), setCookie);
+  ok('…that scripts on the page cannot read', /HttpOnly/.test(setCookie) && /SameSite=Strict/.test(setCookie));
+  ok('…and does not contain the password', !setCookie.includes(ADMIN));
+  const cookie = setCookie.split(';')[0];
+  ok('the cookie opens admin routes', (await withCookie(cookie, '/api/stats/admin/summary')).status === 200);
+  ok('…including Rambler admin', (await withCookie(cookie, '/api/rambler/admin/overview')).status === 200);
+  ok('the session check says signed in', (await (await withCookie(cookie, '/api/admin/session')).json()).admin === true);
+  ok('a made-up cookie does not', (await withCookie('arcade_admin=forged', '/api/stats/admin/summary')).status === 401);
+  await withCookie(cookie, '/api/admin/logout', 'POST');
+  ok('signing out ends the session', (await withCookie(cookie, '/api/stats/admin/summary')).status === 401);
+
   console.log(`\n  ${pass} passed, ${fail} failed`);
   return { pass, fail };
 }

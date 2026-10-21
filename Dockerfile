@@ -9,8 +9,10 @@ RUN apk add --no-cache tini wget
 WORKDIR /app
 
 # Dependencies first, so editing game code doesn't re-run npm on every build.
-COPY package.json package-lock.json* ./
-RUN npm ci --omit=dev 2>/dev/null || npm install --omit=dev
+# Plain `npm ci` fails the build if package-lock.json is out of step with
+# package.json, so the image always holds exactly the locked versions.
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
 
 COPY db.js server.js ./
 COPY rambler ./rambler
@@ -25,8 +27,9 @@ COPY public ./public
 
 # The SQLite file is the only state. It lives on a mounted volume, so the
 # directory has to exist and be owned by the unprivileged user before we drop
-# to it -- a root-owned /app/data would leave the app unable to write.
-RUN mkdir -p /app/data && chown -R node:node /app
+# to it -- a root-owned /app/data would leave the app unable to write. Only
+# that folder: the code stays root-owned, so the app can't rewrite itself.
+RUN mkdir -p /app/data && chown node:node /app/data
 
 ENV NODE_ENV=production
 ENV PORT=3000
