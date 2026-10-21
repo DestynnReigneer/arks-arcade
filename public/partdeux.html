@@ -16,7 +16,7 @@
 
 <header class="top">
   <a href="/" class="icon-btn" title="Back to the arcade">←</a>
-  <h1>🚨 UH-OH: <span>DEUX</span></h1>
+  <h1>🚨 UH-OH: <span>PART DEUX</span></h1>
   <div class="btns">
     <button class="icon-btn" id="muteBtn" title="Sound">🔊</button>
     <button class="icon-btn" id="helpBtn" title="How to play">?</button>
@@ -84,19 +84,35 @@
 <section id="game" class="hidden">
   <ul class="opponents" id="opponents"></ul>
   <div class="table">
-    <button class="pile" id="drawPile" title="Draw a card"><span class="pile-back">🚨</span><span class="pile-count" id="deckCount"></span></button>
-    <div class="discard" id="discard"></div>
-    <div class="dir" id="dirArrow" title="Turn order">↻</div>
+    <div class="spot">
+      <button class="pile" id="drawPile" title="Draw a card"><span class="pile-logo">UH-OH!</span></button>
+      <div class="spot-label" id="deckCount"></div>
+    </div>
+    <div class="table-mid">
+      <div class="dir" id="dirArrow" title="Turn order">↻</div>
+      <div class="color-chip" id="colorChip"></div>
+    </div>
+    <div class="spot">
+      <div class="discard" id="discard"></div>
+      <div class="spot-label" id="lastPlay"></div>
+    </div>
   </div>
+  <div class="latest" id="latest"></div>
   <div class="pending hidden" id="pendingBanner"></div>
-  <div class="turn-line" id="turnLine"></div>
-  <div class="hand" id="hand"></div>
-  <div class="row-btns game-btns">
-    <button class="primary hidden" id="uhohBtn">🚨 Say "Uh-Oh!"</button>
-    <button class="ghost" id="drawBtn">Draw a card</button>
-    <button class="ghost hidden" id="keepBtn">Keep it, end turn</button>
+  <div class="my-area" id="myArea">
+    <div class="turn-banner" id="turnLine"></div>
+    <div class="turn-hint" id="turnHint"></div>
+    <div class="hand" id="hand"></div>
+    <div class="row-btns game-btns">
+      <button class="primary hidden" id="uhohBtn">🚨 Say "Uh-Oh!"</button>
+      <button class="ghost" id="drawBtn">Draw a card</button>
+      <button class="ghost hidden" id="keepBtn">Keep it, end turn</button>
+    </div>
   </div>
-  <div class="log" id="log"></div>
+  <details class="log-box">
+    <summary>Game log</summary>
+    <div class="log" id="log"></div>
+  </details>
   <button class="ghost big" id="quitBtn">Leave game</button>
 </section>
 

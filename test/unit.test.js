@@ -265,6 +265,31 @@ async function run() {
   const notMine = pd.players[1].hand[0];
   ok('you can only play your own cards on your turn', (() => { try { PD.play(pd, 'b', notMine); return false; } catch (e) { return e.status === 409; } })());
   ok('action cards wear funny names', PD.view({ kind: 'wild4', color: null, variant: 0 }, 'filthy').name.length > 3);
+  const PDC = require(path.join(ROOT, 'partdeux/cards.js'));
+  const pdKinds = ['skip', 'draw2', 'reverse', 'nope', 'gift', 'wild', 'wild4'];
+  ok('every action card has names at every level', Object.keys(PDC.LEVELS).every(lv => pdKinds.every(k => PDC.FLAVOR[lv][k] && PDC.FLAVOR[lv][k].length >= 3)));
+  ok('the kids deck has nothing rude in it', !/fuck|shit|ass|sex|drunk|booty|bomb/i.test(JSON.stringify(PDC.FLAVOR.kids)));
+  const PDB = require(path.join(ROOT, 'partdeux/banter.js'));
+  ok('the kids table only hears clean jokes', PDB.jokesFor('kids').every(j => PDB.JOKES.kids.includes(j)));
+  ok('adult tables still hear some clean jokes', PDB.jokesFor('filthy').some(j => PDB.JOKES.kids.includes(j)));
+  const jg = PD.createGame({ players: [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }, { id: 'c', name: 'C' }], level: 'kids' });
+  let moves = 0, lastJoke = 0, closest = Infinity;
+  while (jg.phase !== 'over' && moves < 3000) {
+    const me = jg.players[jg.turn];
+    const pick = PD.snapshot(jg, me.id).playable.find(id => jg.cards[id].kind !== 'gift');
+    if (pick) PD.play(jg, me.id, pick, jg.cards[pick].kind.startsWith('wild') ? { color: 'red' } : {});
+    else { PD.draw(jg, me.id); if (jg.drew) PD.pass(jg, me.id); }
+    moves++;
+    if (jg.jokeSeq > lastJoke) { if (lastJoke) closest = Math.min(closest, moves - jg._lastJokeAt); jg._lastJokeAt = moves; lastJoke = jg.jokeSeq; }
+  }
+  ok('jokes pop up during a game', jg.jokeSeq > 0);
+  ok('…but never closer than six moves apart', closest >= 6, String(closest));
+  const rv = PD.createGame({ players: [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }, { id: 'c', name: 'C' }] });
+  const rvCard = Object.values(rv.cards).find(c => c.kind === 'reverse');
+  rv.players[0].hand.push(rvCard.id);
+  rv.color = rvCard.color;
+  PD.play(rv, 'a', rvCard.id);
+  ok('a Reverse tells every phone to beep like a truck', rv.fx && rv.fx.kind === 'reverse' && PD.snapshot(rv, 'b').fx.kind === 'reverse');
 
   console.log('\n-- dare devil --');
   const DD = require(path.join(ROOT, 'daredevil/engine.js'));
