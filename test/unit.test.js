@@ -284,6 +284,239 @@ async function run() {
   ok('the family deck has nothing rude in it', !/sex|naked|strip|kiss|drink|clothing|orgasm|fuck|shit/i.test(kidsTexts));
   ok('every card type is known', Object.values(DDC.DECK).flat().every(([type]) => DDC.TYPES[type]));
 
+  console.log('\n-- snake --');
+  const SN = require(path.join(ROOT, 'public/snake-engine.js'));
+  const sg = SN.create({ cols: 10, rows: 10, rand: () => 0 });
+  const head0 = { ...sg.snake[0] };
+  SN.step(sg);
+  ok('the snake moves one square each tick', sg.snake[0].x === head0.x + 1 && sg.snake.length === 3);
+  ok('it cannot reverse into itself', SN.turn(sg, 'left') === false);
+  ok('a turn is queued', SN.turn(sg, 'down') && SN.turn(sg, 'left') && sg.queue.join() === 'down,left');
+  SN.step(sg); SN.step(sg);
+  ok('quick double turns both happen', sg.dir === 'left');
+  const eat = SN.create({ cols: 10, rows: 10 });
+  eat.food = { x: eat.snake[0].x + 1, y: eat.snake[0].y };
+  SN.step(eat); SN.step(eat);
+  ok('eating an apple scores and grows the snake', eat.apples === 1 && eat.score === 20 && eat.snake.length === 4 && !!eat.food);
+  const wall = SN.create({ cols: 10, rows: 10 });
+  wall.food = { x: 0, y: 0 };
+  for (let i = 0; i < 10 && !wall.over; i++) SN.step(wall);
+  ok('classic: hitting a wall ends the game', wall.over && wall.events.includes('wall'));
+  const wrap = SN.create({ cols: 10, rows: 10, mode: 'wrap' });
+  wrap.food = { x: 0, y: 0 };
+  for (let i = 0; i < 6; i++) SN.step(wrap);
+  ok('wrap-around: walls take you to the other side', !wrap.over && wrap.snake[0].x === 1);
+  const coil = SN.create({ cols: 10, rows: 10 });
+  coil.food = { x: 0, y: 9 };
+  coil.grow = 3;
+  SN.step(coil);
+  for (const d of ['down', 'left', 'up']) { SN.turn(coil, d); SN.step(coil); }
+  ok('running into your own body ends the game', coil.over && coil.events.includes('self'));
+  const chase = SN.create({ cols: 10, rows: 10 });
+  chase.food = { x: 0, y: 9 };
+  for (const d of ['down', 'left', 'up']) { SN.turn(chase, d); SN.step(chase); }
+  ok('…but chasing your own tail is fine (it moves out of the way)', !chase.over);
+  const gold = SN.create({ cols: 10, rows: 10 });
+  gold.apples = 4;
+  gold.food = { x: gold.snake[0].x + 1, y: gold.snake[0].y };
+  SN.step(gold);
+  ok('every 5th apple brings a golden star', !!gold.gold && gold.events.includes('gold-appears'));
+  for (let i = 0; i < SN.GOLD_TICKS + 2 && gold.gold; i++) { gold.mode = 'wrap'; SN.step(gold); if (gold.over) break; }
+  ok('…which disappears if you are too slow', !gold.gold);
+  const fast = SN.create({ speed: 'fast' }), slow = SN.create({ speed: 'chill' });
+  ok('faster speeds tick faster', SN.interval(fast) < SN.interval(slow));
+  let filled = 0;
+  for (let n = 0; n < 50; n++) {
+    const r = SN.create({ cols: 12, rows: 12, mode: n % 2 ? 'wrap' : 'classic' });
+    for (let i = 0; i < 3000 && !r.over; i++) {
+      if (Math.random() < 0.3) SN.turn(r, ['up', 'down', 'left', 'right'][Math.floor(Math.random() * 4)]);
+      SN.step(r);
+    }
+    const cells = new Set(r.snake.map(p => p.x + ',' + p.y));
+    if (cells.size === r.snake.length && r.snake.every(p => p.x >= 0 && p.y >= 0 && p.x < 12 && p.y < 12)) filled++;
+  }
+  ok('50 random games never overlap the snake or leave the board', filled === 50);
+
+  console.log('\n-- brick breaker --');
+  const BR = require(path.join(ROOT, 'public/bricks-engine.js'));
+  ok('every level is 12 bricks wide and has something to break', BR.LEVELS.every((l, i) => BR.bricksFor(i).some(b => !b.steel)));
+  const serveG = BR.create({ rand: () => 0.5 });
+  BR.step(serveG, 0.1, { x: 100 });
+  ok('the ball rides on the paddle until launched', serveG.balls[0].stuck && Math.abs(serveG.balls[0].x - 100) < 0.01);
+  BR.step(serveG, 0.01, { x: 100, launch: true });
+  ok('launching sends it up', serveG.phase === 'play' && serveG.balls[0].vy < 0);
+  const edge = BR.create();
+  edge.phase = 'play';
+  edge.paddle.x = 180;
+  edge.balls = [{ x: 180 + 30, y: edge.paddle.y - 12, vx: 0, vy: 200, r: 5 }];
+  BR.step(edge, 0.02, { x: 180 });
+  ok('hitting the end of the paddle sends the ball off at an angle', edge.balls[0].vy < 0 && edge.balls[0].vx > 100);
+  const drop = BR.create();
+  drop.phase = 'play';
+  drop.balls = [{ x: 20, y: BR.H - 10, vx: 0, vy: 300, r: 5 }];
+  drop.paddle.x = 300;
+  BR.step(drop, 0.1, { x: 300 });
+  ok('missing the ball costs a life and serves again', drop.lives === 2 && drop.phase === 'serve');
+  drop.lives = 1;
+  drop.phase = 'play';
+  drop.balls = [{ x: 20, y: BR.H - 10, vx: 0, vy: 300, r: 5 }];
+  BR.step(drop, 0.1, { x: 300 });
+  ok('…and the last life ends the game', drop.phase === 'over');
+  const rocket = BR.create();
+  rocket.phase = 'play';
+  const bricksBefore = rocket.bricks.length;
+  rocket.balls = [{ x: 100, y: 400, vx: 0, vy: -4000, r: 5 }];
+  BR.step(rocket, 0.1, { x: 100 });
+  ok('even a very fast ball cannot pass through a brick', rocket.bricks.length === bricksBefore - 1 && rocket.balls[0].vy > 0);
+  const split = BR.create();
+  split.phase = 'play';
+  split.balls = [{ x: 180, y: 300, vx: 50, vy: -200, r: 5 }];
+  BR.applyPower(split, 'multi');
+  ok('the three-ball power-up splits the ball', split.balls.length === 3);
+  let clearedLevels = 0, problem = '';
+  for (let L = 0; L < BR.LEVELS.length; L++) {
+    let seed = L + 1;
+    const g = BR.create({ level: L, rand: () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; } });
+    for (let t = 0; t < 600 && g.phase !== 'cleared' && g.phase !== 'over'; t += 1 / 120) {
+      const ball = g.balls.reduce((a, b) => (!a || b.y > a.y ? b : a), null);
+      BR.step(g, 1 / 120, { x: ball ? ball.x + Math.sin(t * 1.7) * 20 : 180, launch: true });
+      if (g.balls.some(b => !(b.x >= 0 && b.x <= BR.W) || Number.isNaN(b.y))) { problem = 'a ball left the field on level ' + (L + 1); break; }
+    }
+    if (g.phase === 'cleared') clearedLevels++;
+    else if (!problem) problem = `level ${L + 1} not cleared (${BR.breakable(g)} left)`;
+  }
+  ok('an autopilot paddle can clear every level, and the ball never escapes', clearedLevels === BR.LEVELS.length, problem);
+
+  console.log('\n-- block drop --');
+  const BD = require(path.join(ROOT, 'public/blocks-engine.js'));
+  const key = cells => cells.map(c => c.join(',')).sort().join(' ');
+  ok('every piece has four squares in every turn', BD.TYPES.every(t => BD.ROTATIONS[t].every(st => st.length === 4)));
+  ok('four turns bring a piece back to where it started', BD.TYPES.every(t => {
+    const r = BD.ROTATIONS[t];
+    return key(r[0].map(([x, y]) => [BD.SHAPES[t].size - 1 - y, x]).map(([x, y]) => [BD.SHAPES[t].size - 1 - y, x]).map(([x, y]) => [BD.SHAPES[t].size - 1 - y, x]).map(([x, y]) => [BD.SHAPES[t].size - 1 - y, x])) === key(r[0]);
+  }));
+  const bagG = BD.create({ rand: Math.random });
+  const firstSeven = [bagG.piece.type, ...bagG.queue.slice(0, 6)];
+  ok('pieces come from a bag of all seven', new Set(firstSeven).size === 7);
+  const kick = BD.create();
+  kick.piece = { type: 'I', rot: 1, x: -2, y: 5 };
+  ok('a standing long piece fits against the left wall', BD.fits(kick, kick.piece));
+  ok('…and still turns there (wall kick)', BD.rotate(kick, 1) && BD.cellsOf(kick.piece).every(([x]) => x >= 0));
+  const clear = BD.create({ rand: () => 0 });
+  for (let x = 0; x < 9; x++) for (const y of [18, 19, 20, 21]) clear.board[y][x] = 'Z';
+  clear.piece = { type: 'I', rot: 1, x: 7, y: 0 };
+  const dropped = BD.hardDrop(clear);
+  ok('a hard drop scores 2 per row fallen', clear.score >= dropped * 2 && dropped > 10);
+  ok('four rows at once clears them all', clear.lines === 4 && clear.board.slice(18).every(r => r.every(c => !c)));
+  ok('…and scores the big bonus (800 x level, plus the perfect clear)', clear.score === dropped * 2 + 800 + 2000);
+  const lockG = BD.create({ rand: () => 0.3 });
+  const firstPiece = lockG.piece.type;
+  for (let i = 0; i < 400 && lockG.piece.type === firstPiece && lockG.lines === 0; i++) BD.update(lockG, 0.05);
+  ok('a piece that lands locks after a short delay and the next appears', lockG.board.some(r => r.some(Boolean)));
+  const holdG = BD.create({ rand: () => 0.6 });
+  const was = holdG.piece.type, nextUp = holdG.queue[0];
+  BD.hold(holdG);
+  ok('hold keeps the piece and brings out the next', holdG.hold === was && holdG.piece.type === nextUp);
+  ok('…but only once per piece', BD.hold(holdG) === false);
+  const top = BD.create({ rand: () => 0.1 });
+  for (let y = 2; y < BD.ROWS; y++) for (let x = 0; x < BD.COLS; x++) if (x !== y % BD.COLS) top.board[y][x] = 'J';
+  BD.hardDrop(top);
+  for (let i = 0; i < 5 && !top.over; i++) BD.hardDrop(top);
+  ok('filling up to the top ends the game', top.over);
+  const rush = BD.create({ mode: 'rush' });
+  for (let i = 0; i < 300 && !rush.over; i++) { BD.update(rush, 0.5); if (!rush.over && i % 3 === 0) BD.hardDrop(rush); }
+  ok('the rush ends at two minutes (or a top-out)', rush.over && (rush.timeUp || rush.time < BD.RUSH_SECONDS));
+  ok('pieces fall faster at higher levels', BD.fallSeconds(10) < BD.fallSeconds(1) / 5);
+  let sane = 0;
+  for (let n = 0; n < 40; n++) {
+    const g = BD.create();
+    for (let i = 0; i < 2000 && !g.over; i++) {
+      const r = Math.random();
+      if (r < 0.2) BD.move(g, -1); else if (r < 0.4) BD.move(g, 1); else if (r < 0.55) BD.rotate(g, 1);
+      else if (r < 0.6) BD.rotate(g, -1); else if (r < 0.62) BD.hold(g); else if (r < 0.7) BD.hardDrop(g);
+      BD.update(g, 0.05, { soft: r > 0.95 });
+      if (!g.over && !BD.fits(g, g.piece)) break;
+    }
+    if (Number.isFinite(g.score) && (g.over || BD.fits(g, g.piece))) sane++;
+  }
+  ok('40 random games never leave a piece overlapping the stack', sane === 40);
+
+  ok('snake speeds give you time to think (Normal is 150ms+ a step)', SN.interval(SN.create()) >= 150 && SN.interval(SN.create({ speed: 'chill' })) >= 200);
+  const wallHit = BR.create();
+  wallHit.phase = 'play';
+  wallHit.balls = [{ x: BR.SIDE + 8, y: 400, vx: -300, vy: -10, r: 5 }];
+  BR.step(wallHit, 0.05, { x: 180 });
+  ok('brick breaker: the ball bounces off the side wall, not the screen edge', wallHit.balls[0].vx > 0 && wallHit.balls[0].x >= BR.SIDE + 5);
+  BR.step(wallHit, 0.01, { x: -50 });
+  ok('…and the paddle stays inside the walls', wallHit.paddle.x - wallHit.paddle.w / 2 >= BR.SIDE - 0.01);
+  const nudge = BD.create({ rand: () => 0.5 });
+  const y0 = nudge.piece.y;
+  ok('block drop: pressing down moves the piece one row and scores 1', BD.softStep(nudge) && nudge.piece.y === y0 + 1 && nudge.score === 1);
+  ok('…and holding down speeds it up without being instant', BD.SOFT_SECONDS >= 0.05 && BD.SOFT_SECONDS < BD.fallSeconds(1) / 5);
+
+  console.log('\n-- tower defense --');
+  const TD = require(path.join(ROOT, 'public/towers-engine.js'));
+  const mapIds = Object.keys(TD.MAPS);
+  ok('there are six maps, easy to hard', mapIds.length === 6 && ['Easy', 'Medium', 'Hard'].every(l => mapIds.some(id => TD.MAPS[id].level === l)));
+  let roadsOk = true, roadProblem = '';
+  for (const id of mapIds) {
+    const m = TD.parseMap(id);
+    m.tiles.forEach((row, y) => [...row].forEach((ch, x) => {
+      if ((ch === '#' || ch === 'S') && !m.pathSet.has(x + ',' + y)) { roadsOk = false; roadProblem = `${id} ${x},${y} is road nobody walks`; }
+    }));
+    for (const p of m.paths) for (let i = 1; i < p.length; i++) if (Math.abs(p[i][0] - p[i - 1][0]) + Math.abs(p[i][1] - p[i - 1][1]) !== 1) { roadsOk = false; roadProblem = id + ' road jumps'; }
+  }
+  ok('every map\'s roads lead to the castle, with no dead ends', roadsOk, roadProblem);
+  const twoRoads = mapIds.filter(id => TD.parseMap(id).paths.length === 2);
+  ok('Swamp and Volcano have two roads in', twoRoads.join() === 'swamp,volcano');
+  const sw = TD.create({ map: 'swamp' });
+  TD.startWave(sw);
+  for (let i = 0; i < 90; i++) TD.step(sw, 1 / 30);
+  ok('…and monsters take turns using each road', new Set(sw.enemies.map(e => e.road)).size === 2);
+  const tg = TD.create({ map: 'meadow' });
+  for (let i = 0; i < 30 * 60; i++) TD.step(tg, 1 / 30);
+  ok('the first wave waits until you build something', tg.wave === 0 && tg.countdown == null);
+  TD.build(tg, 'archer', 4, 1);
+  ok('…then its clock starts', tg.countdown === TD.FIRST_BREAK);
+  for (let i = 0; i < 30 * TD.FIRST_BREAK + 2; i++) TD.step(tg, 1 / 30);
+  ok('…and wave 1 comes by itself when the clock runs out', tg.wave === 1 && tg.phase === 'wave');
+  ok('a wave can\'t be called while it\'s still marching out', TD.canCall(tg) === false && TD.startWave(tg) === false);
+  for (let i = 0; i < 30 * 120 && tg.phase === 'wave'; i++) { if (tg.enemies[0]) tg.enemies[0].hp = 0; TD.step(tg, 1 / 30); }
+  ok('after a wave is cleared there\'s a break with a clock', tg.phase === 'build' && tg.countdown > TD.BREAK - 1);
+  const fullBonus = TD.earlyBonus(tg);
+  for (let i = 0; i < 30 * (TD.BREAK - 3); i++) TD.step(tg, 1 / 30);
+  ok('calling the next wave early pays more the earlier you call', fullBonus > TD.earlyBonus(tg) && TD.earlyBonus(tg) > 0);
+  const goldBefore = tg.gold, bonusNow = TD.earlyBonus(tg);
+  ok('…and calling it starts it right away with the bonus', TD.startWave(tg) && tg.wave === 2 && tg.gold === goldBefore + bonusNow);
+  const auto = TD.create({ map: 'meadow' });
+  TD.armFirstWave(auto);
+  for (let i = 0; i < 30 * 400 && auto.phase !== 'lost'; i++) TD.step(auto, 1 / 30);
+  ok('with no towers at all, the waves keep coming until the castle falls', auto.phase === 'lost' && auto.wave >= 2);
+  // A decent player (the same simple bot on every map) should win every map.
+  const coverage = (g, x, y) => g.map.paths.reduce((n, p) => n + p.filter(([px, py]) => Math.hypot(px - x, py - y) <= 2.4).length, 0);
+  const results = mapIds.map(id => {
+    const g = TD.create({ map: id });
+    const plan = ['archer', 'archer', 'frost', 'cannon', 'archer', 'tesla', 'cannon', 'frost', 'tesla'];
+    const spots = [];
+    for (let y = 0; y < g.map.rows; y++) for (let x = 0; x < g.map.cols; x++) if (TD.canBuild(g, x, y)) spots.push({ x, y, c: coverage(g, x, y) });
+    spots.sort((a, b) => b.c - a.c);
+    let k = 0;
+    for (let i = 0; i < 30 * 3000 && g.phase !== 'won' && g.phase !== 'lost'; i++) {
+      if (i % 30 === 0) for (let guard = 0; guard < 20; guard++) {
+        if (g.towers.length >= 6) {
+          const up = g.towers.filter(t => TD.upgradeCost(t) != null).sort((a, b) => TD.upgradeCost(a) - TD.upgradeCost(b))[0];
+          if (up && g.gold >= TD.upgradeCost(up) && (g.towers.length >= 10 || k % 2)) { TD.upgrade(g, up.id); continue; }
+        }
+        const type = plan[k % plan.length], spot = spots.find(p => TD.canBuild(g, p.x, p.y));
+        if (!spot || g.gold < TD.TOWERS[type].levels[0].cost) break;
+        TD.build(g, type, spot.x, spot.y); k++;
+      }
+      TD.step(g, 1 / 30);
+    }
+    return id + ':' + g.phase;
+  });
+  ok('a sensible player can win every map', results.every(r => r.endsWith(':won')), results.join(' '));
+
   console.log(`\n  ${pass} passed, ${fail} failed`);
   return { pass, fail };
 }

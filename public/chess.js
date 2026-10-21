@@ -73,6 +73,7 @@
   }
 
   async function start() {
+    if (window.ArcadeStats) ArcadeStats.play();
     Blip.unlock();
     $('setupMsg').textContent = '';
     const color = S.colorPref === 'random' ? (Math.random() < 0.5 ? 'w' : 'b') : S.colorPref;

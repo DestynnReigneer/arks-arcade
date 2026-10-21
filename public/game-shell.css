@@ -1,0 +1,66 @@
+/* Shared bits for the single-player canvas games (Snake, Brick Breaker,
+   Block Drop, Tower Defense): the stage, the score bar, thumb buttons and the
+   game-over panel. */
+
+.stage {
+  position: relative; border: 2px solid var(--border); border-radius: 12px; overflow: hidden;
+  background: #0d0c16; box-shadow: 0 8px 26px rgba(0, 0, 0, 0.45);
+  display: flex; justify-content: center; touch-action: none;
+}
+.stage canvas { display: block; touch-action: none; -webkit-user-select: none; user-select: none; }
+.stage-msg {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+  text-align: center; padding: 20px; background: rgba(8, 8, 15, 0.62); pointer-events: none;
+}
+.stage-msg b { font-size: 22px; letter-spacing: 1px; }
+.stage-msg span { color: var(--muted); font-size: 14px; }
+.stage-msg.hidden { display: none; }
+
+.hud { display: flex; gap: 8px; margin: 0 0 10px; }
+.hud div {
+  flex: 1; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 6px 10px; min-width: 0;
+}
+.hud small { display: block; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--dim); }
+.hud b { font-size: 18px; font-variant-numeric: tabular-nums; color: var(--accent); white-space: nowrap; }
+
+.options { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 10px; }
+.options .seg { margin: 0; }
+
+.pad { display: grid; gap: 8px; margin-top: 12px; }
+.pad-btn {
+  height: 62px; border-radius: 14px; font-size: 24px; line-height: 1; cursor: pointer;
+  background: var(--card); color: var(--text); border: 2px solid var(--border);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  touch-action: none; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
+}
+.pad-btn small { font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--dim); }
+.pad-btn.held, .pad-btn:active { background: color-mix(in srgb, var(--accent) 25%, var(--card)); border-color: var(--accent); }
+.keys-hint { margin-top: 10px; }
+@media (hover: none) { .keys-hint { display: none; } }
+
+.over-panel { margin-top: 14px; }
+.final-score { font-size: 40px; font-weight: 800; color: var(--accent); font-variant-numeric: tabular-nums; }
+.over-detail { margin-top: 0; }
+.board-tabs { margin-bottom: 8px; }
+.options .seg { flex: 1 1 240px; margin: 0; }
+.options .seg button { min-width: 0; }
+body[data-state="over"] .pad, body[data-state="over"] .keys-hint { display: none; }
+/* Four header buttons leave less room for the title on a phone. */
+.top h1 { font-size: clamp(12px, 3.7vw, 21px); letter-spacing: 0.5px; }
+.top h1 .t-emoji { font-style: normal; }
+@media (max-width: 420px) { .top h1 .t-emoji { display: none; } }
+
+/* Music switch: dimmed with a slash through it when off. */
+.music-btn { position: relative; }
+.music-btn.off { opacity: 0.45; }
+.music-btn.off::after {
+  content: ''; position: absolute; left: 8px; right: 8px; top: 50%; height: 2px;
+  background: var(--text); transform: rotate(-40deg); border-radius: 2px;
+}
+/* Five buttons in the top bar: a bit smaller on phones so the title still fits. */
+@media (max-width: 420px) {
+  .top .btns { gap: 4px; }
+  .top .btns .icon-btn { width: 34px; height: 34px; font-size: 15px; }
+  header.top { gap: 6px; }
+  header.top h1 { font-size: 14px; letter-spacing: 0; }
+}
