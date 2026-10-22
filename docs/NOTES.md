@@ -57,8 +57,11 @@ a plan changes, so the next session can pick up from here.
     for `{ user, sessionId, expiresAt }`, sets its own host-only cookie, and
     re-checks `GET /api/session/:id` every few minutes so sign-outs, PIN
     resets and role changes reach it. Signing out here signs out everywhere.
-  - **User shape:** `{ id, name, avatar: { icon, color }, role, device }`.
+  - **User shape:** `{ id, name, avatar: { icon, color, image }, role, device }`.
     Link arcade profiles to `id` (stable, never reused), never to `name`.
+    Always draw the icon + color; use `image` (a small square ARKS ID
+    serves, or `null`) only when it's set and loads. Its `?v=` changes with
+    the picture, so it's safe to cache.
   - **Roles:** admin / adult / teen / kid. Adult (18+) games: admin and adult
     only. Teen: teen and kids games. Kid: kids games only. Arcade admin:
     ARKS admin only.
