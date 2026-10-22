@@ -57,6 +57,32 @@ jobs:
           docker logs arcade
           exit 1
 
+      # A fresh install's ./data is created by Docker as root. The entrypoint
+      # must hand it to 1000:1000 and nothing may keep running as root.
+      - name: Boot with a root-owned data folder
+        run: |
+          mkdir -p "$RUNNER_TEMP/data" && sudo chown root:root "$RUNNER_TEMP/data"
+          docker run -d --name arcade2 -v "$RUNNER_TEMP/data:/app/data" arks-arcade:ci
+          for i in $(seq 1 30); do
+            status=$(docker inspect --format='{{.State.Health.Status}}' arcade2 2>/dev/null || echo starting)
+            echo "health: $status"
+            if [ "$status" = "healthy" ]; then
+              owner=$(stat -c '%u:%g' "$RUNNER_TEMP/data/arcade.db")
+              echo "arcade.db owner: $owner"
+              [ "$owner" = "1000:1000" ] || exit 1
+              # BusyBox ps has no -p, so read the owners from /proc.
+              owners=$(docker exec arcade2 sh -c 'stat -c %u /proc/1 /proc/$(pgrep -x node)' | sort -u | xargs)
+              echo "process owners: $owners"
+              [ "$owners" = "1000" ] || { echo "nothing may run as root"; exit 1; }
+              exit 0
+            fi
+            [ "$status" = "unhealthy" ] && break
+            sleep 2
+          done
+          echo "--- container logs ---"
+          docker logs arcade2
+          exit 1
+
       - name: Stop
         if: always()
-        run: docker rm -f arcade || true
+        run: docker rm -f arcade arcade2 || true

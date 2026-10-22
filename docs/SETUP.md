@@ -56,6 +56,8 @@ admin password.
 | `TRUST_PROXY` | Set to `1` when the arcade sits behind **one** reverse proxy (like Nginx Proxy Manager) so rate limits see each visitor's real address. Leave blank if people connect to the container directly. |
 | `TRIVIA_ONLINE` | Know-It-All downloads free questions from Open Trivia DB in the background and saves them. Set to `off` to never go online. |
 | `DISCORD_WEBHOOK_URL` | Optional. Posts to a Discord channel when someone requests a theme, a pack or a profile. |
+| `HOST_PORT` | The port on the server, if something else already uses 3000 (e.g. `3070`). |
+| `PUID` / `PGID` | Who owns `./data` and runs the arcade. Blank means 1000, the first user on most Linux machines; run `id -u` and `id -g` to check yours. The container fixes the folder's owner on start, so you never need `sudo chown`. |
 
 After changing `.env`: `docker compose up -d` (it recreates the container
 with the new values; your data stays).
@@ -158,5 +160,5 @@ What's up to you:
 - **"Too many requests" for everyone behind the proxy** → set `TRUST_PROXY=1`.
 - **Admin says the password is wrong after editing `.env`** → run
   `docker compose up -d` so the container picks up the new value.
-- **Container shows "unhealthy"** → `docker compose logs` (usually the data
-  folder isn't writable: `sudo chown -R 1000:1000 ./data`).
+- **Container shows "unhealthy" or keeps restarting** → `docker compose logs`.
+  If it says PUID or PGID is wrong, fix them in `.env` (numbers, never 0).
