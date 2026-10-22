@@ -35,6 +35,15 @@ Where things are documented (read these rather than guessing):
 - **No secrets in the repo.** `.env` is gitignored; `.env.example` documents
   every setting.
 
+## ARKS ID (shared family sign-in)
+
+- The contract lives **only** in the private `arks-id` repo, `docs/SPEC.md`
+  (local clone: `../arks-id`). It's versioned. Don't copy it into this repo.
+- Before any ARKS ID work: `git -C ../arks-id pull`, then read the SPEC.
+- Contract changes go through a PR in `arks-id` that bumps the version, and
+  get messaged to the other sessions. Never change it on the arcade's side only.
+- `docs/NOTES.md` records which contract version the arcade is built against.
+
 ## Decisions already made (don't reopen unless the owner does)
 
 - **No server-side AI.** Themes, theme packs, trivia and Spin & Solve packs
