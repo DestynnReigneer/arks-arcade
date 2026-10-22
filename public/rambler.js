@@ -1822,6 +1822,10 @@ function pickProfile(value) {
     return;
   }
   $('adultPinField').classList.toggle('hidden', !S.config.adultRequiresPin);
+  // With a PIN the pad goes on at the 6th digit, so the button is only for the no-PIN tap.
+  $('adultConfirmBtn').classList.toggle('hidden', !!S.config.adultRequiresPin);
+  PinPad.clear($('adultPinInput'));
+  PinPad.attach($('adultPinInput'), () => $('adultConfirmBtn').onclick());
   say($('adultMsg'), '');
   $('adultOverlay').classList.remove('hidden');
 }

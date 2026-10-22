@@ -8,7 +8,7 @@
 const db = require('../db');
 
 const KEY = 'adult_pin';
-const PIN_RE = /^[0-9]{4,8}$/;
+const PIN_RE = /^[0-9]{6}$/;
 
 function fail(message, status) {
   return Object.assign(new Error(message), { status });
@@ -30,7 +30,7 @@ function status() {
 // An empty pin removes the lock (and overrides any ADULT_PIN in .env).
 function set(pin) {
   const value = String(pin == null ? '' : pin).trim();
-  if (value && !PIN_RE.test(value)) throw fail('The PIN must be 4 to 8 digits.', 400);
+  if (value && !PIN_RE.test(value)) throw fail('The PIN must be 6 digits.', 400);
   db.setSetting(KEY, value);
   return status();
 }
@@ -38,6 +38,12 @@ function set(pin) {
 function matches(supplied) {
   const pin = current();
   return !pin || String(supplied || '') === pin;
+}
+
+// The PIN pads take exactly 6 digits, so an old .env PIN of another length
+// could never be typed in. Say so at startup instead of failing silently.
+if (process.env.ADULT_PIN && !PIN_RE.test(String(process.env.ADULT_PIN).trim())) {
+  console.warn('ADULT_PIN in .env must be 6 digits, or the PIN pads cannot enter it. Change it in .env or on the admin page.');
 }
 
 module.exports = { current, status, set, matches };
