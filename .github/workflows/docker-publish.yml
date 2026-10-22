@@ -23,7 +23,7 @@ jobs:
       - run: npm test
 
   build-and-push:
-    # Never publish an image whose tests failed -- the homelab pulls :latest.
+    # Never publish an image whose tests failed -- servers pull :latest.
     needs: test
     runs-on: ubuntu-latest
     permissions:
