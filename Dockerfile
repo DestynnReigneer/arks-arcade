@@ -4,7 +4,7 @@ FROM node:22-alpine
 
 # Tini reaps zombies and forwards signals, so `docker compose stop` actually
 # stops the process instead of waiting out the 10s kill timeout.
-RUN apk add --no-cache tini wget
+RUN apk add --no-cache tini wget su-exec
 
 WORKDIR /app
 
@@ -25,17 +25,19 @@ COPY daredevil ./daredevil
 COPY words ./words
 COPY public ./public
 
-# The SQLite file is the only state. It lives on a mounted volume, so the
-# directory has to exist and be owned by the unprivileged user before we drop
-# to it -- a root-owned /app/data would leave the app unable to write. Only
-# that folder: the code stays root-owned, so the app can't rewrite itself.
+# The SQLite file is the only state, in /app/data. docker-entrypoint.sh gives
+# that folder to PUID:PGID on every start (a mounted ./data covers whatever
+# the image prepared), then drops to that user. Only that folder: the code
+# stays root-owned, so the app can't rewrite itself.
 RUN mkdir -p /app/data && chown node:node /app/data
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod 755 /usr/local/bin/docker-entrypoint.sh
 
 ENV NODE_ENV=production
 ENV PORT=3000
 EXPOSE 3000
 
-USER node
+# No USER line: the entrypoint drops privileges itself, before tini and node.
 
 # Reports unhealthy if the word lists failed to load, not merely if the port
 # is open -- a listening process with no dictionary is the failure that would
@@ -43,5 +45,5 @@ USER node
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD wget -qO- http://127.0.0.1:3000/healthz >/dev/null 2>&1 || exit 1
 
-ENTRYPOINT ["/sbin/tini", "--"]
+ENTRYPOINT ["docker-entrypoint.sh"]
 CMD ["node", "server.js"]
