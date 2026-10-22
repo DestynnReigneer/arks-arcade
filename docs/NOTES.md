@@ -42,13 +42,33 @@ a plan changes, so the next session can pick up from here.
   They need `localhost` or HTTPS. Plan: `@simplewebauthn/server` (rather than
   hand-rolling the crypto), a credentials table, register/sign-in endpoints
   that issue the same session cookie, and a "Manage passkeys" list in admin.
-- **Shared family accounts ("ARKS ID")** are being designed on the Family Hub
-  side: accounts in the Hub first, built to move into a shared ARKS ID that
-  the arcade can use later (sign in once, same user on both). Check there
-  before building passkeys here. Arcade constraints: it must keep working
-  standalone (ARKS sign-in is an optional `.env` setting, built-in profiles
-  stay the default), kids need PIN sign-in, guests stay accountless, and the
-  Hub and arcade are on different hostnames under the same domain.
+- **Shared family accounts ("ARKS ID")**: decided 2026-10-21 with the Family
+  Hub session. The full spec lives in the private `arks-family-hub` repo
+  (`docs/ARKS-ID.md`) until the private `arks-id` repo exists. Build order:
+  arks-id → Hub → passkeys → **arcade last**, so nothing to build here yet.
+  What the arcade will need:
+  - **Optional.** Only on when `ARKS_ID_URL` (plus an app secret) is set in
+    `.env`. Built-in profiles stay the default, party guests stay
+    accountless, and the arcade's own `.env` admin password stays its recovery.
+  - **Sign-in handoff, no shared cookie.** The arcade redirects to ARKS ID's
+    sign-in page with a return path. ARKS ID sends the person back to the
+    arcade's registered `/auth/callback?code=…` (single-use, 60 s). The
+    arcade's server swaps the code via `POST /api/token` (code + app secret)
+    for `{ user, sessionId, expiresAt }`, sets its own host-only cookie, and
+    re-checks `GET /api/session/:id` every few minutes so sign-outs, PIN
+    resets and role changes reach it. Signing out here signs out everywhere.
+  - **User shape:** `{ id, name, avatar: { icon, color }, role, device }`.
+    Link arcade profiles to `id` (stable, never reused), never to `name`.
+  - **Roles:** admin / adult / teen / kid. Adult (18+) games: admin and adult
+    only. Teen: teen and kids games. Kid: kids games only. Arcade admin:
+    ARKS admin only.
+  - **Devices:** Personal (15 days since last use) and Shared (avatar picker
+    plus PIN on every switch, a Switch button, signs out after 10 min idle).
+    Copy both as-is.
+  - **PINs:** 6 digits, checked the moment the 6th digit goes in (no Enter
+    key; keypad 0–9, CLR, ⌫). The owner wants the arcade's own PIN pads to
+    work the same way. **Open question for the owner:** the arcade's adult
+    PIN is 4–8 digits today; auto-checking needs a fixed length (6?).
 
 ## Deployment
 
