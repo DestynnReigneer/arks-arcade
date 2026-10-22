@@ -5,7 +5,7 @@ services:
     container_name: arks-arcade
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "${HOST_PORT:-3000}:3000"
     environment:
       - ARCADE_NAME=${ARCADE_NAME:-}
       - TRIVIA_ONLINE=${TRIVIA_ONLINE:-}
