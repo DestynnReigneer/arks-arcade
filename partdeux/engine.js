@@ -2,19 +2,18 @@
 
 // Uh-Oh: Part Deux. A shedding card game: match the top card by color or by
 // number/symbol, and the first player to empty their hand wins. The action
-// cards wear funny names at every spice level (cards.js).
+// cards wear funny names at every spice level (cards.js), and now and then a
+// joke pops up (banter.js).
 //
 // Pure functions over a plain game object: the
 // rooms and tables modules own timing, sockets and who's allowed to act.
 
 const crypto = require('node:crypto');
 const cardNames = require('./cards');
+const banter = require('./banter');
 
 const COLORS = ['red', 'yellow', 'green', 'blue'];
 const HAND_SIZE = 7;
-
-// Which set of funny names each action wears.
-const FLAVOR_OF = { skip: 'skip', draw2: 'attack', reverse: 'shuffle', nope: 'nope', gift: 'favor', wild: 'defuse', wild4: 'bomb' };
 
 const RULES = {
   num: 'Match the color or the number.',
@@ -75,7 +74,9 @@ function createGame({ players, level = 'kids', drinking = false, rand }) {
     drew: null,              // the card just drawn this turn, which may be played
     calledUhOh: null,        // who has called "Uh-Oh!" on their way to one card
     vulnerable: null,        // who went to one card without calling it (catchable)
-    log: [], callouts: [], seq: 0, rand
+    log: [], callouts: [], seq: 0, rand,
+    fx: null, fxSeq: 0,      // the last thing that happened to someone, for sounds
+    jokes: [], jokeSeq: 0, sinceJoke: 0, jokesTold: []
   };
   for (let i = 0; i < HAND_SIZE; i++) for (const p of game.players) p.hand.push(take(game));
   // Start on a plain number card.
@@ -109,6 +110,32 @@ function callout(game, who, text) {
   game.seq++;
   game.callouts.push({ n: game.seq, who, name: who ? player(game, who).name : null, text });
   if (game.callouts.length > 12) game.callouts.shift();
+}
+
+// What just happened, so every phone can play the right sound: a Reverse
+// backing up, or a "womp womp" when a card lands on someone.
+function effect(game, kind, by, target = null) {
+  game.fxSeq++;
+  game.fx = { n: game.fxSeq, kind, by, target };
+}
+
+// Every few moves there's a chance of a joke. Not overbearing: at least six
+// moves apart, and none repeat until the level's whole list has been told.
+const JOKE_GAP = 6;
+const JOKE_CHANCE = 0.25;
+function maybeJoke(game) {
+  game.sinceJoke++;
+  const roll = game.rand ? game.rand() : crypto.randomInt(1 << 30) / (1 << 30);
+  if (game.phase === 'over' || game.sinceJoke < JOKE_GAP || roll >= JOKE_CHANCE) return;
+  const all = banter.jokesFor(game.level);
+  let fresh = all.map((_, i) => i).filter(i => !game.jokesTold.includes(i));
+  if (!fresh.length) { game.jokesTold = []; fresh = all.map((_, i) => i); }
+  const i = fresh[Math.floor(roll / JOKE_CHANCE * fresh.length) % fresh.length];
+  game.jokesTold.push(i);
+  game.sinceJoke = 0;
+  game.jokeSeq++;
+  game.jokes.push({ n: game.jokeSeq, setup: all[i][0], punch: all[i][1] });
+  if (game.jokes.length > 3) game.jokes.shift();
 }
 
 const player = (game, id) => game.players.find(p => p.id === id);
@@ -163,6 +190,7 @@ function catchUhOh(game, catcherId, targetId) {
   if (game.vulnerable !== targetId || target.hand.length !== 1) throw fail('Too late, or they called it.', 409);
   drawCards(game, target, 2);
   game.vulnerable = null;
+  effect(game, 'caught', catcherId, targetId);
   say(game, `${catcher.name} caught ${target.name}! They forgot to say Uh-Oh. +2 cards 🃏`);
   if (game.drinking) callout(game, targetId, 'Caught! Draw 2 and drink 2 🍺');
   return game;
@@ -191,7 +219,8 @@ function play(game, pid, cardId, options = {}) {
   game.drew = null;
   game.color = card.color || options.color;
   const name = view(card, game.level).name;
-  const nextName = () => game.players[((game.turn + game.dir) % game.players.length + game.players.length) % game.players.length].name;
+  const nextPlayer = () => game.players[((game.turn + game.dir) % game.players.length + game.players.length) % game.players.length];
+  const nextName = () => nextPlayer().name;
 
   if (gift) {
     p.hand.splice(p.hand.indexOf(gift.cardId), 1);
@@ -219,8 +248,11 @@ function play(game, pid, cardId, options = {}) {
     game.dir *= -1;
     if (game.players.length === 2) step(game);      // works like a Skip with two
   }
+  if (['skip', 'draw2', 'wild4', 'reverse'].includes(card.kind)) effect(game, card.kind, pid, card.kind === 'reverse' ? null : nextPlayer().id);
+  else if (card.kind === 'nope' && game.pendingDraw) effect(game, 'nope', pid, nextPlayer().id);
   if (card.kind === 'skip') step(game);
   step(game);
+  maybeJoke(game);
   return game;
 }
 
@@ -236,7 +268,9 @@ function draw(game, pid) {
     game.pendingDraw = 0;
     say(game, `${p.name} draws ${n} 😩`);
     if (game.drinking) callout(game, pid, `Drew ${n}: drink ${n} sips 🍺`);
+    effect(game, 'penalty', pid, pid);
     step(game);
+    maybeJoke(game);
     return game;
   }
   const c = take(game);
@@ -248,6 +282,7 @@ function draw(game, pid) {
   } else {
     say(game, `${p.name} drew a card`);
     step(game);
+    maybeJoke(game);
   }
   return game;
 }
@@ -290,7 +325,7 @@ function view(card, level) {
   if (!card) return null;
   const base = { id: card.id, kind: card.kind, color: card.color, value: card.value, rule: RULES[card.kind] };
   if (card.kind === 'num') return { ...base, name: `${card.value}`, emoji: '', quip: '' };
-  const variants = cardNames.FLAVOR[cardNames.levelOf(level)][FLAVOR_OF[card.kind]];
+  const variants = cardNames.FLAVOR[cardNames.levelOf(level)][card.kind];
   const [emoji, name, quip] = variants[card.variant % variants.length];
   return { ...base, emoji, name, quip };
 }
@@ -310,7 +345,8 @@ function snapshot(game, viewerId, { allHands = false } = {}) {
     hand: me ? me.hand.map(v) : [],
     hands: allHands ? Object.fromEntries(game.players.map(p => [p.id, p.hand.map(v)])) : undefined,
     playable: me && viewerId === turnId ? me.hand.filter(c => (!game.drew || game.drew === c) && canPlay(game, game.cards[c])) : [],
-    log: game.log.slice(-8), callouts: game.callouts
+    log: game.log.slice(-8), callouts: game.callouts,
+    fx: game.fx, jokes: game.jokes
   };
 }
 

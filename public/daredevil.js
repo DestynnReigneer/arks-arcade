@@ -251,12 +251,65 @@
       $('dcWait').textContent = myTurn ? '' : `Waiting for ${nameOf(g.turn)}…`;
     }
 
+    timeCard(card, g, myTurn);
+
     $('log').innerHTML = '';
     for (const l of g.log) { const d = document.createElement('div'); d.textContent = l; $('log').appendChild(d); }
     $('log').scrollTop = $('log').scrollHeight;
 
     showCallouts(g);
     if (g.phase === 'over') showOver(g);
+  }
+
+  // ---- timed dares ---------------------------------------------------------------------------
+  // A card that says "for 10 seconds" gets a timer: a few seconds to read it
+  // first, then the countdown with the thinking tune, then the buzzer.
+  const GRACE = 5;
+  const timer = { key: null, run: null, grace: null };
+
+  function stopTimer() {
+    if (timer.run) timer.run.stop();
+    clearInterval(timer.grace);
+    timer.run = timer.grace = null;
+  }
+
+  function paintTimer(state, label, num, fraction) {
+    const box = $('dcTimer');
+    box.className = `dc-timer ${state}`;
+    $('dctLabel').textContent = label;
+    $('dctNum').textContent = num;
+    $('dctFill').style.transform = `scaleX(${fraction})`;
+  }
+
+  function timeCard(card, g, myTurn) {
+    const match = card && /(\d+)[- ]second/i.exec(card.text);
+    const secs = match ? Math.min(120, Number(match[1])) : 0;
+    const key = secs ? `${g.left}|${card.text}` : null;
+    if (key === timer.key) { $('dctGo').classList.toggle('hidden', !myTurn || !timer.grace); return; }
+    stopTimer();
+    timer.key = key;
+    $('dcTimer').classList.toggle('hidden', !secs);
+    if (!secs) return;
+
+    const start = () => {
+      clearInterval(timer.grace);
+      timer.grace = null;
+      $('dctGo').classList.add('hidden');
+      paintTimer('', 'Go!', secs, 1);
+      timer.run = Blip.think(secs, {
+        onTick: left => paintTimer(left <= 3 ? 'final' : '', 'Go!', left, left / secs),
+        onDone: () => paintTimer('done', 'Time!', '⏰', 0)
+      });
+    };
+    let wait = GRACE;
+    paintTimer('reading', `Read it. ${secs}-second timer starts in`, wait, 1);
+    $('dctGo').classList.toggle('hidden', !myTurn);
+    $('dctGo').onclick = () => { Blip.unlock(); start(); };
+    timer.grace = setInterval(() => {
+      wait--;
+      if (wait <= 0) return start();
+      paintTimer('reading', `Read it. ${secs}-second timer starts in`, wait, wait / GRACE);
+    }, 1000);
   }
 
   let queue = Promise.resolve();
@@ -305,6 +358,8 @@
   }
 
   async function leave() {
+    stopTimer();
+    timer.key = null;
     if (S.table && S.table.kind === 'room') {
       try { await api(`/rooms/${S.table.code}/leave`, { method: 'POST', body: roomCreds() }); } catch { /* gone */ }
       closeRoom();

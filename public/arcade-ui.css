@@ -101,6 +101,21 @@ button:disabled { opacity: 0.4; cursor: default; }
 .scores li.me { background: color-mix(in srgb, var(--accent) 14%, transparent); border-radius: 8px; }
 .scores .empty { color: var(--dim); justify-content: center; }
 
+.joke-pop {
+  position: fixed; left: 50%; top: 64px; z-index: 55; width: min(420px, calc(100vw - 32px));
+  transform: translate(-50%, -16px) scale(0.96); opacity: 0; pointer-events: none;
+  transition: transform 0.3s cubic-bezier(.2, 1.4, .4, 1), opacity 0.25s;
+  background: var(--card-2); border: 2px solid var(--accent); border-radius: 16px; padding: 14px 16px 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); text-align: center; cursor: pointer;
+}
+.joke-pop.show { opacity: 1; transform: translate(-50%, 0) scale(1); pointer-events: auto; }
+.joke-pop::before { content: '😂'; position: absolute; top: -16px; left: 14px; font-size: 26px; }
+.joke-pop .jp-setup { font-size: 16px; line-height: 1.4; }
+.joke-pop .jp-punch { font-size: 18px; font-weight: 800; color: var(--accent); line-height: 1.35; margin-top: 0; max-height: 0; overflow: hidden; transition: max-height 0.3s, margin 0.3s; }
+.joke-pop.punched .jp-punch { max-height: 6em; margin-top: 8px; }
+.joke-pop .jp-hint { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--dim); margin-top: 8px; }
+@media (prefers-reduced-motion: reduce) { .joke-pop { transition: opacity 0.2s; } }
+
 .toast {
   position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 60;
   background: var(--card-2); border: 1px solid var(--accent); color: var(--text);

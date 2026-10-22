@@ -61,6 +61,76 @@ const Blip = (() => {
     src.start();
   }
 
+  // ---- comedy sounds -----------------------------------------------------------------------------
+
+  // Sad trombone: two drooping notes, the second long and wobbly.
+  function womp() {
+    const a = audio();
+    if (!a) return;
+    const muffle = a.createBiquadFilter();
+    muffle.type = 'lowpass';
+    muffle.frequency.value = 900;
+    muffle.connect(a.destination);
+    const note = (from, to, start, len, wobble) => {
+      const t = a.currentTime + start;
+      const o = a.createOscillator(), g = a.createGain();
+      o.type = 'sawtooth';
+      o.frequency.setValueAtTime(from, t);
+      o.frequency.linearRampToValueAtTime(to, t + len);
+      if (wobble) {
+        const lfo = a.createOscillator(), depth = a.createGain();
+        lfo.frequency.value = 6;
+        depth.gain.value = 5;
+        lfo.connect(depth).connect(o.frequency);
+        lfo.start(t);
+        lfo.stop(t + len + 0.05);
+      }
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(0.16, t + 0.06);
+      g.gain.setValueAtTime(0.16, t + len * 0.7);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+      o.connect(g).connect(muffle);
+      o.start(t);
+      o.stop(t + len + 0.05);
+    };
+    note(196, 185, 0, 0.36, false);
+    note(185, 156, 0.42, 0.8, true);
+  }
+
+  // A truck backing up: three steady beeps.
+  function backup() {
+    for (let i = 0; i < 3; i++) tone(1050, 0.3, { type: 'sine', volume: 0.1, delay: i * 0.6 });
+  }
+
+  // A game-show buzzer for when time runs out.
+  function timesUp() {
+    tone(220, 0.6, { type: 'sawtooth', volume: 0.07 });
+    tone(233, 0.6, { type: 'sawtooth', volume: 0.07 });
+  }
+
+  // A thinking tune for a countdown: a soft tick-tock under a plucky little
+  // melody, ticking faster for the last three seconds, then the buzzer.
+  // Returns { stop() }. Our own tune, so nothing borrowed from a game show.
+  const THINK = [72, 76, 79, 76, 81, 79, 76, null, 74, 76, 79, 81, 79, 76, 74, null];
+  function think(seconds, { onTick, onDone } = {}) {
+    let left = seconds * 2, beat = 0, timer = null;
+    const half = () => {
+      if (left <= 0) { stop(); timesUp(); if (onDone) onDone(); return; }
+      const final = left <= 6;
+      tone(beat % 2 ? 1200 : 1500, 0.035, { type: 'sine', volume: final ? 0.09 : 0.05 });
+      const m = THINK[beat % THINK.length];
+      if (m != null && !final) tone(hz(m), 0.22, { type: 'triangle', volume: 0.05 });
+      if (final && beat % 2 === 0) tone(1800, 0.05, { type: 'square', volume: 0.03, delay: 0.25 });
+      if (beat % 2 === 0 && onTick) onTick(left / 2);
+      beat++;
+      left--;
+    };
+    function stop() { clearInterval(timer); timer = null; }
+    half();
+    timer = setInterval(half, 500);
+    return { stop };
+  }
+
   // ---- soft background music --------------------------------------------------------------------
   // A short generated loop per game: a pad, a bass note, a gentle arpeggio and
   // now and then a little tune, all through a low-pass filter so it sits under
@@ -187,7 +257,7 @@ const Blip = (() => {
   document.addEventListener('visibilitychange', syncMusic);
 
   return {
-    tone, tune, noise,
+    tone, tune, noise, womp, backup, timesUp, think,
     // Call from the first tap so later sounds are allowed to play.
     unlock() { unlocked = true; audio(); syncMusic(); },
     get muted() { return muted; },
