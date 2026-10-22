@@ -5,27 +5,29 @@ a plan changes, so the next session can pick up from here.
 
 ## Where things stand
 
-- `main` has everything through PR #12:
+- `main` has everything through PR #16:
   - #11: Admin Stats; Snake, Brick Breaker, Block Drop, Tower Defense; soft
     background music with a 🎵 toggle (Block Drop plays the Korobeiniki folk
     tune). The music has been listened to and approved.
   - #12: admin sign-in by httpOnly session cookie (sign in again once after
     updating), strict `npm ci` in the image, the app can only write to
     `/app/data`, TZ defaults to America/Los_Angeles, CI runs on PRs only.
-- **`feat/party-polish`** is pushed, **waiting for the owner to play it**
-  before its PR:
-  - Uh-Oh: Part Deux: mobile-app table (players across the top, piles apart,
-    glowing "YOUR TURN" hand area), cards with one big symbol, new card names
-    that fit what each card does, truck beep on Reverse, an occasional
-    "womp womp", and server-picked jokes at the table's spice level.
-  - Jokes everywhere stay up by reading time (`ArcadeKit.readMs`, `ArcadeKit.joke`).
-  - Dare Devil: timed cards get a 5-second reading grace, then a countdown
-    with `Blip.think()` (our own tune) and a buzzer.
+  - #13: `HOST_PORT` in `.env` sets the published Docker port (default 3000).
+  - #14: CLAUDE.md points to the ARKS ID contract in `arks-id`.
+  - #15 party polish (merged before play-testing, to test on the homelab):
+    Uh-Oh: Part Deux's mobile-app table, one-symbol cards, card names that fit
+    what each card does, truck beep on Reverse, occasional "womp womp" and
+    server-picked jokes; jokes everywhere stay up by reading time
+    (`ArcadeKit.readMs`, `ArcadeKit.joke`); Dare Devil's timed cards get a
+    5-second reading grace, then a countdown with `Blip.think()` and a buzzer.
+  - #16: adult and profile PINs are exactly 6 digits, on a keypad
+    (`public/pin-pad.js`) that checks on the 6th digit with no Enter key, the
+    same as every ARKS app. Old profile PINs of other lengths need an admin reset.
 
 ## Next up
 
-1. **The owner plays `feat/party-polish`**, then fix what they find and open
-   the PR (merge when CI is green).
+1. **The owner play-tests #15 and #16 on the homelab.** Fix what they find in
+   follow-up PRs.
 2. **Get Claude in Chrome connected** so pages can be checked in a real
    browser: everything on the machine is set up (extension installed, native
    host registered for the native `claude.exe`); it needs a full Chrome
@@ -46,14 +48,10 @@ a plan changes, so the next session can pick up from here.
   contract is in the private `arks-id` repo (`docs/SPEC.md`); see CLAUDE.md
   for how to use it. The arcade integrates last (after ARKS ID, the Hub's
   sign-in and passkeys). **Built against ARKS ID contract: none yet.**
-  - **Open question for the owner:** ARKS ID PINs are 6 digits, checked the
-    moment the 6th digit goes in (no Enter key), and the owner wants the
-    arcade's PIN pads to match. The arcade's adult PIN is 4–8 digits today;
-    should it become exactly 6?
 
 ## Deployment
 
-**Not deployed to the homelab yet.** The target host, port and proxy name are
+**Being deployed to the homelab** (2026-10-21, pulling `:latest`). The host, port and proxy name are
 tracked in the private `arks-family-hub` repo (`docs/SPEC.md` and
 `docs/SERVICES.md`), not here, because this repo is public. Two things known
 from there:
