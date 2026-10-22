@@ -709,6 +709,8 @@ async function run({ base, root }) {
   ok('the admin can reorder and hide games', reordered.status === 200 && reordered.data.order[0] === 'dino' &&
     reordered.data.order.length === 12 && reordered.data.hidden.join() === 'spinsolve', JSON.stringify(reordered.data));
   ok('the home page sees the new order', (await wl('/arcade-info')).data.games.order[0] === 'dino');
+  ok('sorting by most played is on by default', startInfo.games.sort === 'played');
+  ok('the admin can switch it off', (await asAdmin('/comm/admin/home-games', 'POST', { order: ['dino'], hidden: [], sort: 'fixed' })).data.sort === 'fixed');
   ok('hiding every game is refused', (await asAdmin('/comm/admin/home-games', 'POST', {
     order: startInfo.games.order, hidden: startInfo.games.order })).status === 400);
   ok('reordering needs the admin password', (await wl('/comm/admin/home-games', 'POST', { order: ['chess'] })).status === 401);
@@ -1018,6 +1020,14 @@ async function run({ base, root }) {
   ok('plays are counted', chessRow && chessRow[5] === 3);
   ok('the device is recorded', chessRow && sum.devices[chessRow[4]] === 'phone');
   ok('guests show by name', sum.visits.some(v => sum.players[v[3]] === 'Guest 7' && v[1] === 12));
+  const snakeVisit = await statsPost('/visit', { game: 'snake', name: 'Guest 8' });
+  await statsPost('/beat', { id: snakeVisit.data.id, activeMs: 90000 });
+  await statsPost('/beat', { id: snakeVisit.data.id, activeMs: 90000 });
+  const everyoneOrder = (await statsPost('/game-order', {})).data.order;
+  ok('without a profile, the most-played games overall come first', everyoneOrder.slice(0, 3).join() === 'snake,chess,dino', everyoneOrder.join());
+  const mayaOrder = (await statsPost('/game-order', { token: mayaTok })).data.order;
+  ok('a profile sees its own most-played game first, then the most-played overall', mayaOrder.slice(0, 3).join() === 'chess,snake,dino', mayaOrder.join());
+  ok('every game is still in the list once', mayaOrder.length === everyoneOrder.length && new Set(mayaOrder).size === mayaOrder.length);
 
   const err1 = await statsPost('/error', { game: 'spinsolve', message: "Cannot read properties of undefined (reading 'x') at 12", location: '/spinsolve.js:412:17', stack: 'TypeError: boom\n  at spin (/spinsolve.js:412:17)', name: 'Maya' }, phoneUA);
   const err2 = await statsPost('/error', { game: 'spinsolve', message: "Cannot read properties of undefined (reading 'x') at 99", location: '/spinsolve.js:415:3' }, phoneUA);

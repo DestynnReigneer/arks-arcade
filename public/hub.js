@@ -92,17 +92,38 @@
     const name = (info.name || '').trim();
     $('arcadeName').textContent = name ? name + ' ' : '';
     document.title = name ? `${name} Arcade` : 'Arcade';
-    // The admin page decides the order of the games, and which ones show.
-    const list = document.querySelector('.games');
-    if (info.games && list) {
-      for (const id of info.games.order) {
-        const card = list.querySelector(`.game.${id}`);
-        if (!card) continue;
-        list.appendChild(card);
-        card.classList.toggle('hidden', info.games.hidden.includes(id));
-      }
-    }
+    // The admin page decides which games show. The order is the admin's,
+    // unless sorting by most played is on (the default).
+    if (!info.games) return;
+    homeGames = info.games;
+    placeGames(homeGames.order);
+    sortByPlayed();
   }).catch(() => {});
+
+  let homeGames = null;
+  function placeGames(order) {
+    const list = document.querySelector('.games');
+    if (!list) return;
+    for (const id of order) {
+      const card = list.querySelector(`.game.${id}`);
+      if (!card) continue;
+      list.appendChild(card);
+      card.classList.toggle('hidden', homeGames.hidden.includes(id));
+    }
+  }
+  // Your most-played games first; everyone's favorites if you haven't
+  // picked a profile or haven't played much yet.
+  async function sortByPlayed() {
+    if (!homeGames || homeGames.sort !== 'played') return;
+    try {
+      const res = await fetch('/api/stats/game-order', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: ArcadeProfile.token() })
+      });
+      if (res.ok) placeGames((await res.json()).order);
+    } catch { /* keep the admin's order */ }
+  }
+  ArcadeProfile.onChange(sortByPlayed);
 
   // ---- Comm Center ----------------------------------------------------------
 
