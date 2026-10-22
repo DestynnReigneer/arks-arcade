@@ -35,6 +35,13 @@ Where things are documented (read these rather than guessing):
 - **No secrets in the repo.** `.env` is gitignored; `.env.example` documents
   every setting.
 
+## Text people read
+
+Everything players and readers see (game screens, docs, PRs, commits) should
+sound like a person explaining it to a friend: full sentences, everyday words,
+and no term the page hasn't explained. The full rules and examples are in the
+private `arks-internal` repo, `conventions/writing.md`.
+
 ## ARKS ID (shared family sign-in)
 
 - The contract lives **only** in the private `arks-id` repo, `docs/SPEC.md`
