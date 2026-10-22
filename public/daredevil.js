@@ -63,14 +63,13 @@
       $('pinMsg').textContent = '';
       $('pinView').classList.remove('hidden');
       const done = ok => { $('pinView').classList.add('hidden'); resolve(ok); };
-      $('pinOk').onclick = async () => {
-        const pin = $('pinInput').value.trim();
+      PinPad.attach($('pinInput'), async pin => {
         const r = await api('/unlock', { method: 'POST', body: { pin } }).catch(() => ({ ok: false }));
-        if (!r.ok) { $('pinMsg').textContent = 'That PIN is not right.'; return; }
+        if (!r.ok) { $('pinMsg').textContent = 'That PIN is not right.'; PinPad.clear($('pinInput')); return; }
         S.pin = pin;
         try { sessionStorage.setItem('dd.pin', pin); } catch { /* unavailable */ }
         done(true);
-      };
+      });
       $('pinCancel').onclick = () => done(false);
     });
   }

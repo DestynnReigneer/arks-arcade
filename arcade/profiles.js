@@ -33,7 +33,7 @@ function fail(message, status = 400) {
   return Object.assign(new Error(message), { status });
 }
 const cleanName = raw => String(raw || '').trim().replace(/\s+/g, ' ').slice(0, 16);
-const PIN_RE = /^\d{4,8}$/;
+const PIN_RE = /^\d{6}$/;
 
 // A secret that signs profile tokens, made once and kept in the database.
 function secret() {
@@ -95,7 +95,7 @@ module.exports = function profileRoutes({ requireAdmin, notify }) {
       if (nameTaken(name)) throw fail('Someone already has that name.', 409);
       const avatar = Avatars.valid(body.avatar) ? body.avatar : Avatars.DEFAULT;
       const pin = String(body.pin || '').trim();
-      if (pin && !PIN_RE.test(pin)) throw fail('A PIN is 4 to 8 digits (or leave it blank).');
+      if (pin && !PIN_RE.test(pin)) throw fail('A PIN is 6 digits (or leave it blank).');
       const id = crypto.randomBytes(8).toString('hex');
       const salt = pin ? crypto.randomBytes(16).toString('hex') : null;
       db.db.prepare('INSERT INTO arcade_profiles (id, name, avatar, pin_hash, pin_salt) VALUES (?, ?, ?, ?, ?)')
@@ -124,7 +124,7 @@ module.exports = function profileRoutes({ requireAdmin, notify }) {
       const me = verify((req.body || {}).token);
       if (!me || me.id !== req.params.id) throw fail('Pick your profile first.', 401);
       const pin = String((req.body || {}).pin || '').trim();
-      if (pin && !PIN_RE.test(pin)) throw fail('A PIN is 4 to 8 digits.');
+      if (pin && !PIN_RE.test(pin)) throw fail('A PIN is 6 digits.');
       const salt = pin ? crypto.randomBytes(16).toString('hex') : null;
       db.db.prepare("UPDATE arcade_profiles SET pin_hash = ?, pin_salt = ?, pin_version = pin_version + 1, updated_at = datetime('now') WHERE id = ?")
         .run(pin ? hashPin(pin, salt) : null, salt, me.id);

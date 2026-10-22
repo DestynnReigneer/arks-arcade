@@ -208,12 +208,14 @@
     }
     const pinInput = document.getElementById('adultPinInput');
     pinInput.value = '';
-    pinInput.classList.toggle('hidden', !adult.requiresPin);
+    PinPad.attach(pinInput, confirmAdult);
+    PinPad.show(pinInput, adult.requiresPin);
     document.getElementById('adultError').textContent = '';
     document.getElementById('adultHint').textContent = adult.requiresPin
       ? 'Naughty themes for grown-ups. Enter the adult PIN.'
       : 'Naughty themes for grown-ups. Are you 18 or older?';
-    document.getElementById('adultOkBtn').textContent = adult.requiresPin ? 'Unlock' : "I'm an adult";
+    // With a PIN the pad checks it on the 6th digit, so there's no button.
+    document.getElementById('adultOkBtn').classList.toggle('hidden', adult.requiresPin);
     document.getElementById('adultOverlay').classList.remove('hidden');
     if (adult.requiresPin) pinInput.focus();
   }
@@ -224,7 +226,7 @@
     try {
       if (adult.requiresPin) {
         const r = await apiPost('/api/adult-check', { pin });
-        if (!r.ok) { err.textContent = 'That PIN is not right.'; return; }
+        if (!r.ok) { err.textContent = 'That PIN is not right.'; PinPad.clear(document.getElementById('adultPinInput')); return; }
       }
       setAdult(true, pin);
       document.getElementById('adultOverlay').classList.add('hidden');
@@ -576,7 +578,6 @@
   document.getElementById('adultBtn').addEventListener('click', openAdult);
   document.getElementById('adultOkBtn').addEventListener('click', confirmAdult);
   document.getElementById('adultCancelBtn').addEventListener('click', () => document.getElementById('adultOverlay').classList.add('hidden'));
-  document.getElementById('adultPinInput').addEventListener('keydown', e => { if (e.key === 'Enter') confirmAdult(); });
   themeSelect.addEventListener('change', (e) => { setTheme(e.target.value); newGame(); });
 
   // ---- End of game / scoring / initials ----
