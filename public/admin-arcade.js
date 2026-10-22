@@ -219,6 +219,15 @@
   function renderHomeGames() {
     const box = $('homeGames');
     box.innerHTML = '';
+    const sortRow = document.createElement('label');
+    sortRow.className = 'theme-row';
+    sortRow.style.justifyContent = 'flex-start';
+    sortRow.style.gap = '8px';
+    sortRow.innerHTML = '<input type="checkbox"> <span>Put each person\'s most-played games first</span>';
+    const sortBox = sortRow.querySelector('input');
+    sortBox.checked = home.sort === 'played';
+    sortBox.onchange = () => saveHomeGames({ order: home.order, hidden: home.hidden, sort: sortBox.checked ? 'played' : 'fixed' });
+    box.appendChild(sortRow);
     home.order.forEach((id, i) => {
       const hidden = home.hidden.includes(id);
       const row = document.createElement('div');
@@ -255,12 +264,12 @@
     const order = home.order.slice();
     const [id] = order.splice(i, 1);
     order.splice(i + by, 0, id);
-    saveHomeGames({ order, hidden: home.hidden });
+    saveHomeGames({ order, hidden: home.hidden, sort: home.sort });
   }
 
   function toggleHidden(id) {
     const hidden = home.hidden.includes(id) ? home.hidden.filter(x => x !== id) : [...home.hidden, id];
-    saveHomeGames({ order: home.order, hidden });
+    saveHomeGames({ order: home.order, hidden, sort: home.sort });
   }
 
   // ---- wiring --------------------------------------------------------------
