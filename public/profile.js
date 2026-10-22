@@ -211,11 +211,15 @@ const ArcadeProfile = (() => {
     const c = card();
     const chosen = { value: me.avatar };
     c.innerHTML = '<h2></h2><label>Avatar</label><div data-av></div><div class="apf-row"><button class="apf-btn" data-save-av>Save avatar</button></div>' +
-      '<label>PIN</label><p style="text-align:left;margin:4px 0"></p><input data-pin type="password" inputmode="numeric" maxlength="6" autocomplete="new-password" placeholder="New PIN (6 digits)">' +
+      '<label>PIN</label><p style="text-align:left;margin:4px 0"></p>' +
+      (me.hasPin ? '<input data-current type="password" inputmode="numeric" maxlength="6" autocomplete="current-password" placeholder="Current PIN">' : '') +
+      '<input data-pin type="password" inputmode="numeric" maxlength="6" autocomplete="new-password" placeholder="New PIN (6 digits)">' +
       '<div class="apf-row"><button class="apf-btn" data-set-pin>Set PIN</button>' + (me.hasPin ? '<button class="apf-btn" data-clear-pin>Remove PIN</button>' : '') + '</div>' +
       '<div class="apf-msg"></div><div class="apf-row"><button class="apf-btn" data-back>Back</button><button class="apf-btn" data-out>Sign out</button></div>';
     c.querySelector('h2').textContent = me.name;
-    c.querySelector('p').textContent = me.hasPin ? 'Your profile has a PIN. Change it or remove it here.' : 'No PIN yet. Add one so nobody else can play as you.';
+    c.querySelector('p').textContent = me.hasPin
+      ? 'Your profile has a PIN. To change it or remove it, type your current PIN first.'
+      : "Your profile doesn't have a PIN yet. Add a 6-digit one so nobody else can play as you.";
     avatarPicker(c.querySelector('[data-av]'), chosen);
     const msg = t => { c.querySelector('.apf-msg').textContent = t; };
     c.querySelector('[data-save-av]').onclick = async () => {
@@ -229,7 +233,8 @@ const ArcadeProfile = (() => {
     };
     const pinChange = async pin => {
       try {
-        const r = await api(`/${me.id}/pin`, { token: me.token, pin });
+        const current = c.querySelector('[data-current]') ? c.querySelector('[data-current]').value.trim() : '';
+        const r = await api(`/${me.id}/pin`, { token: me.token, pin, current });
         set({ ...me, hasPin: r.profile.hasPin, token: r.token });
         showManage();
         card().querySelector('.apf-msg').textContent = pin ? 'PIN saved.' : 'PIN removed.';
