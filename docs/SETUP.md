@@ -31,7 +31,8 @@ docker compose up -d
 docker compose ps  # STATUS should say "healthy" after about 20 seconds
 ```
 
-Open `http://<server-ip>:3000`. Everything the arcade saves (scores,
+Open `http://<server-ip>:3000` (or the `HOST_PORT` you set in `.env`, if
+something else on the host already uses 3000). Everything the arcade saves (scores,
 profiles, themes, packs) lives in `./data/arcade.db` next to the compose
 file. Back that one file up and you've backed up the arcade.
 
@@ -70,6 +71,7 @@ This gives you `https://arcade.example.com` instead of an IP and port.
    - Domain names: `arcade.example.com`
    - Scheme `http`, Forward Hostname/IP: the arcade machine (or the container
      name, if NPM shares a Docker network with it), Forward Port: `3000`
+     (your `HOST_PORT` if you set one; use `3000` when going by container name)
    - Turn on **Websockets Support** and **Block Common Exploits**.
 3. **SSL tab:** request a Let's Encrypt certificate (a DNS challenge works even
    if nothing is reachable from the internet), and turn on **Force SSL**.
