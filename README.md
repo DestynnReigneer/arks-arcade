@@ -255,6 +255,7 @@ See **[docs/SETUP.md](docs/SETUP.md)** for every setting in `.env`, a step-by-st
 | `TRUST_PROXY` | `1` when behind one reverse proxy like Nginx Proxy Manager. |
 | `TRIVIA_ONLINE` | `off` to skip downloading Open Trivia DB questions. |
 | `DISCORD_WEBHOOK_URL` | Optional Discord notifications for requests. |
+| `HOST_PORT` | Docker only: the host port to publish (default `3000`). |
 | `PORT` | Defaults to `3000`. |
 
 ## Profiles
