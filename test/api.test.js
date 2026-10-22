@@ -985,6 +985,10 @@ async function run({ base, root }) {
   ok('picking her profile now needs the PIN', (await wl(`/profiles/${asked.data.id}/use`, 'POST', {})).status === 401 &&
     (await wl(`/profiles/${asked.data.id}/use`, 'POST', { pin: '999999' })).status === 401);
   ok('the right PIN works', !!(await wl(`/profiles/${asked.data.id}/use`, 'POST', { pin: '432100' })).data.token);
+  const mayaWithPin = (await wl(`/profiles/${asked.data.id}/use`, 'POST', { pin: '432100' })).data.token;
+  ok('removing a PIN needs the current one', (await wl(`/profiles/${asked.data.id}/pin`, 'POST', { token: mayaWithPin, pin: '' })).status === 401);
+  ok('…and a wrong one is refused', (await wl(`/profiles/${asked.data.id}/pin`, 'POST', { token: mayaWithPin, pin: '246810', current: '999999' })).status === 401);
+  ok('changing it works with the current PIN', (await wl(`/profiles/${asked.data.id}/pin`, 'POST', { token: mayaWithPin, pin: '246810', current: '432100' })).data.profile.hasPin === true);
   await asAdmin(`/profiles/admin/${asked.data.id}/clear-pin`, 'POST', {});
   ok('the admin can clear a forgotten PIN', !!(await wl(`/profiles/${asked.data.id}/use`, 'POST', {})).data.token);
   ok('an approved profile becomes a Rambler player with the same id', !!(await wl(`/rambler/players/${asked.data.id}`)).data);
