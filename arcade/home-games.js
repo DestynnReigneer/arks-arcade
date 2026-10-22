@@ -3,6 +3,8 @@
 // Which games the home page shows, and in what order. Set from the admin
 // page's Arcade tab; the home page reads it from /api/arcade-info. A game
 // added in a later release (not in the saved order yet) goes on the end.
+// With sort 'played' (the default) the home page puts the most-played games
+// first (see stats.gameOrder), and this order only breaks ties.
 
 const db = require('../db');
 
@@ -14,12 +16,13 @@ function get() {
   const order = (Array.isArray(saved.order) ? saved.order : []).filter(id => GAMES.includes(id));
   for (const id of GAMES) if (!order.includes(id)) order.push(id);
   const hidden = (Array.isArray(saved.hidden) ? saved.hidden : []).filter(id => GAMES.includes(id));
-  return { order, hidden };
+  const sort = saved.sort === 'fixed' ? 'fixed' : 'played';
+  return { order, hidden, sort };
 }
 
-function set({ order, hidden } = {}) {
+function set({ order, hidden, sort } = {}) {
   const clean = list => [...new Set((Array.isArray(list) ? list : []).filter(id => GAMES.includes(id)))];
-  const next = { order: clean(order), hidden: clean(hidden) };
+  const next = { order: clean(order), hidden: clean(hidden), sort: sort === 'fixed' ? 'fixed' : 'played' };
   if (next.hidden.length >= GAMES.length) {
     throw Object.assign(new Error('Leave at least one game showing.'), { status: 400 });
   }
