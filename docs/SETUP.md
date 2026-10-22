@@ -4,8 +4,8 @@ A step-by-step guide to running the arcade at home: one Docker container, a
 name like `arcade.example.com` on your own network through a reverse proxy,
 and safe access from outside the house without opening any ports.
 
-This is how the ARKS Arcade itself runs: Docker Compose, Nginx Proxy
-Manager in front, Tailscale for when we're away from home.
+A common setup, and the one this guide walks through: Docker Compose,
+Nginx Proxy Manager in front, and Tailscale for playing away from home.
 
 ---
 
@@ -48,7 +48,7 @@ admin password.
 
 | Setting | What it does |
 |---|---|
-| `ARCADE_NAME` | Your arcade's name: `ARKS` shows "ARKS Arcade". Blank shows "Arcade". |
+| `ARCADE_NAME` | Your arcade's name: `Smith` shows "Smith Arcade". Blank shows "Arcade". |
 | `ADMIN_PASSWORD` | Password for the admin page (`/admin.html`). **Set this**, and make it long. Blank keeps admin locked to everyone. |
 | `ADULT_PIN` | Optional PIN guarding every adult option (adult themes, Unfiltered words, adult decks and levels). You can set, change or remove it later from Admin → Arcade, which overrides this. Blank means a "yes, I'm 18+" tap is the only guard. |
 | `TZ` | Your timezone, e.g. `America/Los_Angeles` or `America/New_York`. Daily challenges and streaks roll over at your midnight. |

@@ -1,4 +1,4 @@
-# Homelab deployment: pulls the image CI already built, never builds locally.
+# Server deployment: pulls the published image instead of building it.
 # This is the only file you need on the server -- no checkout required.
 #
 #   mkdir arks-arcade && cd arks-arcade
