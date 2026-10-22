@@ -23,8 +23,8 @@ services:
       timeout: 5s
       retries: 3
       start_period: 20s
-    # The dictionary trie sits at roughly 120MB resident. 512MB is comfortable
-    # headroom on a machine with 128GB, while still capping a runaway.
+    # The dictionary trie sits at roughly 120MB resident. 512MB leaves
+    # comfortable headroom while still capping a runaway.
     deploy:
       resources:
         limits:

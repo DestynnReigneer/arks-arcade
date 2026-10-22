@@ -210,7 +210,7 @@ cp .env.example .env   # set ADMIN_PASSWORD at least; see docs/SETUP.md for the 
 docker compose up -d --build
 ```
 
-## Deploying to the homelab
+## Deploying to a server
 
 `docker-compose.prod.yml` in this repo is the only file the server needs — it
 pulls the image CI built rather than building anything locally:
@@ -329,3 +329,7 @@ Dockerfile
 docker-compose.yml
 .github/workflows/        CI: builds & publishes the Docker image to GHCR
 ```
+
+## License
+
+MIT. See [LICENSE](LICENSE).

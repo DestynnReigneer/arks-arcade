@@ -14,7 +14,7 @@ a plan changes, so the next session can pick up from here.
     `/app/data`, TZ defaults to America/Los_Angeles, CI runs on PRs only.
   - #13: `HOST_PORT` in `.env` sets the published Docker port (default 3000).
   - #14: CLAUDE.md points to the ARKS ID contract in `arks-id`.
-  - #15 party polish (merged before play-testing, to test on the homelab):
+  - #15 party polish (merged before play-testing, to test on the server):
     Uh-Oh: Part Deux's mobile-app table, one-symbol cards, card names that fit
     what each card does, truck beep on Reverse, occasional "womp womp" and
     server-picked jokes; jokes everywhere stay up by reading time
@@ -26,12 +26,10 @@ a plan changes, so the next session can pick up from here.
 
 ## Next up
 
-1. **The owner play-tests #15 and #16 on the homelab.** Fix what they find in
-   follow-up PRs.
+1. **Play-test #15 and #16 on the server.** Fix what turns up in follow-up PRs.
 2. **Get Claude in Chrome connected** so pages can be checked in a real
-   browser: everything on the machine is set up (extension installed, native
-   host registered for the native `claude.exe`); it needs a full Chrome
-   restart and the extension signed in to the same account.
+   browser. Everything is installed; it needs a full Chrome restart and the
+   extension signed in to the same account.
 3. Ask which other games should use the countdown tune (Know-It-All's answer
    clock, Spin & Solve's turn clock).
 
@@ -40,26 +38,23 @@ a plan changes, so the next session can pick up from here.
 - **Passkey sign-in for admin** (fingerprint, face or phone instead of typing
   the password). The `.env` password stays as the recovery; no email
   recovery, by design. Passkeys are tied to the site's name, so one made on
-  `localhost` won't work on the homelab's name: register a new one there.
+  `localhost` won't work on the server's name: register a new one there.
   They need `localhost` or HTTPS. Plan: `@simplewebauthn/server` (rather than
   hand-rolling the crypto), a credentials table, register/sign-in endpoints
   that issue the same session cookie, and a "Manage passkeys" list in admin.
-- **Shared family accounts ("ARKS ID")**: planned, owner-approved. The
+- **Shared family accounts ("ARKS ID")**: planned and approved. The
   contract is in the private `arks-id` repo (`docs/SPEC.md`); see CLAUDE.md
   for how to use it. The arcade integrates last (after ARKS ID, the Hub's
   sign-in and passkeys). **Built against ARKS ID contract: none yet.**
 
 ## Deployment
 
-**Being deployed to the homelab** (2026-10-21, pulling `:latest`). The host, port and proxy name are
-tracked in the private `arks-family-hub` repo (`docs/SPEC.md` and
-`docs/SERVICES.md`), not here, because this repo is public. Two things known
-from there:
+**Being deployed** (2026-10-21, pulling `:latest`). The host, port and proxy
+name are tracked in the private `arks-family-hub` repo, not here, because
+this repo is public. Two things to know:
 
-- The arcade's homelab port **can't be 3000**: another service already uses it
-  on that host. Set `HOST_PORT` in the homelab `.env` (the number is in the
-  Hub repo).
-- The Family Hub will show an ARKS Arcade tile with a live status chip read
+- The server's port 3000 is taken, so its `.env` sets `HOST_PORT`.
+- The family dashboard shows an arcade tile with a live status chip read
   from `/healthz`. Keep that endpoint working and cheap.
 
 ## Good to know
@@ -67,8 +62,8 @@ from there:
 - **Still in beta.** Local scores and profiles don't matter yet, so wiping or
   renaming the local database is fine.
 - **Dropped ideas**, so they don't come back by accident: Short Fuse (replaced by
-  Uh-Oh: Part Deux and Dare Devil), the Kaleidoscope doodle pad (the kids are
-  too old for it), and making the repo private.
+  Uh-Oh: Part Deux and Dare Devil), the Kaleidoscope doodle pad (too young for
+  the audience), and making the repo private.
 - More games will be added over time.
 
 ## Smaller to-dos

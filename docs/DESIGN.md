@@ -4,9 +4,9 @@ This project follows the **ARKS Design Language Color Spec** — a copy lives at
 [`arks-color-spec.html`](arks-color-spec.html) in this folder. Open it in a
 browser; every swatch copies its hex on click.
 
-The canonical copy lives in `arks-internal`. The copy here exists so the
+The original lives in a separate private repo. The copy here exists so the
 palette ships with the code and is available offline. If the two ever
-disagree, `arks-internal` wins.
+disagree, the original wins.
 
 ## Which palette this project uses
 

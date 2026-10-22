@@ -1,5 +1,5 @@
-// Six-digit PIN pads, the same way every ARKS app does them: there's no
-// Enter key, the PIN is checked the moment the 6th digit goes in.
+// Six-digit PIN pads that work like a phone lock screen: there's no Enter
+// key, the PIN is checked the moment the 6th digit goes in.
 //
 //   PinPad.attach(input, pin => check(pin))
 //

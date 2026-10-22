@@ -87,7 +87,7 @@
   $('qrTarget').onchange = () => ArcadeQR.show($('arcadeQr'), $('qrTarget').value, $('arcadeLink'));
 
   // ---- the arcade's name --------------------------------------------------
-  // ARCADE_NAME in .env: "ARKS" makes this the ARKS Arcade. Blank is just Arcade.
+  // ARCADE_NAME in .env: "Smith" makes this the Smith Arcade. Blank is just Arcade.
   fetch('/api/arcade-info').then(r => r.json()).then(info => {
     const name = (info.name || '').trim();
     $('arcadeName').textContent = name ? name + ' ' : '';
