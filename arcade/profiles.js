@@ -118,11 +118,20 @@ module.exports = function profileRoutes({ requireAdmin, notify }) {
     } catch (e) { next(e); }
   });
 
-  // Add, change or remove your own PIN (prove it's you with your token).
+  // Add, change or remove your own PIN. The token proves this device picked the
+  // profile; if it already has a PIN, the current one is needed too, so someone
+  // who finds the profile left open can't lock its owner out.
   router.post('/:id/pin', pinLimiter, (req, res, next) => {
     try {
       const me = verify((req.body || {}).token);
       if (!me || me.id !== req.params.id) throw fail('Pick your profile first.', 401);
+      const before = row(me.id);
+      if (before.pin_hash) {
+        const current = String((req.body || {}).current || '');
+        if (!PIN_RE.test(current) || hashPin(current, before.pin_salt) !== before.pin_hash) {
+          throw fail('Your current PIN isn\'t right.', 401);
+        }
+      }
       const pin = String((req.body || {}).pin || '').trim();
       if (pin && !PIN_RE.test(pin)) throw fail('A PIN is 6 digits.');
       const salt = pin ? crypto.randomBytes(16).toString('hex') : null;
