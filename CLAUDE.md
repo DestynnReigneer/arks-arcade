@@ -21,16 +21,16 @@ Where things are documented (read these rather than guessing):
   "Fifty Shades of Grey").
 - **Branch, then PR to `main`.** Never commit to `main` directly. Claude opens the
   PR, waits for CI, and once every check is green merges it and deletes the
-  branch (`gh pr merge <n> --merge --delete-branch`), then tells the owner. If a
+  branch (`gh pr merge <n> --merge --delete-branch`), then tells the maintainer. If a
   check fails, fix it or say so; never merge red.
 - **`npm test` is the gate.** Run it before committing; CI runs the same thing
   plus a Docker build.
 - **Local test server: port 3001**, not the default 3000:
   `PORT=3001 npm start` (PowerShell: `$env:PORT=3001; npm start`).
-- **Releases** are a git tag; CI publishes the image to GHCR and the homelab
+- **Releases** are a git tag; CI publishes the image to GHCR and the server
   pulls it (see `CONTRIBUTING.md`).
-- **Keep it embeddable.** The arcade will eventually sit inside the ARKS Family
-  Hub (a separate repo, `arks-family-hub`). Use relative URLs, no hard-coded
+- **Keep it embeddable.** The arcade will also be linked from a family
+  dashboard (a separate private project). Use relative URLs, no hard-coded
   host, and keep the home page and game lobbies easy to link to.
 - **No secrets in the repo.** `.env` is gitignored; `.env.example` documents
   every setting.
@@ -44,7 +44,7 @@ Where things are documented (read these rather than guessing):
   get messaged to the other sessions. Never change it on the arcade's side only.
 - `docs/NOTES.md` records which contract version the arcade is built against.
 
-## Decisions already made (don't reopen unless the owner does)
+## Decisions already made (don't reopen unless the maintainer does)
 
 - **No server-side AI.** Themes, theme packs, trivia and Spin & Solve packs
   come from a "copy prompt, paste into any chatbot, paste the answer back"
@@ -53,7 +53,7 @@ Where things are documented (read these rather than guessing):
 - **The server decides every score.** Clients never send their own score.
 - **The adult word list is deliberately uncensored.** Don't soften it.
   `words/blocklist-kids.txt` is what protects the kids list.
-- **Celebrations, yes; fake near-misses, no.** The look the owner wants is
+- **Celebrations, yes; fake near-misses, no.** The look we want is
   modern Las Vegas slot-game energy: confetti, coin showers, big win banners.
   But a "so close!" must always be real (the ladder climbs the actual
   leaderboard).
@@ -65,8 +65,8 @@ Where things are documented (read these rather than guessing):
 - **Every game has a How to play section** that can be reopened mid-game. New
   games need one too.
 - **The repo stays public.** Making it private was considered and turned down.
-  So the defaults are generic (`ARCADE_NAME` blank), and the owner's own setup
-  (ARKS) lives in their `.env`.
+  So the defaults are generic (`ARCADE_NAME` blank), and the maintainer's own setup
+  lives in their `.env`.
 - **The daily board is seeded by the date alone**, and the kids and unfiltered
   dictionaries are deliberately not made equal (standings tag each row).
 - **Theme-pack words must be short**: board geometry makes 7+ letter words

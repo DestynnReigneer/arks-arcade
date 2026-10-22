@@ -48,4 +48,4 @@ git tag -a v1.1.0 -m "Marathon mode, profiles, daily challenge"
 git push origin v1.1.0
 ```
 
-Then on the homelab: `docker compose pull && docker compose up -d`.
+Then on the server: `docker compose pull && docker compose up -d`.
