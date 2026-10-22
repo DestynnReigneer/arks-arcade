@@ -81,6 +81,27 @@ function whoFrom(body) {
   return { player: cleanName(body.name), profileId: null };
 }
 
+// ---- most played ---------------------------------------------------------------------------
+// The home page's game order: the games this profile has spent the most
+// on-screen time in over the last 90 days come first, then what everyone
+// plays most, then the admin's order for anything nobody has touched.
+const ORDER_WINDOW = 90 * DAY;
+
+function gameOrder({ token, now = Date.now() } = {}) {
+  const { order } = homeGames.get();
+  const me = token ? profiles.verify(token) : null;
+  const since = now - ORDER_WINDOW;
+  const timeBy = (extra, args) => new Map(db.db.prepare(
+    `SELECT game, SUM(active_ms) AS ms FROM arcade_visits WHERE started_at >= ? ${extra} GROUP BY game`
+  ).all(since, ...args).map(r => [r.game, r.ms]));
+  const mine = me ? timeBy('AND profile_id = ?', [me.id]) : new Map();
+  const everyone = timeBy('', []);
+  return order.slice().sort((a, b) =>
+    (mine.get(b) || 0) - (mine.get(a) || 0) ||
+    (everyone.get(b) || 0) - (everyone.get(a) || 0) ||
+    order.indexOf(a) - order.indexOf(b));
+}
+
 // ---- visits ------------------------------------------------------------------------------
 function startVisit({ game, name, token, ua, now = Date.now() }) {
   if (!knownGame(game)) throw Object.assign(new Error('Unknown game.'), { status: 400 });
@@ -182,6 +203,10 @@ function routes({ requireAdmin }) {
     const b = req.body || {};
     res.json({ ok: beat({ id: b.id, activeMs: b.activeMs, plays: b.plays, name: b.name, token: b.token }) });
   }));
+  // POST so the profile token stays out of URLs and logs.
+  router.post('/game-order', limiter(300, 'requests'), send((req, res) => {
+    res.json({ order: gameOrder({ token: (req.body || {}).token }) });
+  }));
   router.post('/error', limiter(60, 'error reports'), send((req, res) => {
     const b = req.body || {};
     const code = recordError({
@@ -267,4 +292,4 @@ function watchProcess() {
   });
 }
 
-module.exports = { routes, errorHandler, watchResponses, watchProcess, recordError, startVisit, beat, summary, codeFor, deviceOf };
+module.exports = { routes, errorHandler, watchResponses, watchProcess, recordError, startVisit, beat, summary, codeFor, deviceOf, gameOrder };
