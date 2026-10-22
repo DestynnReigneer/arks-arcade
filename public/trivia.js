@@ -101,17 +101,15 @@
       $('pinMsg').textContent = '';
       $('pinView').classList.remove('hidden');
       $('pinInput').focus();
-      const done = ok => { $('pinView').classList.add('hidden'); $('pinOk').onclick = $('pinCancel').onclick = $('pinInput').onkeydown = null; resolve(ok); };
-      const tryPin = async () => {
-        const pin = $('pinInput').value.trim();
+      const done = ok => { $('pinView').classList.add('hidden'); $('pinCancel').onclick = null; resolve(ok); };
+      const tryPin = async pin => {
         const r = await api('/api/trivia/unlock', { pin }).catch(() => ({ ok: false }));
-        if (!r.ok) { $('pinMsg').textContent = 'That PIN is not right.'; return; }
+        if (!r.ok) { $('pinMsg').textContent = 'That PIN is not right.'; PinPad.clear($('pinInput')); return; }
         S.pin = pin;
         try { sessionStorage.setItem('trivia.adultPin', pin); } catch { /* unavailable */ }
         done(true);
       };
-      $('pinOk').onclick = tryPin;
-      $('pinInput').onkeydown = e => { if (e.key === 'Enter') tryPin(); };
+      PinPad.attach($('pinInput'), tryPin);
       $('pinCancel').onclick = () => done(false);
     });
   }

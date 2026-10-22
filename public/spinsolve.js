@@ -127,21 +127,19 @@
       $('pinInput').focus();
       const done = ok => {
         $('pinView').classList.add('hidden');
-        $('pinOk').onclick = $('pinCancel').onclick = $('pinInput').onkeydown = null;
+        $('pinCancel').onclick = null;
         resolve(ok);
       };
-      const tryPin = async () => {
-        const pin = $('pinInput').value.trim();
+      const tryPin = async pin => {
         try {
           const r = await api('/api/spinsolve/unlock', { pin });
-          if (!r.ok) { $('pinMsg').textContent = 'That PIN is not right.'; return; }
+          if (!r.ok) { $('pinMsg').textContent = 'That PIN is not right.'; PinPad.clear($('pinInput')); return; }
           S.pin = pin;
           try { sessionStorage.setItem('spin.adultPin', pin); } catch { /* unavailable */ }
           done(true);
-        } catch (e) { $('pinMsg').textContent = e.message; }
+        } catch (e) { $('pinMsg').textContent = e.message; PinPad.clear($('pinInput')); }
       };
-      $('pinOk').onclick = tryPin;
-      $('pinInput').onkeydown = e => { if (e.key === 'Enter') tryPin(); };
+      PinPad.attach($('pinInput'), tryPin);
       $('pinCancel').onclick = () => done(false);
     });
   }

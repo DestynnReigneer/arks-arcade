@@ -674,13 +674,14 @@ async function run({ base, root }) {
   ok('the admin can take a post down', !(await wl('/comm/posts')).data.some(p => p.id === ann.data.id));
 
   // ---- adult PIN from the admin page -------------------------------------------
-  ok('a PIN must be 4-8 digits', (await asAdmin('/comm/admin/adult-pin', 'POST', { pin: '12' })).status === 400);
-  await asAdmin('/comm/admin/adult-pin', 'POST', { pin: '2468' });
+  ok('a PIN must be 6 digits', (await asAdmin('/comm/admin/adult-pin', 'POST', { pin: '12' })).status === 400);
+  ok('…not 4', (await asAdmin('/comm/admin/adult-pin', 'POST', { pin: '1234' })).status === 400);
+  await asAdmin('/comm/admin/adult-pin', 'POST', { pin: '246810' });
   ok('the admin can set the adult PIN', (await asAdmin('/comm/admin/adult-pin')).data.source === 'admin');
   const lockedOut = await api('/board', 'POST', { size: 4, profile: 'adult' });
   const pinned = await fetch(API + '/board', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Adult-Pin': '2468' },
+    headers: { 'Content-Type': 'application/json', 'X-Adult-Pin': '246810' },
     body: JSON.stringify({ size: 4, profile: 'adult' })
   });
   ok('the new PIN guards adult boards', lockedOut.status === 403 && pinned.status === 201);
@@ -756,8 +757,8 @@ async function run({ base, root }) {
   };
   ok('adult themes are hidden by default', !(await wl('/themes')).data.some(t => t.adult));
   ok('a wrong PIN does not show them', (await pinGet('/themes?adult=1', '0000')).status === 403);
-  ok('the right PIN shows them', (await pinGet('/themes?adult=1', '2468')).data.some(t => t.label === 'Naughty'));
-  const naughtyPlayed = (await pinGet('/themes?adult=1', '2468')).data.find(t => t.label === 'Naughty');
+  ok('the right PIN shows them', (await pinGet('/themes?adult=1', '246810')).data.some(t => t.label === 'Naughty'));
+  const naughtyPlayed = (await pinGet('/themes?adult=1', '246810')).data.find(t => t.label === 'Naughty');
   ok('adult Easy gets plenty of short rude words', naughtyPlayed.words.filter(w => w.length <= 4).length >= 40);
   ok('the theme keeps its own words too', naughtyPlayed.words.includes('cheeky'));
   ok('the admin always sees them', (await asAdmin('/themes')).data.some(t => t.label === 'Naughty'));
@@ -767,13 +768,13 @@ async function run({ base, root }) {
   const naughtyId = (await asAdmin('/themes')).data.find(t => t.label === 'Naughty').id;
   await wl('/leaderboard', 'POST', { initials: 'XXX', themeId: naughtyId, won: true, guesses: 1, hintsUsed: 0, word: 'spank', elapsedMs: 1000, difficulty: 'normal' });
   ok('adult-theme scores stay off the kids board', !(await wl('/leaderboard?difficulty=normal')).data.some(r => r.initials === 'XXX'));
-  ok('…and show once unlocked', (await pinGet('/leaderboard?difficulty=normal&adult=1', '2468')).data.some(r => r.initials === 'XXX'));
+  ok('…and show once unlocked', (await pinGet('/leaderboard?difficulty=normal&adult=1', '246810')).data.some(r => r.initials === 'XXX'));
 
   // ---- built-in adult Wordless themes ----------------------------------------------
   ok('built-in adult themes stay hidden from kids', !(await wl('/themes')).data.some(t => t.id === 'naughty-bits'));
-  const adultBuiltins = (await pinGet('/themes?adult=1', '2468')).data.filter(t => t.builtin && t.adult).map(t => t.id).sort();
+  const adultBuiltins = (await pinGet('/themes?adult=1', '246810')).data.filter(t => t.builtin && t.adult).map(t => t.id).sort();
   ok('four built-in adult themes appear with the PIN', adultBuiltins.join() === 'bachelorette,bar-crawl,naughty-bits,swear-jar', adultBuiltins.join());
-  const barHint = (await pinGet('/wordless/hints?theme=bar-crawl&word=tequila&adult=1', '2468')).data;
+  const barHint = (await pinGet('/wordless/hints?theme=bar-crawl&word=tequila&adult=1', '246810')).data;
   ok('they come with clues', barHint.clue === 'Salt, shot, lime' && barHint.category === 'Drink', JSON.stringify(barHint));
   ok('their hints need the PIN too', (await wl('/wordless/hints?theme=bar-crawl&word=tequila')).status === 403);
 
@@ -785,16 +786,16 @@ async function run({ base, root }) {
   ok('kids puzzles need no PIN', kidsPuzzles.status === 200 && kidsPuzzles.data.puzzles.length >= 150);
   ok('adult puzzles need the PIN', (await wl('/spinsolve/puzzles?level=filthy')).status === 403);
   ok('a wrong PIN is refused', (await pinGet('/spinsolve/puzzles?level=filthy', '0000')).status === 403);
-  ok('the right PIN opens them', (await pinGet('/spinsolve/puzzles?level=filthy', '2468')).data.puzzles.length >= 30);
+  ok('the right PIN opens them', (await pinGet('/spinsolve/puzzles?level=filthy', '246810')).data.puzzles.length >= 30);
   const kidsBanter = kidsPuzzles.data.banter;
   ok('kids games come with jokes and hecklers', kidsBanter.jokes.length >= 20 && kidsBanter.heckles.length >= 5);
   ok('…and no rude gestures or swearing', !kidsBanter.comebacks.some(c => c.startsWith('🖕')) &&
     !JSON.stringify(kidsBanter).match(/fuck|shit|damn|hell\b/i));
-  const filthyBanter = (await pinGet('/spinsolve/puzzles?level=filthy', '2468')).data.banter;
+  const filthyBanter = (await pinGet('/spinsolve/puzzles?level=filthy', '246810')).data.banter;
   ok('filthy games get the adult jokes and the finger', filthyBanter.comebacks.every(c => c.startsWith('🖕')) &&
     filthyBanter.jokes.some(([a, b]) => /fuck/i.test(a + b)));
-  ok('the unlock check works', (await wl('/spinsolve/unlock', 'POST', { pin: '2468' })).data.ok === true &&
-    (await wl('/spinsolve/unlock', 'POST', { pin: '1111' })).data.ok === false);
+  ok('the unlock check works', (await wl('/spinsolve/unlock', 'POST', { pin: '246810' })).data.ok === true &&
+    (await wl('/spinsolve/unlock', 'POST', { pin: '111111' })).data.ok === false);
 
   const spinReq = await wl('/spinsolve/requests', 'POST', { topic: 'Camping', requestedBy: 'Kid' });
   ok('players can request a puzzle theme', spinReq.status === 201);
@@ -827,14 +828,14 @@ async function run({ base, root }) {
   });
   ok('an adult pack can be made', adultPack.status === 201);
   ok('adult packs are hidden from the kids', !(await wl('/spinsolve/config')).data.packs.some(p => p.label === 'Hen Night'));
-  ok('…shown once unlocked', (await pinGet('/spinsolve/config', '2468')).data.packs.some(p => p.label === 'Hen Night'));
+  ok('…shown once unlocked', (await pinGet('/spinsolve/config', '246810')).data.packs.some(p => p.label === 'Hen Night'));
   ok('…locked when played without the PIN', (await wl(`/spinsolve/puzzles?pack=${adultPack.data.pack.id}`)).status === 403);
   ok('…and never announced', !(await wl('/comm/posts')).data.some(p => p.title.includes('Hen Night')));
   ok('too few good puzzles is refused', (await asAdmin('/spinsolve/admin/packs', 'POST', { label: 'X', puzzles: [{ answer: 'HI THERE' }] })).status === 400);
 
   await wl('/scores/spinsolve', 'POST', { initials: 'XXX', score: 99999, board: 'adult' });
   ok('the adult score board needs the PIN', (await wl('/scores/spinsolve?board=adult')).status === 403);
-  ok('…shows with it', (await pinGet('/scores/spinsolve?board=adult', '2468')).data.some(r => r.initials === 'XXX'));
+  ok('…shows with it', (await pinGet('/scores/spinsolve?board=adult', '246810')).data.some(r => r.initials === 'XXX'));
   ok('…and adult #1s are never announced', !(await wl('/comm/posts')).data.some(p => p.title.includes('XXX took #1 on Spin')));
 
   // ---- Know-It-All (trivia) --------------------------------------------------------
@@ -847,7 +848,7 @@ async function run({ base, root }) {
     famQs.questions.every(q => q.answers[q.correctIndex] === q.correct && ['Animals', 'Science'].includes(q.genre)));
   ok('family games get no drinks or dares', famQs.drinks === null && famQs.dares === null);
   ok('filthy questions need the PIN', (await wl('/trivia/questions?level=filthy')).status === 403);
-  const filthyQs = (await pinGet('/trivia/questions?level=filthy&count=5', '2468')).data;
+  const filthyQs = (await pinGet('/trivia/questions?level=filthy&count=5', '246810')).data;
   ok('…and come with drinking rules and dares', filthyQs.questions.length === 5 && !!filthyQs.drinks.wrong && filthyQs.dares.length >= 5);
   ok('topic requests are accepted', (await wl('/trivia/requests', 'POST', { topic: 'Pokemon' })).status === 201);
   ok('…and show up for the admin', (await asAdmin('/trivia/admin/requests')).data.some(r => r.topic === 'Pokemon'));
@@ -896,7 +897,7 @@ async function run({ base, root }) {
   // ---- join-a-game lobby and QR codes ---------------------------------------------
   const lobbyHost = (await wl('/trivia/rooms', 'POST', { name: 'Robin', settings: { level: 'kids', count: 5 } })).data;
   const hostAdult = body => fetch(base + '/api/trivia/rooms', {
-    method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Adult-Pin': '2468' }, body: JSON.stringify(body)
+    method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Adult-Pin': '246810' }, body: JSON.stringify(body)
   }).then(async r => ({ status: r.status, data: await r.json() }));
   const noPw = await hostAdult({ name: 'Grown', settings: { level: 'filthy' } });
   ok('hosting an adult game asks the host to make a lobby password', noPw.status === 400 && noPw.data.needsPassword === 'create');
@@ -916,7 +917,7 @@ async function run({ base, root }) {
   ok('the host can see the password to tell guests', adultHostView.lobbyPassword === 'tacos');
 
   // Rambler locks its adult games the same way
-  const rbAdult = await fetch(base + '/api/rambler/rooms', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Adult-Pin': '2468' },
+  const rbAdult = await fetch(base + '/api/rambler/rooms', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Adult-Pin': '246810' },
     body: JSON.stringify({ name: 'H', profile: 'adult', password: 'secret' }) }).then(r => r.json());
   ok('Rambler: an Unfiltered room needs its password to join', (await wl(`/rambler/rooms/${rbAdult.code}/join`, 'POST', { name: 'X' })).status === 401 &&
     (await wl(`/rambler/rooms/${rbAdult.code}/join`, 'POST', { name: 'X', password: 'secret' })).status === 201);
@@ -942,7 +943,7 @@ async function run({ base, root }) {
   const pdDraw = await party('partdeux', `/local/${pdLocal.data.id}/act`, 'POST', { action: 'draw', as: pdTurn }, { 'X-Table-Token': pdLocal.data.token });
   ok('Uh-Oh: the player whose turn it is can draw', pdDraw.status === 200);
   ok('Uh-Oh: a spicy deck needs the adult PIN', (await party('partdeux', '/local', 'POST', { names: ['A', 'B'], level: 'spicy' })).status === 403);
-  const pdRoom = (await party('partdeux', '/rooms', 'POST', { name: 'Host', level: 'filthy', drinking: true, password: 'lime' }, { 'X-Adult-Pin': '2468' })).data;
+  const pdRoom = (await party('partdeux', '/rooms', 'POST', { name: 'Host', level: 'filthy', drinking: true, password: 'lime' }, { 'X-Adult-Pin': '246810' })).data;
   ok('Uh-Oh: an adult room locks with a password', (await party('partdeux', `/rooms/${pdRoom.code}/join`, 'POST', { name: 'Kid' })).status === 401);
   const pdGuest = (await party('partdeux', `/rooms/${pdRoom.code}/join`, 'POST', { name: 'Pal', password: 'lime' })).data;
   ok('…and lets a guest in with it', !!pdGuest.playerId);
@@ -959,7 +960,7 @@ async function run({ base, root }) {
   const ddDone = await ddAct({ action: 'done', as: ddLocal.data.game.turn });
   ok('Dare Devil: doing it scores and passes the turn', ddDone.data.game.players[0].score > 0 && ddDone.data.game.turn !== ddLocal.data.game.turn);
   ok('Dare Devil: filthy needs the PIN to host', (await party('daredevil', '/rooms', 'POST', { name: 'H', level: 'filthy' })).status === 403);
-  const ddRoom = (await party('daredevil', '/rooms', 'POST', { name: 'H', level: 'filthy', password: 'wild' }, { 'X-Adult-Pin': '2468' })).data;
+  const ddRoom = (await party('daredevil', '/rooms', 'POST', { name: 'H', level: 'filthy', password: 'wild' }, { 'X-Adult-Pin': '246810' })).data;
   ok('Dare Devil: an adult room needs its password to join', (await party('daredevil', `/rooms/${ddRoom.code}/join`, 'POST', { name: 'X', password: 'nope' })).status === 401 &&
     (await party('daredevil', `/rooms/${ddRoom.code}/join`, 'POST', { name: 'X', password: 'wild' })).status === 201);
 
@@ -978,12 +979,12 @@ async function run({ base, root }) {
   ok('a score saved as a profile needs no initials', mayaScore.status === 201);
   ok('…and shows the profile name and avatar', (await wl('/scores/dino?board=run')).data.some(r => r.profileName === 'Maya' && r.profileAvatar === 'shiba:2' && r.score === 321));
   ok('a fake token gets no credit', (await wl('/scores/dino', 'POST', { score: 50, board: 'run', profileToken: 'x.y' })).status === 400);
-  const mayaPinned = (await wl(`/profiles/${asked.data.id}/pin`, 'POST', { token: maya.token, pin: '4321' })).data;
+  const mayaPinned = (await wl(`/profiles/${asked.data.id}/pin`, 'POST', { token: maya.token, pin: '432100' })).data;
   ok('Maya can add her own PIN', mayaPinned.profile.hasPin && !!mayaPinned.token);
   ok('…after which the old token stops working', (await wl('/scores/dino', 'POST', { score: 60, board: 'run', profileToken: maya.token })).status === 400);
   ok('picking her profile now needs the PIN', (await wl(`/profiles/${asked.data.id}/use`, 'POST', {})).status === 401 &&
-    (await wl(`/profiles/${asked.data.id}/use`, 'POST', { pin: '9999' })).status === 401);
-  ok('the right PIN works', !!(await wl(`/profiles/${asked.data.id}/use`, 'POST', { pin: '4321' })).data.token);
+    (await wl(`/profiles/${asked.data.id}/use`, 'POST', { pin: '999999' })).status === 401);
+  ok('the right PIN works', !!(await wl(`/profiles/${asked.data.id}/use`, 'POST', { pin: '432100' })).data.token);
   await asAdmin(`/profiles/admin/${asked.data.id}/clear-pin`, 'POST', {});
   ok('the admin can clear a forgotten PIN', !!(await wl(`/profiles/${asked.data.id}/use`, 'POST', {})).data.token);
   ok('an approved profile becomes a Rambler player with the same id', !!(await wl(`/rambler/players/${asked.data.id}`)).data);

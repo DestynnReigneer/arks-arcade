@@ -249,7 +249,7 @@ See **[docs/SETUP.md](docs/SETUP.md)** for every setting in `.env`, a step-by-st
 |---|---|
 | `ADMIN_PASSWORD` | Password for `/admin.html`. Blank keeps admin locked. |
 | `ARCADE_NAME` | "<name> Arcade" on the home page. |
-| `ADULT_PIN` | Optional PIN for adult content (changeable from admin). |
+| `ADULT_PIN` | Optional 6-digit PIN for adult content (changeable from admin). |
 | `TZ` | Your timezone, for daily resets. |
 | `PUBLIC_URL` | The address QR codes use (e.g. `https://arcade.example.com`). |
 | `TRUST_PROXY` | `1` when behind one reverse proxy like Nginx Proxy Manager. |
@@ -260,7 +260,7 @@ See **[docs/SETUP.md](docs/SETUP.md)** for every setting in `.env`, a step-by-st
 
 ## Profiles
 
-Like streaming-service profiles for the family. **Who's playing?** on the home page lets you pick a profile, or play as a guest (type a name, or get "Guest 1", "Guest 2"…). **New profile** asks for one with a name and an avatar (Shibas, blocky, toons, movies, music, space and animals); an admin approves it. A PIN on a profile is optional and can be added, changed or removed later by its owner. Scores, Rambler stats and player names in every game follow the profile, and the leaderboards show each profile's avatar.
+Like streaming-service profiles for the family. **Who's playing?** on the home page lets you pick a profile, or play as a guest (type a name, or get "Guest 1", "Guest 2"…). **New profile** asks for one with a name and an avatar (Shibas, blocky, toons, movies, music, space and animals); an admin approves it. A 6-digit PIN on a profile is optional and can be added, changed or removed later by its owner. Scores, Rambler stats and player names in every game follow the profile, and the leaderboards show each profile's avatar.
 
 ## Admin panel
 

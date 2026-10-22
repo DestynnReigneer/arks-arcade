@@ -128,13 +128,13 @@ const ArcadeProfile = (() => {
 
   function showPin(p) {
     const c = card();
-    c.innerHTML = '<h2></h2><p>Enter your PIN.</p><input type="password" inputmode="numeric" maxlength="8" autocomplete="off"><div class="apf-msg"></div>' +
-      '<div class="apf-row"><button class="apf-btn" data-back>Back</button><button class="apf-btn apf-main" data-ok>Let\'s go</button></div>';
+    c.innerHTML = '<h2></h2><p>Enter your PIN.</p><input type="password" inputmode="numeric" maxlength="6" autocomplete="off"><div class="apf-msg"></div>' +
+      '<div class="apf-row"><button class="apf-btn" data-back>Back</button></div>';
     c.querySelector('h2').textContent = `Hi, ${p.name}!`;
     const input = c.querySelector('input');
-    const go = async () => { try { await choose(p, input.value.trim()); } catch (e) { c.querySelector('.apf-msg').textContent = e.message; } };
-    c.querySelector('[data-ok]').onclick = go;
-    input.onkeydown = e => { if (e.key === 'Enter') go(); };
+    PinPad.attach(input, async pin => {
+      try { await choose(p, pin); } catch (e) { c.querySelector('.apf-msg').textContent = e.message; PinPad.clear(input); }
+    });
     c.querySelector('[data-back]').onclick = showList;
     setTimeout(() => input.focus(), 30);
   }
@@ -193,7 +193,7 @@ const ArcadeProfile = (() => {
     c.innerHTML = '<h2>New profile</h2><p>A grown-up approves new profiles in the admin page. You can play as a guest until then.</p>' +
       '<label>Your name</label><input data-name maxlength="16" placeholder="e.g. Sam">' +
       '<label>Pick an avatar</label><div data-av></div>' +
-      '<label>PIN (optional, 4–8 digits) to keep your profile yours</label><input data-pin type="password" inputmode="numeric" maxlength="8" autocomplete="new-password" placeholder="Leave blank for no PIN">' +
+      '<label>PIN (optional, 6 digits) to keep your profile yours</label><input data-pin type="password" inputmode="numeric" maxlength="6" autocomplete="new-password" placeholder="Leave blank for no PIN">' +
       '<div class="apf-msg"></div><div class="apf-row"><button class="apf-btn" data-back>Back</button><button class="apf-btn apf-main" data-ok>Create profile</button></div>';
     avatarPicker(c.querySelector('[data-av]'), chosen);
     c.querySelector('[data-back]').onclick = showList;
@@ -211,7 +211,7 @@ const ArcadeProfile = (() => {
     const c = card();
     const chosen = { value: me.avatar };
     c.innerHTML = '<h2></h2><label>Avatar</label><div data-av></div><div class="apf-row"><button class="apf-btn" data-save-av>Save avatar</button></div>' +
-      '<label>PIN</label><p style="text-align:left;margin:4px 0"></p><input data-pin type="password" inputmode="numeric" maxlength="8" autocomplete="new-password" placeholder="New PIN (4–8 digits)">' +
+      '<label>PIN</label><p style="text-align:left;margin:4px 0"></p><input data-pin type="password" inputmode="numeric" maxlength="6" autocomplete="new-password" placeholder="New PIN (6 digits)">' +
       '<div class="apf-row"><button class="apf-btn" data-set-pin>Set PIN</button>' + (me.hasPin ? '<button class="apf-btn" data-clear-pin>Remove PIN</button>' : '') + '</div>' +
       '<div class="apf-msg"></div><div class="apf-row"><button class="apf-btn" data-back>Back</button><button class="apf-btn" data-out>Sign out</button></div>';
     c.querySelector('h2').textContent = me.name;
