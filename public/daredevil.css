@@ -64,3 +64,18 @@
 .drink-card { border: 2px solid var(--gold); box-shadow: 0 0 30px rgba(255, 210, 63, 0.35); overflow: visible; }
 .callout-who { font-family: var(--show-font); letter-spacing: 2px; color: var(--gold); margin-top: 6px; }
 .drink-card h2 { font-size: 20px; line-height: 1.35; margin: 10px 0 16px; }
+
+/* ---- timed dares: a reading grace, then the countdown ---- */
+.dc-timer { margin: 0 0 12px; padding: 10px 12px; border-radius: 14px; background: rgba(0, 0, 0, 0.06); text-align: center; }
+.dare-card.bomb .dc-timer { background: rgba(255, 255, 255, 0.08); }
+.dct-label { font-size: 12px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; opacity: 0.75; }
+.dct-num { font-family: var(--show-font); font-weight: 900; font-size: 40px; line-height: 1.1; color: var(--accent); }
+.dct-bar { height: 8px; border-radius: 999px; background: rgba(0, 0, 0, 0.12); overflow: hidden; margin-top: 6px; }
+.dct-fill { height: 100%; width: 100%; background: var(--accent); transform-origin: left; transition: transform 0.5s linear; }
+.dc-timer.reading .dct-num { color: #b88400; }
+.dc-timer.reading .dct-fill { background: #b88400; }
+.dc-timer.final .dct-num { animation: tick 0.5s ease-in-out infinite alternate; }
+.dc-timer.done .dct-num { color: #b88400; }
+@keyframes tick { to { transform: scale(1.15); } }
+.dc-timer button { margin-top: 8px; padding: 6px 14px; font-size: 13px; }
+@media (prefers-reduced-motion: reduce) { .dc-timer.final .dct-num { animation: none; } }

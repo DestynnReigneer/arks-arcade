@@ -21,6 +21,44 @@ const ArcadeKit = (() => {
     toastTimer = setTimeout(() => el.classList.add('hidden'), ms);
   }
 
+  // How long a line of text should stay up so it can be read at a relaxed
+  // pace: a couple of seconds to notice it, plus time for every word.
+  const readMs = text => 2500 + 400 * String(text || '').trim().split(/\s+/).filter(Boolean).length;
+
+  // A joke that pops up over the game: the setup, then the punchline, each up
+  // long enough to read. Tap to move it along. Jokes queue, never stack.
+  let jokeQueue = Promise.resolve();
+  function joke(setup, punch) {
+    jokeQueue = jokeQueue.then(() => new Promise(resolve => {
+      let el = $('jokePop');
+      if (!el) {
+        el = document.createElement('div');
+        el.id = 'jokePop';
+        el.className = 'joke-pop';
+        el.setAttribute('role', 'status');
+        el.innerHTML = '<div class="jp-setup"></div><div class="jp-punch"></div><div class="jp-hint">tap to close</div>';
+        document.body.appendChild(el);
+      }
+      const [setupEl, punchEl] = el.children;
+      setupEl.textContent = setup;
+      punchEl.textContent = '';
+      el.classList.remove('punched');
+      el.classList.add('show');
+      let timer = null;
+      const finish = () => { clearTimeout(timer); el.onclick = null; el.classList.remove('show'); setTimeout(resolve, 400); };
+      const reveal = () => {
+        clearTimeout(timer);
+        punchEl.textContent = punch;
+        el.classList.add('punched');
+        if (window.Blip) { Blip.tone(150, 0.08, { type: 'sine', volume: 0.1 }); Blip.tone(150, 0.08, { type: 'sine', volume: 0.1, delay: 0.14 }); }
+        el.onclick = finish;
+        timer = setTimeout(finish, readMs(setup) / 2 + readMs(punch));
+      };
+      el.onclick = reveal;
+      timer = setTimeout(reveal, readMs(setup));
+    }));
+  }
+
   async function api(path, body, headers = {}) {
     const res = await fetch(path, body === undefined ? { headers } : {
       method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify(body)
@@ -91,5 +129,5 @@ const ArcadeKit = (() => {
     ...entry, profileToken: typeof ArcadeProfile !== 'undefined' ? ArcadeProfile.token() : null
   });
 
-  return { $, toast, api, wireInitials, renderScores, loadScores, saveScore };
+  return { $, toast, readMs, joke, api, wireInitials, renderScores, loadScores, saveScore };
 })();

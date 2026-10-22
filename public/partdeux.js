@@ -6,7 +6,9 @@
 (() => {
   const { $, toast } = ArcadeKit;
   const API = '/api/partdeux';
-  const TAGS = { skip: '⏭ Skip', draw2: '+2 Draw', reverse: '🔁 Reverse', nope: '🙅 Nope', gift: '🎁 Gift', wild: '🌈 Wild', wild4: '💣 +4 Wild' };
+  // The one symbol each card shows; the funny names are for the pile and the log.
+  const SYMBOLS = { skip: '⊘', draw2: '+2', reverse: '⇄', nope: '✋', gift: '🎁', wild: '★', wild4: '+4' };
+  const KIND_NAMES = { skip: 'Skip', draw2: 'Draw Two', reverse: 'Reverse', nope: 'Nope', gift: 'Gift', wild: 'Wild', wild4: 'Wild Draw Four' };
   const COLOR_HEX = { red: '#e5383b', yellow: '#f6c90e', green: '#2fbf71', blue: '#2e86de' };
 
   const S = {
@@ -14,7 +16,8 @@
     pin: (() => { try { return sessionStorage.getItem('pd.pin') || ''; } catch { return ''; } })(),
     adultOk: (() => { try { return sessionStorage.getItem('pd.adultOk') === 'yes'; } catch { return false; } })(),
     table: null,       // { kind: 'local', id, token } or { kind: 'room', code, playerId, token }
-    snap: null, viewer: null, es: null, seenCallout: 0, overShown: false
+    snap: null, viewer: null, es: null, seenCallout: 0, overShown: false,
+    fxSeen: null, jokeSeen: null, lastWomp: 0, lastTop: null
   };
   const pinHeaders = () => (S.pin ? { 'X-Adult-Pin': S.pin } : {});
   const levelInfo = id => (S.config ? S.config.levels.find(l => l.id === id) : null) || { id: 'kids', label: 'Kids', adult: false };
@@ -123,6 +126,7 @@
         S.viewer = null;
         S.seenCallout = 0;
         S.overShown = false;
+        S.fxSeen = S.jokeSeen = null;
         return applySnap(r);
       }
       if (S.mode === 'host') {
@@ -146,6 +150,7 @@
     try { sessionStorage.setItem('pd.room', JSON.stringify(S.table)); } catch { /* unavailable */ }
     S.seenCallout = 0;
     S.overShown = false;
+    S.fxSeen = S.jokeSeen = null;
     connect();
   }
 
@@ -191,6 +196,30 @@
     if (snap.kind === 'room' && snap.game.phase === 'over' && S.overShown && !$('overView').classList.contains('hidden')) { /* keep results */ }
     show('game');
     renderGame();
+    reactTo(snap.game);
+  }
+
+  // Sounds and jokes for what just happened. The first snapshot of a game only
+  // sets the starting point, so joining late doesn't replay old ones.
+  function reactTo(g) {
+    const fx = g.fx;
+    const newest = (g.jokes || []).reduce((n, j) => Math.max(n, j.n), 0);
+    if (S.fxSeen === null || (fx && fx.n < S.fxSeen)) S.fxSeen = fx ? fx.n : 0;
+    if (S.jokeSeen === null || newest < S.jokeSeen) S.jokeSeen = newest;
+    if (fx && fx.n > S.fxSeen) {
+      S.fxSeen = fx.n;
+      if (fx.kind === 'reverse') Blip.backup();
+      else if (['skip', 'draw2', 'wild4', 'penalty', 'caught'].includes(fx.kind)) {
+        // Now and then, never back to back: it's funnier when it's a surprise.
+        const now = Date.now();
+        if ((fx.kind === 'caught' || Math.random() < 0.5) && now - S.lastWomp > 6000) { S.lastWomp = now; Blip.womp(); }
+      } else if (fx.kind === 'nope') Blip.tone([300, 900], 0.18, { type: 'triangle', volume: 0.1 });
+    }
+    for (const j of g.jokes || []) {
+      if (j.n <= S.jokeSeen) continue;
+      S.jokeSeen = j.n;
+      ArcadeKit.joke(j.setup, j.punch);
+    }
   }
 
   function renderLobby(snap) {
@@ -226,21 +255,26 @@
     }
   }
 
-  function cardEl(c, { mini = false } = {}) {
+  function cardEl(c) {
     const el = document.createElement('div');
     el.className = `card ${c.color || 'wild'}`;
-    if (c.kind === 'num') {
-      el.innerHTML = '<span class="corner"></span><span class="big"></span>';
-      el.querySelector('.corner').textContent = c.value;
-      el.querySelector('.big').textContent = c.value;
-    } else {
-      el.innerHTML = '<span class="face"><span class="emo"></span></span><span class="nm"></span><span class="tag"></span>';
-      el.querySelector('.emo').textContent = c.emoji;
-      el.querySelector('.nm').textContent = mini ? '' : c.name;
-      el.querySelector('.tag').textContent = TAGS[c.kind];
-    }
-    el.title = c.kind === 'num' ? `${c.color} ${c.value}` : `${c.name}: ${c.rule}`;
+    const sym = c.kind === 'num' ? String(c.value) : SYMBOLS[c.kind];
+    el.innerHTML = '<span class="corner tl"></span><span class="oval"><span class="sym"></span></span><span class="corner br"></span>';
+    const big = el.querySelector('.sym');
+    big.textContent = sym;
+    if (c.kind === 'draw2' || c.kind === 'wild4') big.classList.add('wide');
+    if (c.kind === 'nope' || c.kind === 'gift') big.classList.add('emoji');
+    for (const corner of el.querySelectorAll('.corner')) corner.textContent = sym;
+    el.title = c.kind === 'num' ? `${c.color} ${c.value}` : `${KIND_NAMES[c.kind]} · ${c.name}: ${c.rule}`;
     return el;
+  }
+
+  // Overlap the hand just enough to fit the row; scroll if it still won't.
+  function fitHand(hand, n) {
+    const w = hand.firstElementChild ? hand.firstElementChild.offsetWidth : 72;
+    const room = hand.clientWidth - 16;
+    const gap = n > 1 ? Math.max(-w * 0.62, Math.min(6, (room - w * n) / (n - 1))) : 0;
+    hand.style.setProperty('--gap', `${gap}px`);
   }
 
   function renderGame() {
@@ -273,9 +307,10 @@
       if (p.id === viewer) continue;
       const li = document.createElement('li');
       li.className = (p.id === g.turn ? 'now' : '') + (p.cards === 1 ? ' one' : '');
-      li.innerHTML = '<span class="nm"></span><span class="n"></span>';
-      li.querySelector('.nm').textContent = p.name;
-      li.querySelector('.n').textContent = p.cards;
+      li.innerHTML = '<span class="av"></span><span class="who"></span><span class="count"></span>';
+      li.querySelector('.av').textContent = (p.name.trim()[0] || '?').toUpperCase();
+      li.querySelector('.who').textContent = p.name;
+      li.querySelector('.count').textContent = p.cards;
       if (p.cards === 1) li.insertAdjacentHTML('beforeend', '<span class="alert">UH-OH!</span>');
       if (g.vulnerable === p.id && viewer && !local) {
         const b = document.createElement('button');
@@ -286,34 +321,52 @@
       opp.appendChild(li);
     }
 
-    // The pile
+    // The two piles, and what's in play
     const discard = $('discard');
     discard.innerHTML = '';
     if (g.top) discard.appendChild(cardEl(g.top));
-    discard.style.setProperty('--now', COLOR_HEX[g.color] || '#fff');
-    $('deckCount').textContent = `${g.deckCount} left`;
+    const topId = g.top && g.top.id;
+    discard.classList.toggle('fresh', S.lastTop !== null && topId !== S.lastTop);
+    S.lastTop = topId;
+    const last = $('lastPlay');
+    last.textContent = '';
+    if (g.top && g.top.kind !== 'num') {
+      const b = document.createElement('b');
+      b.textContent = `${g.top.emoji} ${g.top.name}`;
+      last.append(b, document.createElement('br'), g.top.quip || '');
+    }
+    $('deckCount').textContent = `${g.deckCount} cards`;
     $('dirArrow').classList.toggle('ccw', g.dir < 0);
+    $('colorChip').style.setProperty('--now', COLOR_HEX[g.color] || '#fff');
+    $('colorChip').textContent = g.color || '';
+    $('latest').textContent = g.log.length ? g.log[g.log.length - 1] : '';
     $('pendingBanner').classList.toggle('hidden', !g.pendingDraw);
-    $('pendingBanner').textContent = g.pendingDraw ? `+${g.pendingDraw} waiting for ${nameOf(g.turn)}! Draw, or bounce it with a 🙅 Nope.` : '';
+    $('pendingBanner').textContent = g.pendingDraw ? `+${g.pendingDraw} waiting for ${myTurn ? 'you' : nameOf(g.turn)}! Draw, or bounce it with a ✋ Nope.` : '';
 
-    const line = $('turnLine');
-    line.className = 'turn-line' + (myTurn ? ' mine' : '');
-    line.textContent = g.phase === 'over' ? `${nameOf(g.winner)} wins! 🏆`
-      : myTurn ? (g.drew ? 'You drew a card you can play. Play it, or keep it.' : `Your turn. The color is ${g.color}.`)
-        : `${nameOf(g.turn)}'s turn · color: ${g.color}`;
+    // My side: a big "your turn" when it is
+    const cards = viewer ? myHand() : [];
+    const playable = new Set(local ? playableLocal(g, cards) : g.playable);
+    $('myArea').classList.toggle('myturn', myTurn);
+    $('turnLine').textContent = g.phase === 'over' ? `${nameOf(g.winner)} wins! 🏆`
+      : myTurn ? `✨ YOUR TURN${local ? `, ${nameOf(viewer).toUpperCase()}` : ''} ✨`
+        : `Waiting for ${nameOf(g.turn)}…`;
+    $('turnHint').textContent = g.phase === 'over' ? ''
+      : !myTurn ? `${cards.length} card${cards.length === 1 ? '' : 's'} in your hand`
+        : g.pendingDraw ? `Take the +${g.pendingDraw}, or play a ✋ Nope to bounce it.`
+          : g.drew ? 'You drew one that fits. Play it, or keep it.'
+            : playable.size ? `Play a lit-up card: match ${g.color} or ${g.top.kind === 'num' ? `the ${g.top.value}` : 'the symbol'}.`
+              : 'Nothing fits. Draw a card.';
 
-    // My hand
     const hand = $('hand');
     hand.innerHTML = '';
     hand.classList.toggle('myturn', myTurn);
-    const cards = viewer ? myHand() : [];
-    const playable = new Set(local ? playableLocal(g, cards) : g.playable);
     for (const c of cards) {
       const el = cardEl(c);
       if (myTurn && playable.has(c.id)) el.classList.add('ok');
       el.onclick = () => tapCard(c, myTurn && playable.has(c.id));
       hand.appendChild(el);
     }
+    fitHand(hand, cards.length);
 
     const handSize = cards.length;
     $('uhohBtn').classList.toggle('hidden', !(myTurn && handSize === 2 && g.calledUhOh !== viewer));
@@ -321,6 +374,7 @@
     $('drawBtn').disabled = !myTurn;
     $('drawBtn').textContent = g.pendingDraw && myTurn ? `Draw ${g.pendingDraw}` : 'Draw a card';
     $('drawPile').disabled = !myTurn || !!g.drew;
+    $('drawPile').classList.toggle('nudge', myTurn && !g.drew && !playable.size);
     $('keepBtn').classList.toggle('hidden', !(myTurn && g.drew));
 
     $('log').innerHTML = '';
@@ -367,7 +421,7 @@
     const box = $('sheetCard');
     box.innerHTML = '';
     box.appendChild(cardEl(c));
-    $('sheetName').textContent = c.kind === 'num' ? `${c.color} ${c.value}` : c.name;
+    $('sheetName').textContent = c.kind === 'num' ? `${c.color} ${c.value}` : `${c.emoji} ${c.name}`;
     $('sheetQuip').textContent = c.quip || '';
     $('sheetRule').textContent = c.rule;
     const g = G();
@@ -399,7 +453,7 @@
       const cards = $('giftCards');
       cards.innerHTML = '';
       for (const c of others) {
-        const el = cardEl(c, { mini: true });
+        const el = cardEl(c);
         el.onclick = () => { chosen = c.id; for (const x of cards.children) x.classList.remove('pick'); el.classList.add('pick'); };
         cards.appendChild(el);
       }
@@ -455,6 +509,7 @@
     $('overView').classList.add('hidden');
     S.overShown = false;
     S.seenCallout = 0;
+    S.fxSeen = S.jokeSeen = null;
     try {
       if (S.table.kind === 'local') {
         S.viewer = null;
@@ -482,14 +537,14 @@
   const help = Tutorial.create('partdeux', [
     { emoji: '🎯', title: 'The goal', html: '<p>Be the first to get rid of <b>all your cards</b>.</p><p>Everyone starts with 7. Play one card on your turn, if you can.</p>' },
     { emoji: '🃏', title: 'Matching', html: '<p>Play a card that matches the top of the pile by <b>color</b> or by <b>number</b> (or the same action).</p><p>Can\'t play? <b>Draw a card.</b> If it fits, you can play it right away; or keep it and end your turn.</p><div class="tut-tip">Tap a card that can be played to play it. Tap any other card to see what it does.</div>' },
-    { emoji: '😂', title: 'The action cards', html: `<p>Every deck gives them different funny names, but the <b>tag at the bottom</b> always says what they do:</p><table>
-        <tr><td>⏭ Skip</td><td>Next player misses a turn.</td></tr>
-        <tr><td>+2 Draw</td><td>Next player draws 2 and misses a turn.</td></tr>
-        <tr><td>🔁 Reverse</td><td>Turn order flips.</td></tr>
-        <tr><td>🙅 Nope</td><td>Bounce a +2 or +4 on to the next player.</td></tr>
+    { emoji: '😂', title: 'The action cards', html: `<p>Every deck gives them different funny names, but the <b>symbol in the middle</b> always says what they do. Tap a card to see its name.</p><table>
+        <tr><td>⊘ Skip</td><td>Next player misses a turn.</td></tr>
+        <tr><td>+2 Draw Two</td><td>Next player draws 2 and misses a turn.</td></tr>
+        <tr><td>⇄ Reverse</td><td>Turn order flips. Beep, beep!</td></tr>
+        <tr><td>✋ Nope</td><td>Bounce a +2 or +4 on to the next player.</td></tr>
         <tr><td>🎁 Gift</td><td>Give one of your cards away. One closer to winning!</td></tr>
-        <tr><td>🌈 Wild</td><td>Play on anything and pick the color.</td></tr>
-        <tr><td>💣 +4 Wild</td><td>Pick the color; the next player draws 4.</td></tr>
+        <tr><td>★ Wild</td><td>Play on anything and pick the color.</td></tr>
+        <tr><td>+4 Wild Draw Four</td><td>Pick the color; the next player draws 4.</td></tr>
       </table>` },
     { emoji: '🚨', title: 'Say "Uh-Oh!"', html: '<p>When you\'re about to play your <b>second-to-last card</b>, tap <b>Say "Uh-Oh!"</b> first.</p><p>Forget, and anyone can <b>catch</b> you before the next turn: you draw 2.</p>' },
     { emoji: '🍺', title: 'Grown-up decks', html: '<p>Cheeky, Spicy and Filthy decks have naughtier card names, behind the adult PIN.</p><p><b>🍺 Drinking</b>: drink a sip for every card you\'re forced to draw, drink when you\'re caught, and when someone wins, everyone else drinks.</p><div class="tut-tip">Tap <b>?</b> at the top any time to see this again.</div>' }
@@ -515,6 +570,7 @@
   $('menuBtn').onclick = leave;
   $('helpBtn').onclick = () => help.open();
   Blip.muteButton($('muteBtn'));
+  addEventListener('resize', () => { if (G()) fitHand($('hand'), $('hand').children.length); });
 
   // ---- boot ---------------------------------------------------------------------------------------
   (async () => {

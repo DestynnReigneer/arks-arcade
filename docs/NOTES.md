@@ -5,27 +5,51 @@ a plan changes, so the next session can pick up from here.
 
 ## Where things stand
 
-- `main` has everything through PR #10 (`feat/difficulty-and-polish`) plus
-  `feat/stats-and-games` (Admin Stats; Snake, Brick Breaker, Block Drop, Tower
-  Defense; soft background music with a 🎵 toggle, Block Drop's being the
-  Korobeiniki folk tune). The music has been listened to and approved.
+- `main` has everything through PR #12:
+  - #11: Admin Stats; Snake, Brick Breaker, Block Drop, Tower Defense; soft
+    background music with a 🎵 toggle (Block Drop plays the Korobeiniki folk
+    tune). The music has been listened to and approved.
+  - #12: admin sign-in by httpOnly session cookie (sign in again once after
+    updating), strict `npm ci` in the image, the app can only write to
+    `/app/data`, TZ defaults to America/Los_Angeles, CI runs on PRs only.
+- **`feat/party-polish`** is pushed, **waiting for the owner to play it**
+  before its PR:
+  - Uh-Oh: Part Deux: mobile-app table (players across the top, piles apart,
+    glowing "YOUR TURN" hand area), cards with one big symbol, new card names
+    that fit what each card does, truck beep on Reverse, an occasional
+    "womp womp", and server-picked jokes at the table's spice level.
+  - Jokes everywhere stay up by reading time (`ArcadeKit.readMs`, `ArcadeKit.joke`).
+  - Dare Devil: timed cards get a 5-second reading grace, then a countdown
+    with `Blip.think()` (our own tune) and a buzzer.
 
 ## Next up
 
-1. **Repo cleanup from an architecture review**, on its own branch and PR:
-   compose and `.env.example` defaults, Dockerfile build strictness and file
-   ownership, admin sign-in storage, and CI triggers.
-2. **Party-game polish**, on its own branch:
-   - Uh-Oh: Part Deux: a cleaner, Uno-like table (clearer "your turn", draw
-     pile apart from the played pile, less cluttered cards). Rename or explain
-     the Water Balloon Bomb card. Occasional "womp womp" when a card hits a
-     player, a truck-reversing beep for Reverse, and comedy pop-ups at every
-     spice level.
-   - Spin & Solve and Uh-Oh: jokes stay on screen long enough to read.
-   - Dare Devil: timed dares ("do it in 10 seconds") get a 4-5 second reading
-     grace, then a visible countdown.
-   - An original "thinking" countdown tune (not the Jeopardy one) that games
-     can use.
+1. **The owner plays `feat/party-polish`**, then fix what they find and open
+   the PR (merge when CI is green).
+2. **Get Claude in Chrome connected** so pages can be checked in a real
+   browser: everything on the machine is set up (extension installed, native
+   host registered for the native `claude.exe`); it needs a full Chrome
+   restart and the extension signed in to the same account.
+3. Ask which other games should use the countdown tune (Know-It-All's answer
+   clock, Spin & Solve's turn clock).
+
+## Parked until closer to finished
+
+- **Passkey sign-in for admin** (fingerprint, face or phone instead of typing
+  the password). The `.env` password stays as the recovery; no email
+  recovery, by design. Passkeys are tied to the site's name, so one made on
+  `localhost` won't work on the homelab's name: register a new one there.
+  They need `localhost` or HTTPS. Plan: `@simplewebauthn/server` (rather than
+  hand-rolling the crypto), a credentials table, register/sign-in endpoints
+  that issue the same session cookie, and a "Manage passkeys" list in admin.
+- **Shared family accounts ("ARKS ID")**: planned, owner-approved. The
+  contract is in the private `arks-id` repo (`docs/SPEC.md`); see CLAUDE.md
+  for how to use it. The arcade integrates last (after ARKS ID, the Hub's
+  sign-in and passkeys). **Built against ARKS ID contract: none yet.**
+  - **Open question for the owner:** ARKS ID PINs are 6 digits, checked the
+    moment the 6th digit goes in (no Enter key), and the owner wants the
+    arcade's PIN pads to match. The arcade's adult PIN is 4–8 digits today;
+    should it become exactly 6?
 
 ## Deployment
 
@@ -35,7 +59,8 @@ tracked in the private `arks-family-hub` repo (`docs/SPEC.md` and
 from there:
 
 - The arcade's homelab port **can't be 3000**: another service already uses it
-  on that host. Map a different host port in the compose file.
+  on that host. Set `HOST_PORT` in the homelab `.env` (the number is in the
+  Hub repo).
 - The Family Hub will show an ARKS Arcade tile with a live status chip read
   from `/healthz`. Keep that endpoint working and cheap.
 
