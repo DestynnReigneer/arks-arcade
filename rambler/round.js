@@ -196,9 +196,15 @@ function scoreSubmissions({ board, size, cols, rows, profile, difficulty, minLen
   });
 
   const all = solve(board, spec, profile, { min: floor });
+  // Each found word carries its path too, so the results board can show
+  // where it was, the same as a missed word.
   const claimed = new Set();
   for (const r of scored.results) {
-    for (const w of r.words) if (w.valid) claimed.add(w.word);
+    for (const w of r.words) {
+      if (!w.valid) continue;
+      claimed.add(w.word);
+      w.path = all.get(w.word) || findPath(board, spec, w.word);
+    }
   }
 
   const missed = [];
@@ -206,7 +212,7 @@ function scoreSubmissions({ board, size, cols, rows, profile, difficulty, minLen
     if (claimed.has(word)) continue;
     if (profile === 'kids' && !dictionary.isCommon(word)) continue;
     const themed = dictionary.isThemeWord(word);
-    missed.push({ word, points: wordPoints(word, spec, floor, { themed }), themed });
+    missed.push({ word, points: wordPoints(word, spec, floor, { themed }), themed, path: all.get(word) });
   }
   // Theme words first in the reveal: they are the point of the season.
   missed.sort((a, b) => (b.themed ? 1 : 0) - (a.themed ? 1 : 0)

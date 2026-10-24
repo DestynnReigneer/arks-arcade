@@ -122,6 +122,7 @@ function chips(host, items) {
     const c = document.createElement('span');
     c.className = 'chip' + (it.themed ? ' themed' : '');
     c.textContent = it.word;
+    if (it.path) c.dataset.word = it.word;
     if (it.points) {
       const sup = document.createElement('sup');
       sup.textContent = it.points;
@@ -1536,6 +1537,7 @@ function showResults(results) {
       line.innerHTML = `<span class="w"></span><span class="p${w.points ? '' : ' zero'}"></span>`;
       line.querySelector('.w').textContent = w.word;
       line.querySelector('.p').textContent = w.points ? `+${w.points}` : label;
+      if (w.path) line.dataset.word = w.word;
       detail.appendChild(line);
     }
     d.appendChild(detail);
@@ -1545,14 +1547,15 @@ function showResults(results) {
   const canceled = results.canceled || [];
   $('canceledPanel').classList.toggle('hidden', canceled.length === 0);
   if (canceled.length) {
-    chips($('canceledChips'), canceled.map(w => ({ word: w, points: 0 })));
+    chips($('canceledChips'), canceled.map(w => ({ word: w, points: 0, path: wordPaths(results).get(w) })));
   }
 
   $('missedPanel').classList.toggle('hidden', results.missed.length === 0);
   $('missedSub').textContent = results.profile === 'kids'
     ? `${results.missedTotal} everyday words were sitting there. The best was ${results.bestPossible ? results.bestPossible.word : '—'}.`
     : `${results.missedTotal} words went unfound, out of ${results.totalWords} on the board.`;
-  chips($('missedChips'), results.missed.map(m => ({ word: m.word, points: m.points, themed: m.themed })));
+  chips($('missedChips'), results.missed.map(m => ({ word: m.word, points: m.points, themed: m.themed, path: m.path })));
+  showResultBoard(results);
 
   showDailyResult(S.mode === 'daily' ? results.daily : null);
 
@@ -1573,6 +1576,45 @@ function showResults(results) {
       : 'Play again';
 
   screen('results');
+}
+
+// Every word on the results screen that has a path, found or missed.
+function wordPaths(results) {
+  const paths = new Map();
+  for (const r of results.results) for (const w of r.words) if (w.path) paths.set(w.word, w.path);
+  for (const m of results.missed || []) if (m.path) paths.set(m.word, m.path);
+  return paths;
+}
+
+// The round's board stays on the results screen. Tapping a word lights up
+// the tiles that spell it, numbered in order, so a missed word shows how it
+// could have been made.
+function showResultBoard(results) {
+  const tiles = results.board;
+  const cols = results.cols || results.size;
+  const rows = results.rows || results.size;
+  $('resultBoardPanel').classList.toggle('hidden', !tiles || !tiles.length);
+  if (!tiles || !tiles.length) return;
+  renderBoard($('resultBoard'), tiles, cols, rows);
+  $('resultBoardHint').textContent = 'Tap any word below to see where it was on the board.';
+}
+
+function pickResultWord(word) {
+  const path = S.results && wordPaths(S.results).get(word);
+  if (!path) return;
+  const dice = $('resultBoard').children;
+  for (const d of dice) { d.className = 'die'; delete d.dataset.step; }
+  path.forEach((cell, n) => {
+    if (!dice[cell]) return;
+    dice[cell].className = 'die on';
+    dice[cell].dataset.step = String(n + 1);
+  });
+  for (const el of $('resultsScreen').querySelectorAll('.picked')) el.classList.remove('picked');
+  for (const el of $('resultsScreen').querySelectorAll('[data-word]')) {
+    if (el.dataset.word === word) el.classList.add('picked');
+  }
+  $('resultBoardHint').textContent = `${word}: follow the numbers from 1.`;
+  $('resultBoardPanel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 function scoreTarget() {
@@ -2089,6 +2131,10 @@ function bind() {
   $('saveScoreBtn').onclick = openInitials;
   $('confirmInitialsBtn').onclick = saveInitials;
   $('closeInitialsBtn').onclick = () => $('initialsOverlay').classList.add('hidden');
+  $('resultsScreen').addEventListener('click', e => {
+    const el = e.target.closest('[data-word]');
+    if (el) pickResultWord(el.dataset.word);
+  });
 
   $('leaderboardBtn').onclick = openLeaderboard;
   $('closeLeaderboardBtn').onclick = () => $('leaderboardOverlay').classList.add('hidden');
