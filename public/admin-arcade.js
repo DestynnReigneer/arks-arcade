@@ -207,6 +207,35 @@
     } catch (e) { say($('pinMsg'), e.message, false); }
   }
 
+  // ---- send a clip ----------------------------------------------------------
+
+  async function loadClips() {
+    try {
+      const [media, people] = await Promise.all([fetch('/api/custom').then(r => r.json()), fetch('/api/profiles').then(r => r.json())]);
+      const pick = $('clipPick');
+      const to = $('clipTo');
+      pick.innerHTML = '';
+      to.innerHTML = '';
+      for (const c of media.clips) pick.add(new Option(`${c.name} (${c.type})`, c.name));
+      to.add(new Option('Everyone', 'everyone'));
+      for (const p of people) to.add(new Option(p.name, p.id));
+      const none = !media.clips.length;
+      $('clipSendBtn').disabled = none;
+      if (none) pick.add(new Option('No clips on the server yet', ''));
+    } catch (e) { say($('clipMsg'), e.message, false); }
+  }
+  async function sendClip() {
+    try {
+      const r = await fetch('/api/custom/admin/send', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clip: $('clipPick').value, to: $('clipTo').value })
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'That did not work.');
+      say($('clipMsg'), d.sent === 1 ? 'Sent. It plays the next time their screen is open.' : `Sent to ${d.sent} people. It plays the next time each of their screens is open.`);
+    } catch (e) { say($('clipMsg'), e.message, false); }
+  }
+
   // ---- home page games -------------------------------------------------------
 
   const GAME_EMOJI = { wordless: '🔤', rambler: '🔠', spinsolve: '🎡', chess: '♞', dino: '🦖', trivia: '🧠', partdeux: '🚨', daredevil: '😈', snake: '🐍', bricks: '🧱', blocks: '🟪', towers: '🏰' };
@@ -278,12 +307,14 @@
     loadFeedback();
     loadPosts();
     loadHomeGames();
+    loadClips();
     loadPin();
   }
 
   document.addEventListener('DOMContentLoaded', () => {
     renderQuickPosts();
     $('postBtn').onclick = postAnnouncement;
+    $('clipSendBtn').onclick = sendClip;
     $('savePinBtn').onclick = () => {
       const pin = $('pinInput').value.trim();
       if (!pin) return say($('pinMsg'), 'Type a PIN first, or use Remove PIN.', false);

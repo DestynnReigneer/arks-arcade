@@ -1027,6 +1027,25 @@ async function run({ base, root }) {
   ok('without a profile, the most-played games overall come first', everyoneOrder.slice(0, 3).join() === 'snake,chess,dino', everyoneOrder.join());
   const mayaOrder = (await statsPost('/game-order', { token: mayaTok })).data.order;
   ok('a profile sees its own most-played game first, then the most-played overall', mayaOrder.slice(0, 3).join() === 'chess,snake,dino', mayaOrder.join());
+  // ---- the owner's own logos and clips ------------------------------------------
+  const custom = (await wl('/custom')).data;
+  ok('clips in media/clips are listed, with their type', custom.clips.length === 1 && custom.clips[0].name === 'rickroll' && custom.clips[0].type === 'image', JSON.stringify(custom.clips));
+  ok('files with odd names or the wrong type are skipped', !custom.clips.some(c => /bad|readme/.test(c.name)));
+  ok('sprites are listed by name', custom.sprites.length === 1 && custom.sprites[0].name === 'dance-hero');
+  ok('a brand file that exists is offered, a missing one is not', custom.brand.avatar === '/custom/brand/avatar.svg' && custom.brand.wide === null);
+  ok('surprises can be turned off', custom.surprise === 0);
+  const clipFile = await fetch(base + custom.clips[0].url);
+  ok('a clip is served, and never allowed to run scripts', clipFile.status === 200 && /sandbox/.test(clipFile.headers.get('content-security-policy')));
+  ok('only the three logo names are served from brand/', (await fetch(base + '/custom/brand/notes.txt')).status === 404);
+  ok('nothing outside the folders can be reached', (await fetch(base + '/custom/media/clips/%2e%2e%2f%2e%2e%2fserver.js')).status === 404);
+  ok('sending a clip needs the admin password', (await wl('/custom/admin/send', 'POST', { clip: 'rickroll', to: 'everyone' })).status === 401);
+  ok('an unknown clip is refused', (await asAdmin('/custom/admin/send', 'POST', { clip: 'nope', to: 'everyone' })).status === 400);
+  const mayaId = mayaTok.split('.')[0];
+  const sentClip = await asAdmin('/custom/admin/send', 'POST', { clip: 'rickroll', to: mayaId });
+  ok('the admin can send a clip to one person', sentClip.status === 200 && sentClip.data.sent === 1, JSON.stringify(sentClip.data));
+  ok('a guest gets nothing', (await wl('/custom/inbox', 'POST', {})).data.clip === null);
+  ok('it waits for that person', (await wl('/custom/inbox', 'POST', { token: mayaTok })).data.clip.name === 'rickroll');
+  ok('…and plays only once', (await wl('/custom/inbox', 'POST', { token: mayaTok })).data.clip === null);
   ok('every game is still in the list once', mayaOrder.length === everyoneOrder.length && new Set(mayaOrder).size === mayaOrder.length);
 
   const err1 = await statsPost('/error', { game: 'spinsolve', message: "Cannot read properties of undefined (reading 'x') at 12", location: '/spinsolve.js:412:17', stack: 'TypeError: boom\n  at spin (/spinsolve.js:412:17)', name: 'Maya' }, phoneUA);

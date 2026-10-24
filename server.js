@@ -120,6 +120,11 @@ app.use('/api/profiles', require('./arcade/profiles')({ requireAdmin, notify: no
 app.use('/api/scores', require('./arcade/scores').router);
 app.use('/api/stats', stats.routes({ requireAdmin }));
 
+// ---- the owner's own logos, characters, sounds and clips (optional) ----
+const customMedia = require('./arcade/custom-media');
+app.use('/api/custom', customMedia.routes({ requireAdmin }));
+app.use('/custom', customMedia.staticFiles());
+
 // ---- Comm Center (home page message board) ----
 app.use('/api/comm/admin', comm.adminRouter(requireAdmin));
 app.use('/api/comm', comm.router);
