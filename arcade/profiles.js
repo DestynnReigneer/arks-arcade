@@ -212,3 +212,4 @@ module.exports = function profileRoutes({ requireAdmin, notify }) {
 };
 
 module.exports.verify = verify;
+module.exports.approvedIds = () => db.db.prepare("SELECT id FROM arcade_profiles WHERE status = 'approved'").all().map(r => r.id);

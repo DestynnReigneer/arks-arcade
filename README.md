@@ -256,6 +256,7 @@ See **[docs/SETUP.md](docs/SETUP.md)** for every setting in `.env`, a step-by-st
 | `TRIVIA_ONLINE` | `off` to skip downloading Open Trivia DB questions. |
 | `DISCORD_WEBHOOK_URL` | Optional Discord notifications for requests. |
 | `HOST_PORT` | Docker only: the host port to publish (default `3000`). |
+| `CLIP_SURPRISE` | One page load in this many plays a random clip from your own `media/clips` folder (default 200, `0` for off). See [docs/CUSTOM-MEDIA.md](docs/CUSTOM-MEDIA.md). |
 | `PUID` / `PGID` | Docker only: who owns `./data` and runs the arcade (default `1000`; see `id -u` / `id -g`). |
 | `PORT` | Defaults to `3000`. |
 
