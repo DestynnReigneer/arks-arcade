@@ -93,6 +93,5 @@ this repo is public. Two things to know:
   version (22.23.4), Dependabot checks it weekly and skips new major
   versions, and the image rebuilds on the 1st of each month, so #2 is
   handled by the Node 26 move instead.
-- Wordless isn't on the ARKS color spec yet (see `docs/DESIGN.md`).
 - `DISCORD_WEBHOOK_URL` is unset locally, so theme/profile requests don't
   notify. That's expected in dev.
