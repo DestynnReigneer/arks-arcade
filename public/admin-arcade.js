@@ -84,10 +84,12 @@
     card.innerHTML = `
       <div class="fb-head"><span class="fb-kind"></span><span class="fb-from"></span><span class="fb-when"></span></div>
       <div class="fb-msg"></div>
+      <div class="fb-extra"></div>
       <div class="fb-controls">
         <select></select>
         <input type="text" maxlength="500" placeholder="Note to self (optional)">
         <button data-act="save">Save</button>
+        <button data-act="copy">📋 Copy for chat</button>
         <button data-act="delete" class="danger">Delete</button>
       </div>`;
     card.querySelector('.fb-kind').textContent = KIND_LABELS[item.kind] || item.kind;
@@ -95,6 +97,39 @@
       `from ${item.from || 'anonymous'}${item.game ? ' · ' + GAME_LABELS[item.game] : ''}`;
     card.querySelector('.fb-when').textContent = when(item.createdAt);
     card.querySelector('.fb-msg').textContent = item.message;
+    // From the feedback card: where it was sent from, the device, and maybe
+    // a screenshot (tap it to open it full size).
+    const extra = card.querySelector('.fb-extra');
+    const d = item.details || {};
+    const facts = [item.page && `Page: ${item.page}`, d.device && `Device: ${d.device}`, d.screen && `Screen: ${d.screen}`, d.version && `Arcade ${d.version}`].filter(Boolean);
+    if (facts.length) {
+      const line = document.createElement('div');
+      line.className = 'fb-facts';
+      line.textContent = facts.join(' · ');
+      extra.appendChild(line);
+    }
+    if (item.hasPicture) {
+      const a = document.createElement('a');
+      a.href = `${API}/feedback/${item.id}/picture`;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      const img = document.createElement('img');
+      img.className = 'fb-pic';
+      img.alt = 'Screenshot sent with this message';
+      img.loading = 'lazy';
+      img.src = a.href;
+      a.appendChild(img);
+      extra.appendChild(a);
+    }
+    card.querySelector('[data-act="copy"]').onclick = async e => {
+      const head = `Arcade feedback #${item.id} (${KIND_LABELS[item.kind] || item.kind}) from ${item.from || 'a guest'}` +
+        `${item.game ? ', about ' + GAME_LABELS[item.game] : ''}, ${item.createdAt}`;
+      const tail = [...facts, ...(item.hasPicture ? ['A screenshot is attached on the admin page.'] : [])];
+      const text = [head, '', item.message, ...(tail.length ? ['', ...tail] : [])].join('
+');
+      try { await navigator.clipboard.writeText(text); e.target.textContent = '✓ Copied'; } catch { prompt('Copy this:', text); }
+      setTimeout(() => { e.target.textContent = '📋 Copy for chat'; }, 1500);
+    };
 
     const select = card.querySelector('select');
     for (const s of statuses) {
