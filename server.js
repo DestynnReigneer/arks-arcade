@@ -28,12 +28,18 @@ const security = require('./arcade/security');
 app.set('trust proxy', security.trustProxySetting());
 app.disable('x-powered-by');
 app.use(security.headers);
-app.use(express.json({ limit: '200kb' }));
+// Feedback can carry a screenshot, so its route reads its own body with a
+// bigger limit (arcade/comm.js). Everything else stays small.
+const smallJson = express.json({ limit: '200kb' });
+app.use((req, res, next) => (req.method === 'POST' && req.path === '/api/comm/feedback' ? next() : smallJson(req, res, next)));
 // Stats and the error log: see every server error answer on its way out.
 const stats = require('./arcade/stats');
 stats.watchProcess();
 app.use('/api', stats.watchResponses);
 app.use(express.static(path.join(__dirname, 'public')));
+// The one outside library the browser loads: html-to-image, for "Snap this
+// page" on the feedback card. Served from the app itself, never a CDN.
+app.use('/vendor/html-to-image', express.static(path.join(__dirname, 'node_modules', 'html-to-image', 'dist')));
 
 // Rambler lives behind its own router; everything it needs is under
 // rambler/ so this file stays about the arcade as a whole.
@@ -77,6 +83,16 @@ async function notifyDiscord(request, game = 'Wordless') {
         content: `🎮 **New ${game} theme request**\n**Topic:** ${request.topic}${request.requestedBy ? `\n**From:** ${request.requestedBy}` : ''}${request.note ? `\n**Note:** ${request.note}` : ''}`
       })
     });
+  } catch (e) {
+    console.error('Discord webhook failed:', e.message);
+  }
+}
+
+// A plain message to Discord, for anything that isn't a theme request.
+async function notifyText(content) {
+  if (!DISCORD_WEBHOOK_URL) return;
+  try {
+    await fetch(DISCORD_WEBHOOK_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content }) });
   } catch (e) {
     console.error('Discord webhook failed:', e.message);
   }
@@ -126,6 +142,7 @@ app.use('/api/custom', customMedia.routes({ requireAdmin }));
 app.use('/custom', customMedia.staticFiles());
 
 // ---- Comm Center (home page message board) ----
+comm.setFeedbackNotify(notifyText);
 app.use('/api/comm/admin', comm.adminRouter(requireAdmin));
 app.use('/api/comm', comm.router);
 

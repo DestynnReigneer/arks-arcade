@@ -181,6 +181,7 @@ Both card games share their one-phone and room plumbing (`arcade/party-tables.js
 - Ships as a single Docker image with a SQLite file as its only state
 - The home page's Join a game board lists every hosted room in any game, with scan-to-join QR codes in each game's lobby and walkthrough. Adult rooms are listed too but locked: hosting one needs the adult PIN and a lobby password the host makes up; guests only need that password
 - Spin & Solve, Chess and Dino Dash share one high-score table (`/api/scores/:game`); new #1s post to the Comm Center
+- Feedback from anywhere: a tiny red bug sits in the bottom-right corner of every page. Tap it, then tap "Found a bug? Tell us." to open a card where you write what happened, pick the kind and the game, and add a screenshot (snap the page, or upload one) that you can draw on with a pen, a box or an arrow. The home page's Send feedback button and the `/feedback` cheat code open the same card. Messages land in the admin's Comm Center inbox, and ping Discord when `DISCORD_WEBHOOK_URL` is set
 - Everything is American English, word lists included: `words/british.txt` is refused everywhere
 
 ## Running locally
@@ -254,7 +255,7 @@ See **[docs/SETUP.md](docs/SETUP.md)** for every setting in `.env`, a step-by-st
 | `PUBLIC_URL` | The address QR codes use (e.g. `https://arcade.example.com`). |
 | `TRUST_PROXY` | `1` when behind one reverse proxy like Nginx Proxy Manager. |
 | `TRIVIA_ONLINE` | `off` to skip downloading Open Trivia DB questions. |
-| `DISCORD_WEBHOOK_URL` | Optional Discord notifications for requests. |
+| `DISCORD_WEBHOOK_URL` | Optional Discord notifications for theme requests and new feedback. |
 | `HOST_PORT` | Docker only: the host port to publish (default `3000`). |
 | `CLIP_SURPRISE` | One page load in this many plays a random clip from your own `media/clips` folder (default 200, `0` for off). See [docs/CUSTOM-MEDIA.md](docs/CUSTOM-MEDIA.md). |
 | `PUID` / `PGID` | Docker only: who owns `./data` and runs the arcade (default `1000`; see `id -u` / `id -g`). |
@@ -277,7 +278,7 @@ Visit `/admin.html` and enter your `ADMIN_PASSWORD`.
 - Profiles: approve or turn down "New profile" requests, rename, clear a forgotten PIN, unlock a profile locked by wrong PINs, or remove a profile (their old scores stay on the boards)
 - Set, change or remove the adult PIN, and unblock devices that tried too many wrong PINs
 - Home page games: reorder them, hide them, or turn one off while it's being worked on (it stays on the home page, faded, under a "Pardon our dust" sign)
-- Comm Center, high-score boards, Spin & Solve and Know-It-All packs and requests
+- Comm Center: the feedback inbox (with screenshots, the page and device each message came from, and a Copy for chat button), announcements, high-score boards, Spin & Solve and Know-It-All packs and requests
 
 **Rambler:**
 - See the current season, how long is left, and rename it ("Spooky Season")
