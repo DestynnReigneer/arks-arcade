@@ -15,7 +15,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          # node:sqlite needs 22.5+. The Dockerfile pins node:22-alpine, so
+          # node:sqlite needs 22.5+. The Dockerfile pins a node:22.x-alpine, so
           # test on the same major to avoid passing here and failing there.
           node-version: "22"
           cache: npm

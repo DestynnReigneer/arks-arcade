@@ -22,4 +22,11 @@ updates:
   - package-ecosystem: docker
     directory: "/"
     schedule:
-      interval: monthly
+      # Weekly, so a Node security release reaches a PR within days.
+      interval: weekly
+    ignore:
+      # The arcade stays on Node 22 (long-term support) like the other ARKS
+      # apps; moving to a new line is its own PR. Patch and minor updates of
+      # the pinned node:22.x-alpine still come through.
+      - dependency-name: "node"
+        update-types: ["version-update:semver-major"]
