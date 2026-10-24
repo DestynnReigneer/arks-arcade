@@ -144,7 +144,7 @@ app.get('/api/arcade-info', (req, res) => {
 const adultUnlocked = req => req.query.adult === '1' && adultPin.matches(req.get('X-Adult-Pin'));
 
 app.post('/api/adult-check', adultPin.tryLimiter(), (req, res) => {
-  res.json({ ok: adultPin.matches((req.body || {}).pin) });
+  res.json(adultPin.check(req, res));
 });
 
 // ---- Themes (read: public, write: admin-only) ----
