@@ -4,6 +4,11 @@ on:
   push:
     branches: ["main"]
     tags: ["v*.*.*"]
+  # Rebuild once a month even when nothing was merged, so the image picks up
+  # fixes to Alpine's own packages (and to the same Node tag, which Docker
+  # republishes). The tests still have to pass before anything is published.
+  schedule:
+    - cron: "17 9 1 * *"
 
 env:
   REGISTRY: ghcr.io
