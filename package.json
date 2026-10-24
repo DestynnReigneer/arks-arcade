@@ -2,7 +2,7 @@
   "name": "arks-arcade",
   "license": "MIT",
   "version": "1.0.0",
-  "description": "A self-hosted arcade of word games: Wordless (themed Wordle-style) and Rambler (dice-and-grid word hunt) on one Node + SQLite container.",
+  "description": "A self-hosted family and party game arcade: word games, card games, trivia, chess and more, on one Node.js + Express + SQLite container.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
