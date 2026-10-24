@@ -1417,7 +1417,16 @@ function applyRoomState(snap) {
     return;
   }
 
+  // The room keeps sending updates while everyone sits on the results (people
+  // leaving, reconnecting). Show each round's results once, or the initials
+  // box pops back up and wipes what was typed, even after it was saved.
   if (snap.state === 'results' && snap.results) {
+    const roundKey = `${snap.boardId}:${snap.startedAt}`;
+    if (S.shownRoundKey === roundKey) {
+      $('againBtn').textContent = snap.youAreHost ? 'New round' : 'Back to lobby';
+      return;
+    }
+    S.shownRoundKey = roundKey;
     stopClock();
     showResults(snap.results);
   }
