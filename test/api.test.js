@@ -673,6 +673,25 @@ async function run({ base, root }) {
   ok('an unknown status is refused',
     (await asAdmin(`/comm/admin/feedback/${fb.data.id}`, 'PATCH', { status: 'lol' })).status === 400);
 
+  // The feedback bug's card: a screenshot, the page, and the device.
+  const pngHead = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+  const bigPng = 'data:image/png;base64,' + Buffer.concat([pngHead, Buffer.alloc(400 * 1024)]).toString('base64');
+  const shotFb = await wl('/comm/feedback', 'POST', {
+    kind: 'issue', message: 'Play again did nothing', game: 'rambler', picture: bigPng,
+    details: { page: '/rambler.html?code=ABCD&pw=secret', screen: '390x844' }
+  });
+  ok('feedback can carry a screenshot bigger than the usual request limit', shotFb.status === 201, JSON.stringify(shotFb.data));
+  const shotItem = (await asAdmin('/comm/admin/feedback')).data.items.find(i => i.id === shotFb.data.id);
+  ok('…and the inbox shows it with its page and device', shotItem && shotItem.hasPicture && shotItem.page === '/rambler.html' &&
+    shotItem.details.screen === '390x844' && !!shotItem.details.device);
+  ok('the page never keeps its query string', !JSON.stringify(shotItem).includes('secret'));
+  ok('the admin can open the screenshot', (await asAdmin(`/comm/admin/feedback/${shotFb.data.id}/picture`)).status === 200);
+  ok('nobody else can', (await wl(`/comm/admin/feedback/${shotFb.data.id}/picture`)).status === 401);
+  ok('a file that only claims to be a picture is refused', (await wl('/comm/feedback', 'POST', {
+    message: 'x', picture: 'data:image/png;base64,' + Buffer.from('<script>alert(1)</script>').toString('base64') })).status === 400);
+  await asAdmin(`/comm/admin/feedback/${shotFb.data.id}`, 'DELETE');
+  ok('deleting the message removes its screenshot too', (await asAdmin(`/comm/admin/feedback/${shotFb.data.id}/picture`)).status === 404);
+
   const ann = await asAdmin('/comm/admin/posts', 'POST', { emoji: '🍀', title: 'GLHF', body: 'Good luck!', game: 'wordless' });
   const feed = (await wl('/comm/posts')).data;
   ok('the admin can post an announcement', ann.status === 201 && feed[0].title === 'GLHF' && feed[0].game === 'wordless');

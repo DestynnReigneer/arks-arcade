@@ -9,6 +9,14 @@ const express = require('express');
 const rateLimit = require('express-rate-limit');
 const db = require('../db');
 const adultPin = require('./adult-pin');
+const extras = require('./feedback');
+
+// Added for the feedback bug's card: the page it was sent from, details about
+// the device, a screenshot, and the profile that sent it.
+for (const [col, decl] of [['page', 'TEXT'], ['details', 'TEXT'], ['picture', 'TEXT'], ['profile_id', 'TEXT']]) {
+  const cols = db.db.prepare('PRAGMA table_info(comm_feedback)').all().map(c => c.name);
+  if (!cols.includes(col)) db.db.exec(`ALTER TABLE comm_feedback ADD COLUMN ${col} ${decl}`);
+}
 
 const GAMES = ['wordless', 'rambler', 'spinsolve', 'chess', 'dino', 'trivia', 'partdeux', 'daredevil', 'snake', 'bricks', 'blocks', 'towers'];
 const FEEDBACK_KINDS = ['feature', 'issue', 'message'];
@@ -28,7 +36,8 @@ function rowToPost(r) {
 function rowToFeedback(r) {
   return {
     id: r.id, kind: r.kind, message: r.message, from: r.from_name, game: r.game,
-    status: r.status, note: r.admin_note, createdAt: r.created_at, updatedAt: r.updated_at
+    status: r.status, note: r.admin_note, createdAt: r.created_at, updatedAt: r.updated_at,
+    page: r.page || null, details: r.details ? JSON.parse(r.details) : null, hasPicture: !!r.picture
   };
 }
 
@@ -68,16 +77,34 @@ router.get('/posts', (req, res) => {
   res.json(listPosts(req.query.limit));
 });
 
-router.post('/feedback', feedbackLimiter, (req, res) => {
-  const body = req.body || {};
-  const kind = FEEDBACK_KINDS.includes(body.kind) ? body.kind : 'message';
-  const message = clean(body.message, 1000);
-  if (!message) return res.status(400).json({ error: 'Write a message first.' });
-  const info = db.db.prepare(`
-    INSERT INTO comm_feedback (kind, message, from_name, game) VALUES (?, ?, ?, ?)
-  `).run(kind, message, clean(body.from, 30), gameOrNull(body.game));
-  res.status(201).json({ id: Number(info.lastInsertRowid) });
+// The feedback card (public/feedback.js). It can carry a screenshot, so this
+// route reads a bigger body than the rest of the arcade (see server.js).
+router.post('/feedback', express.json({ limit: '5mb' }), feedbackLimiter, (req, res, next) => {
+  try {
+    const body = req.body || {};
+    const kind = FEEDBACK_KINDS.includes(body.kind) ? body.kind : 'message';
+    const message = clean(body.message, 2000);
+    if (!message) throw fail('Write a line or two about what happened first.', 400);
+    const picture = body.picture ? extras.readPicture(body.picture) : null;
+    // A profile's name comes from its token, so nobody can sign as someone else.
+    const profile = body.profileToken ? require('./profiles').verify(body.profileToken) : null;
+    const from = profile ? profile.name : clean(body.from, 30);
+    const page = extras.cleanPage((body.details || {}).page);
+    const info = db.db.prepare(`
+      INSERT INTO comm_feedback (kind, message, from_name, game, page, details, profile_id) VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(kind, message, from, gameOrNull(body.game), page, JSON.stringify(extras.details(req, body.details)), profile ? profile.id : null);
+    const id = Number(info.lastInsertRowid);
+    if (picture) db.db.prepare('UPDATE comm_feedback SET picture = ? WHERE id = ?').run(extras.savePicture(id, picture), id);
+    if (onFeedback) {
+      const label = { feature: '💡 Feature idea', issue: '🐛 Something\'s broken', message: '💬 Message' }[kind];
+      onFeedback(`📡 **New arcade feedback** (${label}) from ${from || 'a guest'}${page ? ` on \`${page}\`` : ''}${picture ? ', with a screenshot' : ''}\n> ${message.split('\n')[0].slice(0, 140)}`);
+    }
+    res.status(201).json({ id });
+  } catch (e) { next(e); }
 });
+
+// Set by server.js: sends a line to Discord when feedback arrives.
+let onFeedback = null;
 
 // ---- admin ------------------------------------------------------------------
 
@@ -108,8 +135,18 @@ function adminRouter(requireAdmin) {
     } catch (e) { next(e); }
   });
 
+  admin.get('/feedback/:id/picture', (req, res) => {
+    const row = db.db.prepare('SELECT picture FROM comm_feedback WHERE id = ?').get(Number(req.params.id) || 0);
+    const file = row && extras.picturePath(row.picture);
+    if (!file) return res.status(404).json({ error: 'No screenshot for that one.' });
+    res.set('X-Content-Type-Options', 'nosniff');
+    res.type(file.endsWith('.png') ? 'png' : 'jpeg').sendFile(file);
+  });
+
   admin.delete('/feedback/:id', (req, res) => {
+    const row = db.db.prepare('SELECT picture FROM comm_feedback WHERE id = ?').get(Number(req.params.id) || 0);
     db.db.prepare('DELETE FROM comm_feedback WHERE id = ?').run(Number(req.params.id));
+    if (row) extras.removePicture(row.picture);
     res.json({ deleted: true });
   });
 
@@ -151,4 +188,4 @@ router.use((err, req, res, next) => {
   res.status(err.status || 500).json({ error: err.message });
 });
 
-module.exports = { router, adminRouter, post, safePost, listPosts, STATUSES };
+module.exports = { router, adminRouter, post, safePost, listPosts, STATUSES, setFeedbackNotify: fn => { onFeedback = fn; } };

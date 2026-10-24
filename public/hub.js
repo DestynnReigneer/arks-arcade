@@ -194,52 +194,6 @@
     $('postClose').focus();
   }
 
-  // ---- feedback -------------------------------------------------------------
-
-  let fbKind = 'message';
-
-  function openFeedback() {
-    fbKind = 'message';
-    paintKinds();
-    $('fbMessage').value = '';
-    $('fbMsg').textContent = '';
-    $('fbMsg').className = 'form-msg';
-    $('feedbackModal').classList.remove('hidden');
-    $('fbMessage').focus();
-  }
-
-  function paintKinds() {
-    for (const b of $('fbKinds').children) b.setAttribute('aria-pressed', String(b.dataset.kind === fbKind));
-  }
-
-  async function sendFeedback() {
-    const message = $('fbMessage').value.trim();
-    const msg = $('fbMsg');
-    if (!message) {
-      msg.textContent = 'Write something first.';
-      msg.className = 'form-msg err';
-      return;
-    }
-    $('fbSend').disabled = true;
-    try {
-      const res = await fetch('/api/comm/feedback', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ kind: fbKind, message, from: $('fbFrom').value, game: $('fbGame').value || null })
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || 'Could not send that.');
-      msg.textContent = 'Sent! Message received, over and out. 📡';
-      msg.className = 'form-msg ok';
-      setTimeout(() => $('feedbackModal').classList.add('hidden'), 1500);
-    } catch (e) {
-      msg.textContent = e.message;
-      msg.className = 'form-msg err';
-    } finally {
-      $('fbSend').disabled = false;
-    }
-  }
-
   // ---- Easter eggs ----------------------------------------------------------
 
   const QUOTES = [
@@ -315,6 +269,7 @@
   const COMMANDS = {
     '/help': () => $('helpModal').classList.remove('hidden'),
     '/secret': () => toggleCheatList(),
+    '/feedback': () => ArcadeFeedback.open(),
     '/dance': () => { bodyEffect('dancing', 4000); toast('💃 /dance 🕺'); },
     '/gg': () => { rain(['🤝', 'GG', '🏆', '✨']); toast('GG WP 🤝'); },
     '/glhf': () => { rain(['🍀', '🎮', '✨']); toast('Good luck, have fun! 🍀'); },
@@ -339,7 +294,8 @@
   const LISTED = [
     ['/dance', 'Everything dances'], ['/gg', 'Good game!'], ['/glhf', 'Good luck, have fun'],
     ['/roll', 'Roll a 20-sided die'], ['/f', 'Pay respects'], ['/wave', 'Say hi'],
-    ['/flex', 'Show off'], ['/afk', 'Be right back'], ['/respawn', 'Start the page over']
+    ['/flex', 'Show off'], ['/afk', 'Be right back'], ['/respawn', 'Start the page over'],
+    ['/feedback', 'Tell us about a bug or an idea']
   ];
   function toggleCheatList() {
     const ul = $('cheatList');
@@ -361,7 +317,7 @@
   }
   // Typed-anywhere triggers, checked against the end of what was typed.
   const TYPED = ['gg', 'iddqd', 'idkfa', 'xyzzy', 'hesoyam', 'barrelroll', 'thecakeisalie', 'leeroy', 'rickroll',
-    '/dance', '/gg', '/glhf', '/help', '/roll', '/afk', '/wave', '/flex'];
+    '/dance', '/gg', '/glhf', '/help', '/roll', '/afk', '/wave', '/flex', '/feedback'];
 
   function runCommand(raw) {
     const cmd = raw.trim().toLowerCase().replace(/\s+/g, '');
@@ -569,13 +525,11 @@
   // ---- wiring -----------------------------------------------------------------
 
   $('postClose').onclick = () => $('postModal').classList.add('hidden');
-  $('feedbackOpen').onclick = openFeedback;
-  $('fbCancel').onclick = () => $('feedbackModal').classList.add('hidden');
-  $('fbSend').onclick = sendFeedback;
-  for (const b of $('fbKinds').children) b.onclick = () => { fbKind = b.dataset.kind; paintKinds(); };
+  // Send feedback opens the same card as the little bug in the corner.
+  $('feedbackOpen').onclick = () => ArcadeFeedback.open();
 
   // Click outside a card, or Escape, closes it.
-  for (const id of ['postModal', 'feedbackModal', 'helpModal']) {
+  for (const id of ['postModal', 'helpModal']) {
     $(id).addEventListener('click', e => { if (e.target.id === id) $(id).classList.add('hidden'); });
   }
   document.addEventListener('keydown', e => {

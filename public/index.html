@@ -211,8 +211,6 @@
   .modal-card .when { font-size: 11px; color: var(--dim); letter-spacing: 0.5px; }
   .modal-card .body { margin: 14px 0 18px; font-size: 14px; line-height: 1.55; color: var(--muted); white-space: pre-wrap; overflow-wrap: anywhere; }
   .modal-actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
-  .fb-kinds { display: flex; gap: 6px; flex-wrap: wrap; margin: 12px 0; }
-  .fb-kinds button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
   .modal-card label { display: block; font-size: 11px; color: var(--dim); letter-spacing: 0.5px; margin: 10px 0 4px; }
   .modal-card textarea, .modal-card input, .modal-card select {
     width: 100%; background: var(--bg); color: var(--text); border: 1px solid var(--border);
@@ -495,6 +493,7 @@
       <p>Pick who's playing with your profile at the top left, then tap any game to start. To play together, one person taps Host in a game, and everyone else joins with the 4-letter code or the QR code.</p>
       <p>Each game has its own How to play guide. Tap the ? inside any game to open it, even in the middle of a round.</p>
       <p>Your scores, streaks and high-score spots follow your profile. If you play as a guest, nothing is saved under your name.</p>
+      <p>Found something broken, or have an idea? Tap the little bug in the bottom-right corner of any page, or Send feedback at the bottom of this one. You can add a screenshot and draw on it.</p>
     </div>
     <div class="modal-actions"><button class="hub-btn primary" id="helpClose">Got it</button></div>
   </div>
@@ -514,49 +513,12 @@
   </div>
 </div>
 
-<!-- Feedback to the admin -->
-<div id="feedbackModal" class="modal hidden" role="dialog" aria-modal="true">
-  <div class="modal-card">
-    <h3>✉️ Send feedback</h3>
-    <div class="when">Goes straight to whoever runs this arcade.</div>
-    <div class="fb-kinds" id="fbKinds">
-      <button class="hub-btn" data-kind="feature" aria-pressed="false">💡 Feature idea</button>
-      <button class="hub-btn" data-kind="issue" aria-pressed="false">🐛 Something's broken</button>
-      <button class="hub-btn" data-kind="message" aria-pressed="true">💬 Message</button>
-    </div>
-    <label for="fbGame">Which game?</label>
-    <select id="fbGame">
-      <option value="">The whole arcade</option>
-      <option value="wordless">Wordless</option>
-      <option value="rambler">Rambler</option>
-      <option value="spinsolve">Spin &amp; Solve</option>
-      <option value="chess">Chess</option>
-      <option value="dino">Dino Dash</option>
-      <option value="trivia">Know-It-All</option>
-      <option value="partdeux">Uh-Oh: Part Deux</option>
-      <option value="daredevil">Dare Devil</option>
-      <option value="snake">Snake</option>
-      <option value="bricks">Brick Breaker</option>
-      <option value="blocks">Block Drop</option>
-      <option value="towers">Tower Defense</option>
-    </select>
-    <label for="fbMessage">Your message</label>
-    <textarea id="fbMessage" maxlength="1000"></textarea>
-    <label for="fbFrom">Your name (optional)</label>
-    <input id="fbFrom" type="text" maxlength="30">
-    <div class="form-msg" id="fbMsg"></div>
-    <div class="modal-actions">
-      <button class="hub-btn" id="fbCancel">Cancel</button>
-      <button class="hub-btn primary" id="fbSend">Send</button>
-    </div>
-  </div>
-</div>
-
 <script src="avatars.js"></script>
 <script src="pin-pad.js"></script>
 <script src="profile.js"></script>
 <script src="stats.js"></script>
 <script src="dust-sign.js"></script>
+<script src="feedback.js"></script>
 <script src="arcade-qr.js"></script>
 <script src="custom-media.js"></script>
 <script src="hub.js"></script>
