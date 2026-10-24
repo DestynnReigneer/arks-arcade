@@ -121,3 +121,8 @@ button:disabled { opacity: 0.4; cursor: default; }
   background: var(--card-2); border: 1px solid var(--accent); color: var(--text);
   padding: 10px 16px; border-radius: 10px; font-size: 14px; max-width: calc(100vw - 32px);
 }
+
+/* Play again sits at the top right of every end screen, so nobody has to
+   scroll past the scores to find it. */
+.over-top { display: flex; justify-content: flex-end; margin-bottom: 6px; }
+.over-top button { width: auto; flex: 0 0 auto; margin: 0; }

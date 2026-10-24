@@ -1459,3 +1459,8 @@ body.in-vice .screen { position: relative; z-index: 1; }
 
 /* The logo: a line tracing a word through a grid of tiles, like the game */
 .logo-grid { width: 26px; height: 26px; vertical-align: -5px; margin-right: 6px; }
+
+/* Play again sits at the top right of every end screen, so nobody has to
+   scroll past the scores to find it. */
+.over-top { display: flex; justify-content: flex-end; margin-bottom: 6px; }
+.over-top button { width: auto; flex: 0 0 auto; margin: 0; }

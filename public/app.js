@@ -629,6 +629,12 @@
     initialsOverlay.classList.add('hidden');
   });
 
+  // Play again on the score card: skip saving and start the next word.
+  document.getElementById('playAgainBtn').addEventListener('click', () => {
+    initialsOverlay.classList.add('hidden');
+    newGame();
+  });
+
   saveScoreBtn.addEventListener('click', async () => {
     const initials = initialBoxes.map(b => b.value.trim()).join('');
     if (!initials) {
