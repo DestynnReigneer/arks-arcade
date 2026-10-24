@@ -1464,3 +1464,24 @@ body.in-vice .screen { position: relative; z-index: 1; }
    scroll past the scores to find it. */
 .over-top { display: flex; justify-content: flex-end; margin-bottom: 6px; }
 .over-top button { width: auto; flex: 0 0 auto; margin: 0; }
+
+/* ---- results: the board stays up, found and missed side by side ---- */
+.result-board-panel { margin-bottom: 12px; }
+.result-board-panel .sub { text-align: center; }
+.result-board-wrap { max-width: 240px; touch-action: auto; }
+#resultBoard { gap: 6px; }
+#resultBoard .die { font-size: clamp(13px, 4.6vw, 20px); border-radius: 9px; }
+/* Each lit tile shows its step, so the path reads in order. */
+#resultBoard .die.on::after {
+  content: attr(data-step);
+  position: absolute; top: 2px; left: 5px;
+  font-size: 10px; font-weight: 700; color: var(--trace);
+}
+.results-split { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: start; margin-bottom: 12px; }
+.results-col { min-width: 0; }
+.results-col .standings { margin-bottom: 10px; }
+.results-col .panel { margin-bottom: 10px; }
+.col-head { margin: 4px 0 8px; font-size: 12px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--dim); }
+.chip[data-word], .word-line[data-word] { cursor: pointer; }
+.chip.picked { border-color: var(--trace); color: var(--text); }
+.word-line.picked .w { color: var(--trace); }

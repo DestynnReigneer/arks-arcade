@@ -362,18 +362,34 @@
     <div class="s" id="resultSub"></div>
   </div>
 
-  <div class="standings" id="standings"></div>
-
-  <div class="panel hidden" id="canceledPanel">
-    <h3>Canceled</h3>
-    <div class="sub">More than one of you found these, so they score nothing for anybody. That's the rule that makes obscure words worth hunting.</div>
-    <div class="chips" id="canceledChips"></div>
+  <!-- The round's board stays up, so anyone can tap a word below and see
+       the path that spells it. -->
+  <div class="panel result-board-panel" id="resultBoardPanel">
+    <div class="sub" id="resultBoardHint">Tap any word below to see where it was on the board.</div>
+    <div class="board-wrap result-board-wrap">
+      <div class="board" id="resultBoard"></div>
+    </div>
   </div>
 
-  <div class="panel" id="missedPanel">
-    <h3>Words nobody found</h3>
-    <div class="sub" id="missedSub"></div>
-    <div class="chips" id="missedChips"></div>
+  <div class="results-split">
+    <div class="results-col">
+      <h3 class="col-head">Found</h3>
+      <div class="standings" id="standings"></div>
+
+      <div class="panel hidden" id="canceledPanel">
+        <h3>Canceled</h3>
+        <div class="sub">More than one of you found these, so they score nothing for anybody. That's the rule that makes obscure words worth hunting.</div>
+        <div class="chips" id="canceledChips"></div>
+      </div>
+    </div>
+
+    <div class="results-col">
+      <div class="panel" id="missedPanel">
+        <h3>Words nobody found</h3>
+        <div class="sub" id="missedSub"></div>
+        <div class="chips" id="missedChips"></div>
+      </div>
+    </div>
   </div>
 
   <div class="panel hidden" id="dailyResultPanel">
