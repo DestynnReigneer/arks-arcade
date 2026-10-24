@@ -32,7 +32,7 @@ Return ONLY a single valid JSON object (no markdown, no code fences, no commenta
 {
   "label": "Short display name for the pack",
   "emoji": "one emoji that fits the pack",
-  "genre": "one or two words, like Movies, Sports, Sex Facts or Booze",
+  "genre": "one or two words, like Movies, Sports, Between the Sheets or Booze",
   "questions": [
     { "question": "The question?", "correct": "The right answer", "wrong": ["Wrong 1", "Wrong 2", "Wrong 3"], "difficulty": "easy" }
   ]

@@ -143,7 +143,7 @@ app.get('/api/arcade-info', (req, res) => {
 // asks for them with ?adult=1 and the adult PIN, or with no PIN set at all.
 const adultUnlocked = req => req.query.adult === '1' && adultPin.matches(req.get('X-Adult-Pin'));
 
-app.post('/api/adult-check', (req, res) => {
+app.post('/api/adult-check', adultPin.tryLimiter(), (req, res) => {
   res.json({ ok: adultPin.matches((req.body || {}).pin) });
 });
 

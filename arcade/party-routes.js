@@ -26,7 +26,7 @@ function makeRoutes({ tables, config }) {
   const token = req => req.get('X-Table-Token');
 
   router.get('/config', (req, res) => res.json({ ...config(), adultRequiresPin: adultPin.status().set, maxPlayers: tables.MAX_PLAYERS }));
-  router.post('/unlock', (req, res) => res.json({ ok: adultPin.matches((req.body || {}).pin) }));
+  router.post('/unlock', adultPin.tryLimiter(), (req, res) => res.json({ ok: adultPin.matches((req.body || {}).pin) }));
 
   router.post('/local', limiter, (req, res, next) => {
     try {

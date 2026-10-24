@@ -21,7 +21,7 @@ const S = {
   player: null,          // the profile currently playing; null means guest
   profiles: [],          // every profile on the server -- NOT the round roster
   avatars: [],
-  adultPin: '',
+  adultPin: (() => { try { return sessionStorage.getItem('rambler.adultPin') || ''; } catch { return ''; } })(),
 
   // single-device round
   boardId: null,
@@ -1815,8 +1815,25 @@ function renderSetup() {
     S.mode === 'room' ? 'Open a room' : S.mode === 'marathon' ? 'Start the run' : 'Slide to victory';
 }
 
-function pickProfile(value) {
-  if (value !== 'adult' || sessionStorage.getItem('rambler.adult') === 'yes') {
+// The PIN is checked with the server before it's kept, so a wrong one can't
+// stick to the tab. A PIN remembered from earlier is checked again too, in
+// case the admin changed it since.
+async function adultPinOk(pin) {
+  return !!(await api('/unlock', { method: 'POST', body: { pin } })).ok;
+}
+
+function forgetAdult() {
+  S.adultPin = '';
+  try { sessionStorage.removeItem('rambler.adult'); sessionStorage.removeItem('rambler.adultPin'); } catch { /* unavailable */ }
+}
+
+async function pickProfile(value) {
+  let unlocked = sessionStorage.getItem('rambler.adult') === 'yes';
+  if (value === 'adult' && unlocked && S.config.adultRequiresPin && !(S.adultPin && await adultPinOk(S.adultPin).catch(() => false))) {
+    forgetAdult();
+    unlocked = false;
+  }
+  if (value !== 'adult' || unlocked) {
     S.profile = value;
     renderSetup();
     return;
@@ -2124,11 +2141,18 @@ function bind() {
 
   $('adultCancelBtn').onclick = () => $('adultOverlay').classList.add('hidden');
   $('closeAdultBtn').onclick = () => $('adultOverlay').classList.add('hidden');
-  $('adultConfirmBtn').onclick = () => {
+  $('adultConfirmBtn').onclick = async () => {
     if (S.config.adultRequiresPin) {
       const pin = $('adultPinInput').value.trim();
       if (!pin) return say($('adultMsg'), 'Enter the PIN.', 'err');
+      let ok;
+      try { ok = await adultPinOk(pin); } catch (e) { PinPad.clear($('adultPinInput')); return say($('adultMsg'), e.message, 'err'); }
+      if (!ok) {
+        PinPad.clear($('adultPinInput'));
+        return say($('adultMsg'), "That PIN isn't right. Try again.", 'err');
+      }
       S.adultPin = pin;
+      try { sessionStorage.setItem('rambler.adultPin', pin); } catch { /* unavailable */ }
     }
     sessionStorage.setItem('rambler.adult', 'yes');
     S.profile = 'adult';
