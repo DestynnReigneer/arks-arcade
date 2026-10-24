@@ -109,7 +109,18 @@
       if (!card) continue;
       list.appendChild(card);
       card.classList.toggle('hidden', homeGames.hidden.includes(id));
+      closeGame(card, id, (homeGames.closed || []).includes(id));
     }
+  }
+  // A game the admin turned off keeps its spot, faded, with the sign on it.
+  // Tapping it explains instead of opening a half-working game.
+  function closeGame(card, id, closed) {
+    card.classList.toggle('closed', closed);
+    card.toggleAttribute('aria-disabled', closed);
+    const sign = card.querySelector('.dust-sign');
+    if (closed && !sign) card.appendChild(DustSign.el());
+    if (!closed && sign) sign.remove();
+    card.onclick = closed ? e => { e.preventDefault(); toast(DustSign.message(id), 3200); } : null;
   }
   // Your most-played games first; everyone's favorites if you haven't
   // picked a profile or haven't played much yet.

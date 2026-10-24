@@ -255,20 +255,26 @@
     sortRow.innerHTML = '<input type="checkbox"> <span>Put each person\'s most-played games first</span>';
     const sortBox = sortRow.querySelector('input');
     sortBox.checked = home.sort === 'played';
-    sortBox.onchange = () => saveHomeGames({ order: home.order, hidden: home.hidden, sort: sortBox.checked ? 'played' : 'fixed' });
+    sortBox.onchange = () => saveHomeGames({ ...home, sort: sortBox.checked ? 'played' : 'fixed' });
     box.appendChild(sortRow);
     home.order.forEach((id, i) => {
       const hidden = home.hidden.includes(id);
+      const closed = home.closed.includes(id);
       const row = document.createElement('div');
       row.className = 'theme-row';
-      row.style.opacity = hidden ? '0.5' : '1';
+      row.style.opacity = hidden || closed ? '0.5' : '1';
       row.innerHTML = `<span></span>
         <span style="display:flex;gap:6px">
           <button class="small-btn" data-act="up" title="Move up">▲</button>
           <button class="small-btn" data-act="down" title="Move down">▼</button>
+          <button class="small-btn" data-act="close"></button>
           <button class="small-btn" data-act="hide"></button>
         </span>`;
-      row.firstChild.textContent = `${i + 1}. ${GAME_EMOJI[id] || ''} ${GAME_LABELS[id] || id}${hidden ? ' (hidden)' : ''}`;
+      row.firstChild.textContent = `${i + 1}. ${GAME_EMOJI[id] || ''} ${GAME_LABELS[id] || id}${closed ? ' (turned off)' : ''}${hidden ? ' (hidden)' : ''}`;
+      const closeBtn = row.querySelector('[data-act="close"]');
+      closeBtn.textContent = closed ? '🚧 Turn on' : '✅ Turn off';
+      closeBtn.title = closed ? 'Open this game again' : 'Show the "Pardon our dust" sign instead of the game';
+      closeBtn.onclick = () => saveHomeGames({ ...home, closed: closed ? home.closed.filter(x => x !== id) : [...home.closed, id] });
       const up = row.querySelector('[data-act="up"]');
       const down = row.querySelector('[data-act="down"]');
       up.disabled = i === 0;
@@ -293,12 +299,12 @@
     const order = home.order.slice();
     const [id] = order.splice(i, 1);
     order.splice(i + by, 0, id);
-    saveHomeGames({ order, hidden: home.hidden, sort: home.sort });
+    saveHomeGames({ ...home, order });
   }
 
   function toggleHidden(id) {
     const hidden = home.hidden.includes(id) ? home.hidden.filter(x => x !== id) : [...home.hidden, id];
-    saveHomeGames({ order: home.order, hidden, sort: home.sort });
+    saveHomeGames({ ...home, hidden });
   }
 
   // ---- wiring --------------------------------------------------------------

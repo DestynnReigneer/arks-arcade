@@ -5,6 +5,10 @@
 // added in a later release (not in the saved order yet) goes on the end.
 // With sort 'played' (the default) the home page puts the most-played games
 // first (see stats.gameOrder), and this order only breaks ties.
+//
+// A closed game is one the admin has turned off while it's being worked on:
+// it stays on the home page, faded, with a "Pardon our dust" sign, and its
+// page shows the sign instead of the game.
 
 const db = require('../db');
 
@@ -16,13 +20,19 @@ function get() {
   const order = (Array.isArray(saved.order) ? saved.order : []).filter(id => GAMES.includes(id));
   for (const id of GAMES) if (!order.includes(id)) order.push(id);
   const hidden = (Array.isArray(saved.hidden) ? saved.hidden : []).filter(id => GAMES.includes(id));
+  const closed = (Array.isArray(saved.closed) ? saved.closed : []).filter(id => GAMES.includes(id));
   const sort = saved.sort === 'fixed' ? 'fixed' : 'played';
-  return { order, hidden, sort };
+  return { order, hidden, closed, sort };
 }
 
-function set({ order, hidden, sort } = {}) {
+// Leaving `closed` out keeps the games that are already closed.
+function set({ order, hidden, closed, sort } = {}) {
   const clean = list => [...new Set((Array.isArray(list) ? list : []).filter(id => GAMES.includes(id)))];
-  const next = { order: clean(order), hidden: clean(hidden), sort: sort === 'fixed' ? 'fixed' : 'played' };
+  const next = {
+    order: clean(order), hidden: clean(hidden),
+    closed: closed === undefined ? get().closed : clean(closed),
+    sort: sort === 'fixed' ? 'fixed' : 'played'
+  };
   if (next.hidden.length >= GAMES.length) {
     throw Object.assign(new Error('Leave at least one game showing.'), { status: 400 });
   }

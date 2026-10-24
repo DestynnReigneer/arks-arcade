@@ -274,8 +274,9 @@ Visit `/admin.html` and enter your `ADMIN_PASSWORD`.
 - The error log: crashes from browsers and the server, grouped by a code like `E-3F9A2C` (players see the code when the server fails). **Copy for chat** copies everything needed to get it fixed
 
 **Arcade:**
-- Profiles: approve or turn down "New profile" requests, rename, clear a forgotten PIN, or remove a profile (their old scores stay on the boards)
-- Set, change or remove the adult PIN
+- Profiles: approve or turn down "New profile" requests, rename, clear a forgotten PIN, unlock a profile locked by wrong PINs, or remove a profile (their old scores stay on the boards)
+- Set, change or remove the adult PIN, and unblock devices that tried too many wrong PINs
+- Home page games: reorder them, hide them, or turn one off while it's being worked on (it stays on the home page, faded, under a "Pardon our dust" sign)
 - Comm Center, high-score boards, Spin & Solve and Know-It-All packs and requests
 
 **Rambler:**

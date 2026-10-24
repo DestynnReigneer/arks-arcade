@@ -79,6 +79,9 @@
     outline: none;
   }
   .game .emoji { font-size: 34px; line-height: 1; }
+  .game.closed { position: relative; cursor: default; }
+  .game.closed > :not(.dust-sign) { opacity: .32; filter: grayscale(.85); }
+  .game.closed:hover, .game.closed:focus-visible { background: var(--card); border-color: var(--border); transform: none; }
   .game h2 {
     margin: 12px 0 6px;
     font-size: 19px;
@@ -553,6 +556,7 @@
 <script src="pin-pad.js"></script>
 <script src="profile.js"></script>
 <script src="stats.js"></script>
+<script src="dust-sign.js"></script>
 <script src="arcade-qr.js"></script>
 <script src="custom-media.js"></script>
 <script src="hub.js"></script>
