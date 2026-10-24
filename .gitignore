@@ -21,3 +21,7 @@ Thumbs.db
 .vscode/
 .idea/
 *.swp
+
+# Your own logos and media (docs/CUSTOM-MEDIA.md). Never committed.
+brand/
+media/

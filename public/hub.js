@@ -298,10 +298,12 @@
     setTimeout(() => document.body.classList.remove(cls), ms);
   }
 
-  // Commands work from the little terminal (so phones get them too) or typed
-  // anywhere on the page with a keyboard.
+  // Commands work from the Cheat codes box (so phones get them too) or typed
+  // anywhere on the page with a keyboard. The owner's clips (custom-media.js)
+  // each become a command too: rickroll.mp4 plays with /rickroll.
   const COMMANDS = {
-    '/help': () => toast('Try: /dance, /gg, /glhf, /roll, /respawn… and some secrets. 🤫', 4000),
+    '/help': () => $('helpModal').classList.remove('hidden'),
+    '/secret': () => toggleCheatList(),
     '/dance': () => { bodyEffect('dancing', 4000); toast('💃 /dance 🕺'); },
     '/gg': () => { rain(['🤝', 'GG', '🏆', '✨']); toast('GG WP 🤝'); },
     '/glhf': () => { rain(['🍀', '🎮', '✨']); toast('Good luck, have fun! 🍀'); },
@@ -320,8 +322,32 @@
     'barrelroll': () => { bodyEffect('barrel', 1300); toast('🛩️ Do a barrel roll!'); },
     'thecakeisalie': () => { rain(['🍰']); toast('🍰 …it really was.'); },
     'leeroy': () => toast('LEEEEROOOOY JENKIIIINS! 🐔', 3000),
-    'rickroll': () => toast('🎵 Never gonna give you up… 🎵', 3500)
+    'rickroll': () => ArcadeMedia.play('rickroll') || toast('🎵 Never gonna give you up… 🎵', 3500)
   };
+  // What /secret lists. The true secrets above stay off the list.
+  const LISTED = [
+    ['/dance', 'Everything dances'], ['/gg', 'Good game!'], ['/glhf', 'Good luck, have fun'],
+    ['/roll', 'Roll a 20-sided die'], ['/f', 'Pay respects'], ['/wave', 'Say hi'],
+    ['/flex', 'Show off'], ['/afk', 'Be right back'], ['/respawn', 'Start the page over']
+  ];
+  function toggleCheatList() {
+    const ul = $('cheatList');
+    if (!ul.children.length) {
+      for (const [cmd, what] of LISTED) {
+        const li = document.createElement('li');
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.innerHTML = '<b></b><span></span>';
+        b.firstChild.textContent = cmd;
+        b.lastChild.textContent = what;
+        b.onclick = () => runCommand(cmd);
+        li.appendChild(b);
+        ul.appendChild(li);
+      }
+    }
+    ul.classList.toggle('hidden');
+    if (!ul.classList.contains('hidden')) toast('Psst… a few more aren\'t on the list. 🤫', 3000);
+  }
   // Typed-anywhere triggers, checked against the end of what was typed.
   const TYPED = ['gg', 'iddqd', 'idkfa', 'xyzzy', 'hesoyam', 'barrelroll', 'thecakeisalie', 'leeroy', 'rickroll',
     '/dance', '/gg', '/glhf', '/help', '/roll', '/afk', '/wave', '/flex'];
@@ -329,7 +355,7 @@
   function runCommand(raw) {
     const cmd = raw.trim().toLowerCase().replace(/\s+/g, '');
     if (COMMANDS[cmd]) { COMMANDS[cmd](); return true; }
-    return false;
+    return ArcadeMedia.play(cmd.replace(/^\//, ''));
   }
 
   const KONAMI = ['arrowup', 'arrowup', 'arrowdown', 'arrowdown', 'arrowleft', 'arrowright', 'arrowleft', 'arrowright', 'b', 'a'];
@@ -369,6 +395,166 @@
     }
   }
 
+  // ---- the owner's logos (brand/ folder on their server) -------------------
+  // With all three files, the title becomes the logo lockup and the square
+  // logo spins in the footer. Without them, the plain title stays.
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+  function showBrand(brand) {
+    if (brand.avatar && brand.wide) {
+      const box = $('lockup');
+      const helm = document.createElement('img');
+      helm.className = 'helm'; helm.src = brand.avatar; helm.alt = '';
+      const wide = document.createElement('img');
+      wide.className = 'wide'; wide.src = brand.wide; wide.alt = 'ARKS';
+      box.append(helm, wide, titleWord('ARCADE'));
+      box.classList.remove('hidden');
+      $('arcadeTitle').classList.add('hidden');
+      document.fonts.load('800 20px Orbitron').then(fitTitleWord, fitTitleWord);
+    }
+    if (brand.square) {
+      const img = document.createElement('img');
+      img.className = 'spin-turn'; img.src = brand.square; img.alt = 'ARKS';
+      $('footLogo').appendChild(img);
+      $('footLogo').classList.remove('hidden');
+    }
+  }
+  // The app's name as a see-through outline in the logo's pink-to-turquoise
+  // blend, drawn on the logo's own 445-unit-tall canvas so its capitals sit
+  // exactly where the logo's letters do (136.5 to 308.6).
+  function titleWord(text) {
+    const svg = document.createElementNS(SVG_NS, 'svg');
+    svg.setAttribute('class', 'word');
+    svg.setAttribute('viewBox', '0 0 900 445');
+    svg.setAttribute('role', 'img');
+    svg.setAttribute('aria-label', text);
+    svg.innerHTML = '<defs><linearGradient id="titleBlend" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff2ec4"/>' +
+      '<stop offset=".5" stop-color="#8a3ffc"/><stop offset="1" stop-color="#00ffc2"/></linearGradient></defs>' +
+      '<text x="0" y="308.6" fill="none" stroke="url(#titleBlend)" stroke-width="1.3" vector-effect="non-scaling-stroke"></text>';
+    svg.querySelector('text').textContent = text;
+    return svg;
+  }
+  function fitTitleWord() {
+    const t = document.querySelector('.lockup .word text');
+    if (!t) return;
+    const c = document.createElement('canvas').getContext('2d');
+    c.font = '800 1000px Orbitron';
+    const m = c.measureText(t.textContent);
+    const size = (308.6 - 136.5) / ((m.actualBoundingBoxAscent + m.actualBoundingBoxDescent) / 1000);
+    t.setAttribute('font-size', size.toFixed(1));
+    t.setAttribute('y', (308.6 - m.actualBoundingBoxDescent * size / 1000).toFixed(1));
+    const b = t.getBBox();
+    t.ownerSVGElement.setAttribute('viewBox', `${b.x} 0 ${b.width} 445`);
+  }
+
+  // ---- clickable characters --------------------------------------------------
+  // Little pixel friends on the wall (in the Cheat codes box on a phone). Each
+  // one runs a command. Pictures in the owner's media/sprites folder take their
+  // place; one named after a command (dance-hero.gif) always runs it.
+  const PAL = { G: '#3ddc84', W: '#ffffff', K: '#12111c', R: '#ff5e8a', A: '#ffc72c', B: '#8fa3c7', Y: '#2e9bff', P: '#c86bff', S: '#c9d1e0', O: '#ff8a3d' };
+  const PIXEL_FRIENDS = [
+    { name: 'Slime', cmd: '/dance', px: ['....GGGG....', '...GGGGGG...', '..GGGGGGGG..', '.GGWKGGWKGG.', '.GGKKGGKKGG.', 'GGGGGGGGGGGG', 'GGGGGRRGGGGG', 'GGGGGGGGGGGG', '.GGGGGGGGGG.', '..GG.GG.GG..'] },
+    { name: 'Robot', cmd: '/roll', px: ['....AAAA....', '.....AA.....', '..BBBBBBBB..', '..BWWBBWWB..', '..BWKBBWKB..', '..BBBBBBBB..', '..BBYYYYBB..', '...BBBBBB...', '.BBBBBBBBBB.', '.B.BBBBBB.B.', '...BB..BB...', '...BB..BB...'] },
+    { name: 'Bat', cmd: '/gg', px: ['PP........PP', 'PPP..PP..PPP', 'PPPPPPPPPPPP', '.PPPWPPWPPP.', '..PPPPPPPP..', '...P.PP.P...'] },
+    { name: 'Knight', cmd: '/glhf', px: ['....SSSS....', '...SSSSSS...', '...SKKKKS...', '...SSSSSS...', '....OOOO....', '..OOOOOOOO..', '.O.OOOOOO.O.', '.S.OOOOOO.S.', '...OO..OO...', '...KK..KK...'] }
+  ];
+  const RANDOM_CMDS = ['/dance', '/gg', '/glhf', '/roll', '/f', '/wave', '/flex'];
+  function pixelSvg(px) {
+    const w = px[0].length, h = px.length, n = Math.max(w, h);
+    let rects = '';
+    px.forEach((row, y) => [...row].forEach((ch, x) => {
+      if (PAL[ch]) rects += `<rect x="${x}" y="${y + n - h}" width="1.02" height="1.02" fill="${PAL[ch]}"/>`;
+    }));
+    return `<svg viewBox="0 0 ${n} ${n}" width="100%" height="100%" shape-rendering="crispEdges" aria-hidden="true">${rects}</svg>`;
+  }
+  function friendButton(f) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'pal';
+    b.title = f.name;
+    b.setAttribute('aria-label', `${f.name}: ${f.cmd}`);
+    if (f.url) { const img = document.createElement('img'); img.src = f.url; img.alt = ''; b.appendChild(img); }
+    else b.innerHTML = pixelSvg(f.px);
+    b.onclick = () => { b.classList.remove('hop'); void b.offsetWidth; b.classList.add('hop'); runCommand(f.cmd); };
+    return b;
+  }
+  function placeCharacters(sprites) {
+    const friends = sprites.length
+      ? sprites.slice(0, 6).map((sp, i) => {
+        const named = '/' + sp.name.split(/[-_]/)[0];
+        return { name: sp.name, url: sp.url, cmd: COMMANDS[named] ? named : RANDOM_CMDS[i % RANDOM_CMDS.length] };
+      })
+      : PIXEL_FRIENDS;
+    const wall = document.createElement('div');
+    wall.className = 'wall';
+    document.body.appendChild(wall);
+    friends.forEach((f, i) => {
+      const b = friendButton(f);
+      b.style.left = i % 2 ? 'calc(50% + 395px)' : 'calc(50% - 455px)';
+      b.style.top = `${330 + i * 320}px`;
+      wall.appendChild(b);
+      $('spriteRow').appendChild(friendButton(f));
+    });
+  }
+
+  // ---- INSERT COIN -----------------------------------------------------------
+  // A coin drops in. The third coin in a row gets an announcer: one of the
+  // owner's clips from media/coin if there are any, else the browser's voice.
+  let audioCtx = null;
+  let coins = 0;
+  let coinReset = null;
+  function coinSound() {
+    try {
+      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+      const t = audioCtx.currentTime;
+      for (const [freq, at] of [[1975, 0], [2637, 0.07], [1568, 0.2]]) {
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.type = 'triangle';
+        o.frequency.value = freq;
+        g.gain.setValueAtTime(0, t + at);
+        g.gain.linearRampToValueAtTime(0.18, t + at + 0.005);
+        g.gain.exponentialRampToValueAtTime(0.001, t + at + 0.18);
+        o.connect(g).connect(audioCtx.destination);
+        o.start(t + at);
+        o.stop(t + at + 0.2);
+      }
+      const len = audioCtx.sampleRate * 0.08;
+      const buf = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
+      const noise = audioCtx.createBufferSource();
+      const lp = audioCtx.createBiquadFilter();
+      const ng = audioCtx.createGain();
+      noise.buffer = buf;
+      lp.type = 'lowpass';
+      lp.frequency.value = 500;
+      ng.gain.value = 0.5;
+      noise.connect(lp).connect(ng).connect(audioCtx.destination);
+      noise.start(t + 0.28);
+    } catch { /* no sound on this browser */ }
+  }
+  const ANNOUNCER = ['Choose your fighter!', 'Player one, ready!', 'Get ready!', 'Here comes a new challenger!', 'Game on!'];
+  function announce() {
+    const own = (ArcadeMedia.info().coin || []);
+    if (own.length) {
+      const a = new Audio(own[Math.floor(Math.random() * own.length)].url);
+      a.play().catch(() => {});
+      return;
+    }
+    if (!window.speechSynthesis) return;
+    const u = new SpeechSynthesisUtterance(ANNOUNCER[Math.floor(Math.random() * ANNOUNCER.length)]);
+    u.rate = 0.9;
+    u.pitch = 0.5;
+    speechSynthesis.speak(u);
+  }
+  function insertCoin() {
+    coinSound();
+    coins++;
+    clearTimeout(coinReset);
+    coinReset = setTimeout(() => { coins = 0; }, 4000);
+    if (coins >= 3) { coins = 0; setTimeout(announce, 450); }
+  }
+
   // ---- wiring -----------------------------------------------------------------
 
   $('postClose').onclick = () => $('postModal').classList.add('hidden');
@@ -378,22 +564,28 @@
   for (const b of $('fbKinds').children) b.onclick = () => { fbKind = b.dataset.kind; paintKinds(); };
 
   // Click outside a card, or Escape, closes it.
-  for (const id of ['postModal', 'feedbackModal']) {
+  for (const id of ['postModal', 'feedbackModal', 'helpModal']) {
     $(id).addEventListener('click', e => { if (e.target.id === id) $(id).classList.add('hidden'); });
   }
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') document.querySelectorAll('.modal').forEach(m => m.classList.add('hidden'));
   });
 
-  $('terminal').addEventListener('keydown', e => {
+  $('cheatInput').addEventListener('keydown', e => {
     if (e.key !== 'Enter') return;
     const value = e.target.value;
     e.target.value = '';
     if (!value.trim()) return;
-    if (!runCommand(value)) toast(`Unknown command: ${value.trim().slice(0, 20)}. Try /help`);
+    if (!runCommand(value)) toast('Nothing happened… try /secret. 🤔');
   });
   document.addEventListener('keydown', onKey);
   $('arcadeTitle').addEventListener('click', onTitleTap);
+  $('lockup').addEventListener('click', onTitleTap);
+  $('helpOpen').onclick = () => $('helpModal').classList.remove('hidden');
+  $('helpClose').onclick = () => $('helpModal').classList.add('hidden');
+  $('insertCoin').addEventListener('click', insertCoin);
+  $('insertCoin').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); insertCoin(); } });
+  ArcadeMedia.ready.then(info => { showBrand(info.brand || {}); placeCharacters(info.sprites || []); });
 
   loadFeed();
   rotateQuotes();
