@@ -49,7 +49,10 @@ function assertProfileAllowed(profile, req) {
 // on a wall the kids read. The score still counts -- only the word is withheld.
 function publicEntry(row) {
   const clean = row.bestWord && dictionary.isWord(row.bestWord, 'kids');
-  return { ...row, bestWord: clean ? row.bestWord : '', profile: undefined };
+  // A profile's score shows what the profile chose today (its name or its
+  // initials), not the letters typed back then.
+  const now = row.playerId ? require('../arcade/profiles').boardName(row.playerId) : null;
+  return { ...row, initials: now ? now.label : row.initials, bestWord: clean ? row.bestWord : '', profile: undefined };
 }
 
 // Only a new number one makes the Comm Center; a whole board's worth of

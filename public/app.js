@@ -608,11 +608,13 @@
     finalScoreDetail.textContent = `${DIFFICULTIES[lastResult.difficulty].label} · ` + (lastResult.won
       ? `${lastResult.guesses} guess${lastResult.guesses === 1 ? '' : 'es'} · ${lastResult.hintsUsed} hint${lastResult.hintsUsed === 1 ? '' : 's'} · ${secs}s`
       : `Not solved — word was ${lastResult.word.toUpperCase()}`);
-    // Playing as a profile: their initials are already filled in.
-    const mine = typeof ArcadeProfile !== 'undefined' ? ArcadeProfile.initials() : '';
+    // Playing as a profile: the score is theirs, so don't ask for initials.
+    const mine = typeof ArcadeProfile !== 'undefined' && ArcadeProfile.token() ? ArcadeProfile.initials() : '';
     initialBoxes.forEach((b, i) => { b.value = mine[i] || ''; b.classList.remove('error'); });
+    document.getElementById('initialsHint').classList.toggle('hidden', !!mine);
+    document.getElementById('initialsBoxes').classList.toggle('hidden', !!mine);
     initialsOverlay.classList.remove('hidden');
-    initialBoxes[0].focus();
+    if (!mine) initialBoxes[0].focus();
   }
 
   initialBoxes.forEach((box, i) => {
