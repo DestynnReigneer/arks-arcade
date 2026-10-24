@@ -13,6 +13,7 @@ const crypto = require('node:crypto');
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const db = require('../db');
+const adultPin = require('./adult-pin');
 const Avatars = require('../public/avatars');
 
 db.db.exec(`
@@ -28,6 +29,21 @@ db.db.exec(`
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 `);
+
+// Added after the first release: wrong PINs in a row, and when a lock lifts.
+for (const [col, decl] of [['pin_fails', 'INTEGER NOT NULL DEFAULT 0'], ['locked_until', 'INTEGER']]) {
+  const cols = db.db.prepare('PRAGMA table_info(arcade_profiles)').all().map(c => c.name);
+  if (!cols.includes(col)) db.db.exec(`ALTER TABLE arcade_profiles ADD COLUMN ${col} ${decl}`);
+}
+
+// Two locks against PIN guessing. A profile locks after 5 wrong PINs in a
+// row, whichever device they came from, and unlocks itself 15 minutes later.
+// Separately, one device is blocked after 20 wrong PINs across all profiles
+// in 10 minutes, so nobody can guess their way through everyone. Right PINs
+// never count toward either. The admin can lift both.
+const PROFILE_FAILS = 5;
+const PROFILE_LOCK_MS = 15 * 60 * 1000;
+const deviceStore = new rateLimit.MemoryStore();
 
 function fail(message, status = 400) {
   return Object.assign(new Error(message), { status });
@@ -46,7 +62,8 @@ const tokenFor = r => `${r.id}.${sign(r.id, r.pin_version)}`;
 const hashPin = (pin, salt) => crypto.scryptSync(String(pin), salt, 32).toString('hex');
 
 const row = id => db.db.prepare('SELECT * FROM arcade_profiles WHERE id = ?').get(String(id || ''));
-const pub = r => ({ id: r.id, name: r.name, avatar: r.avatar, hasPin: !!r.pin_hash, status: r.status, createdAt: r.created_at });
+const lockedFor = r => Math.max(0, (r.locked_until || 0) - Date.now());
+const pub = r => ({ id: r.id, name: r.name, avatar: r.avatar, hasPin: !!r.pin_hash, status: r.status, createdAt: r.created_at, locked: lockedFor(r) > 0 });
 
 // The profile a token belongs to, if it's still valid (a PIN change or a
 // deleted profile makes old tokens stop working).
@@ -77,8 +94,13 @@ function nameTaken(name, exceptId = null) {
 module.exports = function profileRoutes({ requireAdmin, notify }) {
   const router = express.Router();
   const askLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 6, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many profile requests. Try again later.' } });
-  // Slows down anyone trying to guess a PIN.
-  const pinLimiter = rateLimit({ windowMs: 10 * 60 * 1000, limit: 20, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many tries. Wait a few minutes.' } });
+  // The device lock: only wrong PINs (401) count, so switching profiles a lot
+  // at a party never blocks anyone.
+  const pinLimiter = rateLimit({
+    windowMs: 10 * 60 * 1000, limit: 20, standardHeaders: true, legacyHeaders: false,
+    skipSuccessfulRequests: true, store: deviceStore,
+    message: { error: 'Too many wrong PINs from this device. Wait 10 minutes, or ask the admin to unlock it.' }
+  });
 
   // Approved profiles, for the picker.
   router.get('/', (req, res) => {
@@ -111,8 +133,20 @@ module.exports = function profileRoutes({ requireAdmin, notify }) {
       const r = row(req.params.id);
       if (!r || r.status !== 'approved') throw fail('That profile isn\'t available.', 404);
       if (r.pin_hash) {
+        const wait = lockedFor(r);
+        if (wait) throw fail(`This profile is locked for ${Math.ceil(wait / 60000)} more minutes after too many wrong PINs. Ask the admin to unlock it, or wait.`, 423);
         const pin = String((req.body || {}).pin || '');
-        if (!PIN_RE.test(pin) || hashPin(pin, r.pin_salt) !== r.pin_hash) throw fail('That PIN isn\'t right.', 401);
+        if (!PIN_RE.test(pin) || hashPin(pin, r.pin_salt) !== r.pin_hash) {
+          const fails = (r.pin_fails || 0) + 1;
+          if (fails >= PROFILE_FAILS) {
+            db.db.prepare('UPDATE arcade_profiles SET pin_fails = 0, locked_until = ? WHERE id = ?').run(Date.now() + PROFILE_LOCK_MS, r.id);
+            throw fail('That PIN isn\'t right, and that was 5 wrong tries, so this profile is locked for 15 minutes. Ask the admin to unlock it, or wait.', 401);
+          }
+          db.db.prepare('UPDATE arcade_profiles SET pin_fails = ? WHERE id = ?').run(fails, r.id);
+          const left = PROFILE_FAILS - fails;
+          throw fail(`That PIN isn't right. ${left} more ${left === 1 ? 'try' : 'tries'} before this profile locks for 15 minutes.`, 401);
+        }
+        if (r.pin_fails || r.locked_until) db.db.prepare('UPDATE arcade_profiles SET pin_fails = 0, locked_until = NULL WHERE id = ?').run(r.id);
       }
       res.json({ profile: pub(r), token: tokenFor(r) });
     } catch (e) { next(e); }
@@ -200,6 +234,17 @@ module.exports = function profileRoutes({ requireAdmin, notify }) {
   admin.post('/:id/clear-pin', (req, res) => {
     db.db.prepare("UPDATE arcade_profiles SET pin_hash = NULL, pin_salt = NULL, pin_version = pin_version + 1, updated_at = datetime('now') WHERE id = ?").run(req.params.id);
     res.json({ cleared: true });
+  });
+  // Lift a profile's lock (and forget its wrong tries).
+  admin.post('/:id/unlock', (req, res) => {
+    db.db.prepare('UPDATE arcade_profiles SET pin_fails = 0, locked_until = NULL WHERE id = ?').run(req.params.id);
+    res.json({ unlocked: true });
+  });
+  // Lift every device lock: profile PINs and the adult PIN alike.
+  admin.post('/unlock-devices', async (req, res) => {
+    await deviceStore.resetAll();
+    await adultPin.resetTries();
+    res.json({ unlocked: true });
   });
   admin.delete('/:id', (req, res) => {
     db.db.prepare('DELETE FROM arcade_profiles WHERE id = ?').run(req.params.id);

@@ -289,7 +289,9 @@
     <div class="admin-section">
       <h2>👪 Profiles</h2>
       <p class="admin-note">Family profiles for "Who's playing?" on the home page. New ones wait here for you to approve. A PIN is optional; whoever owns the profile can add one, and you can clear a forgotten one.</p>
+      <p class="admin-note">Wrong PINs lock things for a while, so nobody can guess their way in. Five wrong PINs on one profile locks that profile for 15 minutes, and it shows 🔒 Locked here with an Unlock button. Twenty wrong PINs from one phone or computer (profile PINs or the adult PIN) blocks that device for 10 minutes. The button below lifts every device block at once.</p>
       <div id="profileList">Loading…</div>
+      <div style="margin-top:10px"><button class="small-btn" id="unlockDevicesBtn">🔓 Unlock all blocked devices</button> <span class="admin-note" id="unlockDevicesMsg"></span></div>
     </div>
 
     <div class="admin-section">

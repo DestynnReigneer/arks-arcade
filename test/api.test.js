@@ -806,10 +806,16 @@ async function run({ base, root }) {
     (await wl('/spinsolve/unlock', 'POST', { pin: '111111' })).data.ok === false);
   ok('Rambler checks the adult PIN before keeping it', (await wl('/rambler/unlock', 'POST', { pin: '246810' })).data.ok === true &&
     (await wl('/rambler/unlock', 'POST', { pin: '111111' })).data.ok === false);
-  const adultTries = [];
-  for (let i = 0; i < 21; i++) adultTries.push((await wl('/adult-check', 'POST', { pin: '111111' })).status);
-  ok('a wrong adult PIN can be tried again, like a profile PIN', adultTries.slice(0, 20).every(s => s === 200));
-  ok('…until 20 tries, then it asks for a wait', adultTries[20] === 429);
+  // Right PINs never count toward the device limit. Wrong ones do, shared by
+  // every game's adult PIN check (two wrong ones were just tried above).
+  const rights = [];
+  for (let i = 0; i < 25; i++) rights.push((await wl('/adult-check', 'POST', { pin: '246810' })).status);
+  ok('right adult PINs never count toward the limit', rights.every(s => s === 200));
+  let wrongs = 2;
+  while (wrongs < 30 && (await wl('/adult-check', 'POST', { pin: '111111' })).status === 200) wrongs++;
+  ok(`a device is blocked after 20 wrong adult PINs, across every game (${wrongs})`, wrongs === 20);
+  await asAdmin('/profiles/admin/unlock-devices', 'POST', {});
+  ok('the admin can unblock every device', (await wl('/adult-check', 'POST', { pin: '111111' })).status === 200);
 
   const spinReq = await wl('/spinsolve/requests', 'POST', { topic: 'Camping', requestedBy: 'Kid' });
   ok('players can request a puzzle theme', spinReq.status === 201);
@@ -1005,6 +1011,22 @@ async function run({ base, root }) {
   ok('changing it works with the current PIN', (await wl(`/profiles/${asked.data.id}/pin`, 'POST', { token: mayaWithPin, pin: '246810', current: '432100' })).data.profile.hasPin === true);
   await asAdmin(`/profiles/admin/${asked.data.id}/clear-pin`, 'POST', {});
   ok('the admin can clear a forgotten PIN', !!(await wl(`/profiles/${asked.data.id}/use`, 'POST', {})).data.token);
+
+  // Five wrong PINs in a row lock the profile; the admin can unlock it.
+  const mayaNoPin = (await wl(`/profiles/${asked.data.id}/use`, 'POST', {})).data.token;
+  await wl(`/profiles/${asked.data.id}/pin`, 'POST', { token: mayaNoPin, pin: '432100' });
+  const useMaya = pin => wl(`/profiles/${asked.data.id}/use`, 'POST', { pin });
+  const firstWrong = await useMaya('000000');
+  ok('a wrong PIN says how many tries are left', firstWrong.status === 401 && /4 more tries/.test(firstWrong.data.error));
+  for (let i = 0; i < 3; i++) await useMaya('000000');
+  const fifth = await useMaya('000000');
+  ok('the fifth wrong PIN locks the profile', fifth.status === 401 && /locked for 15 minutes/.test(fifth.data.error));
+  ok('…so even the right PIN waits', (await useMaya('432100')).status === 423);
+  ok('the admin sees it locked', (await asAdmin('/profiles/admin')).data.some(p => p.id === asked.data.id && p.locked));
+  await asAdmin(`/profiles/admin/${asked.data.id}/unlock`, 'POST', {});
+  ok('…and can unlock it', !!(await useMaya('432100')).data.token);
+  ok('a right PIN starts the count over', /4 more tries/.test((await useMaya('000000')).data.error));
+  await asAdmin(`/profiles/admin/${asked.data.id}/clear-pin`, 'POST', {});
   ok('an approved profile becomes a Rambler player with the same id', !!(await wl(`/rambler/players/${asked.data.id}`)).data);
   const g1 = (await wl('/profiles/guest', 'POST', {})).data.name;
   const g2 = (await wl('/profiles/guest', 'POST', {})).data.name;

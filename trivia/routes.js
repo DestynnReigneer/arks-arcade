@@ -41,7 +41,7 @@ module.exports = function triviaRoutes({ requireAdmin, notify }) {
     });
   });
 
-  router.post('/unlock', (req, res) => res.json({ ok: adultPin.matches((req.body || {}).pin) }));
+  router.post('/unlock', adultPin.tryLimiter(), (req, res) => res.json(adultPin.check(req, res)));
 
   // Questions for a game on this phone (solo or pass-and-play), answers included.
   router.get('/questions', (req, res, next) => {
