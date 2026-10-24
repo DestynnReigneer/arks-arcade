@@ -280,14 +280,18 @@
   }
 
   function computeTileSize(cols) {
-    const available = Math.min(window.innerWidth - 24, 600);
+    // clientWidth leaves out the scrollbar; innerWidth counts it, which made
+    // the board a few pixels wider than a phone screen.
+    const available = Math.min(document.documentElement.clientWidth - 24, 600);
     const gap = 6;
     const size = Math.floor((available - (cols - 1) * gap) / cols);
     // Tall enough for the hints and the keyboard too, so nothing scrolls away.
     const top = board.getBoundingClientRect().top + window.scrollY;
     const keys = keyboardEl.offsetHeight || 170;
     const byHeight = Math.floor((window.innerHeight - top - keys - 24 - (MAX_GUESSES - 1) * gap) / MAX_GUESSES);
-    return Math.max(30, Math.min(60, size, byHeight));
+    // Never wider than the screen: a 10-letter word on a small phone gets
+    // smaller tiles rather than a page that scrolls sideways.
+    return Math.min(size, Math.max(30, Math.min(60, size, byHeight)));
   }
 
   function fitBoard() {
