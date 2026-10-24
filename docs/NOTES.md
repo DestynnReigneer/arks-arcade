@@ -1,36 +1,50 @@
 # Status and to-dos
 
-Last updated 2026-10-21. Update this file whenever a piece of work lands or
-a plan changes, so the next session can pick up from here.
+Last updated 2026-10-23. Update this file whenever a piece of work lands or
+a plan changes, so the next session can pick up from here. When the
+maintainer says "I'm back", start from "Last session" below.
 
-## Where things stand
+## Last session (2026-10-21 to 10-23)
 
-- `main` has everything through PR #16:
-  - #11: Admin Stats; Snake, Brick Breaker, Block Drop, Tower Defense; soft
-    background music with a 🎵 toggle (Block Drop plays the Korobeiniki folk
-    tune). The music has been listened to and approved.
-  - #12: admin sign-in by httpOnly session cookie (sign in again once after
-    updating), strict `npm ci` in the image, the app can only write to
-    `/app/data`, TZ defaults to America/Los_Angeles, CI runs on PRs only.
-  - #13: `HOST_PORT` in `.env` sets the published Docker port (default 3000).
-  - #14: CLAUDE.md points to the ARKS ID contract in `arks-id`.
-  - #15 party polish (merged before play-testing, to test on the server):
-    Uh-Oh: Part Deux's mobile-app table, one-symbol cards, card names that fit
-    what each card does, truck beep on Reverse, occasional "womp womp" and
-    server-picked jokes; jokes everywhere stay up by reading time
-    (`ArcadeKit.readMs`, `ArcadeKit.joke`); Dare Devil's timed cards get a
-    5-second reading grace, then a countdown with `Blip.think()` and a buzzer.
-  - #16: adult and profile PINs are exactly 6 digits, on a keypad
-    (`public/pin-pad.js`) that checks on the 6th digit with no Enter key, the
-    same as every ARKS app. Old profile PINs of other lengths need an admin reset.
+**Done and merged** (each its own PR, CI green):
+
+- #17 notes, #18 neutral wording in public docs and the MIT license, #19 the
+  container hands `./data` to `PUID:PGID` on start, #20 changing or removing a
+  profile PIN asks for the current one, #21 CLAUDE.md writing rule, #22 the
+  home page sorts games by most played (per profile, then everyone).
+- #23 the new home page top and bottom, from the header the maintainer chose
+  as the design language for every app: slogan on top; profile on the left;
+  logo lockup (picture, wide logo, "ARCADE" as a gradient outline) or the
+  plain title in the middle; ? help and ADMIN on the right; a clickable
+  INSERT COIN under the title (coin sound, third coin gets an announcer);
+  a Cheat codes box under Join a game (/secret lists the commands); clickable
+  pixel characters on the walls; the square logo spinning in the footer.
+  Plus the owner's optional `brand/` and `media/` folders, with clips that
+  play as secret commands, random surprises, or sent from Admin → Arcade.
+  How-to: `docs/CUSTOM-MEDIA.md`.
+
+Earlier work (#11 to #16: new games, admin sign-in, party polish, PIN pads)
+is in the git history and the README.
+
+**In progress:**
+
+- **Achievements.** The design plan is a private doc the maintainer is
+  marking up (link in the maintainer's own notes). Nothing is built yet. When
+  they're done, revise the plan from their edits, then build step 1.
+- **Shared clips for the other apps** (Hub and later): planned in the private
+  `arks-internal` repo (`conventions/shared-media.md`), not built.
 
 ## Next up
 
-1. **Play-test #15 and #16 on the server.** Fix what turns up in follow-up PRs.
-2. **Get Claude in Chrome connected** so pages can be checked in a real
+1. **Play-test on the server:** #15 party polish, #16 PIN pads, and #23 the
+   new top, footer, cheat codes and clips. Fix what turns up.
+2. **Achievements:** wait for the maintainer's markup of the plan, then build
+   step 1 (age groups, the feats engine, Rambler milestones moved over).
+3. **Get Claude in Chrome connected** so pages can be checked in a real
    browser. Everything is installed; it needs a full Chrome restart and the
-   extension signed in to the same account.
-3. Ask which other games should use the countdown tune (Know-It-All's answer
+   extension signed in to the same account. Until then, headless Chrome
+   screenshots work for checking layouts.
+4. Ask which other games should use the countdown tune (Know-It-All's answer
    clock, Spin & Solve's turn clock).
 
 ## Parked until closer to finished

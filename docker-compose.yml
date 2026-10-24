@@ -17,8 +17,12 @@ services:
       - TZ=${TZ:-America/Los_Angeles}
       - PUID=${PUID:-1000}
       - PGID=${PGID:-1000}
+      - CLIP_SURPRISE=${CLIP_SURPRISE:-}
     volumes:
       - ./data:/app/data
+      # Optional: your own logos, characters, sounds and clips (docs/CUSTOM-MEDIA.md).
+      - ./brand:/app/brand:ro
+      - ./media:/app/media:ro
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/healthz"]
       interval: 30s

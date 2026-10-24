@@ -20,6 +20,23 @@ const SUITES = [
   ['api', require('./api.test.js')]
 ];
 
+// A throwaway brand/ and media/ folder, so the tests can check what the
+// arcade picks up from them and what it refuses to serve.
+const os = require('node:os');
+const MEDIA_ROOT = fs.mkdtempSync(path.join(os.tmpdir(), 'arcade-media-'));
+const GIF = Buffer.from('R0lGODlhAQABAAAAACw=', 'base64');
+for (const [file, body] of [
+  ['brand/avatar.svg', '<svg xmlns="http://www.w3.org/2000/svg"/>'],
+  ['brand/notes.txt', 'not a logo'],
+  ['media/clips/rickroll.gif', GIF],
+  ['media/clips/bad name.gif', GIF],
+  ['media/clips/readme.txt', 'not a clip'],
+  ['media/sprites/dance-hero.gif', GIF]
+]) {
+  fs.mkdirSync(path.dirname(path.join(MEDIA_ROOT, file)), { recursive: true });
+  fs.writeFileSync(path.join(MEDIA_ROOT, file), body);
+}
+
 function startServer() {
   return new Promise((resolve, reject) => {
     const child = spawn(process.execPath, ['server.js'], {
@@ -30,7 +47,10 @@ function startServer() {
         NODE_ENV: 'test',
         // Admin routes are deny-by-default, so the suite has to supply a
         // token to be able to prove they are locked *and* that they work.
-        ADMIN_TOKEN: 'test-admin-token'
+        ADMIN_TOKEN: 'test-admin-token',
+        BRAND_DIR: path.join(MEDIA_ROOT, 'brand'),
+        MEDIA_DIR: path.join(MEDIA_ROOT, 'media'),
+        CLIP_SURPRISE: '0'
       },
       stdio: ['ignore', 'pipe', 'pipe']
     });

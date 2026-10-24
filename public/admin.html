@@ -293,6 +293,17 @@
     </div>
 
     <div class="admin-section">
+      <h2>🎬 Send a clip</h2>
+      <p class="admin-note">Clips are the GIFs, videos and sounds in the media/clips folder on your server (see docs/CUSTOM-MEDIA.md). Pick one and who gets it, and it pops up the next time their screen is open in the arcade, behind a "tap to open" card. Only profiles can get clips, not guests. If the server restarts before they see it, it's forgotten.</p>
+      <div id="clipSend" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <select id="clipPick"></select>
+        <select id="clipTo"></select>
+        <button class="small-btn" id="clipSendBtn">Send it</button>
+      </div>
+      <div id="clipMsg" class="admin-msg"></div>
+    </div>
+
+    <div class="admin-section">
       <h2>🏠 Home page games</h2>
       <p class="admin-note">When the box below is ticked, the home page puts the games each person plays most at the top, based on the last 90 days. Someone who hasn't picked a profile, or hasn't played much yet, sees what the whole family plays most. Games nobody has played follow the order you set here. Untick it to always use your order. You can also hide games you don't want showing; hidden games still work if someone has the link.</p>
       <div id="homeGames">Loading…</div>
