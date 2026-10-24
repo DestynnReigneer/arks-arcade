@@ -23,6 +23,12 @@ maintainer says "I'm back", start from "Last session" below.
   play as secret commands, random surprises, or sent from Admin → Arcade.
   How-to: `docs/CUSTOM-MEDIA.md`.
 
+On 2026-10-24, the adult levels cleanup (feedback items 3 to 6): gentler level
+descriptions, "Sex Facts" renamed "Between the Sheets", and Rambler's adult
+PIN screen now looks like the other games' and checks the PIN on entry, so a
+wrong one can be retried. Every adult PIN check allows 20 tries per 10
+minutes, the same as profile PINs.
+
 Earlier work (#11 to #16: new games, admin sign-in, party polish, PIN pads)
 is in the git history and the README.
 

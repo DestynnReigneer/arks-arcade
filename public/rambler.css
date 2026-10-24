@@ -189,6 +189,19 @@ input[type="text"] {
   font-size: 15px;
 }
 input[type="text"]:focus { outline: none; border-color: var(--accent); }
+/* The adult PIN box, dressed like the other games' PIN screens. */
+#adultPinInput {
+  width: 100%;
+  padding: 14px 12px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 20px;
+}
+#adultPinInput:focus { outline: none; border-color: var(--accent); }
+.pin-hint { text-align: center; color: var(--muted); font-size: 14px; margin-bottom: 10px; }
 textarea {
   width: 100%;
   min-height: 150px;
