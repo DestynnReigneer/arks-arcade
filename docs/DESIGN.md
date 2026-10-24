@@ -31,7 +31,7 @@ as one product.
 | Rambler, kids dictionary (`rambler.css`) | 8-Bit | **applied** |
 | Rambler, unfiltered dictionary | Vice | **applied** — `:root.unfiltered` |
 | Rambler Marathon | Vice | applied (built that way) |
-| Wordless (`style.css`) | 8-Bit | **not yet — see below** |
+| Wordless (`style.css`) | its own look | **kept as is, by choice (2026-10-24) — see below** |
 | Admin (`admin.html`) | — | not assigned a palette |
 
 ### How Rambler switches
@@ -85,7 +85,13 @@ the look it was built around. So a purple phone means "unfiltered or
 Marathon", not just "unfiltered". On the classic screens the signal is clean.
 Left as is: changing Marathon would undo a look that was asked for.
 
-### Why Wordless is not done
+### Why Wordless keeps its own look
+
+**Decided 2026-10-24:** the maintainer compared Wordless as it is with two
+8-Bit versions (gold buttons with blue "wrong spot" tiles, and blue buttons
+with gold tiles) and chose to keep Wordless as it is. Don't reopen this
+unless the maintainer does. The reasons it was never a simple swap:
+
 
 Not a token swap, and it needs a decision rather than a guess:
 
