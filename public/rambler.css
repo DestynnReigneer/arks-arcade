@@ -979,7 +979,8 @@ body.in-vice .screen { position: relative; z-index: 1; }
   color: var(--text);
   font-family: inherit;
   cursor: pointer;
-  flex: 0 0 auto;
+  flex: 0 1 auto;   /* gives way first; a long name ends in "…" */
+  min-width: 0;
   max-width: 46%;
 }
 .profile-chip:hover { border-color: var(--accent); }
@@ -1186,6 +1187,11 @@ body.in-vice .screen { position: relative; z-index: 1; }
 @media (max-width: 400px) {
   .profile-chip .pc-info { display: none; }
   .profile-chip { padding: 4px; }
+  header { gap: 8px; }
+}
+/* The smallest phones (320 wide) need the top bar a little tighter still. */
+@media (max-width: 340px) {
+  header { gap: 6px; padding: 10px; }
 }
 
 /* Empty slots on the arcade board are drawn, not hidden — a wall with three
