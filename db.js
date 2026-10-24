@@ -481,6 +481,7 @@ function listLeaderboard({ themeId, difficulty, limit, includeAdult = false }) {
     elapsedMs: r.elapsed_ms,
     difficulty: r.difficulty,
     createdAt: r.created_at,
+    profileId: r.profile_id || null,
     profileName: r.profile_name || null,
     profileAvatar: r.profile_avatar || null
   }));

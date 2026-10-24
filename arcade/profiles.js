@@ -30,8 +30,10 @@ db.db.exec(`
   );
 `);
 
-// Added after the first release: wrong PINs in a row, and when a lock lifts.
-for (const [col, decl] of [['pin_fails', 'INTEGER NOT NULL DEFAULT 0'], ['locked_until', 'INTEGER']]) {
+// Added after the first release: wrong PINs in a row, when a lock lifts, and
+// what the high-score boards show for this profile (its name, or initials).
+for (const [col, decl] of [['pin_fails', 'INTEGER NOT NULL DEFAULT 0'], ['locked_until', 'INTEGER'],
+  ['board_show', "TEXT NOT NULL DEFAULT 'name'"], ['initials', 'TEXT']]) {
   const cols = db.db.prepare('PRAGMA table_info(arcade_profiles)').all().map(c => c.name);
   if (!cols.includes(col)) db.db.exec(`ALTER TABLE arcade_profiles ADD COLUMN ${col} ${decl}`);
 }
@@ -63,7 +65,22 @@ const hashPin = (pin, salt) => crypto.scryptSync(String(pin), salt, 32).toString
 
 const row = id => db.db.prepare('SELECT * FROM arcade_profiles WHERE id = ?').get(String(id || ''));
 const lockedFor = r => Math.max(0, (r.locked_until || 0) - Date.now());
-const pub = r => ({ id: r.id, name: r.name, avatar: r.avatar, hasPin: !!r.pin_hash, status: r.status, createdAt: r.created_at, locked: lockedFor(r) > 0 });
+const INITIALS_RE = /^[A-Z0-9]{1,3}$/;
+const initialsOf = r => r.initials || String(r.name).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 3) || 'P';
+const pub = r => ({
+  id: r.id, name: r.name, avatar: r.avatar, hasPin: !!r.pin_hash, status: r.status, createdAt: r.created_at,
+  locked: lockedFor(r) > 0, boardShow: r.board_show === 'initials' ? 'initials' : 'name', initials: initialsOf(r)
+});
+
+// What the high-score boards show for a profile right now: its name, or the
+// initials it chose. Boards look this up every time they're shown, so
+// changing the choice changes past scores too. null for a profile that's
+// gone, so the board falls back to what was saved with the score.
+function boardName(id) {
+  const r = id ? row(id) : null;
+  if (!r || r.status !== 'approved') return null;
+  return { label: r.board_show === 'initials' ? initialsOf(r) : r.name, avatar: r.avatar, initials: initialsOf(r) };
+}
 
 // The profile a token belongs to, if it's still valid (a PIN change or a
 // deleted profile makes old tokens stop working).
@@ -181,9 +198,17 @@ module.exports = function profileRoutes({ requireAdmin, notify }) {
     try {
       const me = verify((req.body || {}).token);
       if (!me || me.id !== req.params.id) throw fail('Pick your profile first.', 401);
-      const avatar = (req.body || {}).avatar;
+      const body = req.body || {};
+      const now = row(me.id);
+      // Each of these is optional, so the avatar and the board choice can be
+      // saved separately.
+      const avatar = body.avatar === undefined ? now.avatar : body.avatar;
       if (!Avatars.valid(avatar)) throw fail('Pick one of the avatars.');
-      db.db.prepare("UPDATE arcade_profiles SET avatar = ?, updated_at = datetime('now') WHERE id = ?").run(avatar, me.id);
+      const show = body.boardShow === undefined ? now.board_show : body.boardShow === 'initials' ? 'initials' : 'name';
+      let initials = body.initials === undefined ? now.initials : String(body.initials || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+      if (initials && !INITIALS_RE.test(initials)) throw fail('Initials are 1 to 3 letters or numbers.');
+      initials = initials || null;
+      db.db.prepare("UPDATE arcade_profiles SET avatar = ?, board_show = ?, initials = ?, updated_at = datetime('now') WHERE id = ?").run(avatar, show, initials, me.id);
       const r = row(me.id);
       syncRambler(r);
       res.json({ profile: pub(r) });
@@ -257,4 +282,5 @@ module.exports = function profileRoutes({ requireAdmin, notify }) {
 };
 
 module.exports.verify = verify;
+module.exports.boardName = boardName;
 module.exports.approvedIds = () => db.db.prepare("SELECT id FROM arcade_profiles WHERE status = 'approved'").all().map(r => r.id);
