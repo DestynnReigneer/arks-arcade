@@ -720,6 +720,13 @@ async function run({ base, root }) {
   ok('hiding every game is refused', (await asAdmin('/comm/admin/home-games', 'POST', {
     order: startInfo.games.order, hidden: startInfo.games.order })).status === 400);
   ok('reordering needs the admin password', (await wl('/comm/admin/home-games', 'POST', { order: ['chess'] })).status === 401);
+  ok('no game starts turned off', startInfo.games.closed.length === 0);
+  await asAdmin('/comm/admin/home-games', 'POST', { order: startInfo.games.order, hidden: [], closed: ['chess', 'nope'] });
+  ok('the admin can turn a game off, and the home page sees it', (await wl('/arcade-info')).data.games.closed.join() === 'chess');
+  await asAdmin('/comm/admin/home-games', 'POST', { order: startInfo.games.order, hidden: [] });
+  ok('saving the order leaves turned-off games off', (await wl('/arcade-info')).data.games.closed.join() === 'chess');
+  await asAdmin('/comm/admin/home-games', 'POST', { order: startInfo.games.order, hidden: [], closed: [] });
+  ok('…until the admin turns them on', (await wl('/arcade-info')).data.games.closed.length === 0);
   await asAdmin('/comm/admin/home-games', 'POST', { order: startInfo.games.order, hidden: [] });
 
   // ---- arcade high scores ---------------------------------------------------------
