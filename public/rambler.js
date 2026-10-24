@@ -1522,7 +1522,9 @@ function showResults(results) {
     sum.innerHTML =
       `<span class="rank">${r.rank}</span><span class="nm"></span>` +
       `<span class="sc">${r.score}<small>${r.score === 1 ? 'pt' : 'pts'}</small></span>`;
-    sum.querySelector('.nm').textContent = r.name;
+    // "You found", so the column needs no heading of its own and lines up
+    // with "Words nobody found" beside it.
+    sum.querySelector('.nm').textContent = `${r.name} found`;
     d.appendChild(sum);
 
     const detail = document.createElement('div');
