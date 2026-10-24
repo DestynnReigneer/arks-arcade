@@ -5,6 +5,7 @@
 // admin's choice wins. Unset everywhere means a confirmation tap is all that
 // guards adult content -- fine on a LAN, not once the server is reachable.
 
+const rateLimit = require('express-rate-limit');
 const db = require('../db');
 
 const KEY = 'adult_pin';
@@ -46,4 +47,11 @@ if (process.env.ADULT_PIN && !PIN_RE.test(String(process.env.ADULT_PIN).trim()))
   console.warn('ADULT_PIN in .env must be 6 digits, or the PIN pads cannot enter it. Change it in .env or on the admin page.');
 }
 
-module.exports = { current, status, set, matches };
+// Every place that checks a typed-in adult PIN gets the same try rules as the
+// profile PINs: 20 tries per 10 minutes from one address, then a wait. A
+// wrong guess never locks anyone out for longer than that.
+function tryLimiter() {
+  return rateLimit({ windowMs: 10 * 60 * 1000, limit: 20, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many tries. Wait a few minutes.' } });
+}
+
+module.exports = { current, status, set, matches, tryLimiter };

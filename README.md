@@ -164,7 +164,7 @@ The four share `public/game-shell.js` (game-over panel, saving scores, high-scor
 
 Multiple-choice trivia. Solo (high-score board), take turns on one phone, or a room where everyone answers on their own phone at the same time and faster right answers score more. Pick genres, difficulty, how many questions and how long to answer.
 
-Questions come from a built-in bank (`trivia/bank.js`), packs built from an AI prompt in the admin Trivia tab (with player topic requests), and Open Trivia DB (opentdb.com, CC BY-SA 4.0), which the server downloads in the background and saves for offline play (`TRIVIA_ONLINE=off` to skip it). Cheeky, Spicy and Filthy levels sit behind the adult PIN, with optional Drinking rules and Couples dares that get raunchier with the level.
+Questions come from a built-in bank (`trivia/bank.js`), packs built from an AI prompt in the admin Trivia tab (with player topic requests), and Open Trivia DB (opentdb.com, CC BY-SA 4.0), which the server downloads in the background and saves for offline play (`TRIVIA_ONLINE=off` to skip it). Cheeky, Spicy and Filthy levels sit behind the adult PIN, with optional Drinking rules and Couples dares that get spicier with the level.
 
 ### Uh-Oh: Part Deux (`/partdeux.html`)
 
