@@ -6,7 +6,7 @@
 const LEVELS = {
   kids: { id: 'kids', label: 'Family', emoji: '🧒', adult: false, blurb: 'Silly dares and goofy questions for everyone.' },
   cheeky: { id: 'cheeky', label: 'Cheeky', emoji: '🌶️', adult: true, blurb: 'Flirty dares and juicy truths. Date night.' },
-  spicy: { id: 'spicy', label: 'Spicy', emoji: '🌶️🌶️', adult: true, blurb: 'Clothes start coming off.' },
+  spicy: { id: 'spicy', label: 'Spicy', emoji: '🌶️🌶️', adult: true, blurb: 'Things heat up. Grown-ups only.' },
   filthy: { id: 'filthy', label: 'Filthy', emoji: '🌶️🌶️🌶️', adult: true, blurb: 'No holds barred. Couples and close friends.' }
 };
 

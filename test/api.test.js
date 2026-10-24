@@ -798,6 +798,12 @@ async function run({ base, root }) {
     filthyBanter.jokes.some(([a, b]) => /fuck/i.test(a + b)));
   ok('the unlock check works', (await wl('/spinsolve/unlock', 'POST', { pin: '246810' })).data.ok === true &&
     (await wl('/spinsolve/unlock', 'POST', { pin: '111111' })).data.ok === false);
+  ok('Rambler checks the adult PIN before keeping it', (await wl('/rambler/unlock', 'POST', { pin: '246810' })).data.ok === true &&
+    (await wl('/rambler/unlock', 'POST', { pin: '111111' })).data.ok === false);
+  const adultTries = [];
+  for (let i = 0; i < 21; i++) adultTries.push((await wl('/adult-check', 'POST', { pin: '111111' })).status);
+  ok('a wrong adult PIN can be tried again, like a profile PIN', adultTries.slice(0, 20).every(s => s === 200));
+  ok('…until 20 tries, then it asks for a wait', adultTries[20] === 429);
 
   const spinReq = await wl('/spinsolve/requests', 'POST', { topic: 'Camping', requestedBy: 'Kid' });
   ok('players can request a puzzle theme', spinReq.status === 201);

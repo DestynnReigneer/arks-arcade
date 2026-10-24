@@ -10,7 +10,7 @@
 const LEVELS = {
   kids:   { id: 'kids',   label: 'Kids',   emoji: '🧒', adult: false, blurb: 'Volcanoes, rainbows and cookie sharing. Fine for everyone.' },
   cheeky: { id: 'cheeky', label: 'Cheeky', emoji: '🌶️', adult: true,  blurb: 'Innuendo and mild swearing. Date night.' },
-  spicy:  { id: 'spicy',  label: 'Spicy',  emoji: '🌶️🌶️', adult: true, blurb: 'Crude, gross, lots of swearing.' },
+  spicy:  { id: 'spicy',  label: 'Spicy',  emoji: '🌶️🌶️', adult: true, blurb: 'Crude and rude, with plenty of swearing.' },
   filthy: { id: 'filthy', label: 'Filthy', emoji: '🌶️🌶️🌶️', adult: true, blurb: 'No holds barred. Adults who know each other well.' }
 };
 
