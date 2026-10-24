@@ -85,9 +85,16 @@ const ArcadeKit = (() => {
       reset() {
         let last = '';
         try { last = localStorage.getItem('arcade.initials') || ''; } catch { /* unavailable */ }
-        if (typeof ArcadeProfile !== 'undefined' && ArcadeProfile.initials()) last = ArcadeProfile.initials();
+        // Playing as a profile: the score is theirs, so the boxes are filled
+        // in and hidden. The board shows what the profile chose.
+        const me = typeof ArcadeProfile !== 'undefined' && ArcadeProfile.token() ? ArcadeProfile.initials() : '';
+        if (me) last = me;
         boxes.forEach((b, i) => { b.value = last[i] || ''; });
-        boxes[0].focus();
+        const row = boxes[0].parentElement;
+        row.classList.toggle('hidden', !!me);
+        const hint = row.previousElementSibling;
+        if (hint && hint.classList.contains('hint')) hint.classList.toggle('hidden', !!me);
+        if (!me) boxes[0].focus();
       },
       remember(v) { try { localStorage.setItem('arcade.initials', v); } catch { /* unavailable */ } }
     };

@@ -60,17 +60,21 @@ function list(game, board, limit = 25) {
   const cap = Math.min(Math.max(parseInt(limit, 10) || 25, 1), 100);
   return db.db.prepare(`
     SELECT * FROM arcade_scores WHERE game = ? AND board = ? ORDER BY score DESC, created_at ASC LIMIT ?
-  `).all(game, key, cap).map(r => ({
-    id: r.id, initials: r.initials, score: r.score, detail: r.detail, board: r.board, createdAt: r.created_at,
-    profileName: r.profile_name || null, profileAvatar: r.profile_avatar || null
-  }));
+  `).all(game, key, cap).map(r => {
+    // A profile's current choice (name or initials) wins over what was saved.
+    const now = r.profile_id ? require('./profiles').boardName(r.profile_id) : null;
+    return {
+      id: r.id, initials: r.initials, score: r.score, detail: r.detail, board: r.board, createdAt: r.created_at,
+      profileName: now ? now.label : r.profile_name || null, profileAvatar: now ? now.avatar : r.profile_avatar || null
+    };
+  });
 }
 
 function save(game, { initials, score, board, detail, profileToken }) {
   const { g, key } = boardOf(game, board);
   // Playing as a profile: the score is theirs, no initials needed.
   const profile = profileToken ? require('./profiles').verify(profileToken) : null;
-  const who = profile ? initialsOf(profile.name) : String(initials || '').toUpperCase().trim();
+  const who = profile ? profile.initials || initialsOf(profile.name) : String(initials || '').toUpperCase().trim();
   if (!INITIALS_RE.test(who)) throw fail('Initials must be 1-3 letters or numbers.', 400);
   const points = Math.round(Number(score));
   if (!Number.isFinite(points) || points < 1 || points > g.max) throw fail('That score does not look right.', 400);
@@ -82,7 +86,7 @@ function save(game, { initials, score, board, detail, profileToken }) {
   `).get(game, key, points).c + 1;
   if (rank === 1 && !(g.adultBoards || []).includes(key)) {
     const where = Object.keys(g.boards).length > 1 ? ` (${g.boards[key]})` : '';
-    const shout = profile ? profile.name : who;
+    const shout = profile ? require('./profiles').boardName(profile.id).label : who;
     comm.safePost({
       kind: 'highscore', emoji: '🏆', game,
       title: `${shout} took #1 on ${g.label}${where}`,

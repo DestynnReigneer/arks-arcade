@@ -1995,12 +1995,14 @@ function openInitials() {
   if (!target) return;
   $('initialsWho').textContent = `${target.score} points \u2014 good enough for the board.`;
   const boxes = [...document.querySelectorAll('.initial-box')];
-  // Prefill from the active profile, because typing AAA every round gets old.
-  const seed = (S.player ? S.player.name : '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 3);
-  boxes.forEach((b, i) => { b.value = seed[i] || ''; });
+  // Playing as a profile: the score is theirs, so the boxes are filled in
+  // and hidden, and the board shows what the profile chose (name or initials).
+  const mine = S.player && window.ArcadeProfile && ArcadeProfile.token() ? ArcadeProfile.initials() : '';
+  boxes.forEach((b, i) => { b.value = mine[i] || ''; });
+  document.querySelector('.initials-boxes').classList.toggle('hidden', !!mine);
   say($('initialsMsg'), '');
   $('initialsOverlay').classList.remove('hidden');
-  document.querySelector('.initial-box').focus();
+  if (!mine) document.querySelector('.initial-box').focus();
 }
 
 async function saveInitials() {
