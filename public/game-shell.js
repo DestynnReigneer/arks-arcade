@@ -31,6 +31,7 @@ const GameShell = (() => {
     // ---- game over ---------------------------------------------------------------------
     const over = el(`
       <div class="panel center hidden over-panel" role="dialog" aria-live="polite">
+        <div class="over-top"><button class="primary again-btn"></button></div>
         <h2 class="over-title">Game over</h2>
         <div class="final-score"></div>
         <div class="over-detail hint"></div>
@@ -43,7 +44,6 @@ const GameShell = (() => {
           <div class="msg"></div>
         </div>
         <div class="stack">
-          <button class="ghost big again-btn"></button>
           <button class="ghost scores-btn">🏆 High scores</button>
         </div>
       </div>`);
