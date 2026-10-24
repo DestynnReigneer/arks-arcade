@@ -84,6 +84,12 @@ async function run({ base, root }) {
     a + (w.length <= 4 ? 1 : w.length === 5 ? 2 : w.length === 6 ? 3 : w.length === 7 ? 5 : 11), 0);
   ok(`score matches the table (${me.score} == ${expect})`, me.score === expect);
   ok('the junk word counts as submitted but not valid', me.wordCount === real.length);
+  // The results board lights up a word's tiles, so each one must spell it.
+  const spells = (w, path) => Array.isArray(path) && path.map(i => tiles[i]).join('') === w;
+  ok('each found word comes with the path that spells it',
+    me.words.filter(w => w.valid).every(w => spells(w.word, w.path)));
+  ok('…and so does each missed word',
+    scored.data.missed.length > 0 && scored.data.missed.every(m => spells(m.word, m.path)));
 
   console.log('\n-- the score cannot be forged --');
   const saved = await api('/leaderboard', 'POST', { boardId, playerId: 'p0', mode: 'solo', initials: 'AAA' });
