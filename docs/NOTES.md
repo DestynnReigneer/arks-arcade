@@ -89,7 +89,10 @@ this repo is public. Two things to know:
 ## Smaller to-dos
 
 - Dependabot has three open PRs (#2 Docker node-26-alpine, #3 npm, #4 GitHub
-  Actions). Review them.
+  Actions). Review them. Since 2026-10-24 the Dockerfile names an exact Node
+  version (22.23.4), Dependabot checks it weekly and skips new major
+  versions, and the image rebuilds on the 1st of each month, so #2 is
+  handled by the Node 26 move instead.
 - The local branch `feat/difficulty-and-polish` is merged (PR #10) and can be
   deleted.
 - The `package.json` description still says "an arcade of word games: Wordless
