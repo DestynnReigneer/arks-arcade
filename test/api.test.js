@@ -1042,6 +1042,25 @@ async function run({ base, root }) {
   const mayaWordless = await wl('/leaderboard', 'POST', { themeId: 'classic', won: true, guesses: 2, hintsUsed: 0, word: 'apple', elapsedMs: 5000, difficulty: 'easy', profileToken: mayaTok });
   ok('Wordless credits a profile too', mayaWordless.status === 201 && (await wl('/leaderboard?difficulty=easy')).data.some(r => r.profileName === 'Maya'));
 
+  // Name or initials on the boards: the profile chooses, and past scores follow.
+  const mayaRb = await api('/board', 'POST', { size: 5, profile: 'kids' });
+  const mayaWords = solver.solveWords(mayaRb.data.board, square(5), 'kids').filter(w => w.length >= 5).slice(0, 6);
+  await api('/score', 'POST', { boardId: mayaRb.data.boardId, players: [{ id: 'p0', name: 'Maya', words: mayaWords }] });
+  await api('/leaderboard', 'POST', { boardId: mayaRb.data.boardId, playerId: 'p0', mode: 'solo', initials: 'ZZZ', profileId: asked.data.id });
+  const mayaOnBoards = async who => (await wl('/scores/dino?board=run')).data.some(r => r.profileName === who && r.score === 321) &&
+    (await wl('/leaderboard?difficulty=easy')).data.some(r => r.profileName === who) &&
+    (await api('/arcade?board=5')).data.entries.some(e => e.initials === who);
+  ok('a profile shows its name on the boards by default', (await wl(`/profiles/${asked.data.id}/use`, 'POST', {})).data.profile.boardShow === 'name' &&
+    await mayaOnBoards('Maya'));
+  const toInitials = await wl(`/profiles/${asked.data.id}`, 'PATCH', { token: mayaTok, boardShow: 'initials', initials: 'mya' });
+  ok('a profile can choose initials instead', toInitials.data.profile.boardShow === 'initials' && toInitials.data.profile.initials === 'MYA');
+  ok('…and every board, past scores included, shows them', await mayaOnBoards('MYA'));
+  ok('initials longer than 3 are refused', (await wl(`/profiles/${asked.data.id}`, 'PATCH', { token: mayaTok, initials: 'ABCD' })).status === 400);
+  ok('changing the choice needs the profile', (await wl(`/profiles/${asked.data.id}`, 'PATCH', { token: 'x.y', boardShow: 'name' })).status === 401);
+  await wl(`/profiles/${asked.data.id}`, 'PATCH', { token: mayaTok, boardShow: 'name' });
+  ok('switching back shows the name again, and keeps the initials for later', await mayaOnBoards('Maya') &&
+    (await wl(`/profiles/${asked.data.id}/use`, 'POST', {})).data.profile.initials === 'MYA');
+
   // ---- stats and the error log ----------------------------------------------------------
   const phoneUA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1';
   const statsPost = (p, body, ua) => fetch(base + '/api/stats' + p, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(ua ? { 'User-Agent': ua } : {}) }, body: JSON.stringify(body) })

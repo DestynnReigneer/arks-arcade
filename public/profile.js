@@ -24,7 +24,8 @@ const ArcadeProfile = (() => {
   }
   const name = () => (get() || {}).name || '';
   const token = () => (get() || {}).token || null;
-  const initials = () => name().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 3);
+  // The initials this profile chose, or the first three letters of its name.
+  const initials = () => (get() || {}).initials || name().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 3);
   const onChange = fn => listeners.push(fn);
 
   async function api(path, body) {
@@ -60,7 +61,9 @@ const ArcadeProfile = (() => {
     .apf-tabs button.on{border-color:#ffc72c;color:#ffc72c}
     .apf-av{display:grid;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:8px;margin:6px 0 10px}
     .apf-av button{padding:3px;border-radius:50%;border:3px solid transparent;background:none;cursor:pointer;aspect-ratio:1}.apf-av button.on{border-color:#ffc72c}
-    .apf label{display:block;font-size:12px;color:#c9b98a;margin-top:8px}.apf-sub{font-size:12px;color:#8f8367;text-align:center;margin-top:10px}
+    .apf label{display:block;font-size:12px;color:#c9b98a;margin-top:8px}
+    .apf label.apf-pick{display:flex;align-items:center;gap:8px;font-size:14px;color:#f4ecd0;margin-top:6px}
+    .apf label.apf-pick input[type=radio]{width:auto;margin:0}.apf label.apf-pick input[data-ini]{width:70px;margin:0;text-transform:uppercase;letter-spacing:.2em;text-align:center}.apf-sub{font-size:12px;color:#8f8367;text-align:center;margin-top:10px}
   `;
 
   function ensure() {
@@ -95,7 +98,7 @@ const ArcadeProfile = (() => {
     const c = card();
     c.innerHTML = '<h2>Who\'s playing?</h2><p>Pick your profile, or play as a guest.</p><div class="apf-grid"></div><div class="apf-msg"></div>' +
       '<div class="apf-row"><button class="apf-btn" data-guest>👤 Play as a guest</button><button class="apf-btn" data-new>➕ New profile</button></div>' +
-      (get() && get().id ? '<div class="apf-row"><button class="apf-btn" data-manage>⚙️ My profile: avatar &amp; PIN</button></div>' : '') +
+      (get() && get().id ? '<div class="apf-row"><button class="apf-btn" data-manage>⚙️ My profile: avatar, PIN &amp; name on boards</button></div>' : '') +
       '<div class="apf-row"><button class="apf-btn" data-close>Close</button></div>';
     c.querySelector('[data-guest]').onclick = showGuest;
     c.querySelector('[data-new]').onclick = showNew;
@@ -121,7 +124,10 @@ const ArcadeProfile = (() => {
 
   async function choose(p, pin) {
     const r = await api(`/${p.id}/use`, { pin });
-    const chosen = { id: r.profile.id, name: r.profile.name, avatar: r.profile.avatar, hasPin: r.profile.hasPin, token: r.token };
+    const chosen = {
+      id: r.profile.id, name: r.profile.name, avatar: r.profile.avatar, hasPin: r.profile.hasPin, token: r.token,
+      boardShow: r.profile.boardShow, initials: r.profile.initials
+    };
     set(chosen);
     close(chosen);
   }
@@ -211,23 +217,47 @@ const ArcadeProfile = (() => {
     const c = card();
     const chosen = { value: me.avatar };
     c.innerHTML = '<h2></h2><label>Avatar</label><div data-av></div><div class="apf-row"><button class="apf-btn" data-save-av>Save avatar</button></div>' +
-      '<label>PIN</label><p style="text-align:left;margin:4px 0"></p>' +
+      '<label>On the high-score boards, show</label>' +
+      '<label class="apf-pick"><input type="radio" name="apfShow" value="name"> My name, <b data-myname></b></label>' +
+      '<label class="apf-pick"><input type="radio" name="apfShow" value="initials"> My initials <input data-ini maxlength="3" autocomplete="off" spellcheck="false" placeholder="ABC"></label>' +
+      '<p class="apf-sub" style="text-align:left;margin:2px 0 0">You can change this any time, and your past scores switch to match.</p>' +
+      '<div class="apf-row"><button class="apf-btn" data-save-board>Save</button></div>' +
+      '<label>PIN</label><p data-pin-note style="text-align:left;margin:4px 0"></p>' +
       (me.hasPin ? '<input data-current type="password" inputmode="numeric" maxlength="6" autocomplete="current-password" placeholder="Current PIN">' : '') +
       '<input data-pin type="password" inputmode="numeric" maxlength="6" autocomplete="new-password" placeholder="New PIN (6 digits)">' +
       '<div class="apf-row"><button class="apf-btn" data-set-pin>Set PIN</button>' + (me.hasPin ? '<button class="apf-btn" data-clear-pin>Remove PIN</button>' : '') + '</div>' +
       '<div class="apf-msg"></div><div class="apf-row"><button class="apf-btn" data-back>Back</button><button class="apf-btn" data-out>Sign out</button></div>';
     c.querySelector('h2').textContent = me.name;
-    c.querySelector('p').textContent = me.hasPin
+    c.querySelector('[data-pin-note]').textContent = me.hasPin
       ? 'Your profile has a PIN. To change it or remove it, type your current PIN first.'
       : "Your profile doesn't have a PIN yet. Add a 6-digit one so nobody else can play as you.";
     avatarPicker(c.querySelector('[data-av]'), chosen);
     const msg = t => { c.querySelector('.apf-msg').textContent = t; };
+    c.querySelector('[data-myname]').textContent = me.name;
+    const ini = c.querySelector('[data-ini]');
+    ini.value = initials();
+    ini.oninput = () => {
+      ini.value = ini.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 3);
+      c.querySelector('input[value="initials"]').checked = true;
+    };
+    c.querySelector(`input[value="${me.boardShow === 'initials' ? 'initials' : 'name'}"]`).checked = true;
+    c.querySelector('[data-save-board]').onclick = async () => {
+      try {
+        const boardShow = c.querySelector('input[name="apfShow"]:checked').value;
+        if (boardShow === 'initials' && !ini.value) throw new Error('Type 1 to 3 letters for your initials.');
+        const res = await fetch(`${API}/${me.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: me.token, boardShow, initials: ini.value }) });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        set({ ...get(), boardShow: data.profile.boardShow, initials: data.profile.initials });
+        msg(boardShow === 'initials' ? `The boards show ${data.profile.initials} now.` : `The boards show ${me.name} now.`);
+      } catch (e) { msg(e.message); }
+    };
     c.querySelector('[data-save-av]').onclick = async () => {
       try {
         const res = await fetch(`${API}/${me.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: me.token, avatar: chosen.value }) });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error);
-        set({ ...me, avatar: data.profile.avatar });
+        set({ ...get(), avatar: data.profile.avatar });
         msg('Avatar saved.');
       } catch (e) { msg(e.message); }
     };
