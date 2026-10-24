@@ -47,11 +47,26 @@ if (process.env.ADULT_PIN && !PIN_RE.test(String(process.env.ADULT_PIN).trim()))
   console.warn('ADULT_PIN in .env must be 6 digits, or the PIN pads cannot enter it. Change it in .env or on the admin page.');
 }
 
-// Every place that checks a typed-in adult PIN gets the same try rules as the
-// profile PINs: 20 tries per 10 minutes from one address, then a wait. A
-// wrong guess never locks anyone out for longer than that.
-function tryLimiter() {
-  return rateLimit({ windowMs: 10 * 60 * 1000, limit: 20, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many tries. Wait a few minutes.' } });
+// Every place that checks a typed-in adult PIN shares one limiter with the
+// same rule as a device's profile PINs: 20 wrong PINs in 10 minutes from one
+// address, then a wait (or the admin unlocks it). Right PINs don't count.
+// The routes say whether a check was right through res.locals.pinOk.
+const tries = new rateLimit.MemoryStore();
+const limiter = rateLimit({
+  windowMs: 10 * 60 * 1000, limit: 20, standardHeaders: true, legacyHeaders: false,
+  store: tries,
+  skipSuccessfulRequests: true,
+  requestWasSuccessful: (req, res) => res.locals.pinOk === true,
+  message: { error: 'Too many wrong PINs from this device. Wait 10 minutes, or ask the admin to unlock it.' }
+});
+const tryLimiter = () => limiter;
+const resetTries = () => tries.resetAll();
+
+// Checks a typed-in PIN for a route, and tells the limiter how it went.
+function check(req, res) {
+  const ok = matches((req.body || {}).pin);
+  res.locals.pinOk = ok;
+  return { ok };
 }
 
-module.exports = { current, status, set, matches, tryLimiter };
+module.exports = { current, status, set, matches, tryLimiter, resetTries, check };
