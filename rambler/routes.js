@@ -88,7 +88,7 @@ const roomLimiter = limit(60, 40, 'Too many rooms created. Try again later.');
 // ---- config ----------------------------------------------------------------
 
 // Checks a typed-in adult PIN before the page keeps it.
-router.post('/unlock', adultPin.tryLimiter(), (req, res) => res.json({ ok: adultPin.matches((req.body || {}).pin) }));
+router.post('/unlock', adultPin.tryLimiter(), (req, res) => res.json(adultPin.check(req, res)));
 
 router.get('/config', (req, res) => {
   res.json({

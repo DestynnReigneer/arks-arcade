@@ -65,8 +65,8 @@ module.exports = function spinRoutes({ requireAdmin, notify }) {
     });
   });
 
-  router.post('/unlock', (req, res) => {
-    res.json({ ok: adultPin.matches((req.body || {}).pin) });
+  router.post('/unlock', adultPin.tryLimiter(), (req, res) => {
+    res.json(adultPin.check(req, res));
   });
 
   // The puzzles for a game: one pack, or every built-in and pack puzzle at a level.
