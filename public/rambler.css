@@ -1481,7 +1481,6 @@ body.in-vice .screen { position: relative; z-index: 1; }
 .results-col { min-width: 0; }
 .results-col .standings { margin-bottom: 10px; }
 .results-col .panel { margin-bottom: 10px; }
-.col-head { margin: 4px 0 8px; font-size: 12px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--dim); }
 .chip[data-word], .word-line[data-word] { cursor: pointer; }
 .chip.picked { border-color: var(--trace); color: var(--text); }
 .word-line.picked .w { color: var(--trace); }
