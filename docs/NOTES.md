@@ -46,8 +46,17 @@ Pinned, in no particular order. Show them as checkboxes when asked.
   errors and failed server calls; the server adds who, when and the user
   agent); and one copy-paste block per feedback with Copy for chat and a
   Search the web button per error. Spec: `arks-internal/conventions/feedback.md`,
-  "Seeing the picture, and the diagnostics". The Hub builds it first; copy its
-  collector and viewer once its PR is merged.
+  "Seeing the picture, and the diagnostics". The Hub built it first
+  (arks-family-hub PR #27): copy `public/feedback.js` (the collector wraps
+  `fetch` and listens for `error` and `unhandledrejection` from page load),
+  `public/feedback.css`, `server/feedback.js` (`cleanDetails`, Discord with
+  `allowed_mentions: { parse: [] }`, the version from `GIT_SHA`), and
+  `chatBlock()`, `pageFeedback()` and `openViewer()` from `private/admin.js`.
+  CI: `ARG GIT_SHA=dev` plus `ENV GIT_SHA` in the Dockerfile, and
+  `build-args: GIT_SHA=${{ github.sha }}` in `docker-publish.yml`.
+- **`npm audit` warning:** `body-parser` (inside Express 4) has a high-severity
+  denial-of-service bug. `npm audit` says `npm audit fix` can patch it without
+  moving to Express 5; the Hub fixed the same thing that way.
 - **Play-test on the server:** pull the new image on the server and try
   everything from #15 to #37. Fix what turns up.
 - **Start a new game:** Sudoku, a crossword, a word scramble, or a
