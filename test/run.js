@@ -37,13 +37,14 @@ for (const [file, body] of [
   fs.writeFileSync(path.join(MEDIA_ROOT, file), body);
 }
 
-function startServer() {
+function startServer(port = PORT, extraEnv = {}) {
   return new Promise((resolve, reject) => {
     const child = spawn(process.execPath, ['server.js'], {
       cwd: ROOT,
       env: {
         ...process.env,
-        PORT: String(PORT),
+        ...extraEnv,
+        PORT: String(port),
         NODE_ENV: 'test',
         // Admin routes are deny-by-default, so the suite has to supply a
         // token to be able to prove they are locked *and* that they work.
@@ -68,10 +69,10 @@ function startServer() {
 }
 
 // Poll rather than assume: the log line appears just before listen() resolves.
-async function waitForHealth() {
+async function waitForHealth(base = BASE) {
   for (let i = 0; i < 40; i++) {
     try {
-      const res = await fetch(`${BASE}/healthz`);
+      const res = await fetch(`${base}/healthz`);
       if (res.ok) return;
     } catch { /* not up yet */ }
     await new Promise(r => setTimeout(r, 250));
@@ -83,13 +84,14 @@ async function waitForHealth() {
 // previous run left behind.
 function resetTestDb() {
   const dir = path.join(ROOT, 'data');
-  for (const f of ['test.db', 'test.db-journal', 'test.db-wal', 'test.db-shm']) {
+  for (const f of ['test.db', 'test.db-journal', 'test.db-wal', 'test.db-shm',
+    'test-arksid.db', 'test-arksid.db-journal', 'test-arksid.db-wal', 'test-arksid.db-shm']) {
     try { fs.unlinkSync(path.join(dir, f)); } catch { /* not there */ }
   }
 }
 
 (async () => {
-  let server = null;
+  let server = null, server2 = null, fake = null;
   resetTestDb();
   let total = 0;
   let failed = 0;
@@ -104,11 +106,25 @@ function resetTestDb() {
       total += result.pass + result.fail;
       failed += result.fail;
     }
+    // The same arcade signing in through ARKS ID: a second server with
+    // ARKS_ID_URL set, talking to a pretend ARKS ID, on its own database.
+    const { startFakeArksId } = require('./fake-arksid');
+    const ID_PORT = Number(PORT) + 1, ID_BASE = `http://localhost:${ID_PORT}`;
+    const secret = 'arcade-test-secret-'.padEnd(43, 's');
+    fake = await startFakeArksId({ secret, arcadeBase: ID_BASE });
+    server2 = await startServer(ID_PORT, { ARKS_ID_URL: fake.base, ARKS_ID_SECRET: secret, RAMBLER_DB: 'test-arksid.db' });
+    await waitForHealth(ID_BASE);
+    console.log(`\n${'='.repeat(60)}\n  arksid\n${'='.repeat(60)}`);
+    const result = await require('./arksid.test.js').run({ base: ID_BASE, root: ROOT, fake, admin: 'test-admin-token' });
+    total += result.pass + result.fail;
+    failed += result.fail;
   } catch (e) {
     console.error('\nRUNNER FAILED:', e.message);
     failed++;
   } finally {
     if (server) server.kill();
+    if (server2) server2.kill();
+    if (fake) fake.close();
   }
 
   console.log(`\n${'='.repeat(60)}`);

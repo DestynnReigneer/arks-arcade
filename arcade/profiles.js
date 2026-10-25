@@ -104,6 +104,13 @@ function syncRambler(r) {
   else db.createPlayer({ id: r.id, name: r.name, avatar: r.avatar });
 }
 
+// With ARKS ID sign-in on (arcade/arksid.js), profiles come from ARKS ID
+// accounts: nobody asks for one here, and names, PINs and the boards choice
+// are changed in ARKS ID. Avatars are still the arcade's own.
+let arksMode = false;
+const OFF = 'Profiles come from ARKS ID on this arcade. Sign in with your ARKS ID instead.';
+function setArksMode(on) { arksMode = !!on; }
+
 function nameTaken(name, exceptId = null) {
   return !!db.db.prepare("SELECT 1 FROM arcade_profiles WHERE lower(name) = lower(?) AND status != 'rejected' AND id != ?").get(name, exceptId || '');
 }
@@ -127,6 +134,7 @@ module.exports = function profileRoutes({ requireAdmin, notify }) {
   // Ask for a new profile. A grown-up approves it in admin.
   router.post('/', askLimiter, (req, res, next) => {
     try {
+      if (arksMode) throw fail(OFF, 403);
       const body = req.body || {};
       const name = cleanName(body.name);
       if (!name) throw fail('Give your profile a name.');
@@ -147,6 +155,7 @@ module.exports = function profileRoutes({ requireAdmin, notify }) {
   // Pick a profile on this device (with its PIN, if it has one).
   router.post('/:id/use', pinLimiter, (req, res, next) => {
     try {
+      if (arksMode) throw fail(OFF, 403);
       const r = row(req.params.id);
       if (!r || r.status !== 'approved') throw fail('That profile isn\'t available.', 404);
       if (r.pin_hash) {
@@ -174,6 +183,7 @@ module.exports = function profileRoutes({ requireAdmin, notify }) {
   // who finds the profile left open can't lock its owner out.
   router.post('/:id/pin', pinLimiter, (req, res, next) => {
     try {
+      if (arksMode) throw fail('PINs are set in ARKS ID on this arcade.', 403);
       const me = verify((req.body || {}).token);
       if (!me || me.id !== req.params.id) throw fail('Pick your profile first.', 401);
       const before = row(me.id);
@@ -204,6 +214,7 @@ module.exports = function profileRoutes({ requireAdmin, notify }) {
       // saved separately.
       const avatar = body.avatar === undefined ? now.avatar : body.avatar;
       if (!Avatars.valid(avatar)) throw fail('Pick one of the avatars.');
+      if (arksMode && (body.boardShow !== undefined || body.initials !== undefined)) throw fail('Name or initials on the boards is chosen in ARKS ID on this arcade.', 403);
       const show = body.boardShow === undefined ? now.board_show : body.boardShow === 'initials' ? 'initials' : 'name';
       let initials = body.initials === undefined ? now.initials : String(body.initials || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
       if (initials && !INITIALS_RE.test(initials)) throw fail('Initials are 1 to 3 letters or numbers.');
@@ -226,7 +237,30 @@ module.exports = function profileRoutes({ requireAdmin, notify }) {
   const admin = express.Router();
   admin.use(requireAdmin);
   admin.get('/', (req, res) => {
-    res.json(db.db.prepare("SELECT * FROM arcade_profiles WHERE status != 'rejected' ORDER BY status DESC, name COLLATE NOCASE").all().map(pub));
+    const account = id => (id ? db.db.prepare('SELECT user_id, name, role FROM arcade_id_accounts WHERE user_id = ?').get(id) || null : null);
+    res.json(db.db.prepare("SELECT * FROM arcade_profiles WHERE status != 'rejected' ORDER BY status DESC, name COLLATE NOCASE").all()
+      .map(r => ({ ...pub(r), account: arksMode ? account(r.arksid_user) : undefined })));
+  });
+  // With ARKS ID on: every account the arcade has seen, and which profile it's
+  // linked to, so a wrong first-time link can be moved.
+  admin.get('/accounts', (req, res) => {
+    if (!arksMode) return res.json({ on: false, accounts: [] });
+    res.json({ on: true, accounts: db.db.prepare(`SELECT a.user_id, a.name, a.role, p.id AS profile_id FROM arcade_id_accounts a
+      LEFT JOIN arcade_profiles p ON p.arksid_user = a.user_id ORDER BY a.name COLLATE NOCASE`).all().map(a => ({ ...a })) });
+  });
+  // { arksid_user } links this profile to that account (moving it from any
+  // other profile), or null unlinks it. The next sign-in brings the name over.
+  admin.post('/:id/link', (req, res, next) => {
+    try {
+      if (!arksMode) throw fail('ARKS ID sign-in is not turned on.', 400);
+      const r = row(req.params.id);
+      if (!r) throw fail('No such profile.', 404);
+      const to = (req.body || {}).arksid_user;
+      if (to !== null && !db.db.prepare('SELECT 1 FROM arcade_id_accounts WHERE user_id = ?').get(String(to || ''))) throw fail('Pick an ARKS ID account from the list.');
+      if (to) db.db.prepare('UPDATE arcade_profiles SET arksid_user = NULL WHERE arksid_user = ?').run(to);
+      db.db.prepare('UPDATE arcade_profiles SET arksid_user = ? WHERE id = ?').run(to, r.id);
+      res.json({ linked: !!to });
+    } catch (e) { next(e); }
   });
   admin.post('/:id/approve', (req, res, next) => {
     try {
@@ -282,5 +316,10 @@ module.exports = function profileRoutes({ requireAdmin, notify }) {
 };
 
 module.exports.verify = verify;
+module.exports.pub = pub;
+module.exports.tokenFor = tokenFor;
+module.exports.syncRambler = syncRambler;
+module.exports.setArksMode = setArksMode;
+module.exports.DEFAULT_AVATAR = Avatars.DEFAULT;
 module.exports.boardName = boardName;
 module.exports.approvedIds = () => db.db.prepare("SELECT id FROM arcade_profiles WHERE status = 'approved'").all().map(r => r.id);

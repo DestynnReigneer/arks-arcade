@@ -15,6 +15,12 @@ function fail(message, status) {
   return Object.assign(new Error(message), { status });
 }
 
+// With ARKS ID sign-in on (arcade/arksid.js), adult levels follow the person's
+// role instead of a PIN: a signed-in grown-up's page gets a short-lived adult
+// pass, and that pass is what goes wherever the PIN used to. The PIN is off.
+let passCheck = null;
+function usePasses(check) { passCheck = check; }
+
 // null in the settings table means "never changed from the admin page".
 function current() {
   const saved = db.getSetting(KEY, null);
@@ -23,6 +29,7 @@ function current() {
 }
 
 function status() {
+  if (passCheck) return { set: true, source: 'arksid' };
   const saved = db.getSetting(KEY, null);
   const source = saved !== null && saved !== undefined ? 'admin' : process.env.ADULT_PIN ? 'env' : 'none';
   return { set: !!current(), source };
@@ -30,6 +37,7 @@ function status() {
 
 // An empty pin removes the lock (and overrides any ADULT_PIN in .env).
 function set(pin) {
+  if (passCheck) throw fail('This arcade signs in through ARKS ID, so adult levels follow ARKS ID roles and there is no adult PIN to set.', 400);
   const value = String(pin == null ? '' : pin).trim();
   if (value && !PIN_RE.test(value)) throw fail('The PIN must be 6 digits.', 400);
   db.setSetting(KEY, value);
@@ -37,6 +45,7 @@ function set(pin) {
 }
 
 function matches(supplied) {
+  if (passCheck) return passCheck(String(supplied || ''));
   const pin = current();
   return !pin || String(supplied || '') === pin;
 }
@@ -69,4 +78,4 @@ function check(req, res) {
   return { ok };
 }
 
-module.exports = { current, status, set, matches, tryLimiter, resetTries, check };
+module.exports = { current, status, set, matches, tryLimiter, resetTries, check, usePasses };
