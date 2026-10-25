@@ -37,7 +37,13 @@ order they were clicked, and keep the rest pinned here.
 
 ## To-do list (checkbox list; pinned items wait here)
 
-Pinned, in no particular order. Show them as checkboxes when asked.
+Since 2026-10-24 the one to-do list for every ARKS product lives in the
+maintainer's private roadmap (`arks-internal/ROADMAP.md`), worked from one
+session for all the repos. This copy is the Arcade's part of it; tick items
+off in both places. One rule from the roadmap shapes the Arcade's next big
+item: when it signs in through ARKS ID (`ARKS_ID_URL` set), ARKS ID owns
+everything about a person, and the Arcade's own profile PINs, locks,
+board-name setting and adult PIN are only for copies running without it.
 
 - **Feedback extras (asked for every app, 2026-10-24):** an admin picture
   viewer (full screen, zoom, fit, actual size, drag, open in a new tab);
