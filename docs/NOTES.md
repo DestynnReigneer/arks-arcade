@@ -52,6 +52,11 @@ Pinned, in no particular order. Show them as checkboxes when asked.
   `public/feedback.css`, `server/feedback.js` (`cleanDetails`, Discord with
   `allowed_mentions: { parse: [] }`, the version from `GIT_SHA`), and
   `chatBlock()`, `pageFeedback()` and `openViewer()` from `private/admin.js`.
+  Search the web cleans the error first (web addresses, IPs with ports,
+  `arksnet` names, emails, `u_`/`s_` ids, long hex ids and 5+ digit numbers
+  become placeholders) and shows it in an editable box with Cancel and Search
+  before anything goes to Google: copy `cleanForSearch()` and `openSearch()`
+  too (arks-family-hub PR #28, arks-internal PR #21).
   CI: `ARG GIT_SHA=dev` plus `ENV GIT_SHA` in the Dockerfile, and
   `build-args: GIT_SHA=${{ github.sha }}` in `docker-publish.yml`.
 - **`npm audit` warning:** `body-parser` (inside Express 4) has a high-severity
