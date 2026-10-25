@@ -39,6 +39,15 @@ order they were clicked, and keep the rest pinned here.
 
 Pinned, in no particular order. Show them as checkboxes when asked.
 
+- **Feedback extras (asked for every app, 2026-10-24):** an admin picture
+  viewer (full screen, zoom, fit, actual size, drag, open in a new tab);
+  diagnostics the bug collects from page load (page and view, device and
+  browser, how long the page was open, version plus git commit, the last 10
+  errors and failed server calls; the server adds who, when and the user
+  agent); and one copy-paste block per feedback with Copy for chat and a
+  Search the web button per error. Spec: `arks-internal/conventions/feedback.md`,
+  "Seeing the picture, and the diagnostics". The Hub builds it first; copy its
+  collector and viewer once its PR is merged.
 - **Play-test on the server:** pull the new image on the server and try
   everything from #15 to #37. Fix what turns up.
 - **Start a new game:** Sudoku, a crossword, a word scramble, or a
