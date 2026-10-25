@@ -49,8 +49,6 @@ board-name setting and adult PIN are only for copies running without it.
   everything from #15 to #37. Fix what turns up.
 - **Start a new game:** Sudoku, a crossword, a word scramble, or a
   cabinet-style game (the list is in the private feedback list).
-- **Countdown tune in more games:** should Know-It-All's answer clock and
-  Spin & Solve's turn clock use it?
 - **Achievements step 1:** waits for the maintainer's markup of the private
   plan. Then build step 1 (age groups, the feats engine, Rambler milestones
   moved over).

@@ -38,6 +38,14 @@ button { font-family: inherit; }
   border-radius: 10px; border: 1px solid var(--border); background: var(--card); color: var(--text);
   text-decoration: none; font-size: 17px; cursor: pointer;
 }
+/* On a phone the header carries up to five buttons: shrink them a little so
+   the game's name still fits. */
+@media (max-width: 420px) {
+  .top { gap: 6px; }
+  .top .btns { gap: 4px; }
+  .top .icon-btn { width: 30px; height: 30px; font-size: 14px; }
+  .top h1 { letter-spacing: 0.5px; font-size: 14px; }
+}
 
 .panel, .card-panel {
   background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin-bottom: 14px;
