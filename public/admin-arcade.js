@@ -407,7 +407,9 @@
   async function loadPin() {
     try {
       const s = await api('/adult-pin');
-      $('pinStatus').textContent = !s.set
+      $('pinStatus').textContent = s.source === 'arksid'
+        ? 'This arcade signs in through ARKS ID, so adult levels open for grown-ups’ ARKS ID accounts (adult or admin) and there is no adult PIN.'
+        : !s.set
         ? 'No PIN set: anyone can switch on adult content with a confirmation tap.'
         : s.source === 'env' ? 'A PIN is set (from ADULT_PIN in .env).' : 'A PIN is set (from this page).';
     } catch (e) { $('pinStatus').textContent = e.message; }
