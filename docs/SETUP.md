@@ -56,6 +56,8 @@ admin password.
 | `TRUST_PROXY` | Set to `1` when the arcade sits behind **one** reverse proxy (like Nginx Proxy Manager) so rate limits see each visitor's real address. Leave blank if people connect to the container directly. |
 | `TRIVIA_ONLINE` | Know-It-All downloads free questions from Open Trivia DB in the background and saves them. Set to `off` to never go online. |
 | `DISCORD_WEBHOOK_URL` | Optional. Posts to a Discord channel when someone requests a theme, a pack or a profile. |
+| `ARKS_ID_URL`, `ARKS_ID_SECRET` | Optional, and only if you also run an ARKS ID server, a family sign-in service the arcade can share with other apps. Both blank (the usual case) keeps the arcade's own profiles. See "Signing in through ARKS ID" below. |
+| `ARKS_ID_API_URL` | Optional. Where the arcade's server reaches ARKS ID, if that's a different address from `ARKS_ID_URL` (for example a home-network address). Blank uses `ARKS_ID_URL`. |
 | `HOST_PORT` | The port on the server, if something else already uses 3000 (e.g. `3070`). |
 | `PUID` / `PGID` | Who owns `./data` and runs the arcade. Blank means 1000, the first user on most Linux machines; run `id -u` and `id -g` to check yours. The container fixes the folder's owner on start, so you never need `sudo chown`. |
 
@@ -129,6 +131,29 @@ WireGuard):
   or remove it from **⚙️ My profile**; you can clear a forgotten one in admin.
 - Scores are credited to the profile (the server checks a signed token), so
   nobody can post a score as someone else without their PIN.
+
+### Signing in through ARKS ID (optional)
+
+If you run an ARKS ID server, register the arcade there as an app named
+`arcade` with the callback `https://<your arcade>/auth/callback`, then put its
+address in `ARKS_ID_URL` and the app's secret in `ARKS_ID_SECRET`. With both
+set, ARKS ID takes over everything about a person:
+
+- **Who's playing?** shows *Sign in with ARKS ID*. The first time someone signs
+  in, their account is linked to the arcade profile with the same name, so
+  their scores come along; with no match, a new profile is made. You can move a
+  wrong link in **Admin → Arcade → Profiles**.
+- Names, PINs and "name or initials on the boards" are set in ARKS ID. The
+  arcade's own profile requests and profile PINs switch off; avatars stay the
+  arcade's own.
+- **Adult levels follow the person's role**: a signed-in adult or admin opens
+  them without a PIN, and kids, teens and guests can't. `ADULT_PIN` isn't used.
+- **Guest play** is only offered on a device ARKS ID doesn't know, or one that
+  belongs to an admin, so nobody can get around the adult rules by playing as a
+  guest. The first visit from a signed-out browser makes one quick stop at
+  ARKS ID to find out.
+- **Clips** you send from admin go through ARKS ID, so they pop up in whichever
+  app the person opens next.
 
 ## 8. Keeping it safe
 

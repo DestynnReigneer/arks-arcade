@@ -31,7 +31,7 @@
   async function load() {
     const box = $('profileList');
     try {
-      const rows = await api();
+      const [rows, ids] = await Promise.all([api(), api('/accounts')]);
       box.innerHTML = rows.length ? '' : '<div class="admin-note">No profiles yet. When someone taps "New profile" on the home page, it shows up here to approve.</div>';
       for (const p of rows) {
         const row = document.createElement('div');
@@ -69,6 +69,29 @@
               load();
             }, true)
           );
+        }
+        // With ARKS ID on: which account this profile is, and a way to move a
+        // wrong first-time link (it links by name the first time someone signs in).
+        if (ids.on && p.status === 'approved') {
+          const pick = document.createElement('select');
+          pick.className = 'small-btn';
+          pick.title = 'Which ARKS ID account plays as this profile';
+          const none = document.createElement('option');
+          none.value = ''; none.textContent = 'ARKS ID: not linked';
+          pick.appendChild(none);
+          for (const a of ids.accounts) {
+            const o = document.createElement('option');
+            const other = a.profile_id && a.profile_id !== p.id ? rows.find(x => x.id === a.profile_id) : null;
+            o.value = a.user_id;
+            o.textContent = `ARKS ID: ${a.name} (${a.role})${other ? `, now ${other.name}` : ''}`;
+            pick.appendChild(o);
+          }
+          pick.value = p.account ? p.account.user_id : '';
+          pick.onchange = async () => {
+            try { await api(`/${p.id}/link`, { method: 'POST', body: { arksid_user: pick.value || null } }); } catch (e) { alert(e.message); }
+            load();
+          };
+          actions.prepend(pick);
         }
         row.append(avatar(p.avatar), label, actions);
         box.appendChild(row);

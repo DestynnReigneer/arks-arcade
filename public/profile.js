@@ -28,6 +28,36 @@ const ArcadeProfile = (() => {
   const initials = () => (get() || {}).initials || name().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 3);
   const onChange = fn => listeners.push(fn);
 
+  // ---- ARKS ID (optional, see arcade/arksid.js) ----------------------------------------
+  // When this arcade signs in through ARKS ID, "who's playing" comes from it:
+  // a signed-in person gets their linked profile and its token, and guest
+  // play is only offered on a device no family member owns.
+  const Id = { on: false, me: null };
+  Id.ready = fetch('/api/arksid/me', { cache: 'no-store' }).then(r => (r.ok ? r.json() : { on: false })).catch(() => ({ on: false })).then(me => {
+    Id.on = !!me.on; Id.me = me;
+    if (!Id.on) return Id;
+    const cur = get();
+    if (me.signedIn) {
+      set({ id: me.profile.id, name: me.profile.name, avatar: me.profile.avatar, hasPin: false, token: me.token,
+        boardShow: me.profile.boardShow, initials: me.profile.initials, arksid: true, role: me.role, adult: me.adult });
+    } else {
+      if (cur && (!cur.guest || (me.deviceChecked && !me.guestAllowed))) set(null);
+      // Once per visit: a quick stop at ARKS ID to learn whose device this is,
+      // so guest play can be offered (or not). It comes straight back.
+      let tried = false;
+      try { tried = sessionStorage.getItem('arksid.deviceTried') === '1'; sessionStorage.setItem('arksid.deviceTried', '1'); } catch { tried = true; }
+      if (!me.deviceChecked && !tried) location.replace('/auth/device?return=' + encodeURIComponent(location.pathname + location.search + location.hash));
+    }
+    return Id;
+  });
+  const here = () => encodeURIComponent(location.pathname + location.search + location.hash);
+  async function signOut() {
+    let next = '/';
+    try { next = (await (await fetch('/auth/signout', { method: 'POST' })).json()).next || '/'; } catch { /* go home */ }
+    set(null);
+    location.href = next;
+  }
+
   async function api(path, body) {
     const res = await fetch(API + path, body === undefined ? undefined : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     const data = await res.json().catch(() => ({}));
@@ -96,6 +126,8 @@ const ArcadeProfile = (() => {
 
   async function showList() {
     const c = card();
+    await Id.ready;
+    if (Id.on) return showArksId();
     c.innerHTML = '<h2>Who\'s playing?</h2><p>Pick your profile, or play as a guest.</p><div class="apf-grid"></div><div class="apf-msg"></div>' +
       '<div class="apf-row"><button class="apf-btn" data-guest>👤 Play as a guest</button><button class="apf-btn" data-new>➕ New profile</button></div>' +
       (get() && get().id ? '<div class="apf-row"><button class="apf-btn" data-manage>⚙️ My profile: avatar, PIN &amp; name on boards</button></div>' : '') +
@@ -120,6 +152,40 @@ const ArcadeProfile = (() => {
       b.onclick = () => (p.hasPin ? showPin(p) : choose(p, ''));
       grid.appendChild(b);
     }
+  }
+
+  // "Who's playing?" when this arcade signs in through ARKS ID.
+  function showArksId() {
+    const c = card(), me = Id.me, cur = get();
+    if (me.signedIn && cur && cur.arksid) {
+      c.innerHTML = '<h2>Who&#39;s playing?</h2><div class="apf-grid"></div><p data-who></p>' +
+        '<div class="apf-row"><button class="apf-btn" data-manage>⚙️ My avatar</button><button class="apf-btn" data-out>Sign out</button></div>' +
+        '<div class="apf-row"><button class="apf-btn" data-close>Close</button></div>';
+      const tile = document.createElement('div');
+      tile.className = 'apf-tile on';
+      tile.style.gridColumn = '1/-1';
+      tile.appendChild(avatarEl(cur.avatar, 56));
+      const n = document.createElement('span');
+      n.textContent = cur.name;
+      tile.appendChild(n);
+      c.querySelector('.apf-grid').appendChild(tile);
+      c.querySelector('[data-who]').textContent = `You're signed in with ARKS ID as ${cur.name}. Your name, your PIN and whether the high-score boards show your name or initials are all set in ARKS ID.`;
+      c.querySelector('[data-manage]').onclick = showManage;
+      c.querySelector('[data-out]').onclick = signOut;
+      c.querySelector('[data-close]').onclick = () => close(get());
+      return;
+    }
+    const guest = me.guestAllowed;
+    c.innerHTML = '<h2>Who&#39;s playing?</h2><p data-lead></p><div class="apf-msg"></div>' +
+      '<div class="apf-row"><button class="apf-btn apf-main" data-in>Sign in with ARKS ID</button></div>' +
+      (guest ? '<div class="apf-row"><button class="apf-btn" data-guest>👤 Play as a guest</button></div>' : '') +
+      '<div class="apf-row"><button class="apf-btn" data-close>Close</button></div>';
+    c.querySelector('[data-lead]').textContent = guest
+      ? 'Sign in with your ARKS ID so your scores count, or play as a guest.'
+      : 'Sign in with your ARKS ID to play. This device belongs to someone in the family, so playing as a guest is turned off here.';
+    c.querySelector('[data-in]').onclick = () => { location.href = '/auth/signin?return=' + here(); };
+    if (guest) c.querySelector('[data-guest]').onclick = showGuest;
+    c.querySelector('[data-close]').onclick = () => close(get());
   }
 
   async function choose(p, pin) {
@@ -216,6 +282,29 @@ const ArcadeProfile = (() => {
     const me = get();
     const c = card();
     const chosen = { value: me.avatar };
+    if (Id.on) {
+      // Signed in through ARKS ID: only the avatar is the arcade's own.
+      c.innerHTML = '<h2></h2><label>Avatar</label><div data-av></div><div class="apf-row"><button class="apf-btn" data-save-av>Save avatar</button></div>' +
+        '<p class="apf-sub" data-more></p><div class="apf-msg"></div><div class="apf-row"><button class="apf-btn" data-back>Back</button></div>';
+      c.querySelector('h2').textContent = me.name;
+      c.querySelector('[data-more]').textContent = 'Your name, your PIN and whether the boards show your name or initials are changed on your ARKS ID account page.';
+      const link = document.createElement('a');
+      link.href = Id.me.accountUrl; link.textContent = ' Open ARKS ID';
+      link.style.color = '#ffc72c';
+      c.querySelector('[data-more]').appendChild(link);
+      avatarPicker(c.querySelector('[data-av]'), chosen);
+      c.querySelector('[data-save-av]').onclick = async () => {
+        try {
+          const res = await fetch(`${API}/${me.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: me.token, avatar: chosen.value }) });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error);
+          set({ ...get(), avatar: data.profile.avatar });
+          c.querySelector('.apf-msg').textContent = 'Avatar saved.';
+        } catch (e) { c.querySelector('.apf-msg').textContent = e.message; }
+      };
+      c.querySelector('[data-back]').onclick = showList;
+      return;
+    }
     c.innerHTML = '<h2></h2><label>Avatar</label><div data-av></div><div class="apf-row"><button class="apf-btn" data-save-av>Save avatar</button></div>' +
       '<label>On the high-score boards, show</label>' +
       '<label class="apf-pick"><input type="radio" name="apfShow" value="name"> My name, <b data-myname></b></label>' +
@@ -287,5 +376,5 @@ const ArcadeProfile = (() => {
   }
   document.addEventListener('DOMContentLoaded', () => fillNames());
 
-  return { get, set, name, token, initials, onChange, open, avatarEl, fillNames };
+  return { get, set, name, token, initials, onChange, open, avatarEl, fillNames, arksId: () => Id };
 })();

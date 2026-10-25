@@ -56,6 +56,27 @@ const adminSession = require('./arcade/admin-session');
 const { requireAdmin } = adminSession;
 app.use('/api/admin', adminSession.routes());
 
+// ---- Optional: signing in through ARKS ID (arcade/arksid.js) ----
+// Off unless ARKS_ID_URL and ARKS_ID_SECRET are set. With it on, profiles,
+// names, the boards choice and adult levels follow ARKS ID instead of the
+// arcade's own profiles and adult PIN.
+const arksid = require('./arcade/arksid');
+{
+  const problem = arksid.problem();
+  if (problem) { console.error(`Refusing to start: ${problem}`); process.exit(1); }
+}
+const arks = (() => {
+  const client = arksid.createClient();
+  return client ? arksid.createArksId({ client, profiles: require('./arcade/profiles') }) : null;
+})();
+if (arks) {
+  require('./arcade/profiles').setArksMode(true);
+  adultPin.usePasses(arks.passOk);
+  app.use(arks.routes());
+} else {
+  app.get('/api/arksid/me', (req, res) => res.set('Cache-Control', 'no-store').json({ on: false }));
+}
+
 // ---- Rate limiting for public write endpoints ----
 const leaderboardLimiter = rateLimit({
   windowMs: 10 * 60 * 1000,
@@ -138,7 +159,7 @@ app.use('/api/stats', stats.routes({ requireAdmin }));
 
 // ---- the owner's own logos, characters, sounds and clips (optional) ----
 const customMedia = require('./arcade/custom-media');
-app.use('/api/custom', customMedia.routes({ requireAdmin }));
+app.use('/api/custom', customMedia.routes({ requireAdmin, arks }));
 app.use('/custom', customMedia.staticFiles());
 
 // ---- Comm Center (home page message board) ----
@@ -418,7 +439,9 @@ app.listen(PORT, () => {
   if (!DISCORD_WEBHOOK_URL) {
     console.warn('DISCORD_WEBHOOK_URL is not set — theme request notifications will not be sent.');
   }
-  if (adultPin.status().set) {
+  if (arks) {
+    console.log('Signing in through ARKS ID is on: profiles and adult levels follow ARKS ID.');
+  } else if (adultPin.status().set) {
     console.log('Adult PIN is set — adult content requires it.');
   }
 });
