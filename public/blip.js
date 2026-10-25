@@ -131,6 +131,31 @@ const Blip = (() => {
     return { stop };
   }
 
+  // The same tune, driven by a game's own clock instead of a timer of its
+  // own, so it pauses whenever the game's clock pauses. Call step(msLeft) as
+  // often as the clock updates; a beat plays each time another half second
+  // has gone. reset() before a new countdown.
+  function thinker() {
+    let lastHalf = null, beat = 0;
+    return {
+      step(msLeft) {
+        const h = Math.ceil(msLeft / 500);
+        if (h === lastHalf || h <= 0) { lastHalf = h; return; }
+        lastHalf = h;
+        const final = h <= 6;
+        tone(beat % 2 ? 1200 : 1500, 0.035, { type: 'sine', volume: final ? 0.09 : 0.05 });
+        const m = THINK[beat % THINK.length];
+        if (m != null && !final) tone(hz(m), 0.22, { type: 'triangle', volume: 0.05 });
+        if (final && beat % 2 === 0) tone(1800, 0.05, { type: 'square', volume: 0.03, delay: 0.25 });
+        beat++;
+      },
+      reset() { lastHalf = null; beat = 0; }
+    };
+  }
+  // Whether games with a countdown play the thinking tune, remembered per
+  // browser. Off means the quiet ticks for the last few seconds instead.
+  let tuneOn = (() => { try { return localStorage.getItem('arcade.thinkTune') !== 'off'; } catch { return true; } })();
+
   // ---- soft background music --------------------------------------------------------------------
   // A short generated loop per game: a pad, a bass note, a gentle arpeggio and
   // now and then a little tune, all through a low-pass filter so it sits under
@@ -257,7 +282,25 @@ const Blip = (() => {
   document.addEventListener('visibilitychange', syncMusic);
 
   return {
-    tone, tune, noise, womp, backup, timesUp, think,
+    tone, tune, noise, womp, backup, timesUp, think, thinker,
+    get tuneOn() { return tuneOn; },
+    // Wires a button that turns just the countdown tune on and off (the rest
+    // of the game's sound stays as it is).
+    tuneButton(btn) {
+      const paint = () => {
+        btn.textContent = '🎵';
+        btn.style.opacity = tuneOn ? '' : '.4';
+        btn.title = tuneOn ? 'Countdown tune on. Tap to turn just the tune off.' : 'Countdown tune off. Tap to turn it on.';
+        btn.setAttribute('aria-pressed', String(tuneOn));
+        btn.setAttribute('aria-label', 'Countdown tune');
+      };
+      paint();
+      btn.addEventListener('click', () => {
+        tuneOn = !tuneOn;
+        try { localStorage.setItem('arcade.thinkTune', tuneOn ? 'on' : 'off'); } catch { /* unavailable */ }
+        paint();
+      });
+    },
     // Call from the first tap so later sounds are allowed to play.
     unlock() { unlocked = true; audio(); syncMusic(); },
     get muted() { return muted; },

@@ -410,16 +410,21 @@
   }
 
   let raf = null;
+  const thinking = Blip.thinker();
   function runTimer(endsAt, total, onEnd) {
     stopTimer();
     const fill = $('qTimerFill');
     let lastSec = null;
+    thinking.reset();
     const tick = () => {
       const left = Math.max(0, endsAt - Date.now());
       fill.style.transform = `scaleX(${left / total})`;
       $('qTimerFill').parentElement.classList.toggle('low', left < 5000);
       const sec = Math.ceil(left / 1000);
-      if (sec !== lastSec && sec <= 5 && sec > 0) Blip.tone(sec <= 2 ? 1320 : 990, 0.04, { type: 'square', volume: 0.04 });
+      // The thinking tune while people pick, or quiet ticks at the end if the
+      // tune is turned off (the 🎵 button).
+      if (Blip.tuneOn) thinking.step(left);
+      else if (sec !== lastSec && sec <= 5 && sec > 0) Blip.tone(sec <= 2 ? 1320 : 990, 0.04, { type: 'square', volume: 0.04 });
       lastSec = sec;
       if (left <= 0) { raf = null; onEnd(); return; }
       raf = requestAnimationFrame(tick);
@@ -561,6 +566,7 @@
     } catch (e) { $('reqMsg').textContent = e.message; }
   };
   Blip.muteButton($('muteBtn'));
+  Blip.tuneButton($('tuneBtn'));
   initials = ArcadeKit.wireInitials([...document.querySelectorAll('#overScore .ini')], saveScore);
 
   // ---- boot --------------------------------------------------------------------------------------
