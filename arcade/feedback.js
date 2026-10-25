@@ -64,14 +64,44 @@ function deviceOf(ua) {
   return `${kind}, ${system}, ${browser}`;
 }
 
-// Everything the admin sees under "Details", built on the server so the
-// sender can't put anything else in it.
+// Which build this is. CI bakes the git commit into the image (GIT_SHA).
+function appVersion(env = process.env) {
+  const sha = String(env.GIT_SHA || '').trim();
+  return { name: 'Arcade', version: VERSION, commit: /^[0-9a-f]{7,40}$/.test(sha) ? sha.slice(0, 12) : 'dev' };
+}
+
+// One line of plain text: no control characters, cut to n.
+const str = (v, n) => (v === undefined || v === null ? '' : String(v)).replace(/[\u0000-\u001f\u007f]+/g, ' ').trim().slice(0, n);
+const num = v => (typeof v === 'number' && Number.isFinite(v) ? Math.round(v * 100) / 100 : null);
+const bool = v => (typeof v === 'boolean' ? v : null);
+const list = (v, n) => (Array.isArray(v) ? v.slice(-n) : []);
+// A path and its # part, never the ? part.
+function cleanPath(v) {
+  const s = String(v || '').replace(/\?[^#]*/, '').slice(0, 120);
+  return /^\/[A-Za-z0-9._~\-/#%]*$/.test(s) ? s : '';
+}
+
+// Everything the admin sees under "Details": what the bug collected in the
+// browser since the page loaded (only these fields, each cut to size), plus
+// what the server knows itself. Nobody's name comes from here; comm.js takes
+// that from the profile's token.
 function details(req, sent = {}) {
+  const d = sent && typeof sent === 'object' ? sent : {};
   return {
-    screen: String(sent.screen || '').slice(0, 20).replace(/[^0-9x]/g, ''),
+    page: cleanPath(d.page), view: str(d.view, 60),
+    userAgent: str(d.userAgent, 300), platform: str(d.platform, 40), language: str(d.language, 20),
+    timeZone: str(d.timeZone, 50), localTime: str(d.localTime, 40),
+    screen: str(d.screen, 20).replace(/[^0-9x]/g, ''), window: str(d.window, 20).replace(/[^0-9x]/g, ''), pixelRatio: num(d.pixelRatio),
+    touch: bool(d.touch), colorScheme: str(d.colorScheme, 10), reducedMotion: bool(d.reducedMotion),
+    online: bool(d.online), connection: str(d.connection, 20),
+    openForSeconds: num(d.openForSeconds), loadMs: num(d.loadMs),
+    errors: list(d.errors, 10).map(e => ({ at: str(e && e.at, 30), message: str(e && e.message, 300), source: str(e && e.source, 200) })),
+    requests: list(d.requests, 10).map(r => ({ at: str(r && r.at, 30), method: str(r && r.method, 8).toUpperCase(), path: cleanPath(r && r.path), status: num(r && r.status), ms: num(r && r.ms) })),
     device: deviceOf(req.get('User-Agent')),
-    version: VERSION
+    version: VERSION,
+    app: appVersion(),
+    server: { receivedAt: new Date().toISOString(), userAgent: str(req.get('User-Agent'), 300) }
   };
 }
 
-module.exports = { readPicture, savePicture, picturePath, removePicture, cleanPage, details };
+module.exports = { readPicture, savePicture, picturePath, removePicture, cleanPage, details, appVersion };

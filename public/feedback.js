@@ -17,6 +17,68 @@
   const RED = '#e52521', GREEN = '#43b047', INK = '#ff2ec4';
   const MAX_W = 1280;            // a screenshot is scaled down to this width
   const TIP_MS = 4000;           // how long the bubble stays out
+  const KEEP = 10;               // errors and failed requests remembered
+  const started = Date.now();
+
+  // ---- Diagnostics, from page load on ----
+  // This script loads first on every page, so the card can send what
+  // happened before someone tapped the bug: the last few errors and failed
+  // calls to the arcade's own server, and a description of the device. Never
+  // cookies, tokens, PINs, or the ? part of an address.
+  const errors = [], failed = [];
+  const stampNow = () => new Date().toTimeString().slice(0, 8);
+  const remember = (list, item) => { list.push(item); if (list.length > KEEP) list.shift(); };
+  const shortSource = (file, line, col) => (file ? String(file).replace(location.origin, '').replace(/\?.*$/, '') + (line ? `:${line}${col ? ':' + col : ''}` : '') : '');
+  addEventListener('error', e => {
+    if (!e.message) return;   // a picture that didn't load, not a script error
+    remember(errors, { at: stampNow(), message: String(e.message).slice(0, 300), source: shortSource(e.filename, e.lineno, e.colno) });
+  });
+  addEventListener('unhandledrejection', e => {
+    const r = e.reason;
+    remember(errors, { at: stampNow(), message: 'Unhandled promise: ' + String((r && r.message) || r).slice(0, 280), source: '' });
+  });
+  if (window.fetch) {
+    const realFetch = window.fetch.bind(window);
+    window.fetch = (input, init) => {
+      const t0 = Date.now(), method = (init && init.method) || (input && input.method) || 'GET';
+      let url = null;
+      try { url = new URL(typeof input === 'string' ? input : input.url, location.href); } catch { /* not an address */ }
+      const mine = url && url.origin === location.origin;
+      return realFetch(input, init).then(res => {
+        if (mine && res.status >= 400) remember(failed, { at: stampNow(), method, path: url.pathname, status: res.status, ms: Date.now() - t0 });
+        return res;
+      }, err => {
+        if (mine) remember(failed, { at: stampNow(), method, path: url.pathname, status: 0, ms: Date.now() - t0 });
+        throw err;
+      });
+    };
+  }
+  function diagnostics() {
+    const nav = performance.getEntriesByType && performance.getEntriesByType('navigation')[0];
+    const conn = navigator.connection;
+    const mq = q => !!(window.matchMedia && matchMedia(q).matches);
+    return {
+      page: location.pathname + location.hash,
+      view: document.title,
+      userAgent: navigator.userAgent,
+      platform: (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || '',
+      language: navigator.language || '',
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || '',
+      localTime: new Date().toString().slice(0, 33),
+      screen: `${screen.width}x${screen.height}`,
+      window: `${innerWidth}x${innerHeight}`,
+      pixelRatio: devicePixelRatio || 1,
+      touch: mq('(pointer: coarse)'),
+      colorScheme: mq('(prefers-color-scheme: dark)') ? 'dark' : 'light',
+      reducedMotion: mq('(prefers-reduced-motion: reduce)'),
+      online: navigator.onLine,
+      connection: (conn && conn.effectiveType) || '',
+      openForSeconds: Math.round((Date.now() - started) / 1000),
+      loadMs: nav ? Math.round(nav.duration || nav.loadEventEnd || 0) : null,
+      errors: errors.slice(),
+      requests: failed.slice()
+    };
+  }
 
   const BUG = ['..L......L..', '...L....L...', '....KKKK....', '...KWKKWK...', 'L..KKKKKK..L', '.LTTTDTTTTL.',
     '..TDTTDTDT..', 'LLTTTDTTTTLL', '..TTDTTDTT..', '.LTTTDTTDTL.', 'L..TTDTTT..L', '....TTTT....'];
@@ -367,7 +429,7 @@
           game: veil.querySelector('#fbGamePick').value || null,
           from: veil.querySelector('#fbFromName').value,
           profileToken: profile ? profile.token() : null,
-          details: { page: location.pathname, screen: `${innerWidth}x${innerHeight}` }
+          details: diagnostics()
         })
       });
       const data = await res.json().catch(() => ({}));

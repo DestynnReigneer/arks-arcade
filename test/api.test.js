@@ -685,6 +685,21 @@ async function run({ base, root }) {
   ok('…and the inbox shows it with its page and device', shotItem && shotItem.hasPicture && shotItem.page === '/rambler.html' &&
     shotItem.details.screen === '390x844' && !!shotItem.details.device);
   ok('the page never keeps its query string', !JSON.stringify(shotItem).includes('secret'));
+  // The diagnostics the bug collects: only known fields, cut to size, and the
+  // server adds which build it is.
+  const diagFb = await wl('/comm/feedback', 'POST', {
+    kind: 'issue', message: 'It froze', details: {
+      page: '/chess.html?code=WXYZ#board', window: '390x844', touch: true, cookie: 'nope',
+      errors: Array.from({ length: 12 }, (_, i) => ({ at: '12:00:0' + i, message: 'TypeError ' + i, source: '/chess.js:1' })),
+      requests: [{ at: '12:00:01', method: 'post', path: '/api/chess/move?token=abc', status: 409, ms: 12 }]
+    }
+  });
+  const diag = (await asAdmin('/comm/admin/feedback')).data.items.find(i => i.id === diagFb.data.id).details;
+  ok('diagnostics keep the page\'s # part but never its ? part', diag.page === '/chess.html#board');
+  ok('…keep the last 10 errors and clean request paths', diag.errors.length === 10 && diag.errors[9].message === 'TypeError 11' &&
+    diag.requests[0].path === '/api/chess/move' && diag.requests[0].method === 'POST');
+  ok('…drop anything else the browser sends', !('cookie' in diag) && !JSON.stringify(diag).includes('abc'));
+  ok('…and say which build it came from', diag.app && diag.app.name === 'Arcade' && /^(dev|[0-9a-f]{7,12})$/.test(diag.app.commit) && !!diag.server.receivedAt);
   ok('the admin can open the screenshot', (await asAdmin(`/comm/admin/feedback/${shotFb.data.id}/picture`)).status === 200);
   ok('nobody else can', (await wl(`/comm/admin/feedback/${shotFb.data.id}/picture`)).status === 401);
   ok('a file that only claims to be a picture is refused', (await wl('/comm/feedback', 'POST', {
