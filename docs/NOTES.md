@@ -65,9 +65,6 @@ board-name setting and adult PIN are only for copies running without it.
   too (arks-family-hub PR #28, arks-internal PR #21).
   CI: `ARG GIT_SHA=dev` plus `ENV GIT_SHA` in the Dockerfile, and
   `build-args: GIT_SHA=${{ github.sha }}` in `docker-publish.yml`.
-- **`npm audit` warning:** `body-parser` (inside Express 4) has a high-severity
-  denial-of-service bug. `npm audit` says `npm audit fix` can patch it without
-  moving to Express 5; the Hub fixed the same thing that way.
 - **Play-test on the server:** pull the new image on the server and try
   everything from #15 to #37. Fix what turns up.
 - **Start a new game:** Sudoku, a crossword, a word scramble, or a
@@ -77,10 +74,10 @@ board-name setting and adult PIN are only for copies running without it.
 - **Achievements step 1:** waits for the maintainer's markup of the private
   plan. Then build step 1 (age groups, the feats engine, Rambler milestones
   moved over).
-- **Node 26 and Dependabot:** after 2026-10-28, move to an exact Node 26
-  version. Dependabot #3 (Express 5, which also fixes an `npm audit` warning
-  about `body-parser`) and #27 (GitHub Actions) need fresh checks first. #2
-  closed itself because of the new skip-major-versions rule.
+- **Node 26:** after 2026-10-28, move to an exact Node 26 version. The
+  `body-parser` warning was patched with `npm audit fix` instead of Express 5
+  (2026-10-25), so Dependabot #3 closed as replaced; Express 5 can come later
+  as its own change.
 - **Get Claude in Chrome connected,** so pages can be checked in a real
   browser. Until then, headless Chrome screenshots work.
 
