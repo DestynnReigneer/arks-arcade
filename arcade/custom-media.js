@@ -92,9 +92,38 @@ function send(clipName, profileIds) {
   return { sent: profileIds.length };
 }
 
-function routes({ requireAdmin }) {
+// arks: arcade/arksid.js when signing in through ARKS ID is on. Then a sent
+// clip goes through ARKS ID's clip inbox, so it pops up in whichever ARKS app
+// the person opens next, and the inbox is read from there.
+function routes({ requireAdmin, arks = null }) {
   const router = express.Router();
   router.get('/', (req, res) => res.json(catalog()));
+  if (arks) {
+    router.post('/inbox', rateLimit({ windowMs: 60 * 1000, limit: 30, standardHeaders: true, legacyHeaders: false }), async (req, res) => {
+      const me = await arks.current(req);
+      let name = null;
+      if (me) { try { name = await arks.client.nextClip(me.sessionId); } catch { /* try again next time */ } }
+      // A clip this arcade has no file for is skipped.
+      res.json({ clip: name ? catalog().clips.find(c => c.name === name) || null : null });
+    });
+    router.post('/admin/send', requireAdmin, async (req, res, next) => {
+      try {
+        const b = req.body || {};
+        const clip = catalog(0).clips.find(c => c.name === String(b.clip || '').toLowerCase());
+        if (!clip) throw Object.assign(new Error('There is no clip with that name.'), { status: 400 });
+        let to = 'everyone';
+        if (b.to !== 'everyone') {
+          const row = require('../db').db.prepare('SELECT arksid_user FROM arcade_profiles WHERE id = ?').get(String(b.to || ''));
+          if (!row || !row.arksid_user) throw Object.assign(new Error('Pick someone who signs in with ARKS ID.'), { status: 400 });
+          to = row.arksid_user;
+        }
+        let r;
+        try { r = await arks.client.sendClip(to, clip.name); } catch { throw Object.assign(new Error("ARKS ID didn't answer, so the clip wasn't sent. Try again in a moment."), { status: 502 }); }
+        if (r.error) throw Object.assign(new Error(r.error), { status: 400 });
+        res.json({ sent: r.sent });
+      } catch (e) { next(e); }
+    });
+  }
   // POST so the profile token stays out of URLs and logs.
   router.post('/inbox', rateLimit({ windowMs: 60 * 1000, limit: 30, standardHeaders: true, legacyHeaders: false }), (req, res) => {
     const me = profiles.verify((req.body || {}).token);
@@ -125,7 +154,14 @@ function staticFiles() {
   router.use((req, res, next) => { res.set('Content-Security-Policy', "default-src 'none'; img-src 'self' data:; media-src 'self'; style-src 'unsafe-inline'; sandbox"); next(); });
   router.use('/brand', (req, res, next) => (Object.values(BRAND_FILES).includes(req.path.slice(1)) ? next() : res.status(404).end()),
     express.static(BRAND_DIR, opts));
-  for (const kind of Object.keys(KINDS)) router.use(`/media/${kind}`, express.static(path.join(MEDIA_DIR, kind), opts));
+  // Only plain names with the folder's own kind of file ending: a .txt or
+  // anything else dropped in the folder is never served.
+  for (const kind of Object.keys(KINDS)) {
+    router.use(`/media/${kind}`, (req, res, next) => {
+      const name = req.path.slice(1);
+      return SAFE_NAME.test(name) && KINDS[kind].ext.includes(extOf(name)) ? next() : res.status(404).end();
+    }, express.static(path.join(MEDIA_DIR, kind), opts));
+  }
   router.use((req, res) => res.status(404).end());
   return router;
 }

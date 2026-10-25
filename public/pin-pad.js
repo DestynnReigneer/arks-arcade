@@ -64,6 +64,55 @@
       check();
     });
     input.addEventListener('input', check);
+    // On an arcade that signs in through ARKS ID, the only PIN pads are the
+    // adult ones, and they don't take a PIN: see arksIdPad below.
+    if (typeof ArcadeProfile !== 'undefined' && ArcadeProfile.arksId) ArcadeProfile.arksId().ready.then(Id => { if (Id.on) arksIdPad(input, state, Id); });
+  }
+
+  // With ARKS ID, adult levels follow the signed-in person's role. When an
+  // adult PIN pad shows up on screen, a grown-up's page fetches an adult pass
+  // and hands it to the game in place of the PIN; anyone else is told why the
+  // levels stay locked. Waiting until the pad is actually showing means
+  // nothing unlocks unless the game is asking.
+  function arksIdPad(input, state, Id) {
+    state.arks = true;
+    input.style.display = 'none';
+    state.pad.style.display = 'none';
+    const note = document.createElement('p');
+    note.className = 'pin-pad-arksid';
+    note.style.cssText = 'text-align:center;margin:10px 0;line-height:1.45';
+    state.pad.after(note);
+    state.note = note;
+    const me = Id.me || {};
+    if (!me.signedIn) {
+      note.textContent = 'Adult levels unlock when a grown-up signs in with their ARKS ID. ';
+      const a = document.createElement('a');
+      a.href = '/auth/signin?return=' + encodeURIComponent(location.pathname + location.search + location.hash);
+      a.textContent = 'Sign in';
+      a.style.color = 'inherit';
+      note.appendChild(a);
+      return;
+    }
+    if (!me.adult) { note.textContent = 'Adult levels are only for grown-ups’ ARKS ID accounts, so they stay locked here.'; return; }
+    note.textContent = 'Unlocking with your ARKS ID…';
+    let done = false;
+    const unlock = async () => {
+      if (done || state.busy || !state.onComplete) return;
+      done = true;
+      try {
+        const res = await fetch('/api/arksid/adult-pass', { method: 'POST' });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.pass) throw new Error(data.error || 'ARKS ID didn’t answer. Try again in a moment.');
+        note.textContent = 'Unlocked with your ARKS ID.';
+        state.busy = true;
+        try { await state.onComplete(data.pass); } finally { state.busy = false; }
+      } catch (e) { note.textContent = e.message; done = false; }
+    };
+    // Unlock each time the pad comes into view (it may be shown, hidden and
+    // shown again as someone switches levels).
+    new IntersectionObserver(entries => {
+      for (const e of entries) { if (e.isIntersecting) unlock(); else done = false; }
+    }).observe(note);
   }
 
   function clear(input) {
@@ -71,8 +120,10 @@
   }
 
   function show(input, on) {
+    const state = input._pinPad;
+    if (state && state.arks) { if (state.note) state.note.style.display = on ? '' : 'none'; return; }
     input.classList.toggle('hidden', !on);
-    if (input._pinPad) input._pinPad.pad.style.display = on ? '' : 'none';
+    if (state) state.pad.style.display = on ? '' : 'none';
   }
 
   window.PinPad = { LEN, attach, clear, show };
