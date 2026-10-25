@@ -36,6 +36,11 @@ RUN mkdir -p /app/data && chown node:node /app/data
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod 755 /usr/local/bin/docker-entrypoint.sh
 
+# Which git commit this image was built from. CI passes it in, and feedback
+# from the bug says it, so a report points at an exact build.
+ARG GIT_SHA=dev
+ENV GIT_SHA=$GIT_SHA
+
 ENV NODE_ENV=production
 ENV PORT=3000
 EXPOSE 3000

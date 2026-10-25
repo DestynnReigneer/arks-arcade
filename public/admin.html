@@ -109,6 +109,30 @@
     border-radius: 6px; padding: 5px 9px; font-size: 11.5px; cursor: pointer;
   }
   .fb-controls button.danger { border-color: #7a2a2a; color: #ff9a9a; }
+  .fb-thumb { display: block; padding: 0; border: 0; background: none; cursor: zoom-in; }
+  .fb-errs { margin: 0 0 8px; padding-left: 18px; font-size: 12px; }
+  .fb-errs li { margin-bottom: 4px; overflow-wrap: anywhere; }
+  .fb-errs button { margin-left: 8px; background: var(--key-bg); border: 1px solid var(--tile-border); color: var(--text); border-radius: 6px; padding: 2px 7px; font-size: 11px; cursor: pointer; }
+  .fb-diag { margin-bottom: 8px; font-size: 12px; }
+  .fb-diag summary { cursor: pointer; opacity: .8; }
+  .fb-diag pre { max-height: 280px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; background: #10121a; border: 1px solid var(--tile-border); border-radius: 8px; padding: 8px 10px; font-size: 11.5px; }
+  .fbv { position: fixed; inset: 0; z-index: 300; display: flex; flex-direction: column; background: rgba(6, 6, 12, .94); }
+  .fbv-bar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 10px 12px; border-bottom: 1px solid var(--tile-border); }
+  .fbv-bar button, .fbv-bar a { background: var(--key-bg); border: 1px solid var(--tile-border); color: var(--text); border-radius: 6px; padding: 6px 10px; font-size: 12.5px; cursor: pointer; text-decoration: none; }
+  .fbv-bar .fbv-close { border-color: var(--accent); }
+  .fbv-zoom { min-width: 48px; text-align: center; font-size: 12px; opacity: .8; }
+  .fbv-sp { flex: 1; }
+  .fbv-stage { flex: 1; overflow: auto; display: grid; place-items: center; padding: 10px; cursor: grab; touch-action: none; }
+  .fbv-stage.drag { cursor: grabbing; }
+  .fbv-stage img { max-width: none; user-select: none; -webkit-user-drag: none; }
+  .fbs { align-items: center; justify-content: center; padding: 16px; }
+  .fbs-card { width: min(520px, 100%); background: #171623; border: 1px solid var(--tile-border); border-radius: 12px; padding: 18px; }
+  .fbs-card h2 { margin: 0 0 8px; font-size: 18px; }
+  .fbs-card p { font-size: 13px; opacity: .85; margin: 0 0 10px; }
+  .fbs-card textarea { width: 100%; box-sizing: border-box; background: #10121a; border: 1px solid var(--tile-border); color: var(--text); border-radius: 6px; padding: 8px; font: 13px/1.4 inherit; }
+  .fbs-row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
+  .fbs-row button { background: var(--key-bg); border: 1px solid var(--tile-border); color: var(--text); border-radius: 6px; padding: 7px 14px; cursor: pointer; }
+  .fbs-row .fbs-go { border-color: var(--accent); }
   .danger-zone { border-color: #4a2020; }
   .danger-zone h2 { color: #ff9a9a; }
   .req-card {
