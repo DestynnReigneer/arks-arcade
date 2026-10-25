@@ -647,8 +647,10 @@
   // nobody loses time to an animation) and behind a results screen. Jokes
   // and hecklers never stop it: they're just entertainment while you think.
 
+  const thinking = Blip.thinker();
   function resetTurn() {
     S.timeLeft = S.turnSecs * 1000;
+    thinking.reset();
     S.idleSince = Date.now();
     S.jokedThisTurn = false;
     $('turnTimer').classList.toggle('hidden', !S.turnSecs);
@@ -684,7 +686,10 @@
       const before = Math.ceil(S.timeLeft / 1000);
       S.timeLeft -= step;
       const after = Math.ceil(S.timeLeft / 1000);
-      if (after !== before && after <= 5 && after > 0) Blip.tone(after <= 2 ? 1320 : 990, 0.05, { type: 'square', volume: 0.05 });
+      // The thinking tune while the player decides (it pauses with the
+      // clock), or quiet ticks at the end if the tune is turned off.
+      if (Blip.tuneOn) thinking.step(S.timeLeft);
+      else if (after !== before && after <= 5 && after > 0) Blip.tone(after <= 2 ? 1320 : 990, 0.05, { type: 'square', volume: 0.05 });
       paintClock();
       if (S.timeLeft <= 0) return timeUp();
     }
@@ -1000,6 +1005,7 @@
   $('scoresClose').addEventListener('click', () => $('scoresView').classList.add('hidden'));
   $('helpBtn').addEventListener('click', () => help.open());
   Blip.muteButton($('muteBtn'));
+  Blip.tuneButton($('tuneBtn'));
   initials = ArcadeKit.wireInitials([...document.querySelectorAll('#overScore .ini')], saveScore);
 
   buildWheel();
