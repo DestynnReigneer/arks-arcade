@@ -45,26 +45,6 @@ item: when it signs in through ARKS ID (`ARKS_ID_URL` set), ARKS ID owns
 everything about a person, and the Arcade's own profile PINs, locks,
 board-name setting and adult PIN are only for copies running without it.
 
-- **Feedback extras (asked for every app, 2026-10-24):** an admin picture
-  viewer (full screen, zoom, fit, actual size, drag, open in a new tab);
-  diagnostics the bug collects from page load (page and view, device and
-  browser, how long the page was open, version plus git commit, the last 10
-  errors and failed server calls; the server adds who, when and the user
-  agent); and one copy-paste block per feedback with Copy for chat and a
-  Search the web button per error. Spec: `arks-internal/conventions/feedback.md`,
-  "Seeing the picture, and the diagnostics". The Hub built it first
-  (arks-family-hub PR #27): copy `public/feedback.js` (the collector wraps
-  `fetch` and listens for `error` and `unhandledrejection` from page load),
-  `public/feedback.css`, `server/feedback.js` (`cleanDetails`, Discord with
-  `allowed_mentions: { parse: [] }`, the version from `GIT_SHA`), and
-  `chatBlock()`, `pageFeedback()` and `openViewer()` from `private/admin.js`.
-  Search the web cleans the error first (web addresses, IPs with ports,
-  `arksnet` names, emails, `u_`/`s_` ids, long hex ids and 5+ digit numbers
-  become placeholders) and shows it in an editable box with Cancel and Search
-  before anything goes to Google: copy `cleanForSearch()` and `openSearch()`
-  too (arks-family-hub PR #28, arks-internal PR #21).
-  CI: `ARG GIT_SHA=dev` plus `ENV GIT_SHA` in the Dockerfile, and
-  `build-args: GIT_SHA=${{ github.sha }}` in `docker-publish.yml`.
 - **Play-test on the server:** pull the new image on the server and try
   everything from #15 to #37. Fix what turns up.
 - **Start a new game:** Sudoku, a crossword, a word scramble, or a

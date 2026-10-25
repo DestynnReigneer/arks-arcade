@@ -542,6 +542,18 @@ async function run() {
   });
   ok('a sensible player can win every map', results.every(r => r.endsWith(':won')), results.join(' '));
 
+  // The browser scripts aren't run by the other tests, so at least make sure
+  // each one parses: a stray line break inside a string once stopped a whole
+  // admin script from loading, and nothing else noticed.
+  console.log('\n-- browser scripts load --');
+  const fs = require('node:fs');
+  const vm = require('node:vm');
+  for (const f of fs.readdirSync(path.join(ROOT, 'public')).filter(n => n.endsWith('.js')).sort()) {
+    let error = '';
+    try { new vm.Script(fs.readFileSync(path.join(ROOT, 'public', f), 'utf8'), { filename: f }); } catch (e) { error = e.message; }
+    ok(`public/${f} parses`, !error, error);
+  }
+
   console.log(`\n  ${pass} passed, ${fail} failed`);
   return { pass, fail };
 }

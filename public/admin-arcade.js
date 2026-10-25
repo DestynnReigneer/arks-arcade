@@ -97,11 +97,12 @@
       `from ${item.from || 'anonymous'}${item.game ? ' · ' + GAME_LABELS[item.game] : ''}`;
     card.querySelector('.fb-when').textContent = when(item.createdAt);
     card.querySelector('.fb-msg').textContent = item.message;
-    // From the feedback card: where it was sent from, the device, and maybe
-    // a screenshot (tap it to open it full size).
+    // From the feedback card: where it was sent from, the device, the errors
+    // the page saw, and maybe a screenshot (tap it to open the viewer).
     const extra = card.querySelector('.fb-extra');
     const d = item.details || {};
-    const facts = [item.page && `Page: ${item.page}`, d.device && `Device: ${d.device}`, d.screen && `Screen: ${d.screen}`, d.version && `Arcade ${d.version}`].filter(Boolean);
+    const facts = [item.page && `Page: ${item.page}`, d.device && `Device: ${d.device}`, (d.window || d.screen) && `Window: ${d.window || d.screen}`,
+      d.app ? `Arcade ${d.app.version}, ${d.app.commit}` : d.version && `Arcade ${d.version}`].filter(Boolean);
     if (facts.length) {
       const line = document.createElement('div');
       line.className = 'fb-facts';
@@ -109,26 +110,59 @@
       extra.appendChild(line);
     }
     if (item.hasPicture) {
-      const a = document.createElement('a');
-      a.href = `${API}/feedback/${item.id}/picture`;
-      a.target = '_blank';
-      a.rel = 'noopener';
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'fb-thumb';
+      b.setAttribute('aria-label', 'Open the screenshot full screen');
       const img = document.createElement('img');
       img.className = 'fb-pic';
       img.alt = 'Screenshot sent with this message';
       img.loading = 'lazy';
-      img.src = a.href;
-      a.appendChild(img);
-      extra.appendChild(a);
+      img.src = `${API}/feedback/${item.id}/picture`;
+      b.appendChild(img);
+      b.onclick = () => openViewer(item.id);
+      extra.appendChild(b);
     }
+    // Each error the page saw gets a Search the web button.
+    if ((d.errors || []).length) {
+      const ul = document.createElement('ul');
+      ul.className = 'fb-errs';
+      d.errors.forEach(err => {
+        const li = document.createElement('li');
+        const msg = document.createElement('span');
+        msg.textContent = err.message;
+        const s = document.createElement('button');
+        s.type = 'button';
+        s.textContent = '🔎 Search the web';
+        s.onclick = () => openSearch(err.message);
+        li.append(msg, s);
+        ul.appendChild(li);
+      });
+      extra.appendChild(ul);
+    }
+    const det = document.createElement('details');
+    det.className = 'fb-diag';
+    const sum = document.createElement('summary');
+    sum.textContent = 'Diagnostics for a Claude session';
+    const pre = document.createElement('pre');
+    pre.textContent = chatBlock(item);
+    det.append(sum, pre);
+    extra.appendChild(det);
     card.querySelector('[data-act="copy"]').onclick = async e => {
-      const head = `Arcade feedback #${item.id} (${KIND_LABELS[item.kind] || item.kind}) from ${item.from || 'a guest'}` +
-        `${item.game ? ', about ' + GAME_LABELS[item.game] : ''}, ${item.createdAt}`;
-      const tail = [...facts, ...(item.hasPicture ? ['A screenshot is attached on the admin page.'] : [])];
-      const text = [head, '', item.message, ...(tail.length ? ['', ...tail] : [])].join('
-');
-      try { await navigator.clipboard.writeText(text); e.target.textContent = '✓ Copied'; } catch { prompt('Copy this:', text); }
-      setTimeout(() => { e.target.textContent = '📋 Copy for chat'; }, 1500);
+      const text = chatBlock(item);
+      try {
+        await navigator.clipboard.writeText(text);
+        e.target.textContent = '✓ Copied';
+      } catch {
+        // The clipboard needs HTTPS or localhost: select the block instead.
+        det.open = true;
+        const r = document.createRange();
+        r.selectNodeContents(pre);
+        getSelection().removeAllRanges();
+        getSelection().addRange(r);
+        e.target.textContent = 'Selected, press Ctrl+C';
+      }
+      setTimeout(() => { e.target.textContent = '📋 Copy for chat'; }, 1800);
     };
 
     const select = card.querySelector('select');
@@ -158,6 +192,152 @@
     };
     return card;
   }
+
+  // Everything the bug sent, as one plain-text block made for pasting into a
+  // chat with an AI helper: who, when, what they wrote, then the details.
+  function chatBlock(item) {
+    const d = item.details || {}, app = d.app || {}, srv = d.server || {};
+    const yes = (v, a, b) => (v === true ? a : v === false ? b : 'unknown');
+    return [
+      `Arcade feedback #${item.id}`,
+      `Kind: ${KIND_LABELS[item.kind] || item.kind}`,
+      `From: ${item.from || 'a guest'}`,
+      `About: ${item.game ? GAME_LABELS[item.game] : 'the arcade in general'}`,
+      `Sent: ${srv.receivedAt ? new Date(srv.receivedAt).toString().slice(0, 33) : item.createdAt}`,
+      `Status: ${STATUS_LABELS[item.status] || item.status}`,
+      '',
+      'What they wrote:',
+      ...item.message.split('\n').map(l => '> ' + l),
+      '',
+      `App: Arcade ${app.version || d.version || '?'}, commit ${app.commit || 'unknown'}`,
+      `Page: ${d.page || item.page || '?'}${d.view ? ` (${d.view})` : ''}`,
+      `Device: ${[d.device, d.platform, d.screen && d.screen + ' screen', d.window && d.window + ' window', d.pixelRatio && 'pixel ratio ' + d.pixelRatio, yes(d.touch, 'touch', 'mouse')].filter(Boolean).join(', ')}`,
+      `Browser: ${d.userAgent || srv.userAgent || 'unknown'}`,
+      `Language and time zone: ${d.language || '?'}, ${d.timeZone || '?'}${d.localTime ? ` (their clock: ${d.localTime})` : ''}`,
+      `Preferences: ${d.colorScheme || '?'} color scheme, reduced motion ${yes(d.reducedMotion, 'on', 'off')}`,
+      `Network: ${yes(d.online, 'online', 'offline')}${d.connection ? ', ' + d.connection : ''}`,
+      `Page open for: ${d.openForSeconds != null ? d.openForSeconds + ' s' : '?'}${d.loadMs != null ? `, loaded in ${d.loadMs} ms` : ''}`,
+      `Screenshot: ${item.hasPicture ? 'yes, on the admin page' : 'none'}`,
+      '',
+      'JavaScript errors on the page (last 10):',
+      ...((d.errors || []).length ? d.errors.map(e => `- ${e.at} ${e.message}${e.source ? ` (${e.source})` : ''}`) : ['- none']),
+      '',
+      'Failed requests to the arcade (last 10):',
+      ...((d.requests || []).length ? d.requests.map(r => `- ${r.at} ${r.method} ${r.path} → ${r.status || 'no answer'} in ${r.ms} ms`) : ['- none'])
+    ].join('\n');
+  }
+
+  // The picture viewer: full screen, zoom with the buttons, the wheel or a
+  // pinch, drag to look around, or open the picture in its own tab.
+  let viewer = null;
+  function openViewer(id) {
+    const src = `${API}/feedback/${id}/picture`;
+    let zoom = 1, fit = 1;
+    viewer = document.createElement('div');
+    viewer.className = 'fbv';
+    viewer.setAttribute('role', 'dialog');
+    viewer.setAttribute('aria-modal', 'true');
+    viewer.setAttribute('aria-label', `Feedback #${id} screenshot`);
+    viewer.innerHTML = '<div class="fbv-bar"><button type="button" data-z="out" aria-label="Zoom out">−</button><span class="fbv-zoom"></span>' +
+      '<button type="button" data-z="in" aria-label="Zoom in">+</button><button type="button" data-z="fit">Fit</button>' +
+      '<button type="button" data-z="one">Actual size</button><a target="_blank" rel="noopener">Open in a new tab</a>' +
+      '<span class="fbv-sp"></span><button type="button" data-z="close" class="fbv-close">Close</button></div><div class="fbv-stage"><img alt=""></div>';
+    viewer.querySelector('a').href = src;
+    document.body.appendChild(viewer);
+    const stage = viewer.querySelector('.fbv-stage'), img = viewer.querySelector('img');
+    img.alt = `Screenshot sent with feedback #${id}`;
+    const setZoom = z => {
+      zoom = Math.min(8, Math.max(0.1, z));
+      img.style.width = Math.round(img.naturalWidth * zoom) + 'px';
+      viewer.querySelector('.fbv-zoom').textContent = Math.round(zoom * 100) + '%';
+    };
+    img.onload = () => {
+      fit = Math.min(1, (stage.clientWidth - 20) / img.naturalWidth, (stage.clientHeight - 20) / img.naturalHeight);
+      setZoom(fit);
+    };
+    img.src = src;
+    viewer.addEventListener('click', e => {
+      const b = e.target.closest('[data-z]');
+      if (!b) return;
+      const z = b.dataset.z;
+      if (z === 'close') return closeViewer();
+      setZoom(z === 'in' ? zoom * 1.25 : z === 'out' ? zoom / 1.25 : z === 'fit' ? fit : 1);
+    });
+    stage.addEventListener('wheel', e => { e.preventDefault(); setZoom(zoom * (e.deltaY < 0 ? 1.15 : 1 / 1.15)); }, { passive: false });
+    // Drag with one finger or the mouse to look around; pinch with two to zoom.
+    const pts = {};
+    let drag = null, pinch = null;
+    stage.addEventListener('pointerdown', e => {
+      pts[e.pointerId] = e;
+      stage.setPointerCapture(e.pointerId);
+      const ids = Object.keys(pts);
+      if (ids.length === 1) { drag = { x: e.clientX, y: e.clientY, l: stage.scrollLeft, t: stage.scrollTop }; stage.classList.add('drag'); }
+      if (ids.length === 2) { const a = pts[ids[0]], b = pts[ids[1]]; pinch = { d: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY), z: zoom }; drag = null; }
+    });
+    stage.addEventListener('pointermove', e => {
+      if (!pts[e.pointerId]) return;
+      pts[e.pointerId] = e;
+      const ids = Object.keys(pts);
+      if (pinch && ids.length === 2) { const a = pts[ids[0]], b = pts[ids[1]]; setZoom(pinch.z * Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY) / pinch.d); }
+      else if (drag) { stage.scrollLeft = drag.l - (e.clientX - drag.x); stage.scrollTop = drag.t - (e.clientY - drag.y); }
+    });
+    const lift = e => {
+      delete pts[e.pointerId];
+      if (Object.keys(pts).length < 2) pinch = null;
+      if (!Object.keys(pts).length) { drag = null; stage.classList.remove('drag'); }
+    };
+    stage.addEventListener('pointerup', lift);
+    stage.addEventListener('pointercancel', lift);
+    viewer.querySelector('[data-z="close"]').focus();
+  }
+  function closeViewer() { if (viewer) { viewer.remove(); viewer = null; } }
+
+  // Search the web, in two steps: first the error message alone is cleaned
+  // (addresses, emails, IPs, this server's own name, ids and long numbers
+  // become placeholders), then shown in a box you can edit. Nothing goes to
+  // the search engine until you press Search.
+  function cleanForSearch(msg) {
+    const host = location.hostname.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return String(msg)
+      .replace(/\b[a-z][a-z0-9+.-]*:\/\/[^\s'")\]]+/gi, '<address>')   // web addresses
+      .replace(/\b[\w.+-]+@[\w-]+(\.[\w-]+)+\b/g, '<email>')           // email addresses
+      .replace(/\b\d{1,3}(\.\d{1,3}){3}(:\d+)?\b/g, '<ip address>')    // IP addresses
+      .replace(host ? new RegExp(`\\b${host}\\b`, 'gi') : /$^/, '<address>') // this server's name
+      .replace(/\b[us]_[0-9a-f]{6,}\b/gi, '<id>')                      // account and session ids
+      .replace(/\b(?=[0-9a-f]*\d)[0-9a-f]{12,}\b/gi, '<id>')           // long hex ids
+      .replace(/\b\d{5,}\b/g, '<number>')                              // long numbers
+      .replace(/\s+/g, ' ').trim();
+  }
+  function openSearch(msg) {
+    const wrap = document.createElement('div');
+    wrap.className = 'fbv fbs';
+    wrap.setAttribute('role', 'dialog');
+    wrap.setAttribute('aria-modal', 'true');
+    wrap.innerHTML = '<form class="fbs-card"><h2>Search the web</h2>' +
+      '<p>This is exactly what will be searched. Web addresses, IP addresses, this server\'s name, ids and long numbers have been swapped for placeholders, so nothing about your network goes out. You can change the words before searching.</p>' +
+      '<textarea rows="3" maxlength="400" aria-label="Search for"></textarea>' +
+      '<div class="fbs-row"><button type="button" data-cancel>Cancel</button><button type="submit" class="fbs-go">Search</button></div></form>';
+    document.body.appendChild(wrap);
+    const q = wrap.querySelector('textarea');
+    q.value = cleanForSearch(msg);
+    const close = () => wrap.remove();
+    wrap.querySelector('[data-cancel]').onclick = close;
+    wrap.addEventListener('click', e => { if (e.target === wrap) close(); });
+    wrap.querySelector('form').onsubmit = e => {
+      e.preventDefault();
+      const words = q.value.trim();
+      if (!words) return;
+      window.open('https://www.google.com/search?q=' + encodeURIComponent(words), '_blank', 'noopener');
+      close();
+    };
+    q.focus();
+  }
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    if (viewer) closeViewer();
+    const s = document.querySelector('.fbs');
+    if (s) s.remove();
+  });
 
   // ---- announcements -------------------------------------------------------
 
