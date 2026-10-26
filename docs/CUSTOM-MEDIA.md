@@ -31,13 +31,14 @@ else.
 
 ## brand/: your logo in the header and footer
 
-Put three files here, with exactly these names:
+Put these files here, with exactly these names:
 
 | File | Where it shows |
 |---|---|
 | `avatar.svg` | A small round picture at the start of the title |
 | `logo-wide.svg` | Your wide logo, between the picture and the word ARCADE |
 | `logo-square.svg` | Your square logo, spinning slowly at the bottom of the home page |
+| `favicon.svg` | The little icon on the browser tab, on every page. It's drawn 16 pixels wide, so a simple, bold picture works best |
 
 With `avatar.svg` and `logo-wide.svg`, the plain "ARCADE" title becomes your
 picture, your logo and "ARCADE" drawn as an outline. With `logo-square.svg`,
