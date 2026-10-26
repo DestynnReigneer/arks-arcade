@@ -211,13 +211,16 @@ function createArksId({ client, now = Date.now, profiles }) {
   // Checks with ARKS ID every few minutes, so a sign-out, rename or role
   // change there reaches the arcade quickly. If ARKS ID can't be reached, a
   // sign-in keeps working until it would have ended anyway.
-  async function current(req) {
+  async function current(req, { fresh = false } = {}) {
     const token = readCookie(req, COOKIE);
     if (!token || token.length > 100) return null;
     const row = db.db.prepare('SELECT * FROM arcade_signins WHERE token_hash = ?').get(hash(token));
     if (!row) return null;
     db.db.prepare('UPDATE arcade_signins SET used_at = ? WHERE token_hash = ?').run(now(), row.token_hash);
-    if (client && (now() - row.checked_at > CHECK_MS || now() >= row.expires_at)) {
+    // fresh: the person just changed something on their ARKS ID account page,
+    // so ask now instead of waiting for the next check (at most every 5 seconds).
+    const due = now() - row.checked_at > CHECK_MS || (fresh && now() - row.checked_at > 5000);
+    if (client && (due || now() >= row.expires_at)) {
       let s = null;
       try { s = await client.session(row.session_id, true); } catch { /* unreachable */ }
       const user = s && s.valid ? cleanUser(s.user) : null;
@@ -339,7 +342,7 @@ function createArksId({ client, now = Date.now, profiles }) {
     router.get('/api/arksid/me', async (req, res) => {
       res.set('Cache-Control', 'no-store');
       if (!client) return res.json({ on: false });
-      const me = await current(req);
+      const me = await current(req, { fresh: req.query.fresh === '1' });
       const dev = deviceFrom(req);
       const out = {
         on: true, accountUrl: `${client.url}/`, deviceChecked: !!dev,
