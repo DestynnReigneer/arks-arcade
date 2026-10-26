@@ -5,6 +5,10 @@
 // cartoon heads, plus emoji sets. An avatar is stored as an id like
 // "shiba:3" or "emoji:🎸"; Avatars.html(id) turns it into markup.
 // Works in the browser and (for validating ids) on the server.
+//
+// The optional sign-in service (ARKS ID) and the other apps that use it keep
+// exact copies of this file, so a character picked in one app looks the same
+// in all of them. Change it here first, then copy it over unchanged.
 
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
@@ -90,6 +94,37 @@
     Animals: ['🦊', '🐼', '🦁', '🐸', '🐙', '🦄', '🐧', '🐯']
   };
 
+  // ---- ARKS ID icons -------------------------------------------------------------------
+  // The 16 line icons people pick on ARKS ID, in their ARKS color, so an
+  // account that uses an icon looks the same here: "arks:rocket:s1".
+  const ARKS_ICONS = {
+    rocket: '<path d="M12 2.5c3 2.2 4.5 5.4 4.5 9.2V16h-9v-4.3c0-3.8 1.5-7 4.5-9.2Z"/><circle cx="12" cy="10" r="1.8"/><path d="M7.5 12.5 5 15v4l2.5-1.5M16.5 12.5 19 15v4l-2.5-1.5M10 19c.5 1.2 1.2 2 2 2.5.8-.5 1.5-1.3 2-2.5"/>',
+    controller: '<rect x="2.5" y="7" width="19" height="11" rx="4"/><path d="M7.5 10.5v4M5.5 12.5h4M15.5 11.5h.01M18 13.5h.01"/>',
+    cat: '<path d="M5 9.5V4l4 3h6l4-3v5.5c0 5-3.1 9.5-7 9.5s-7-4.5-7-9.5Z"/><path d="M9.5 11.5h.01M14.5 11.5h.01M10.5 14.5 12 15.5l1.5-1M2.5 13h4M2.5 16l4-1.2M21.5 13h-4M21.5 16l-4-1.2"/>',
+    dog: '<path d="M8 5.5C6 4.5 3.5 5 3 7.5c-.4 2 .5 4.5 2.5 5M16 5.5c2-1 4.5-.5 5 2 .4 2-.5 4.5-2.5 5"/><path d="M7 7.5c1.3-1.3 3-2 5-2s3.7.7 5 2c.8 1.5 1.2 3.4 1.2 5.5 0 4-2.8 7-6.2 7s-6.2-3-6.2-7c0-2.1.4-4 1.2-5.5Z"/><path d="M10 11h.01M14 11h.01M10.8 14.2h2.4L12 15.5ZM12 15.5v1.5"/>',
+    star: '<path d="m12 3 2.7 5.6 6.1.8-4.5 4.2 1.1 6.1L12 16.8l-5.4 2.9 1.1-6.1-4.5-4.2 6.1-.8L12 3Z"/>',
+    heart: '<path d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.2a4.3 4.3 0 0 1 7.5 2.6C19.5 15.4 12 20 12 20Z"/>',
+    bolt: '<path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z"/>',
+    moon: '<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z"/>',
+    crown: '<path d="M3.5 8 7.5 12 12 5.5l4.5 6.5 4-4L19 18H5L3.5 8Z"/><path d="M5 21h14"/>',
+    ghost: '<path d="M5 20.5V11a7 7 0 0 1 14 0v9.5l-2.3-1.7-2.4 1.7-2.3-1.7-2.3 1.7-2.4-1.7L5 20.5Z"/><path d="M9.5 11h.01M14.5 11h.01"/>',
+    robot: '<rect x="4.5" y="8" width="15" height="11" rx="2.5"/><path d="M12 8V4.5M12 3.5h.01M9.5 16.5h5M2.5 12v3M21.5 12v3"/><circle cx="9" cy="12.5" r="1.3"/><circle cx="15" cy="12.5" r="1.3"/>',
+    music: '<path d="M9 18V5.5l11-2V16"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/>',
+    planet: '<circle cx="12" cy="12" r="6"/><path d="M6.6 14.8c-2.7 1.7-4.2 3.2-3.8 3.9.7 1.2 5.8-.6 11.3-4.1s9.4-7.1 8.7-8.3c-.4-.7-2.4-.4-5 .8"/>',
+    flower: '<circle cx="12" cy="8.5" r="1.6"/><circle cx="12" cy="4.6" r="2.1"/><circle cx="15.7" cy="7.3" r="2.1"/><circle cx="14.3" cy="11.7" r="2.1"/><circle cx="9.7" cy="11.7" r="2.1"/><circle cx="8.3" cy="7.3" r="2.1"/><path d="M12 14v7M12 18.5c-1.5-1.8-3.5-2.3-5-2M12 20c1.3-1.4 3-1.8 4.5-1.5"/>',
+    ball: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3v18M5.6 5.6C8 8 9 10 9 12s-1 4-3.4 6.4M18.4 5.6C16 8 15 10 15 12s1 4 3.4 6.4"/>',
+    paw: '<path d="M12 12.5c-2.6 0-5 2.6-5 5 0 1.8 1.5 2.5 3 2.5h4c1.5 0 3-.7 3-2.5 0-2.4-2.4-5-5-5Z"/><circle cx="5.5" cy="10.5" r="1.9"/><circle cx="9.5" cy="6" r="1.9"/><circle cx="14.5" cy="6" r="1.9"/><circle cx="18.5" cy="10.5" r="1.9"/>'
+  };
+  // The color, and a dark circle tinted with it (like ARKS ID's own avatars).
+  const ARKS_COLORS = {
+    pink: ['#ff2ec4', '#3a1838'], teal: ['#00ffc2', '#10302f'], s1: ['#5b93dc', '#1f2639'],
+    s2: ['#d96490', '#33202e'], s3: ['#ba852f', '#2f2522'], s4: ['#2ea9a2', '#132c31']
+  };
+  function arksIcon(icon, color) {
+    const [line, bg] = ARKS_COLORS[color];
+    return svg(`<g transform="translate(14 14) scale(1.5)" fill="none" stroke="${line}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${ARKS_ICONS[icon]}</g>`, bg);
+  }
+
   const SETS = [
     { id: 'shiba', label: 'Shibas', items: SHIBA.map(([name], i) => ({ id: `shiba:${i}`, name })) },
     { id: 'block', label: 'Blocky', items: BLOCK.map(([name], i) => ({ id: `block:${i}`, name })) },
@@ -99,7 +134,21 @@
   const ALL = new Set(SETS.flatMap(s => s.items.map(i => i.id)));
   const DEFAULT = 'shiba:0';
 
-  const valid = id => ALL.has(String(id));
+  // An "arks:" id is set from someone's ARKS ID account, not picked here.
+  const arksParts = id => {
+    const m = /^arks:([a-z]+):([a-z0-9]+)$/.exec(String(id));
+    return m && ARKS_ICONS[m[1]] && ARKS_COLORS[m[2]] ? [m[1], m[2]] : null;
+  };
+  const valid = id => ALL.has(String(id)) || !!arksParts(id);
+
+  // The avatar to show for an ARKS ID account ({ icon, color, art } from its
+  // user): the character they picked, or else their icon in their color.
+  function fromAccount(a) {
+    if (!a || typeof a !== 'object') return DEFAULT;
+    if (typeof a.art === 'string' && ALL.has(a.art)) return a.art;
+    if (ARKS_ICONS[a.icon] && ARKS_COLORS[a.color]) return `arks:${a.icon}:${a.color}`;
+    return DEFAULT;
+  }
 
   // Markup for an avatar: an inline SVG, or the emoji in a colored circle.
   function html(id) {
@@ -109,6 +158,8 @@
     if (set === 'shiba' && SHIBA[n]) return svg(SHIBA[n][1], SHIBA_BG[n % SHIBA_BG.length]);
     if (set === 'block' && BLOCK[n]) return svg(blockFace(BLOCK[n]), '#1e1a30');
     if (set === 'toon' && TOON_HAIR[n]) return svg(toonFace(TOON_HAIR[n][1]), ['#9ad7ff', '#ffb3d6', '#c8f0b0', '#ffe08a'][n % 4]);
+    const arks = arksParts(s);
+    if (arks) return arksIcon(arks[0], arks[1]);
     if (set === 'emoji' && ALL.has(s)) return svg(`<text x="32" y="43" font-size="30" text-anchor="middle">${key}</text>`, '#2a2740');
     // Anything older (Rambler's plain-emoji avatars) still shows.
     return svg(`<text x="32" y="43" font-size="30" text-anchor="middle">${s.replace(/[<>&"]/g, '')}</text>`, '#2a2740');
@@ -122,5 +173,5 @@
     return el;
   }
 
-  return { SETS, DEFAULT, valid, html, put };
+  return { SETS, DEFAULT, valid, html, put, fromAccount };
 });

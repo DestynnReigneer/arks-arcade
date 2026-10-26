@@ -25,6 +25,7 @@ const crypto = require('node:crypto');
 const express = require('express');
 const db = require('../db');
 const adultPin = require('./adult-pin');
+const Avatars = require('../public/avatars');
 
 const COOKIE = 'arcade_me';
 const STATE_COOKIE = 'arcade_state';
@@ -82,6 +83,13 @@ function createClient(s = settings(), fetchImpl = fetch) {
       if (!res.ok) throw new Error(`ARKS ID answered ${res.status}`);
       return res.json();
     },
+    // A guest's name and avatar, for the Create an account form (v7) -> a token.
+    async prefill(name, art) {
+      const res = await post('/api/prefill', { name, art });
+      if (!res.ok) throw new Error(`ARKS ID answered ${res.status}`);
+      const body = await res.json();
+      return typeof body.prefill === 'string' && /^[A-Za-z0-9_-]{20,64}$/.test(body.prefill) ? body.prefill : null;
+    },
     async device(code) {
       const res = await post('/api/device', { code });
       if (res.status === 400) return null;
@@ -110,7 +118,12 @@ function cleanUser(u) {
   const name = String(u.name || '').replace(/[\u0000-\u001f\u007f]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 16);
   if (!name || !ROLES.includes(u.role)) return null;
   const board = String(u.boardName || '').trim();
-  return { id: u.id, name, role: u.role, initials: /^[A-Z]{1,3}$/.test(board) && board !== name.toUpperCase() ? board : null };
+  return {
+    id: u.id, name, role: u.role, initials: /^[A-Z]{1,3}$/.test(board) && board !== name.toUpperCase() ? board : null,
+    // The avatar comes from the account too (contract v7): the character they
+    // picked there, or their icon in their color. null: leave the profile's own.
+    avatar: u.avatar && typeof u.avatar === 'object' ? Avatars.fromAccount(u.avatar) : null
+  };
 }
 
 const hash = s => crypto.createHash('sha256').update(String(s)).digest('hex');
@@ -169,15 +182,15 @@ function createArksId({ client, now = Date.now, profiles }) {
       if (p) db.db.prepare('UPDATE arcade_profiles SET arksid_user = ? WHERE id = ?').run(user.id, p.id);
       else {
         const id = crypto.randomBytes(8).toString('hex');
-        db.db.prepare("INSERT INTO arcade_profiles (id, name, avatar, status, arksid_user) VALUES (?, ?, ?, 'approved', ?)").run(id, user.name, profiles.DEFAULT_AVATAR, user.id);
+        db.db.prepare("INSERT INTO arcade_profiles (id, name, avatar, status, arksid_user) VALUES (?, ?, ?, 'approved', ?)").run(id, user.name, user.avatar || profiles.DEFAULT_AVATAR, user.id);
         p = db.db.prepare('SELECT * FROM arcade_profiles WHERE id = ?').get(id);
       }
     }
-    // The name and the board choice belong to ARKS ID now. The profile's own
-    // PIN and locks are off.
-    db.db.prepare(`UPDATE arcade_profiles SET name = ?, board_show = ?, initials = ?, pin_hash = NULL, pin_salt = NULL,
+    // The name, the avatar and the board choice belong to ARKS ID now. The
+    // profile's own PIN and locks are off.
+    db.db.prepare(`UPDATE arcade_profiles SET name = ?, avatar = ?, board_show = ?, initials = ?, pin_hash = NULL, pin_salt = NULL,
       pin_fails = 0, locked_until = NULL, updated_at = datetime('now') WHERE id = ?`)
-      .run(user.name, user.initials ? 'initials' : 'name', user.initials, p.id);
+      .run(user.name, user.avatar || p.avatar, user.initials ? 'initials' : 'name', user.initials, p.id);
     p = db.db.prepare('SELECT * FROM arcade_profiles WHERE id = ?').get(p.id);
     profiles.syncRambler(p);
     return p;
@@ -260,18 +273,35 @@ function createArksId({ client, now = Date.now, profiles }) {
     const s = String(v || '/');
     return /^\/(?![/\\])[A-Za-z0-9._~\-/?=&%#]{0,300}$/.test(s) ? s : '/';
   };
+  function arksIdUrl(req, res, page, ret, extra = '') {
+    const state = crypto.randomBytes(24).toString('base64url');
+    res.cookie(STATE_COOKIE, state, cookieOpts(req, { maxAge: 10 * 60 * 1000, path: '/auth' }));
+    return `${client.url}/${page}?app=arcade&return=${encodeURIComponent(cleanReturn(ret))}&state=${state}${extra}`;
+  }
   function toArksId(req, res, page) {
     res.set('Cache-Control', 'no-store');
     if (!client) return res.redirect(303, '/');
-    const state = crypto.randomBytes(24).toString('base64url');
-    res.cookie(STATE_COOKIE, state, cookieOpts(req, { maxAge: 10 * 60 * 1000, path: '/auth' }));
-    res.redirect(303, `${client.url}/${page}?app=arcade&return=${encodeURIComponent(cleanReturn(req.query.return))}&state=${state}`);
+    res.redirect(303, arksIdUrl(req, res, page, req.query.return));
   }
 
   function routes() {
     const router = express.Router();
     router.get('/auth/signin', (req, res) => toArksId(req, res, 'signin'));
     router.get('/auth/device', (req, res) => toArksId(req, res, 'device'));
+    // A guest making an account: { name, avatar, return } -> { url }. The name
+    // and avatar they played with are handed to ARKS ID server to server, so
+    // the sign-up form starts with them and they never ride in a web address.
+    // If that fails, the plain sign-in page is fine.
+    router.post('/auth/signup', express.json({ limit: '2kb' }), async (req, res) => {
+      res.set('Cache-Control', 'no-store');
+      if (!client) return res.status(404).json({ error: 'Signing in isn\'t set up on this arcade.' });
+      const b = req.body || {};
+      const name = String(b.name || '').replace(/[\u0000-\u001f\u007f]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 16);
+      const art = typeof b.avatar === 'string' && Avatars.valid(b.avatar) && !b.avatar.startsWith('arks:') ? b.avatar : null;
+      let token = null;
+      if (name || art) { try { token = await client.prefill(name, art); } catch { /* unreachable: no prefill */ } }
+      res.json({ url: arksIdUrl(req, res, 'signin', b.return, token ? `&prefill=${token}` : '') });
+    });
 
     // Back from ARKS ID with a sign-in code, or a "whose device" code.
     router.get('/auth/callback', async (req, res) => {
