@@ -83,7 +83,7 @@ const ArcadeProfile = (() => {
     .apf-tile{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 6px;border-radius:14px;border:2px solid transparent;background:#171623;color:inherit;cursor:pointer;font:inherit;font-size:13px;font-weight:700}
     .apf-tile:hover,.apf-tile.on{border-color:#ffc72c}.apf-tile .lock{font-size:11px;opacity:.7;font-weight:600}
     .apf-row{display:flex;gap:8px;margin-top:10px}.apf-row>*{flex:1}
-    .apf button.apf-btn{padding:11px;border-radius:10px;border:1px solid #3d3958;background:transparent;color:inherit;font:inherit;font-weight:700;cursor:pointer}
+    .apf .apf-btn{padding:11px;border-radius:10px;border:1px solid #3d3958;background:transparent;color:inherit;font:inherit;font-weight:700;cursor:pointer;text-align:center;text-decoration:none}
     .apf button.apf-main{background:#ffc72c;color:#1a0f05;border-color:#ffc72c}
     .apf input{width:100%;box-sizing:border-box;padding:11px;border-radius:10px;border:1px solid #3d3958;background:#12111c;color:#fff;font:inherit;font-size:15px;margin:6px 0}
     .apf-msg{min-height:18px;color:#ff7a7a;font-size:13px;text-align:center;margin:6px 0}
@@ -159,7 +159,7 @@ const ArcadeProfile = (() => {
     const c = card(), me = Id.me, cur = get();
     if (me.signedIn && cur && cur.arksid) {
       c.innerHTML = '<h2>Who&#39;s playing?</h2><div class="apf-grid"></div><p data-who></p>' +
-        '<div class="apf-row"><button class="apf-btn" data-manage>⚙️ My avatar</button><button class="apf-btn" data-out>Sign out</button></div>' +
+        '<div class="apf-row"><a class="apf-btn" data-account>⚙️ Change my avatar</a><button class="apf-btn" data-out>Sign out</button></div>' +
         '<div class="apf-row"><button class="apf-btn" data-close>Close</button></div>';
       const tile = document.createElement('div');
       tile.className = 'apf-tile on';
@@ -169,8 +169,8 @@ const ArcadeProfile = (() => {
       n.textContent = cur.name;
       tile.appendChild(n);
       c.querySelector('.apf-grid').appendChild(tile);
-      c.querySelector('[data-who]').textContent = `You're signed in with ARKS ID as ${cur.name}. Your name, your PIN and whether the high-score boards show your name or initials are all set in ARKS ID.`;
-      c.querySelector('[data-manage]').onclick = showManage;
+      c.querySelector('[data-who]').textContent = `You're signed in with ARKS ID as ${cur.name}. Your name, your avatar, your PIN and whether the high-score boards show your name or initials are all set on your ARKS ID account page.`;
+      c.querySelector('[data-account]').href = me.accountUrl;
       c.querySelector('[data-out]').onclick = signOut;
       c.querySelector('[data-close]').onclick = () => close(get());
       return;
@@ -178,13 +178,17 @@ const ArcadeProfile = (() => {
     const guest = me.guestAllowed;
     c.innerHTML = '<h2>Who&#39;s playing?</h2><p data-lead></p><div class="apf-msg"></div>' +
       '<div class="apf-row"><button class="apf-btn apf-main" data-in>Sign in with ARKS ID</button></div>' +
-      (guest ? '<div class="apf-row"><button class="apf-btn" data-guest>👤 Play as a guest</button></div>' : '') +
+      (guest ? '<div class="apf-row"><button class="apf-btn" data-guest>👤 Play as a guest</button><button class="apf-btn" data-join>✨ Make an account</button></div>' : '') +
       '<div class="apf-row"><button class="apf-btn" data-close>Close</button></div>';
     c.querySelector('[data-lead]').textContent = guest
-      ? 'Sign in with your ARKS ID so your scores count, or play as a guest.'
+      ? 'Sign in with your ARKS ID so your scores count, play as a guest, or make an account of your own.'
       : 'Sign in with your ARKS ID to play. This device belongs to someone in the family, so playing as a guest is turned off here.';
     c.querySelector('[data-in]').onclick = () => { location.href = '/auth/signin?return=' + here(); };
-    if (guest) c.querySelector('[data-guest]').onclick = showGuest;
+    if (guest) {
+      c.querySelector('[data-guest]').onclick = showGuest;
+      // A guest who already picked a name and avatar keeps them.
+      c.querySelector('[data-join]').onclick = () => makeAccount(cur && cur.guest ? cur : {}, c);
+    }
     c.querySelector('[data-close]').onclick = () => close(get());
   }
 
@@ -211,15 +215,39 @@ const ArcadeProfile = (() => {
     setTimeout(() => input.focus(), 30);
   }
 
+  // To ARKS ID's Create an account form, with this guest's name and avatar
+  // already filled in (the arcade's server hands them over).
+  async function makeAccount(g, c) {
+    const msg = c.querySelector('.apf-msg');
+    if (msg) msg.textContent = '';
+    try {
+      const res = await fetch('/auth/signup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: g.name || '', avatar: g.avatar || '', return: location.pathname + location.search + location.hash }) });
+      const data = await res.json();
+      if (!res.ok || !data.url) throw new Error(data.error);
+      location.href = data.url;
+    } catch (e) {
+      if (msg) msg.textContent = (e && e.message) || 'The sign-up page didn\'t open. Try again in a moment.';
+    }
+  }
+
   function showGuest() {
     const c = card();
-    c.innerHTML = '<h2>Playing as a guest</h2><p>Type a name, or leave it blank to be "Guest" with a number.</p><input maxlength="16" placeholder="Your name (optional)"><div class="apf-msg"></div>' +
-      '<div class="apf-row"><button class="apf-btn" data-back>Back</button><button class="apf-btn apf-main" data-ok>Play</button></div>';
+    const was = get();
+    const chosen = { value: was && was.guest && was.avatar ? was.avatar : 'emoji:👾' };
+    c.innerHTML = '<h2>Playing as a guest</h2><p>Type a name, or leave it blank to be "Guest" with a number. Then pick an avatar for fun.</p><input maxlength="16" placeholder="Your name (optional)"><label>Avatar</label><div data-av></div><div class="apf-msg"></div>' +
+      '<div class="apf-row"><button class="apf-btn" data-back>Back</button><button class="apf-btn apf-main" data-ok>Play</button></div>' +
+      (Id.on ? '<p class="apf-sub" data-join-note></p><div class="apf-row"><button class="apf-btn" data-join>✨ Make an account with these</button></div>' : '');
     const input = c.querySelector('input');
+    if (was && was.guest && !/^Guest\b/.test(was.name)) input.value = was.name;
+    avatarPicker(c.querySelector('[data-av]'), chosen);
+    if (Id.on) {
+      c.querySelector('[data-join-note]').textContent = 'With an ARKS ID account your scores count and follow you to the other family apps. Your name and avatar come along to the sign-up page.';
+      c.querySelector('[data-join]').onclick = () => makeAccount({ name: input.value.trim(), avatar: chosen.value }, c);
+    }
     const go = async () => {
       let n = input.value.trim().replace(/\s+/g, ' ').slice(0, 16);
       if (!n) { try { n = (await api('/guest', {})).name; } catch { n = 'Guest'; } }
-      const g = { guest: true, name: n, avatar: 'emoji:👾' };
+      const g = { guest: true, name: n, avatar: chosen.value };
       set(g);
       close(g);
     };
@@ -282,29 +310,6 @@ const ArcadeProfile = (() => {
     const me = get();
     const c = card();
     const chosen = { value: me.avatar };
-    if (Id.on) {
-      // Signed in through ARKS ID: only the avatar is the arcade's own.
-      c.innerHTML = '<h2></h2><label>Avatar</label><div data-av></div><div class="apf-row"><button class="apf-btn" data-save-av>Save avatar</button></div>' +
-        '<p class="apf-sub" data-more></p><div class="apf-msg"></div><div class="apf-row"><button class="apf-btn" data-back>Back</button></div>';
-      c.querySelector('h2').textContent = me.name;
-      c.querySelector('[data-more]').textContent = 'Your name, your PIN and whether the boards show your name or initials are changed on your ARKS ID account page.';
-      const link = document.createElement('a');
-      link.href = Id.me.accountUrl; link.textContent = ' Open ARKS ID';
-      link.style.color = '#ffc72c';
-      c.querySelector('[data-more]').appendChild(link);
-      avatarPicker(c.querySelector('[data-av]'), chosen);
-      c.querySelector('[data-save-av]').onclick = async () => {
-        try {
-          const res = await fetch(`${API}/${me.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: me.token, avatar: chosen.value }) });
-          const data = await res.json();
-          if (!res.ok) throw new Error(data.error);
-          set({ ...get(), avatar: data.profile.avatar });
-          c.querySelector('.apf-msg').textContent = 'Avatar saved.';
-        } catch (e) { c.querySelector('.apf-msg').textContent = e.message; }
-      };
-      c.querySelector('[data-back]').onclick = showList;
-      return;
-    }
     c.innerHTML = '<h2></h2><label>Avatar</label><div data-av></div><div class="apf-row"><button class="apf-btn" data-save-av>Save avatar</button></div>' +
       '<label>On the high-score boards, show</label>' +
       '<label class="apf-pick"><input type="radio" name="apfShow" value="name"> My name, <b data-myname></b></label>' +
