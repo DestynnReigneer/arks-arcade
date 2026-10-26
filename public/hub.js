@@ -35,8 +35,11 @@
   $('playerChip').onclick = () => ArcadeProfile.open();
   ArcadeProfile.onChange(paintChip);
   paintChip();
-  // First visit on this device: ask.
-  if (!ArcadeProfile.get()) setTimeout(() => ArcadeProfile.open(), 600);
+  // First visit on this device: ask. With ARKS ID on, wait until it has said
+  // who's signed in, so someone just back from signing in isn't asked again.
+  ArcadeProfile.arksId().ready.then(() => {
+    if (!ArcadeProfile.get()) setTimeout(() => ArcadeProfile.open(), 600);
+  });
 
   // ---- join a game -----------------------------------------------------------
   // Every room being hosted anywhere in the arcade, refreshed every few seconds.
