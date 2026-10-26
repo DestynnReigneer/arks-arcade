@@ -6,6 +6,9 @@
 // get a name. Needs avatars.js loaded first. Brings its own styles.
 
 const ArcadeProfile = (() => {
+  // Back after signing out shouldn't show a saved copy of a signed-in page:
+  // a page the browser kept in memory is loaded fresh instead.
+  window.addEventListener('pageshow', e => { if (e.persisted) location.reload(); });
   const KEY = 'arcade.profile';
   const API = '/api/profiles';
   const listeners = [];
@@ -51,6 +54,20 @@ const ArcadeProfile = (() => {
     return Id;
   });
   const here = () => encodeURIComponent(location.pathname + location.search + location.hash);
+  // The ARKS ID account page in a small window. It closes itself after Save,
+  // and then this page asks for the fresh account and reloads, so a new avatar
+  // or name shows straight away. If the window can't open (a popup blocker),
+  // the page goes there instead.
+  function openAccount() {
+    const url = Id.me.accountUrl + '?popup=1';
+    const w = window.open(url, 'arksid', 'popup,width=560,height=820');
+    if (!w) { location.href = Id.me.accountUrl; return; }
+    const watch = setInterval(() => {
+      if (!w.closed) return;
+      clearInterval(watch);
+      fetch('/api/arksid/me?fresh=1', { cache: 'no-store' }).catch(() => null).then(() => location.reload());
+    }, 500);
+  }
   async function signOut() {
     let next = '/';
     try { next = (await (await fetch('/auth/signout', { method: 'POST' })).json()).next || '/'; } catch { /* go home */ }
@@ -171,6 +188,7 @@ const ArcadeProfile = (() => {
       c.querySelector('.apf-grid').appendChild(tile);
       c.querySelector('[data-who]').textContent = `You're signed in with ARKS ID as ${cur.name}. Your name, your avatar, your PIN and whether the high-score boards show your name or initials are all set on your ARKS ID account page.`;
       c.querySelector('[data-account]').href = me.accountUrl;
+      c.querySelector('[data-account]').onclick = e => { e.preventDefault(); openAccount(); };
       c.querySelector('[data-out]').onclick = signOut;
       c.querySelector('[data-close]').onclick = () => close(get());
       return;
@@ -381,5 +399,5 @@ const ArcadeProfile = (() => {
   }
   document.addEventListener('DOMContentLoaded', () => fillNames());
 
-  return { get, set, name, token, initials, onChange, open, avatarEl, fillNames, arksId: () => Id };
+  return { get, set, name, token, initials, onChange, open, avatarEl, fillNames, openAccount, arksId: () => Id };
 })();
