@@ -214,6 +214,7 @@ module.exports = function profileRoutes({ requireAdmin, notify }) {
       // saved separately.
       const avatar = body.avatar === undefined ? now.avatar : body.avatar;
       if (!Avatars.valid(avatar)) throw fail('Pick one of the avatars.');
+      if (arksMode && avatar !== now.avatar) throw fail('Your avatar is picked on your ARKS ID account page on this arcade.', 403);
       if (arksMode && (body.boardShow !== undefined || body.initials !== undefined)) throw fail('Name or initials on the boards is chosen in ARKS ID on this arcade.', 403);
       const show = body.boardShow === undefined ? now.board_show : body.boardShow === 'initials' ? 'initials' : 'name';
       let initials = body.initials === undefined ? now.initials : String(body.initials || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
