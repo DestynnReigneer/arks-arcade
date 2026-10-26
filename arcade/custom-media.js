@@ -4,7 +4,8 @@
 // in two folders next to the compose file (see docs/CUSTOM-MEDIA.md):
 //
 //   brand/  avatar.svg, logo-wide.svg, logo-square.svg: shown in the header
-//           and footer instead of the plain title.
+//           and footer instead of the plain title. favicon.svg: the browser
+//           tab's icon.
 //   media/  sprites/  pictures for the clickable characters on the home page
 //           coin/     sounds for the third INSERT COIN click
 //           clips/    GIFs, videos and sounds: secret commands, surprises,
@@ -31,7 +32,7 @@ const KINDS = {
   coin: { ext: AUDIO, max: 2 * MB },
   clips: { ext: [...IMAGE, ...AUDIO, ...VIDEO], max: 50 * MB }
 };
-const BRAND_FILES = { avatar: 'avatar.svg', wide: 'logo-wide.svg', square: 'logo-square.svg' };
+const BRAND_FILES = { avatar: 'avatar.svg', wide: 'logo-wide.svg', square: 'logo-square.svg', favicon: 'favicon.svg' };
 // Plain names only, so a file name can't reach outside its folder or into HTML.
 const SAFE_NAME = /^[a-z0-9][a-z0-9_-]*\.[a-z0-9]+$/i;
 
