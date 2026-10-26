@@ -136,7 +136,8 @@ WireGuard):
 
 If you run an ARKS ID server, register the arcade there as an app named
 `arcade` with the callback `https://<your arcade>/auth/callback`, then put its
-address in `ARKS_ID_URL` and the app's secret in `ARKS_ID_SECRET`. With both
+address in `ARKS_ID_URL` and the app's secret in `ARKS_ID_SECRET` (make the
+secret with `openssl rand -hex 32`, the same value in both). With both
 set, ARKS ID takes over everything about a person:
 
 - **Who's playing?** shows *Sign in with ARKS ID*. The first time someone signs
