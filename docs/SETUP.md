@@ -144,9 +144,13 @@ set, ARKS ID takes over everything about a person:
   in, their account is linked to the arcade profile with the same name, so
   their scores come along; with no match, a new profile is made. You can move a
   wrong link in **Admin → Arcade → Profiles**.
-- Names, PINs and "name or initials on the boards" are set in ARKS ID. The
-  arcade's own profile requests and profile PINs switch off; avatars stay the
-  arcade's own.
+- Names, avatars, PINs and "name or initials on the boards" are set in ARKS ID.
+  The arcade's own profile requests and profile PINs switch off. ARKS ID keeps a
+  copy of the arcade's avatar collection, so someone can pick a Shiba or a toon
+  there, and it shows here. Someone using one of ARKS ID's plain icons gets that
+  icon here in their color.
+- **Guests pick an avatar for fun.** **Make an account** sends them to ARKS ID's
+  sign-up page with the name and avatar they played with already filled in.
 - **Adult levels follow the person's role**: a signed-in adult or admin opens
   them without a PIN, and kids, teens and guests can't. `ADULT_PIN` isn't used.
 - **Guest play** is only offered on a device ARKS ID doesn't know, or one that

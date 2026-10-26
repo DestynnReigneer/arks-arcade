@@ -71,8 +71,12 @@ board-name setting and adult PIN are only for copies running without it.
 - **Shared family accounts ("ARKS ID")**: planned and approved. The
   contract is in the private `arks-id` repo (`docs/SPEC.md`); see CLAUDE.md
   for how to use it. The arcade integrates last (after ARKS ID, the Hub's
-  sign-in and passkeys). **Built against ARKS ID contract: v5** (2026-10-25):
-  sign-in, `/device` for guest play, `boardName`, and the clip inbox.
+  sign-in and passkeys). **Built against ARKS ID contract: v7** (2026-10-26):
+  sign-in, `/device` for guest play, `boardName`, the clip inbox, avatars from
+  the account (`avatar.art`, or the icon as `arks:<icon>:<color>`), and
+  handing a guest's name and avatar to sign-up (`/api/prefill`).
+  `public/avatars.js` is the original of the shared avatar collection; the
+  other apps keep exact copies, so copy it over after changing it.
   The Hub already signs in through ARKS ID (arks-family-hub PR #26, contract
   v3). When the arcade does, its `server/arksid.js` and `test/harness.js` (a
   pretend ARKS ID for tests) are worth copying. Two lessons from it: profile

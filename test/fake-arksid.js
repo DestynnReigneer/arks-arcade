@@ -1,6 +1,6 @@
 'use strict';
 
-// A pretend ARKS ID for the tests: just enough of its contract (v5) for the
+// A pretend ARKS ID for the tests: just enough of its contract (v7) for the
 // arcade's sign-in, "whose device is this?", sessions and the clip inbox.
 // Whoever is in `next` signs in on the next /signin; `deviceOwner` is who owns
 // the next device that asks /device (null for a visitor's phone).
@@ -11,10 +11,10 @@ const crypto = require('node:crypto');
 function startFakeArksId({ secret, arcadeBase }) {
   const users = {
     sam: { id: 'u_sam0000001', name: 'Sam', role: 'admin', boardName: 'Sam' },
-    alex: { id: 'u_alex000001', name: 'Alex', role: 'adult', boardName: 'Alex' },
-    milo: { id: 'u_milo000001', name: 'Milo', role: 'kid', boardName: 'MIL' }
+    alex: { id: 'u_alex000001', name: 'Alex', role: 'adult', boardName: 'Alex', avatar: { icon: 'cat', color: 'teal', image: null, art: null } },
+    milo: { id: 'u_milo000001', name: 'Milo', role: 'kid', boardName: 'MIL', avatar: { icon: 'rocket', color: 's1', image: null, art: 'toon:2' } }
   };
-  const fake = { users, next: 'milo', deviceOwner: null, inbox: {}, sessions: new Map(), base: '' };
+  const fake = { users, next: 'milo', deviceOwner: null, inbox: {}, sessions: new Map(), base: '', prefills: new Map(), lastPrefill: null };
   const codes = new Map(), deviceCodes = new Map();
   const code = () => crypto.randomBytes(24).toString('base64url');
   const json = (res, status, body) => { res.writeHead(status, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(body)); };
@@ -30,6 +30,7 @@ function startFakeArksId({ secret, arcadeBase }) {
     const q = u.searchParams;
     if (req.method === 'GET' && (u.pathname === '/signin' || u.pathname === '/device')) {
       if (q.get('app') !== 'arcade') return json(res, 400, { error: 'unknown app' });
+      fake.lastPrefill = q.get('prefill') ? fake.prefills.get(q.get('prefill')) || 'unknown' : null;
       const c = code();
       if (u.pathname === '/signin') codes.set(c, fake.next); else deviceCodes.set(c, fake.deviceOwner);
       const to = new URL('/auth/callback', arcadeBase);
@@ -40,6 +41,12 @@ function startFakeArksId({ secret, arcadeBase }) {
     }
     if (!u.pathname.startsWith('/api/')) return json(res, 404, { error: 'Not found.' });
     if (req.headers.authorization !== `Bearer ${secret}`) return json(res, 401, { error: 'no' });
+    if (req.method === 'POST' && u.pathname === '/api/prefill') {
+      const b = await readBody(req);
+      const token = code();
+      fake.prefills.set(token, { name: b.name, art: b.art });
+      return json(res, 200, { prefill: token, expiresAt: Date.now() + 15 * 60 * 1000 });
+    }
     if (req.method === 'POST' && u.pathname === '/api/token') {
       const b = await readBody(req);
       const key = codes.get(b.code);
