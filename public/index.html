@@ -250,9 +250,34 @@
   h1.rainbow .lit { animation: rainbow 1s linear infinite; }
   @keyframes rainbow { 0% { color: #ff5e5e; } 25% { color: #ffc72c; } 50% { color: #3ddc84; } 75% { color: #2e9bff; } 100% { color: #c86bff; } }
 
-  /* ---- top bar: slogan, profile, title, help and admin ---- */
-  .top-bar { width: 100%; max-width: 980px; display: grid; grid-template-columns: 1fr auto 1fr;
-    grid-template-areas: "slogan slogan slogan" "left mid right" "coin coin coin"; align-items: center; gap: 6px 16px; margin-bottom: 18px; }
+  /* ---- top bar: slogan, profile, title, help and admin ----
+     It stays at the top of the screen. Once you scroll it shrinks to one thin
+     row: the slogan and INSERT COIN fade away, and if anyone is hosting, a
+     LIVE pill fades in that jumps back to the lobby (dock.js). The two side
+     columns share the leftover room, so the title stays dead center. */
+  .top-bar { width: 100%; max-width: 980px; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    grid-template-areas: "slogan slogan slogan" "left mid right" "coin coin coin"; align-items: center; gap: 6px 16px; margin-bottom: 18px;
+    position: sticky; top: 0; z-index: 40; padding: 10px 14px; border: 1px solid var(--border); border-top: 0; border-radius: 0 0 12px 12px;
+    background: color-mix(in srgb, var(--card) 94%, transparent); backdrop-filter: blur(10px); transition: padding .25s, box-shadow .25s; }
+  .top-bar::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; border-radius: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2) 60%, transparent); }
+  .top-bar.docked { padding-top: 6px; padding-bottom: 6px; row-gap: 0; box-shadow: 0 12px 30px -14px #000; }
+  .top-bar .quote, .top-bar .insert-coin { max-height: 60px; transition: opacity .25s, max-height .3s; }
+  /* The slogan sets its own opacity as it rotates, so this one has to win. */
+  .top-bar.docked .quote, .top-bar.docked .insert-coin { opacity: 0 !important; min-height: 0; max-height: 0; overflow: hidden; pointer-events: none; }
+  .top-bar h1 { transition: font-size .25s; }
+  .top-bar.docked h1 { font-size: 22px; }
+  .lockup .helm, .lockup .wide, .lockup .word { transition: width .25s, height .25s; }
+  .top-bar.docked .lockup .helm { width: 30px; height: 30px; }
+  .top-bar.docked .lockup .wide, .top-bar.docked .lockup .word { height: 32px; }
+  .live-dock { display: inline-flex; align-items: center; gap: 6px; max-width: 0; opacity: 0; overflow: hidden; flex: none; height: 32px; padding: 0;
+    border-radius: 999px; border: 1px solid transparent; background: none; color: var(--accent); font: 700 12px/1 var(--font); letter-spacing: 1.5px; cursor: pointer;
+    transition: max-width .35s ease; white-space: nowrap; }
+  .live-dock.in { max-width: 160px; padding: 0 12px; border-color: color-mix(in srgb, var(--accent) 55%, var(--card)); }
+  .live-dock .dot { width: 8px; height: 8px; border-radius: 50%; background: #ff3860; box-shadow: 0 0 8px #ff3860; }
+  /* No scroll bars anywhere: the page and the boxes inside it scroll without one. */
+  * { scrollbar-width: none; }
+  ::-webkit-scrollbar { display: none; }
   .top-bar .quote { grid-area: slogan; margin: 0; text-align: center; }
   .top-bar .left { grid-area: left; display: flex; align-items: center; gap: 8px; min-width: 0; }
   .top-bar .mid { grid-area: mid; display: flex; align-items: center; justify-content: center; gap: 12px; }
@@ -260,9 +285,9 @@
   .top-bar .insert-coin { grid-area: coin; margin: 0; text-align: center; cursor: pointer; user-select: none; }
   .top-bar .insert-coin:hover { text-shadow: 0 0 8px var(--accent); }
   .lockup { display: flex; align-items: center; gap: 12px; cursor: default; }
-  .lockup .helm { width: 48px; height: 48px; flex: none; }
-  .lockup .wide { height: 60px; width: auto; }
-  .lockup .word { display: block; height: 60px; width: auto; overflow: visible; }
+  .lockup .helm { width: 40px; height: 40px; flex: none; }
+  .lockup .wide { height: 46px; width: auto; }
+  .lockup .word { display: block; height: 46px; width: auto; overflow: visible; }
   .lockup .word text { font-family: Orbitron, sans-serif; font-weight: 800; letter-spacing: .06em; }
   .round-btn { display: inline-grid; place-items: center; width: 36px; height: 36px; border-radius: 8px;
     border: 1px solid var(--border); background: var(--card); color: var(--muted); font: 700 18px/1 var(--font); cursor: pointer; }
@@ -309,7 +334,10 @@
   @keyframes turn { 0% { transform: rotateY(0) } 45% { transform: rotateY(360deg) } 100% { transform: rotateY(360deg) } }
 
   @media (max-width: 560px) {
-    .top-bar { grid-template-columns: auto 1fr auto; gap: 6px 8px; }
+    .top-bar { gap: 6px 8px; padding: 8px; }
+    .top-bar.docked .lockup .helm { width: 24px; height: 24px; }
+    .top-bar.docked .lockup .wide, .top-bar.docked .lockup .word { height: 24px; }
+    .live-dock .word { display: none; }
     .top-bar .player-chip span, .top-bar .player-chip small { display: none; }
     .top-bar .player-chip { padding: 3px; }
     .top-bar .right { gap: 6px; }
@@ -334,7 +362,7 @@
 
 <header class="top-bar">
   <div class="quote" id="quote"></div>
-  <div class="left"><button class="player-chip" id="playerChip" type="button"></button></div>
+  <div class="left"><button class="player-chip" id="playerChip" type="button"></button><button class="live-dock hidden" id="liveDock" type="button" aria-label="Games being hosted"><span class="dot"></span><b id="liveN">0</b><span class="word">LIVE</span></button></div>
   <div class="mid">
     <h1 id="arcadeTitle"><span id="arcadeName"></span><span class="lit">ARCADE</span></h1>
     <div class="lockup hidden" id="lockup"></div>
@@ -347,7 +375,7 @@
 </header>
 
 <!-- Games being hosted right now, and a QR code to get other phones here -->
-<section class="lobby" aria-label="Join a game">
+<section class="lobby" id="lobby" aria-label="Join a game">
   <div class="lobby-head">
     <h2>📡 JOIN A GAME</h2>
     <button class="hub-btn" id="qrToggle" aria-expanded="false">📱 Phone QR</button>
@@ -482,7 +510,7 @@
   <ul id="commFeed"><li class="comm-empty">Tuning in…</li></ul>
 </section>
 
-<footer>
+<footer id="chin">
   <div class="foot-logo hidden" id="footLogo"></div>
 </footer>
 
@@ -522,6 +550,7 @@
 <script src="dust-sign.js"></script>
 <script src="arcade-qr.js"></script>
 <script src="custom-media.js"></script>
+<script src="dock.js"></script>
 <script src="hub.js"></script>
 
 </body>
