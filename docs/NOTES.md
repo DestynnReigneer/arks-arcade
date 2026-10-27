@@ -7,6 +7,20 @@ to-do list as checkboxes (the rule is in the maintainer's global CLAUDE.md
 and `arks-internal/conventions/sessions.md`): do the checked items in the
 order they were clicked, and keep the rest pinned here.
 
+## The sticky top bar (2026-10-27)
+
+The home page's top bar now stays at the top of the screen. Once you scroll it shrinks
+to one thin row: the rotating slogan and INSERT COIN fade away, and the title gets
+smaller. While anyone is hosting a game, a LIVE pill with the number of games fades into
+the bar as the lobby scrolls away, and tapping it jumps back to the lobby. The footer
+logo fades in as you reach the bottom, and nothing shows a scroll bar.
+
+- `public/dock.js` does the shrinking and fading. It's a copy of a file shared with other
+  apps, so keep the copies in step and keep this one free of anything specific to them.
+- The title lockup is a little smaller (46 pixels tall instead of 60), and the two side
+  columns share the leftover room, so the title stays centered on a phone too.
+- The game pages keep their own headers for now.
+
 ## Last session (2026-10-24)
 
 **Done and merged** (each its own PR, CI green, image published):
