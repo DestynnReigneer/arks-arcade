@@ -69,6 +69,9 @@
         else join.classList.add('off');
         list.appendChild(li);
       }
+      // With nobody hosting there's nothing to show, so the LIVE pill stays out of the bar.
+      $('liveN').textContent = rooms.length;
+      $('liveDock').classList.toggle('hidden', !rooms.length);
       $('lobbyEmpty').classList.toggle('hidden', rooms.length > 0);
       const open = rooms.filter(r => r.status === 'open').length;
       if (rooms.length && !open) $('lobbyEmpty').classList.remove('hidden');
@@ -78,6 +81,16 @@
     } catch { /* the server's away; try again shortly */ }
   }
   loadLobby();
+
+  // ---- the sticky top bar -----------------------------------------------------
+  // It shrinks once you scroll, and the footer logo fades in at the bottom
+  // (dock.js). While anyone is hosting, a LIVE pill fades into the bar as the
+  // lobby scrolls away; tapping it scrolls back up to the lobby.
+  const liveDock = $('liveDock');
+  Dock.header(document.querySelector('.top-bar'));
+  Dock.catch($('lobby'), [liveDock]);
+  Dock.chin($('chin'));
+  liveDock.addEventListener('click', () => $('lobby').scrollIntoView({ behavior: 'smooth', block: 'start' }));
   setInterval(() => { if (!document.hidden) loadLobby(); }, 5000);
 
   $('qrToggle').onclick = () => {
