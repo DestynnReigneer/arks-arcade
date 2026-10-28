@@ -45,6 +45,16 @@ const ArcadeProfile = (() => {
         boardShow: me.profile.boardShow, initials: me.profile.initials, arksid: true, role: me.role, adult: me.adult });
     } else {
       if (cur && (!cur.guest || (me.deviceChecked && !me.guestAllowed))) set(null);
+      // At most once an hour: a quiet stop at ARKS ID (silent sign-in). If this
+      // device is signed in there, say from the family's other app, it comes
+      // back signed in here too, with no tap. If not, it comes straight back.
+      let silentAt = 0;
+      try { silentAt = Number(localStorage.getItem('arksid.silentAt')) || 0; } catch { silentAt = Date.now(); }
+      if (Date.now() - silentAt > 60 * 60 * 1000) {
+        try { localStorage.setItem('arksid.silentAt', String(Date.now())); } catch { /* no storage: don't loop */ }
+        location.replace('/auth/signin?silent=1&return=' + encodeURIComponent(location.pathname + location.search + location.hash));
+        return Id;
+      }
       // Once per visit: a quick stop at ARKS ID to learn whose device this is,
       // so guest play can be offered (or not). It comes straight back.
       let tried = false;
