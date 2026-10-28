@@ -6,7 +6,6 @@
 // shouting about happens -- a new theme, a new top score.
 
 const express = require('express');
-const rateLimit = require('express-rate-limit');
 const db = require('../db');
 const adultPin = require('./adult-pin');
 const extras = require('./feedback');
@@ -65,13 +64,18 @@ function listPosts(limit = 20) {
 
 const router = express.Router();
 
-const feedbackLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000,
-  limit: 10,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'That is a lot of messages. Try again in a while.' }
-});
+// Admins send as much feedback as they like; everyone else gets 30 in 3
+// minutes, then a 3-minute wait (arcade/burst-limit.js). server.js says who's
+// an admin through setAdminCheck.
+const { createBurstLimit, waitMessage } = require('./burst-limit');
+const sends = createBurstLimit();
+let adminCheck = async () => false;
+async function feedbackLimiter(req, res, next) {
+  try { if (await adminCheck(req)) return next(); } catch { /* not an admin */ }
+  const r = sends.take(['ip:' + req.ip]);
+  if (!r.ok) return res.status(429).json({ error: waitMessage(r.waitSeconds) });
+  next();
+}
 
 router.get('/posts', (req, res) => {
   res.json(listPosts(req.query.limit));
@@ -83,7 +87,7 @@ router.post('/feedback', express.json({ limit: '5mb' }), feedbackLimiter, (req, 
   try {
     const body = req.body || {};
     const kind = FEEDBACK_KINDS.includes(body.kind) ? body.kind : 'message';
-    const message = clean(body.message, 2000);
+    const message = clean(body.message, 5000);
     if (!message) throw fail('Write a line or two about what happened first.', 400);
     const picture = body.picture ? extras.readPicture(body.picture) : null;
     // A profile's name comes from its token, so nobody can sign as someone else.
@@ -188,4 +192,4 @@ router.use((err, req, res, next) => {
   res.status(err.status || 500).json({ error: err.message });
 });
 
-module.exports = { router, adminRouter, post, safePost, listPosts, STATUSES, setFeedbackNotify: fn => { onFeedback = fn; } };
+module.exports = { router, adminRouter, post, safePost, listPosts, STATUSES, setFeedbackNotify: fn => { onFeedback = fn; }, setAdminCheck: fn => { adminCheck = fn; } };

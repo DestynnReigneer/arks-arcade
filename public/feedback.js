@@ -194,7 +194,7 @@
         <label for="fbGamePick">Which game?</label>
         <select id="fbGamePick"><option value="">The whole arcade</option></select>
         <label for="fbText">What happened, and what did you expect instead?</label>
-        <textarea id="fbText" maxlength="2000" placeholder="For example: I tapped Play again and nothing happened."></textarea>
+        <textarea id="fbText" maxlength="5000" placeholder="For example: I tapped Play again and nothing happened."></textarea>
         <div data-from-row>
           <label for="fbFromName">Your name (optional)</label>
           <input type="text" id="fbFromName" maxlength="30" autocomplete="off">
