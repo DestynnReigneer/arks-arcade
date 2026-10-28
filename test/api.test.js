@@ -1130,7 +1130,11 @@ async function run({ base, root }) {
   ok('surprises can be turned off', custom.surprise === 0);
   const clipFile = await fetch(base + custom.clips[0].url);
   ok('a clip is served, and never allowed to run scripts', clipFile.status === 200 && /sandbox/.test(clipFile.headers.get('content-security-policy')));
-  ok('only the three logo names are served from brand/', (await fetch(base + '/custom/brand/notes.txt')).status === 404);
+  ok('only the logo and icon names are served from brand/', (await fetch(base + '/custom/brand/notes.txt')).status === 404);
+  const manifest = await fetch(base + '/manifest.webmanifest');
+  const mj = await manifest.json();
+  ok('the install manifest is served, with no icons until the brand folder has them',
+    manifest.status === 200 && /manifest\+json/.test(manifest.headers.get('content-type')) && mj.short_name === 'Arcade' && Array.isArray(mj.icons) && mj.icons.length === 0, JSON.stringify(mj));
   ok('nothing outside the folders can be reached', (await fetch(base + '/custom/media/clips/%2e%2e%2f%2e%2e%2fserver.js')).status === 404);
   ok('sending a clip needs the admin password', (await wl('/custom/admin/send', 'POST', { clip: 'rickroll', to: 'everyone' })).status === 401);
   ok('an unknown clip is refused', (await asAdmin('/custom/admin/send', 'POST', { clip: 'nope', to: 'everyone' })).status === 400);

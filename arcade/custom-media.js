@@ -32,7 +32,9 @@ const KINDS = {
   coin: { ext: AUDIO, max: 2 * MB },
   clips: { ext: [...IMAGE, ...AUDIO, ...VIDEO], max: 50 * MB }
 };
-const BRAND_FILES = { avatar: 'avatar.svg', wide: 'logo-wide.svg', square: 'logo-square.svg', favicon: 'favicon.svg' };
+// The app icons are what a phone shows when the arcade is added to its home screen.
+const BRAND_FILES = { avatar: 'avatar.svg', wide: 'logo-wide.svg', square: 'logo-square.svg', favicon: 'favicon.svg',
+  icon180: 'app-icon-180.png', icon192: 'app-icon-192.png', icon512: 'app-icon-512.png' };
 // Plain names only, so a file name can't reach outside its folder or into HTML.
 const SAFE_NAME = /^[a-z0-9][a-z0-9_-]*\.[a-z0-9]+$/i;
 
@@ -167,4 +169,4 @@ function staticFiles() {
   return router;
 }
 
-module.exports = { routes, staticFiles, catalog, send, KINDS, BRAND_FILES };
+module.exports = { routes, staticFiles, catalog, send, brand, KINDS, BRAND_FILES };
