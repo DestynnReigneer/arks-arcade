@@ -164,6 +164,10 @@ app.use('/custom', customMedia.staticFiles());
 
 // ---- Comm Center (home page message board) ----
 comm.setFeedbackNotify(notifyText);
+// An admin (the admin page unlocked, or signed in with ARKS ID's admin role)
+// sends as much feedback as they like.
+comm.setAdminCheck(async req => require('./arcade/admin-session').isAdmin(req) ||
+  !!(arks && ((await arks.current(req)) || {}).account?.role === 'admin'));
 app.use('/api/comm/admin', comm.adminRouter(requireAdmin));
 app.use('/api/comm', comm.router);
 
