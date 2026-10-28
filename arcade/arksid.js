@@ -281,10 +281,12 @@ function createArksId({ client, now = Date.now, profiles }) {
     res.cookie(STATE_COOKIE, state, cookieOpts(req, { maxAge: 10 * 60 * 1000, path: '/auth' }));
     return `${client.url}/${page}?app=arcade&return=${encodeURIComponent(cleanReturn(ret))}&state=${state}${extra}`;
   }
+  // silent=1 (contract v8): someone already signed in to ARKS ID comes back
+  // signed in here with no tap; anyone else comes straight back, no page.
   function toArksId(req, res, page) {
     res.set('Cache-Control', 'no-store');
     if (!client) return res.redirect(303, '/');
-    res.redirect(303, arksIdUrl(req, res, page, req.query.return));
+    res.redirect(303, arksIdUrl(req, res, page, req.query.return, page === 'signin' && req.query.silent === '1' ? '&silent=1' : ''));
   }
 
   function routes() {
@@ -322,6 +324,8 @@ function createArksId({ client, now = Date.now, profiles }) {
         res.cookie(DEVICE_COOKIE, deviceCookie(result || { known: true, owner: null }), cookieOpts(req, { maxAge: DEVICE_MS }));
         return res.redirect(303, back);
       }
+      // A silent try for someone who isn't signed in to ARKS ID: back where they were.
+      if (client && state && req.query.state === state && req.query.error === 'signin_needed') return res.redirect(303, back);
       if (!ok) return res.redirect(303, '/?signin=failed');
       let traded = null;
       try { traded = await client.token(code); } catch { return res.redirect(303, '/?signin=unreachable'); }
