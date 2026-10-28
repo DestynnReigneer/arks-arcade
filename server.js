@@ -161,6 +161,19 @@ app.use('/api/stats', stats.routes({ requireAdmin }));
 const customMedia = require('./arcade/custom-media');
 app.use('/api/custom', customMedia.routes({ requireAdmin, arks }));
 app.use('/custom', customMedia.staticFiles());
+// The install manifest: the name and icon a phone uses when the arcade is
+// added to its home screen. The icons come from the brand folder when it has
+// them (app-icon-192.png and app-icon-512.png); without them the phone uses
+// the page's own icon.
+app.get('/manifest.webmanifest', (req, res) => {
+  const b = customMedia.brand(), name = String(process.env.ARCADE_NAME || '').trim().slice(0, 30);
+  const icons = [['icon192', '192x192'], ['icon512', '512x512']].filter(([k]) => b[k])
+    .map(([k, sizes]) => ({ src: b[k], sizes, type: 'image/png', purpose: 'any maskable' }));
+  res.type('application/manifest+json').set('Cache-Control', 'no-cache').json({
+    name: name ? `${name} Arcade` : 'Arcade', short_name: 'Arcade', start_url: '/', scope: '/', display: 'browser',
+    background_color: '#12111c', theme_color: '#12111c', icons
+  });
+});
 
 // ---- Comm Center (home page message board) ----
 comm.setFeedbackNotify(notifyText);
