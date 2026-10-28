@@ -39,6 +39,7 @@ Put these files here, with exactly these names:
 | `logo-wide.svg` | Your wide logo, between the picture and the word ARCADE |
 | `logo-square.svg` | Your square logo, spinning slowly at the bottom of the home page |
 | `favicon.svg` | The little icon on the browser tab, on every page. It's drawn 16 pixels wide, so a simple, bold picture works best |
+| `app-icon-192.png`, `app-icon-512.png`, `app-icon-180.png` | The icon a phone shows when someone adds the arcade to their home screen, as square PNGs of those sizes. Fill the whole square with your background, and keep the picture inside the middle 80%, because Android trims the icon to a circle or other shape. Without them, the phone falls back to a small icon on a white circle |
 
 With `avatar.svg` and `logo-wide.svg`, the plain "ARCADE" title becomes your
 picture, your logo and "ARCADE" drawn as an outline. With `logo-square.svg`,
