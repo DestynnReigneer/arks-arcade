@@ -542,6 +542,20 @@ async function run() {
   });
   ok('a sensible player can win every map', results.every(r => r.endsWith(':won')), results.join(' '));
 
+  console.log('\n-- feedback limit --');
+  {
+    const { createBurstLimit } = require('../arcade/burst-limit');
+    let t = 0;
+    const lim = createBurstLimit({ now: () => t });
+    let okCount = 0;
+    for (let k = 0; k < 31; k++) if (lim.take(['ip:a']).ok) okCount++;
+    ok('30 feedback in 3 minutes go through, the 31st waits', okCount === 30);
+    t += 2 * 60 * 1000;
+    ok('still waiting after 2 minutes', !lim.take(['ip:a']).ok);
+    t += 61 * 1000;
+    ok('the wait is over after 3 minutes', lim.take(['ip:a']).ok);
+  }
+
   // The browser scripts aren't run by the other tests, so at least make sure
   // each one parses: a stray line break inside a string once stopped a whole
   // admin script from loading, and nothing else noticed.
