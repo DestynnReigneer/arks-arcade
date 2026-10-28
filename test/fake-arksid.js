@@ -31,6 +31,14 @@ function startFakeArksId({ secret, arcadeBase }) {
     if (req.method === 'GET' && (u.pathname === '/signin' || u.pathname === '/device')) {
       if (q.get('app') !== 'arcade') return json(res, 400, { error: 'unknown app' });
       fake.lastPrefill = q.get('prefill') ? fake.prefills.get(q.get('prefill')) || 'unknown' : null;
+      // Silent sign-in (v8) with nobody signed in: straight back, saying so.
+      if (u.pathname === '/signin' && q.get('silent') === '1' && !fake.next) {
+        const miss = new URL('/auth/callback', arcadeBase);
+        miss.searchParams.set('error', 'signin_needed');
+        miss.searchParams.set('return', q.get('return') || '/');
+        if (q.get('state')) miss.searchParams.set('state', q.get('state'));
+        return back(res, miss.href);
+      }
       const c = code();
       if (u.pathname === '/signin') codes.set(c, fake.next); else deviceCodes.set(c, fake.deviceOwner);
       const to = new URL('/auth/callback', arcadeBase);

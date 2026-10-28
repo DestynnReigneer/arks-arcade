@@ -91,9 +91,15 @@ async function run({ base, root, fake, admin: ADMIN }) {
   ok('or picks one with a PIN', (await milo.call('/api/profiles/abcdefabcdef0001/use', { method: 'POST', body: { pin: '123456' } })).status === 403);
   ok('the boards choice is made in ARKS ID', (await milo.call('/api/profiles/abcdefabcdef0001', { method: 'PATCH', body: { token: me.token, boardShow: 'name' } })).status === 403);
   ok('the avatar is picked in ARKS ID too', (await milo.call('/api/profiles/abcdefabcdef0001', { method: 'PATCH', body: { token: me.token, avatar: 'emoji:🐙' } })).status === 403);
+  // Silent sign-in (v8): nobody signed in to ARKS ID, so straight back, still signed out.
+  const quiet = browser();
+  fake.next = null;
+  const miss = await quiet.call('/auth/signin?silent=1&return=%2Fsnake.html');
+  ok('a silent try with nobody signed in comes straight back to the page', miss.url === base + '/snake.html', miss.url);
+  ok('…still signed out', !(await quiet.me()).signedIn);
   const fresh = browser();
   fake.next = 'alex';
-  await fresh.call('/auth/signin?return=%2F');
+  await fresh.call('/auth/signin?silent=1&return=%2F');
   const alex = await fresh.me();
   ok('someone with no matching profile gets a new one', alex.signedIn && alex.profile.name === 'Alex' && alex.profile.id !== 'abcdefabcdef0001');
   ok('…showing their ARKS ID icon in its color', alex.profile.avatar === 'arks:cat:teal', alex.profile.avatar);
