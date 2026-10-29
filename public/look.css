@@ -1,0 +1,41 @@
+/* The arcade's colors (2026-10-29): the dark purple background, panels and
+   text from the color spec's Vice palette (docs/DESIGN.md), the same family
+   look as the maintainer's other apps. Each game keeps its own accent colors,
+   the 8-bit characters keep theirs, and gold stays the coin-and-win color.
+   Every page loads this after its own stylesheet, so these values win over the
+   older 8-Bit ones. Wordless keeps its own look (decided 2026-10-24 and again
+   2026-10-29), so it doesn't load this file. Adult mode (adult-mode.css) still
+   paints its own screen, hot-pink frame and ADULTS ONLY tab over the top. */
+:root {
+  --ground:
+    radial-gradient(900px 520px at 8% -8%, rgba(255, 46, 196, 0.20), transparent 62%),
+    radial-gradient(900px 600px at 100% 30%, rgba(0, 255, 194, 0.10), transparent 60%),
+    linear-gradient(160deg, #100620 0%, #170a2e 55%, #2c1350 100%);
+  --bg: #170a2e;
+  --plate: #0a0416;
+  --card: #22103f;
+  --card-2: #2c1350;
+  --text: #f5eaff;
+  --muted: #c9a8dd;
+  --dim: #9483ae;
+  --border: color-mix(in srgb, var(--text) 10%, var(--card));
+  --card-hover: color-mix(in srgb, var(--text) 7%, var(--card-2));
+}
+html { background-color: var(--bg); }
+
+/* The faint grid behind every page, fading out toward the bottom. */
+html::before {
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background-image: linear-gradient(rgba(255, 46, 196, 0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 46, 196, 0.06) 1px, transparent 1px);
+  background-size: 44px 44px;
+  -webkit-mask-image: linear-gradient(180deg, #000, transparent 85%); mask-image: linear-gradient(180deg, #000, transparent 85%);
+}
+body { position: relative; z-index: 1; }
+
+/* Two places that named the old colors directly. */
+.tut-card { background: var(--card); color: var(--text); border-color: var(--border); }
+.stage { background: var(--card); }
+
+/* No scroll bars anywhere. */
+* { scrollbar-width: none; }
+::-webkit-scrollbar { display: none; }
