@@ -7,6 +7,17 @@ to-do list as checkboxes (the rule is in the maintainer's global CLAUDE.md
 and `arks-internal/conventions/sessions.md`): do the checked items in the
 order they were clicked, and keep the rest pinned here.
 
+## The ARKS look (2026-10-29)
+
+The maintainer approved a preview and chose: the whole arcade on the Vice background,
+panels and text (`public/look.css`), and one top bar on every page
+(`public/topbar.css`, built on game pages by `public/topbar.js`), the same as their
+other apps. Game accents, the 8-bit characters, slogans, INSERT COIN and the gold for
+coins and wins stay. Wordless keeps its own look but gets the bar. The bar on game
+pages is pinned (`position: fixed`) with a spacer under it, and it's a `<div>`, not a
+`<header>`, because some games style every `<header>`. Adult mode's pink frame and
+ADULTS ONLY tab are now the signal for grown-up mode (`docs/DESIGN.md`).
+
 ## The sticky top bar (2026-10-27)
 
 The home page's top bar now stays at the top of the screen. Once you scroll it shrinks

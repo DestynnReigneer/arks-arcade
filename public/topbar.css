@@ -1,0 +1,63 @@
+/* The top bar every page shares (2026-10-29): the same bar as the
+   maintainer's other apps, so moving between them feels like one place, with
+   only the name in the middle changing. It keeps its own colors, so it looks
+   the same on every page, Wordless included. public/topbar.js builds it on the
+   game pages; the home page has its own markup with the same classes. */
+.ah {
+  --tb-bar: #1e0e39; --tb-text: #f5eaff; --tb-text-2: #c9a8dd; --tb-pink: #ff2ec4; --tb-teal: #00ffc2;
+  --tb-border: color-mix(in srgb, #f5eaff 10%, #22103f);
+  position: sticky; top: 0; z-index: 40; width: 100%; max-width: 1100px; margin: 0 auto 10px; padding: 0 16px; box-sizing: border-box;
+}
+/* On a game page the bar is pinned to the top of the screen, so it's the same
+   width and place whatever the game's own layout is; a spacer keeps the game
+   from starting under it. */
+.ah.ah-fixed { position: fixed; left: 50%; transform: translateX(-50%); width: min(1100px, 100vw); margin: 0; }
+.ah-spacer { height: 86px; flex: none; }
+@media (max-width: 640px) { .ah-spacer { height: 68px; } }
+.ah-bar {
+  position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 12px;
+  height: 76px; padding: 0 14px; box-sizing: border-box; color: var(--tb-text);
+  background: color-mix(in srgb, var(--tb-bar) 94%, transparent); border: 1px solid var(--tb-border); border-top: 0; border-radius: 0 0 10px 10px;
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); transition: height .25s ease, box-shadow .25s;
+  font-family: "Rajdhani", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+.ah-bar::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; border-radius: 2px;
+  background: linear-gradient(90deg, var(--tb-pink), var(--tb-teal) 60%, transparent);
+}
+.ah.docked .ah-bar { height: 54px; box-shadow: 0 12px 30px -14px #000; }
+.ah-side { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.ah-side.r { justify-content: flex-end; }
+.ah-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--tb-text); }
+.ah-brand .helm { width: 40px; height: 40px; flex: none; transition: width .25s, height .25s; }
+.ah-brand .wide, .ah-brand .word { height: 46px; width: auto; flex: none; overflow: visible; transition: height .25s; }
+.ah-brand .word text { font-family: Orbitron, sans-serif; font-weight: 800; letter-spacing: .06em; }
+.ah.docked .ah-brand .helm { width: 30px; height: 30px; }
+.ah.docked .ah-brand .wide, .ah.docked .ah-brand .word { height: 32px; }
+/* Without the owner's logos: the plain name. */
+.ah-plain { font: 800 24px/1 Orbitron, -apple-system, sans-serif; letter-spacing: 4px; }
+.ah-back, .ah-ib, .ah-lock {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px; height: 34px; min-width: 34px; padding: 0 12px; box-sizing: border-box;
+  border-radius: 9px; border: 1px solid var(--tb-border); background: var(--tb-bar); color: var(--tb-text-2);
+  font-family: inherit; font-weight: 700; font-size: 13px; line-height: 1; letter-spacing: .14em; text-transform: uppercase; text-decoration: none; cursor: pointer;
+}
+.ah-ib { padding: 0; font-size: 18px; letter-spacing: 0; }
+.ah-back svg, .ah-lock svg { width: 15px; height: 15px; flex: none; }
+.ah-lock { border-color: color-mix(in srgb, var(--tb-pink) 55%, #22103f); color: var(--tb-pink); }
+.ah-back:hover, .ah-ib:hover { color: var(--tb-text); border-color: color-mix(in srgb, var(--tb-pink) 55%, #22103f); }
+.ah.docked .ah-back span, .ah.docked .ah-lock span { display: none; }
+.ah.docked .ah-back, .ah.docked .ah-lock { padding: 0 9px; }
+@media (max-width: 640px) {
+  .ah { padding: 0 8px; }
+  .ah-bar { height: 60px; padding: 0 8px; gap: 6px; }
+  .ah.docked .ah-bar { height: 50px; }
+  .ah-brand { gap: 6px; }
+  .ah-brand .helm { width: 28px; height: 28px; }
+  .ah-brand .wide, .ah-brand .word { height: 30px; }
+  .ah.docked .ah-brand .helm { width: 24px; height: 24px; }
+  .ah.docked .ah-brand .wide, .ah.docked .ah-brand .word { height: 24px; }
+  .ah-plain { font-size: 18px; letter-spacing: 2px; }
+  .ah-back span, .ah-lock span, .ah-ib.help { display: none; }
+  .ah-back, .ah-lock { padding: 0 9px; }
+}
+@media (prefers-reduced-motion: reduce) { .ah-bar, .ah-brand .helm, .ah-brand .wide, .ah-brand .word { transition: none; } }
