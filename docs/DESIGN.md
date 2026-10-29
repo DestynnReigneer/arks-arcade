@@ -8,7 +8,28 @@ The original lives in a separate private repo. The copy here exists so the
 palette ships with the code and is available offline. If the two ever
 disagree, the original wins.
 
-## Which palette this project uses
+## The arcade's look since 2026-10-29
+
+The maintainer chose to move the whole arcade to the spec's **Vice** background,
+panels and text, the same family look as their other apps, after approving a
+preview. `public/look.css` does it: every page loads it after its own stylesheet,
+and it only changes the background, panel, text and border tokens. Each game keeps
+its own accent colors, the 8-bit characters keep theirs, and gold stays the coin and
+win color. **Wordless keeps its own look** (asked again and kept, 2026-10-29), so it
+doesn't load `look.css`.
+
+Every page also shares one top bar (`public/topbar.css`, `public/topbar.js` on the
+game pages): back to the arcade on the left, the title in the middle (the owner's
+logo lockup when the brand folder has it), and How to play and Admin on the right.
+It is the same bar as the maintainer's other apps, so moving between them feels
+like one place.
+
+**Adult mode is still easy to spot.** The old "purple means unfiltered" signal is
+gone now that everything is purple, so the signal is `adult-mode.css`: a plum
+screen with a hot-pink frame around the whole page and an ADULTS ONLY tab, on every
+game. The sections below describe the 8-Bit era and are kept for the history.
+
+## Which palette this project used before
 
 The spec offers six languages. Two were written for exactly this kind of
 project, and the arcade uses both:
