@@ -469,7 +469,7 @@
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'Sending did not work. Try again in a moment.');
       veil.querySelector('.fb-card').innerHTML =
-        '<h2>📡 Thanks! Message received.</h2><p>Whoever runs this arcade will see it on the admin page.</p><p data-note></p><div class="fb-row"><button type="button" data-done>Close</button></div>';
+        '<h2>📡 Thanks! Message received.</h2><p>Whoever runs this arcade will see it and can answer you.</p><p data-note></p><div class="fb-row"><button type="button" data-done>Close</button></div>';
       // The arcade had no room left for the picture: the note still arrived.
       const note = veil.querySelector('[data-note]');
       if (data.pictureDropped && data.note) note.textContent = data.note; else note.remove();

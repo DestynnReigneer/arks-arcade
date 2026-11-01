@@ -74,6 +74,11 @@ const arks = (() => {
 })();
 if (arks) {
   require('./arcade/profiles').setArksMode(true);
+  // Feedback goes to ARKS ID's one inbox (arcade/comm.js), and waits in a
+  // small queue that's sent again every minute when ARKS ID can't be reached.
+  const relay = require('./kit/feedback-relay').createRelay({ db: require('./db').db, call: (method, p, body) => arks.client.appFeedback(method, p, body) });
+  relay.start();
+  comm.setInbox({ relay, current: arks.current, url: arks.client.url });
   adultPin.usePasses(arks.passOk);
   app.use(arks.routes());
 } else {
