@@ -12,14 +12,39 @@ const extras = require('./feedback');
 
 // Added for the feedback bug's card: the page it was sent from, details about
 // the device, a screenshot, and the profile that sent it.
-for (const [col, decl] of [['page', 'TEXT'], ['details', 'TEXT'], ['picture', 'TEXT'], ['profile_id', 'TEXT']]) {
+// Then (2026-11-01), tracking the way GitHub tracks issues: each side's own
+// copy (admin_hidden, sender_hidden), when the sender last fixed what they
+// wrote, and a thread of replies between the admin and the sender.
+for (const [col, decl] of [['page', 'TEXT'], ['details', 'TEXT'], ['picture', 'TEXT'], ['profile_id', 'TEXT'],
+  ['admin_hidden', 'INTEGER NOT NULL DEFAULT 0'], ['sender_hidden', 'INTEGER NOT NULL DEFAULT 0'], ['edited_at', 'TEXT']]) {
   const cols = db.db.prepare('PRAGMA table_info(comm_feedback)').all().map(c => c.name);
   if (!cols.includes(col)) db.db.exec(`ALTER TABLE comm_feedback ADD COLUMN ${col} ${decl}`);
 }
+db.db.exec(`CREATE TABLE IF NOT EXISTS comm_feedback_replies (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  feedback_id INTEGER NOT NULL,
+  from_admin INTEGER NOT NULL DEFAULT 0,
+  profile_id TEXT,
+  name TEXT,
+  body TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+)`);
 
 const GAMES = ['wordless', 'rambler', 'spinsolve', 'chess', 'dino', 'trivia', 'partdeux', 'daredevil', 'snake', 'bricks', 'blocks', 'towers'];
 const FEEDBACK_KINDS = ['feature', 'issue', 'message'];
 const STATUSES = ['new', 'pending', 'in-progress', 'completed', 'canceled'];
+// Done ones (Fixed, Won't fix) move to the Archive, for the admin and the sender.
+const ARCHIVED = ['completed', 'canceled'];
+const replyCount = id => db.db.prepare('SELECT COUNT(*) AS n FROM comm_feedback_replies WHERE feedback_id = ?').get(id).n;
+const repliesOf = id => db.db.prepare('SELECT * FROM comm_feedback_replies WHERE feedback_id = ? ORDER BY id').all(id)
+  .map(r => ({ id: r.id, fromAdmin: !!r.from_admin, name: r.name, body: r.body, createdAt: r.created_at }));
+// Gone for good once neither side keeps a copy.
+function forgetFeedback(id) {
+  const row = db.db.prepare('SELECT picture FROM comm_feedback WHERE id = ?').get(id);
+  db.db.prepare('DELETE FROM comm_feedback_replies WHERE feedback_id = ?').run(id);
+  db.db.prepare('DELETE FROM comm_feedback WHERE id = ?').run(id);
+  if (row) extras.removePicture(row.picture);
+}
 
 function fail(message, status) {
   return Object.assign(new Error(message), { status });
@@ -36,7 +61,8 @@ function rowToFeedback(r) {
   return {
     id: r.id, kind: r.kind, message: r.message, from: r.from_name, game: r.game,
     status: r.status, note: r.admin_note, createdAt: r.created_at, updatedAt: r.updated_at,
-    page: r.page || null, details: r.details ? JSON.parse(r.details) : null, hasPicture: !!r.picture
+    page: r.page || null, details: r.details ? JSON.parse(r.details) : null, hasPicture: !!r.picture,
+    editedAt: r.edited_at || null, fromProfile: !!r.profile_id, replyCount: replyCount(r.id)
   };
 }
 
@@ -107,6 +133,65 @@ router.post('/feedback', express.json({ limit: '5mb' }), feedbackLimiter, (req, 
   } catch (e) { next(e); }
 });
 
+// ---- the sender's side: "My feedback" (2026-11-01) ---------------------------
+// Everything here takes the profile's token in the body, so it never sits in
+// an address. Only feedback that profile sent, and only its copy.
+function mine(req) {
+  const profile = require('./profiles').verify((req.body || {}).token);
+  if (!profile) throw fail('Pick who\'s playing first.', 401);
+  return profile;
+}
+function minePiece(req, profile) {
+  const row = db.db.prepare('SELECT * FROM comm_feedback WHERE id = ? AND sender_hidden = 0').get(Number(req.params.id));
+  if (!row || row.profile_id !== profile.id) throw fail('That message isn\'t there anymore.', 404);
+  return row;
+}
+const senderView = (r, full) => ({
+  id: r.id, kind: r.kind, message: r.message, game: r.game, status: r.status, createdAt: r.created_at, editedAt: r.edited_at || null,
+  hasPicture: !!r.picture, replyCount: replyCount(r.id), ...(full ? { replies: repliesOf(r.id) } : {})
+});
+router.post('/mine', (req, res, next) => {
+  try {
+    const profile = mine(req);
+    const archive = (req.body || {}).view === 'archive';
+    const rows = db.db.prepare(`SELECT * FROM comm_feedback WHERE profile_id = ? AND sender_hidden = 0 AND status ${archive ? '' : 'NOT'} IN ('completed', 'canceled') ORDER BY created_at DESC, id DESC LIMIT 200`).all(profile.id);
+    res.json({ items: rows.map(r => senderView(r, false)) });
+  } catch (e) { next(e); }
+});
+router.post('/mine/:id', (req, res, next) => {
+  try { const p = mine(req); res.json({ thread: senderView(minePiece(req, p), true) }); } catch (e) { next(e); }
+});
+router.post('/mine/:id/edit', (req, res, next) => {
+  try {
+    const p = mine(req), row = minePiece(req, p);
+    if (ARCHIVED.includes(row.status)) throw fail('That one is done already, so it can\'t be changed. Send a new one instead.', 409);
+    const message = clean((req.body || {}).message, 5000);
+    if (!message) throw fail('Write something first.', 400);
+    db.db.prepare("UPDATE comm_feedback SET message = ?, edited_at = datetime('now') WHERE id = ?").run(message, row.id);
+    res.json({ ok: true });
+  } catch (e) { next(e); }
+});
+router.post('/mine/:id/reply', (req, res, next) => {
+  try {
+    const p = mine(req), row = minePiece(req, p);
+    const body = clean((req.body || {}).body, 5000);
+    if (!body) throw fail('Write your reply first.', 400);
+    db.db.prepare('INSERT INTO comm_feedback_replies (feedback_id, from_admin, profile_id, name, body) VALUES (?, 0, ?, ?, ?)').run(row.id, p.id, p.name, body);
+    // A reply after it's done means it isn't done after all: back on the admin's list.
+    if (ARCHIVED.includes(row.status)) db.db.prepare("UPDATE comm_feedback SET status = 'pending', updated_at = datetime('now') WHERE id = ?").run(row.id);
+    if (row.admin_hidden) db.db.prepare('UPDATE comm_feedback SET admin_hidden = 0 WHERE id = ?').run(row.id);
+    res.status(201).json({ ok: true });
+  } catch (e) { next(e); }
+});
+router.post('/mine/:id/delete', (req, res, next) => {
+  try {
+    const p = mine(req), row = minePiece(req, p);
+    if (row.admin_hidden) forgetFeedback(row.id);
+    else db.db.prepare('UPDATE comm_feedback SET sender_hidden = 1 WHERE id = ?').run(row.id);
+    res.json({ deleted: true });
+  } catch (e) { next(e); }
+});
+
 // Set by server.js: sends a line to Discord when feedback arrives.
 let onFeedback = null;
 
@@ -119,8 +204,8 @@ function adminRouter(requireAdmin) {
   admin.get('/feedback', (req, res) => {
     const status = STATUSES.includes(req.query.status) ? req.query.status : null;
     const rows = status
-      ? db.db.prepare('SELECT * FROM comm_feedback WHERE status = ? ORDER BY created_at DESC').all(status)
-      : db.db.prepare('SELECT * FROM comm_feedback ORDER BY created_at DESC').all();
+      ? db.db.prepare('SELECT * FROM comm_feedback WHERE admin_hidden = 0 AND status = ? ORDER BY created_at DESC').all(status)
+      : db.db.prepare('SELECT * FROM comm_feedback WHERE admin_hidden = 0 ORDER BY created_at DESC').all();
     res.json({ statuses: STATUSES, items: rows.map(rowToFeedback) });
   });
 
@@ -147,10 +232,32 @@ function adminRouter(requireAdmin) {
     res.type(file.endsWith('.png') ? 'png' : 'jpeg').sendFile(file);
   });
 
+  // The thread: replies between the admin and the sender. Opening a new one counts as seeing it.
+  admin.get('/feedback/:id/replies', (req, res, next) => {
+    try {
+      const row = db.db.prepare('SELECT * FROM comm_feedback WHERE id = ? AND admin_hidden = 0').get(Number(req.params.id));
+      if (!row) throw fail('No such message.', 404);
+      if (row.status === 'new') db.db.prepare("UPDATE comm_feedback SET status = 'pending', updated_at = datetime('now') WHERE id = ?").run(row.id);
+      res.json({ replies: repliesOf(row.id) });
+    } catch (e) { next(e); }
+  });
+  admin.post('/feedback/:id/replies', (req, res, next) => {
+    try {
+      const row = db.db.prepare('SELECT * FROM comm_feedback WHERE id = ? AND admin_hidden = 0').get(Number(req.params.id));
+      if (!row) throw fail('No such message.', 404);
+      const body = clean((req.body || {}).body, 5000);
+      if (!body) throw fail('Write your reply first.', 400);
+      db.db.prepare("INSERT INTO comm_feedback_replies (feedback_id, from_admin, name, body) VALUES (?, 1, 'Admin', ?)").run(row.id, body);
+      if (row.status === 'new') db.db.prepare("UPDATE comm_feedback SET status = 'pending', updated_at = datetime('now') WHERE id = ?").run(row.id);
+      res.status(201).json({ ok: true });
+    } catch (e) { next(e); }
+  });
+  // Delete for me: the sender keeps their copy unless they deleted it too, or
+  // it came from someone with no profile.
   admin.delete('/feedback/:id', (req, res) => {
-    const row = db.db.prepare('SELECT picture FROM comm_feedback WHERE id = ?').get(Number(req.params.id) || 0);
-    db.db.prepare('DELETE FROM comm_feedback WHERE id = ?').run(Number(req.params.id));
-    if (row) extras.removePicture(row.picture);
+    const row = db.db.prepare('SELECT * FROM comm_feedback WHERE id = ?').get(Number(req.params.id) || 0);
+    if (row && (row.sender_hidden || !row.profile_id)) forgetFeedback(row.id);
+    else if (row) db.db.prepare('UPDATE comm_feedback SET admin_hidden = 1 WHERE id = ?').run(row.id);
     res.json({ deleted: true });
   });
 

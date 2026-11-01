@@ -1038,6 +1038,29 @@ async function run({ base, root }) {
   ok('a profile without a PIN can be picked straight away', !!maya.token);
   const mayaScore = await wl('/scores/dino', 'POST', { score: 321, board: 'run', profileToken: maya.token });
   ok('a score saved as a profile needs no initials', mayaScore.status === 201);
+
+  // ---- My feedback: tracked GitHub-style (2026-11-01) ----
+  const mfb = (await wl('/comm/feedback', 'POST', { kind: 'issue', message: 'Snake is too fast', game: 'snake', profileToken: maya.token })).data.id;
+  const mineOpen = (await wl('/comm/mine', 'POST', { token: maya.token })).data.items;
+  ok('a profile sees the feedback it sent', mineOpen.some(i => i.id === mfb && i.status === 'new'));
+  ok('…and nobody else can read it', (await wl(`/comm/mine/${mfb}`, 'POST', { token: 'x.y' })).status === 401);
+  ok('the sender can fix what they wrote', (await wl(`/comm/mine/${mfb}/edit`, 'POST', { token: maya.token, message: 'Snake is way too fast' })).status === 200);
+  ok('opening the replies marks it seen', (await asAdmin(`/comm/admin/feedback/${mfb}/replies`)).status === 200 &&
+    (await asAdmin('/comm/admin/feedback')).data.items.find(i => i.id === mfb).status === 'pending');
+  ok('the admin answers', (await asAdmin(`/comm/admin/feedback/${mfb}/replies`, 'POST', { body: 'Try Chill speed.' })).status === 201);
+  await asAdmin(`/comm/admin/feedback/${mfb}`, 'PATCH', { status: 'completed' });
+  ok('a fixed one moves to the sender\'s archive', !(await wl('/comm/mine', 'POST', { token: maya.token })).data.items.some(i => i.id === mfb) &&
+    (await wl('/comm/mine', 'POST', { token: maya.token, view: 'archive' })).data.items.some(i => i.id === mfb));
+  const mthread = (await wl(`/comm/mine/${mfb}`, 'POST', { token: maya.token })).data.thread;
+  ok('…with the admin\'s reply in the thread', mthread.replies.length === 1 && mthread.replies[0].fromAdmin && mthread.message === 'Snake is way too fast');
+  ok('a done one can\'t be changed', (await wl(`/comm/mine/${mfb}/edit`, 'POST', { token: maya.token, message: 'late' })).status === 409);
+  await wl(`/comm/mine/${mfb}/reply`, 'POST', { token: maya.token, body: 'Still too fast!' });
+  ok('a reply after it\'s done puts it back on the admin\'s list', (await asAdmin('/comm/admin/feedback')).data.items.find(i => i.id === mfb).status === 'pending');
+  await asAdmin(`/comm/admin/feedback/${mfb}`, 'DELETE');
+  ok('delete for me: the admin\'s copy goes, the sender keeps theirs', !(await asAdmin('/comm/admin/feedback')).data.items.some(i => i.id === mfb) &&
+    (await wl('/comm/mine', 'POST', { token: maya.token })).data.items.some(i => i.id === mfb));
+  await wl(`/comm/mine/${mfb}/delete`, 'POST', { token: maya.token });
+  ok('…and once both deleted it, it\'s gone', (await wl(`/comm/mine/${mfb}`, 'POST', { token: maya.token })).status === 404);
   ok('…and shows the profile name and avatar', (await wl('/scores/dino?board=run')).data.some(r => r.profileName === 'Maya' && r.profileAvatar === 'shiba:2' && r.score === 321));
   ok('a fake token gets no credit', (await wl('/scores/dino', 'POST', { score: 50, board: 'run', profileToken: 'x.y' })).status === 400);
   const mayaPinned = (await wl(`/profiles/${asked.data.id}/pin`, 'POST', { token: maya.token, pin: '432100' })).data;
