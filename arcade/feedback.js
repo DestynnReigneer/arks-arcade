@@ -12,7 +12,17 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const DIR = path.join(__dirname, '..', 'data', 'feedback');
-const MAX_PICTURE = 3 * 1024 * 1024;
+// The same numbers in every app with the feedback card (2026-11-01): one
+// picture is at most 1.5 MB (the card shrinks screenshots to fit), and all the
+// pictures together at most 500 MB. Past that, notes still arrive, just
+// without their picture, so a flood of screenshots can't fill the disk.
+const MAX_PICTURE = 1.5 * 1024 * 1024;
+const MAX_TOTAL = process.env.NODE_ENV === 'test' && Number(process.env.FEEDBACK_PICTURES_MAX_BYTES) > 0
+  ? Number(process.env.FEEDBACK_PICTURES_MAX_BYTES)   // the tests try a tiny cap
+  : 500 * 1024 * 1024;
+// A JSON body that holds the biggest picture (base64 makes it a third
+// bigger) plus the note and its details.
+const BODY_LIMIT = '2.5mb';
 const VERSION = require('../package.json').version;
 
 function fail(message, status = 400) {
@@ -24,17 +34,34 @@ function readPicture(dataUrl) {
   const m = /^data:image\/(png|jpeg);base64,([A-Za-z0-9+/=]+)$/.exec(String(dataUrl || ''));
   if (!m) throw fail('The screenshot has to be a PNG or JPEG picture.');
   const bytes = Buffer.from(m[2], 'base64');
-  if (bytes.length > MAX_PICTURE) throw fail('That screenshot is too big. Try a smaller one.');
+  if (bytes.length > MAX_PICTURE) throw fail('That picture is bigger than 1.5 MB, which is the most a note can carry. Try a smaller one.', 413);
   const png = bytes.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
   const jpeg = bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
   if (!png && !jpeg) throw fail('The screenshot has to be a PNG or JPEG picture.');
   return { bytes, ext: png ? 'png' : 'jpg' };
 }
 
+// How much the saved pictures take up, counted once from the folder and then
+// kept up to date as pictures come and go.
+let total = null;
+function picturesTotal() {
+  if (total !== null) return total;
+  total = 0;
+  try {
+    for (const f of fs.readdirSync(DIR)) {
+      if (/^\d+\.(png|jpg)$/.test(f)) { try { total += fs.statSync(path.join(DIR, f)).size; } catch { /* gone */ } }
+    }
+  } catch { /* no folder yet */ }
+  return total;
+}
+// Whether one more picture of this size still fits under the cap.
+const pictureFits = picture => picturesTotal() + picture.bytes.length <= MAX_TOTAL;
+
 function savePicture(id, picture) {
   fs.mkdirSync(DIR, { recursive: true });
   const file = `${id}.${picture.ext}`;
   fs.writeFileSync(path.join(DIR, file), picture.bytes);
+  total = picturesTotal() + picture.bytes.length;
   return file;
 }
 
@@ -44,7 +71,11 @@ function picturePath(file) {
 
 function removePicture(file) {
   const p = picturePath(file);
-  if (p) fs.rm(p, { force: true }, () => {});
+  if (!p) return;
+  let size = 0;
+  try { size = fs.statSync(p).size; } catch { return; }
+  try { fs.rmSync(p, { force: true }); } catch { return; }
+  if (total !== null) total = Math.max(0, total - size);
 }
 
 // The page's path only: no query string, so nothing like a room password or
@@ -104,4 +135,5 @@ function details(req, sent = {}) {
   };
 }
 
-module.exports = { readPicture, savePicture, picturePath, removePicture, cleanPage, details, appVersion };
+module.exports = { readPicture, savePicture, picturePath, removePicture, pictureFits, picturesTotal, cleanPage, details, appVersion,
+  MAX_PICTURE, MAX_TOTAL, BODY_LIMIT };

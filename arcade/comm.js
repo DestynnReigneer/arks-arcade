@@ -90,17 +90,36 @@ function listPosts(limit = 20) {
 
 const router = express.Router();
 
-// Admins send as much feedback as they like; everyone else gets 30 in 3
-// minutes, then a 3-minute wait (arcade/burst-limit.js). server.js says who's
-// an admin through setAdminCheck.
-const { createBurstLimit, waitMessage } = require('./burst-limit');
-const sends = createBurstLimit();
+// Admins send as much feedback as they like. A profile gets 30 in 3 minutes,
+// then a 3-minute wait; someone without a profile gets 5 an hour from one
+// device (arcade/burst-limit.js). server.js says who's an admin through
+// setAdminCheck. It's checked after the note itself, so a refused empty note
+// doesn't use one up.
+const limits = require('./burst-limit');
+const sends = limits.createBurstLimit();
+const guestSends = limits.createBurstLimit({ max: limits.GUEST_MAX, windowMs: limits.GUEST_WINDOW_MS, waitMs: 0 });
 let adminCheck = async () => false;
-async function feedbackLimiter(req, res, next) {
-  try { if (await adminCheck(req)) return next(); } catch { /* not an admin */ }
-  const r = sends.take(['ip:' + req.ip]);
-  if (!r.ok) return res.status(429).json({ error: waitMessage(r.waitSeconds) });
-  next();
+async function overLimit(req, profile) {
+  try { if (await adminCheck(req)) return null; } catch { /* not an admin */ }
+  if (profile) {
+    const r = sends.take(['profile:' + profile.id, 'ip:' + req.ip]);
+    return r.ok ? null : limits.waitMessage(r.waitSeconds);
+  }
+  const r = guestSends.take(['ip:' + req.ip]);
+  return r.ok ? null : limits.guestWaitMessage(r.waitSeconds);
+}
+
+// When the pictures folder is full, the admin hears about it once, as a note
+// in their own inbox. It's said again only after there was room once more.
+const FULL_FLAG = 'feedback_pictures_full_flagged';
+function flagPicturesFull() {
+  if (db.getSetting(FULL_FLAG, false)) return;
+  db.setSetting(FULL_FLAG, true);
+  db.db.prepare("INSERT INTO comm_feedback (kind, message, from_name) VALUES ('message', ?, 'The arcade')").run(
+    'The feedback pictures folder is full: the screenshots people sent add up to 500 MB, the most the arcade keeps. ' +
+    'New notes still arrive, but without their pictures, until you delete some old feedback that has one. ' +
+    'You get this note once each time the folder fills up.');
+  if (onFeedback) onFeedback('📡 **The feedback pictures folder is full** (500 MB). New notes arrive without their screenshots until some old feedback is deleted.');
 }
 
 router.get('/posts', (req, res) => {
@@ -109,27 +128,38 @@ router.get('/posts', (req, res) => {
 
 // The feedback card (public/feedback.js). It can carry a screenshot, so this
 // route reads a bigger body than the rest of the arcade (see server.js).
-router.post('/feedback', express.json({ limit: '5mb' }), feedbackLimiter, (req, res, next) => {
+router.post('/feedback', express.json({ limit: extras.BODY_LIMIT }), async (req, res, next) => {
   try {
     const body = req.body || {};
     const kind = FEEDBACK_KINDS.includes(body.kind) ? body.kind : 'message';
     const message = clean(body.message, 5000);
     if (!message) throw fail('Write a line or two about what happened first.', 400);
-    const picture = body.picture ? extras.readPicture(body.picture) : null;
+    let picture = body.picture ? extras.readPicture(body.picture) : null;
     // A profile's name comes from its token, so nobody can sign as someone else.
     const profile = body.profileToken ? require('./profiles').verify(body.profileToken) : null;
+    const limited = await overLimit(req, profile);
+    if (limited) throw fail(limited, 429);
+    // No room left for pictures: the note still goes in, without it.
+    let pictureDropped = false;
+    if (picture && !extras.pictureFits(picture)) { picture = null; pictureDropped = true; flagPicturesFull(); }
     const from = profile ? profile.name : clean(body.from, 30);
     const page = extras.cleanPage((body.details || {}).page);
     const info = db.db.prepare(`
       INSERT INTO comm_feedback (kind, message, from_name, game, page, details, profile_id) VALUES (?, ?, ?, ?, ?, ?, ?)
     `).run(kind, message, from, gameOrNull(body.game), page, JSON.stringify(extras.details(req, body.details)), profile ? profile.id : null);
     const id = Number(info.lastInsertRowid);
-    if (picture) db.db.prepare('UPDATE comm_feedback SET picture = ? WHERE id = ?').run(extras.savePicture(id, picture), id);
+    if (picture) {
+      db.db.prepare('UPDATE comm_feedback SET picture = ? WHERE id = ?').run(extras.savePicture(id, picture), id);
+      if (db.getSetting(FULL_FLAG, false)) db.setSetting(FULL_FLAG, false);
+    }
     if (onFeedback) {
       const label = { feature: '💡 Feature idea', issue: '🐛 Something\'s broken', message: '💬 Message' }[kind];
       onFeedback(`📡 **New arcade feedback** (${label}) from ${from || 'a guest'}${page ? ` on \`${page}\`` : ''}${picture ? ', with a screenshot' : ''}\n> ${message.split('\n')[0].slice(0, 140)}`);
     }
-    res.status(201).json({ id });
+    res.status(201).json(pictureDropped ? {
+      id, pictureDropped,
+      note: 'Your note arrived, but the picture couldn\'t come with it, because the arcade has no room left for screenshots right now. The admin has been told.'
+    } : { id });
   } catch (e) { next(e); }
 });
 
@@ -296,6 +326,8 @@ function adminRouter(requireAdmin) {
 }
 
 router.use((err, req, res, next) => {
+  // The body was bigger than any note with a 1.5 MB picture can be.
+  if (err.type === 'entity.too.large') return res.status(413).json({ error: 'That picture is bigger than 1.5 MB, which is the most a note can carry. Try a smaller one.' });
   res.status(err.status || 500).json({ error: err.message });
 });
 

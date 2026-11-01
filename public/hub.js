@@ -37,9 +37,9 @@
   paintChip();
   // First visit on this device: ask. With ARKS ID on, wait until it has said
   // who's signed in, so someone just back from signing in isn't asked again.
-  ArcadeProfile.arksId().ready.then(() => {
-    if (!ArcadeProfile.get()) setTimeout(() => ArcadeProfile.open(), 600);
-  });
+  // The same check every game page runs (topbar.js), except that the home
+  // page asks even without ARKS ID.
+  ArcadeProfile.askIfNobody({ always: true, delay: 600 });
 
   // ---- join a game -----------------------------------------------------------
   // Every room being hosted anywhere in the arcade, refreshed every few seconds.
