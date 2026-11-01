@@ -1,12 +1,14 @@
 // The owner's own clips (see docs/CUSTOM-MEDIA.md), on every page:
 // - a clip the admin sent to this profile plays the next time a page is open,
 // - now and then a random clip plays as a surprise,
-// - ArcadeMedia.play(name) plays one on purpose (the home page's secret commands).
+// - ArcadeMedia.play(name) plays one on purpose (the home page's secret commands),
+// - a meme (a picture from the images folder) sent through ARKS ID shows
+//   straight away: it has no sound, so it doesn't need the tap first.
 // Browsers won't play sound until someone taps, so every clip starts behind a
 // "tap to play" card. Without a clips folder on the server, none of this shows.
 
 const ArcadeMedia = (() => {
-  let info = { brand: {}, sprites: [], coin: [], clips: [], surprise: 0 };
+  let info = { brand: {}, sprites: [], coin: [], clips: [], images: [], surprise: 0 };
   const ready = fetch('/api/custom').then(r => (r.ok ? r.json() : info)).then(d => { info = d; return d; }).catch(() => info);
 
   const BAIT = [
@@ -66,6 +68,7 @@ const ArcadeMedia = (() => {
       if (el.play) { el.play().catch(() => {}); el.onended = close; }
     };
     wrap.addEventListener('click', e => { if (e.target === wrap) close(); });
+    if (clip.meme) go.onclick();
   }
 
   function play(name) {
@@ -87,10 +90,11 @@ const ArcadeMedia = (() => {
   }
 
   ready.then(d => {
-    if (!d.clips || !d.clips.length) return;
+    const clips = d.clips || [];
+    if (!clips.length && !(d.images || []).length) return;
     checkInbox();
     setInterval(checkInbox, 20 * 1000);
-    if (d.surprise > 0 && Math.random() < 1 / d.surprise) {
+    if (clips.length && d.surprise > 0 && Math.random() < 1 / d.surprise) {
       setTimeout(() => show(d.clips[Math.floor(Math.random() * d.clips.length)]), 4000);
     }
   });

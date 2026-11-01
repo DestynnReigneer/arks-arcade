@@ -16,7 +16,8 @@ arcade/                  the folder with your docker-compose.yml
 └── media/
     ├── sprites/         characters for the home page
     ├── coin/            announcer sounds for INSERT COIN
-    └── clips/           GIFs, videos and sounds for surprises and pranks
+    ├── clips/           GIFs, videos and sounds for surprises and pranks
+    └── images/          memes sent from another app that shares this folder
 ```
 
 The compose file already connects both folders to the arcade, read-only, so the
@@ -96,6 +97,18 @@ also makes it a better prank.
   or M4A sound. For MP4, use the common H.264 format so every browser and
   phone can play it.
 - **Size:** each file 50 MB or less. Short is better: under a minute.
+
+## media/images/: memes
+
+If the arcade signs in through ARKS ID and shares its media folder with another
+app that sends memes (pictures) through ARKS ID's clip inbox, those pictures live
+in `media/images/`. When one is sent to someone, it pops up the next time their
+screen is open in the arcade. A picture has no sound, so it shows straight away
+instead of behind the "Tap to open" card. A meme the arcade has no file for is
+skipped.
+
+- **What:** GIF, PNG, JPG or WebP pictures.
+- **Size:** each file 10 MB or less.
 
 ## A note on other people's characters and music
 

@@ -10,6 +10,8 @@
 //           coin/     sounds for the third INSERT COIN click
 //           clips/    GIFs, videos and sounds: secret commands, surprises,
 //                     and clips the admin sends to someone's screen
+//           images/   memes: pictures that another app sharing this folder
+//                     sends through ARKS ID's clip inbox as "meme-<name>"
 //
 // Nothing here ships with the arcade. Without the folders, the arcade uses its
 // own pixel characters, the browser's announcer voice and the plain title.
@@ -30,7 +32,8 @@ const VIDEO = ['mp4', 'webm'];
 const KINDS = {
   sprites: { ext: IMAGE, max: 2 * MB },
   coin: { ext: AUDIO, max: 2 * MB },
-  clips: { ext: [...IMAGE, ...AUDIO, ...VIDEO], max: 50 * MB }
+  clips: { ext: [...IMAGE, ...AUDIO, ...VIDEO], max: 50 * MB },
+  images: { ext: IMAGE.filter(e => e !== 'svg'), max: 10 * MB }
 };
 // The app icons are what a phone shows when the arcade is added to its home screen.
 const BRAND_FILES = { avatar: 'avatar.svg', wide: 'logo-wide.svg', square: 'logo-square.svg', favicon: 'favicon.svg',
@@ -72,6 +75,7 @@ function catalog(now = Date.now()) {
       sprites: listKind('sprites'),
       coin: listKind('coin'),
       clips: listKind('clips'),
+      images: listKind('images').map(i => ({ ...i, meme: true })),
       // One page load in N plays a random clip by surprise. 0 turns it off.
       surprise: Number.isFinite(n) && n >= 0 ? n : 200
     };
@@ -106,8 +110,10 @@ function routes({ requireAdmin, arks = null }) {
       const me = await arks.current(req);
       let name = null;
       if (me) { try { name = await arks.client.nextClip(me.sessionId); } catch { /* try again next time */ } }
-      // A clip this arcade has no file for is skipped.
-      res.json({ clip: name ? catalog().clips.find(c => c.name === name) || null : null });
+      // A meme comes as "meme-<name>". One this arcade has no file for is skipped.
+      const c = catalog();
+      const found = !name ? null : name.startsWith('meme-') ? c.images.find(i => i.name === name.slice(5)) : c.clips.find(x => x.name === name);
+      res.json({ clip: found || null });
     });
     router.post('/admin/send', requireAdmin, async (req, res, next) => {
       try {
@@ -148,7 +154,7 @@ function routes({ requireAdmin, arks = null }) {
   return router;
 }
 
-// The files themselves. Only the three brand names and the three media
+// The files themselves. Only the brand names and the media
 // folders are served, never a directory listing.
 function staticFiles() {
   const router = express.Router();
