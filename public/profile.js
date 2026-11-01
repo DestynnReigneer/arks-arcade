@@ -103,24 +103,24 @@ const ArcadeProfile = (() => {
   // ---- the picker ---------------------------------------------------------------------
   let root = null;
   const CSS = `
-    .apf{position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;padding:14px;background:rgba(5,4,10,.85);backdrop-filter:blur(3px);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#f4ecd0}
-    .apf-card{width:100%;max-width:440px;max-height:92vh;overflow-y:auto;background:#1e1a30;border:1px solid #3d3958;border-radius:18px;padding:18px}
-    .apf h2{margin:0 0 4px;font-size:20px;text-align:center}.apf p{margin:4px 0 12px;font-size:13px;color:#c9b98a;text-align:center;line-height:1.45}
+    .apf{position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;padding:14px;background:rgba(16,6,32,.85);backdrop-filter:blur(3px);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#f5eaff}
+    .apf-card{width:100%;max-width:440px;max-height:92vh;overflow-y:auto;background:#22103f;border:1px solid #3d2a63;border-radius:18px;padding:18px}
+    .apf h2{margin:0 0 4px;font-size:20px;text-align:center}.apf p{margin:4px 0 12px;font-size:13px;color:#c9a8dd;text-align:center;line-height:1.45}
     .apf-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:10px;margin:10px 0}
-    .apf-tile{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 6px;border-radius:14px;border:2px solid transparent;background:#171623;color:inherit;cursor:pointer;font:inherit;font-size:13px;font-weight:700}
+    .apf-tile{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 6px;border-radius:14px;border:2px solid transparent;background:#2c1350;color:inherit;cursor:pointer;font:inherit;font-size:13px;font-weight:700}
     .apf-tile:hover,.apf-tile.on{border-color:#ffc72c}.apf-tile .lock{font-size:11px;opacity:.7;font-weight:600}
     .apf-row{display:flex;gap:8px;margin-top:10px}.apf-row>*{flex:1}
-    .apf .apf-btn{padding:11px;border-radius:10px;border:1px solid #3d3958;background:transparent;color:inherit;font:inherit;font-weight:700;cursor:pointer;text-align:center;text-decoration:none}
+    .apf .apf-btn{padding:11px;border-radius:10px;border:1px solid #3d2a63;background:transparent;color:inherit;font:inherit;font-weight:700;cursor:pointer;text-align:center;text-decoration:none}
     .apf button.apf-main{background:#ffc72c;color:#1a0f05;border-color:#ffc72c}
-    .apf input{width:100%;box-sizing:border-box;padding:11px;border-radius:10px;border:1px solid #3d3958;background:#12111c;color:#fff;font:inherit;font-size:15px;margin:6px 0}
+    .apf input{width:100%;box-sizing:border-box;padding:11px;border-radius:10px;border:1px solid #3d2a63;background:#0a0416;color:#fff;font:inherit;font-size:15px;margin:6px 0}
     .apf-msg{min-height:18px;color:#ff7a7a;font-size:13px;text-align:center;margin:6px 0}
-    .apf-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}.apf-tabs button{padding:5px 10px;border-radius:999px;border:1px solid #3d3958;background:transparent;color:inherit;font:inherit;font-size:12px;cursor:pointer}
+    .apf-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}.apf-tabs button{padding:5px 10px;border-radius:999px;border:1px solid #3d2a63;background:transparent;color:inherit;font:inherit;font-size:12px;cursor:pointer}
     .apf-tabs button.on{border-color:#ffc72c;color:#ffc72c}
     .apf-av{display:grid;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:8px;margin:6px 0 10px}
     .apf-av button{padding:3px;border-radius:50%;border:3px solid transparent;background:none;cursor:pointer;aspect-ratio:1}.apf-av button.on{border-color:#ffc72c}
-    .apf label{display:block;font-size:12px;color:#c9b98a;margin-top:8px}
-    .apf label.apf-pick{display:flex;align-items:center;gap:8px;font-size:14px;color:#f4ecd0;margin-top:6px}
-    .apf label.apf-pick input[type=radio]{width:auto;margin:0}.apf label.apf-pick input[data-ini]{width:70px;margin:0;text-transform:uppercase;letter-spacing:.2em;text-align:center}.apf-sub{font-size:12px;color:#8f8367;text-align:center;margin-top:10px}
+    .apf label{display:block;font-size:12px;color:#c9a8dd;margin-top:8px}
+    .apf label.apf-pick{display:flex;align-items:center;gap:8px;font-size:14px;color:#f5eaff;margin-top:6px}
+    .apf label.apf-pick input[type=radio]{width:auto;margin:0}.apf label.apf-pick input[data-ini]{width:70px;margin:0;text-transform:uppercase;letter-spacing:.2em;text-align:center}.apf-sub{font-size:12px;color:#9483ae;text-align:center;margin-top:10px}
   `;
 
   function ensure() {
@@ -133,10 +133,17 @@ const ArcadeProfile = (() => {
     root.setAttribute('role', 'dialog');
     root.setAttribute('aria-modal', 'true');
     root.innerHTML = '<div class="apf-card"></div>';
-    root.addEventListener('click', e => { if (e.target === root) close(); });
+    // Tapping outside the card closes it, but only once someone is playing.
+    root.addEventListener('click', e => { if (e.target === root && canClose()) close(); });
     document.body.appendChild(root);
   }
   const card = () => root.querySelector('.apf-card');
+  // Nobody picked yet (no profile, no guest, not signed in): the card stays
+  // until they pick, so nobody plays as no one (found by the maintainer,
+  // 2026-11-01: Close let them straight into the arcade).
+  const canClose = () => !!get();
+  const closeRow = () => (canClose() ? '<div class="apf-row"><button class="apf-btn" data-close>Close</button></div>' : '');
+  const wireClose = c => { const b = c.querySelector('[data-close]'); if (b) b.onclick = () => close(get()); };
   let resolveOpen = null;
   function close(result = null) {
     if (root) root.style.display = 'none';
@@ -158,10 +165,10 @@ const ArcadeProfile = (() => {
     c.innerHTML = '<h2>Who\'s playing?</h2><p>Pick your profile, or play as a guest.</p><div class="apf-grid"></div><div class="apf-msg"></div>' +
       '<div class="apf-row"><button class="apf-btn" data-guest>👤 Play as a guest</button><button class="apf-btn" data-new>➕ New profile</button></div>' +
       (get() && get().id ? '<div class="apf-row"><button class="apf-btn" data-manage>⚙️ My profile: avatar, PIN &amp; name on boards</button></div>' : '') +
-      '<div class="apf-row"><button class="apf-btn" data-close>Close</button></div>';
+      closeRow();
     c.querySelector('[data-guest]').onclick = showGuest;
     c.querySelector('[data-new]').onclick = showNew;
-    c.querySelector('[data-close]').onclick = () => close(get());
+    wireClose(c);
     if (c.querySelector('[data-manage]')) c.querySelector('[data-manage]').onclick = showManage;
     const grid = c.querySelector('.apf-grid');
     let list = [];
@@ -187,7 +194,7 @@ const ArcadeProfile = (() => {
     if (me.signedIn && cur && cur.arksid) {
       c.innerHTML = '<h2>Who&#39;s playing?</h2><div class="apf-grid"></div><p data-who></p>' +
         '<div class="apf-row"><a class="apf-btn" data-account>⚙️ Change my avatar</a><button class="apf-btn" data-out>Sign out</button></div>' +
-        '<div class="apf-row"><button class="apf-btn" data-close>Close</button></div>';
+        closeRow();
       const tile = document.createElement('div');
       tile.className = 'apf-tile on';
       tile.style.gridColumn = '1/-1';
@@ -200,14 +207,14 @@ const ArcadeProfile = (() => {
       c.querySelector('[data-account]').href = me.accountUrl;
       c.querySelector('[data-account]').onclick = e => { e.preventDefault(); openAccount(); };
       c.querySelector('[data-out]').onclick = signOut;
-      c.querySelector('[data-close]').onclick = () => close(get());
+      wireClose(c);
       return;
     }
     const guest = me.guestAllowed;
     c.innerHTML = '<h2>Who&#39;s playing?</h2><p data-lead></p><div class="apf-msg"></div>' +
       '<div class="apf-row"><button class="apf-btn apf-main" data-in>Sign in with ARKS ID</button></div>' +
       (guest ? '<div class="apf-row"><button class="apf-btn" data-guest>👤 Play as a guest</button><button class="apf-btn" data-join>✨ Make an account</button></div>' : '') +
-      '<div class="apf-row"><button class="apf-btn" data-close>Close</button></div>';
+      closeRow();
     c.querySelector('[data-lead]').textContent = guest
       ? 'Sign in with your ARKS ID so your scores count, play as a guest, or make an account of your own.'
       : 'Sign in with your ARKS ID to play. This device belongs to someone in the family, so playing as a guest is turned off here.';
@@ -217,7 +224,7 @@ const ArcadeProfile = (() => {
       // A guest who already picked a name and avatar keeps them.
       c.querySelector('[data-join]').onclick = () => makeAccount(cur && cur.guest ? cur : {}, c);
     }
-    c.querySelector('[data-close]').onclick = () => close(get());
+    wireClose(c);
   }
 
   async function choose(p, pin) {
