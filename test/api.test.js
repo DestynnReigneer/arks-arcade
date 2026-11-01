@@ -707,6 +707,23 @@ async function run({ base, root }) {
   await asAdmin(`/comm/admin/feedback/${shotFb.data.id}`, 'DELETE');
   ok('deleting the message removes its screenshot too', (await asAdmin(`/comm/admin/feedback/${shotFb.data.id}/picture`)).status === 404);
 
+  // The limits every app shares (2026-11-01).
+  const pngOf = bytes => 'data:image/png;base64,' + Buffer.concat([pngHead, Buffer.alloc(bytes - 8)]).toString('base64');
+  const justFits = await asAdmin('/comm/feedback', 'POST', { message: 'Right at the limit', picture: pngOf(1.5 * 1024 * 1024) });
+  ok('a 1.5 MB picture fits in a note', justFits.status === 201, JSON.stringify(justFits.data));
+  await asAdmin(`/comm/admin/feedback/${justFits.data.id}`, 'DELETE');
+  const tooBig = await wl('/comm/feedback', 'POST', { message: 'Huge', picture: pngOf(1.5 * 1024 * 1024 + 1) });
+  ok('a picture over 1.5 MB is refused, and says why', tooBig.status === 413 && /1\.5 MB/.test(tooBig.data.error), JSON.stringify(tooBig.data));
+  const wayTooBig = await wl('/comm/feedback', 'POST', { message: 'Huger', picture: pngOf(3 * 1024 * 1024) });
+  ok('…even when the whole note is too big to read', wayTooBig.status === 413 && /1\.5 MB/.test(wayTooBig.data.error), JSON.stringify(wayTooBig.data));
+  // Without a profile: 5 an hour from one device. Three went through above
+  // (the refused ones don't count).
+  const guestNote = n => wl('/comm/feedback', 'POST', { message: 'Guest note ' + n });
+  ok('someone without a profile can send 5 notes an hour', (await guestNote(4)).status === 201 && (await guestNote(5)).status === 201);
+  const sixth = await guestNote(6);
+  ok('…and the 6th waits, saying why and for how long', sixth.status === 429 && /5 notes an hour/.test(sixth.data.error) && /minutes/.test(sixth.data.error), JSON.stringify(sixth.data));
+  ok('the admin has no limit', (await asAdmin('/comm/feedback', 'POST', { message: 'Admin note past the guest limit' })).status === 201);
+
   const ann = await asAdmin('/comm/admin/posts', 'POST', { emoji: '🍀', title: 'GLHF', body: 'Good luck!', game: 'wordless' });
   const feed = (await wl('/comm/posts')).data;
   ok('the admin can post an announcement', ann.status === 201 && feed[0].title === 'GLHF' && feed[0].game === 'wordless');
@@ -1040,7 +1057,9 @@ async function run({ base, root }) {
   ok('a score saved as a profile needs no initials', mayaScore.status === 201);
 
   // ---- My feedback: tracked GitHub-style (2026-11-01) ----
-  const mfb = (await wl('/comm/feedback', 'POST', { kind: 'issue', message: 'Snake is too fast', game: 'snake', profileToken: maya.token })).data.id;
+  const mfbRes = await wl('/comm/feedback', 'POST', { kind: 'issue', message: 'Snake is too fast', game: 'snake', profileToken: maya.token });
+  ok('a profile can still send feedback after a guest on the same device used up theirs', mfbRes.status === 201, JSON.stringify(mfbRes.data));
+  const mfb = mfbRes.data.id;
   const mineOpen = (await wl('/comm/mine', 'POST', { token: maya.token })).data.items;
   ok('a profile sees the feedback it sent', mineOpen.some(i => i.id === mfb && i.status === 'new'));
   ok('…and nobody else can read it', (await wl(`/comm/mine/${mfb}`, 'POST', { token: 'x.y' })).status === 401);

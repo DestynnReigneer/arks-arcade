@@ -20,12 +20,17 @@
 //     admin owns, so nobody can dodge the adult rules by playing as a guest.
 //   - Clips the admin sends go through ARKS ID's clip inbox, so they pop up in
 //     whichever app the person opens next.
+//   - A photo or team picture someone picked on ARKS ID shows here too. The
+//     arcade's server fetches it from ARKS ID and serves it from the arcade
+//     itself (/api/arksid/photo/<profile>), so the browser only ever talks to
+//     the arcade. See "Photos" below.
 
 const crypto = require('node:crypto');
 const express = require('express');
 const db = require('../db');
 const adultPin = require('./adult-pin');
 const Avatars = require('../public/avatars');
+const { photoPath, looksLike, photoAvatar, isPhotoAvatar } = require('./arksid-photo');
 
 const COOKIE = 'arcade_me';
 const STATE_COOKIE = 'arcade_state';
@@ -35,6 +40,9 @@ const CHECK_MS = 3 * 60 * 1000;               // re-check with ARKS ID this ofte
 const DEVICE_MS = 24 * 60 * 60 * 1000;        // how long "whose device is this?" is remembered
 const PASS_MS = 12 * 60 * 60 * 1000;          // how long an adult pass works
 const TIMEOUT_MS = 5000;
+const PHOTO_MAX = 2 * 1024 * 1024;              // ARKS ID's photos are 256 px, team pictures 512 px
+const PHOTO_KEEP_MS = 10 * 60 * 1000;           // a fetched photo is kept in memory this long
+const PHOTO_TYPES = ['image/webp', 'image/jpeg', 'image/png'];
 const ROLES = ['admin', 'adult', 'teen', 'kid'];
 const GROWN_UP = ['admin', 'adult'];
 
@@ -108,6 +116,17 @@ function createClient(s = settings(), fetchImpl = fetch) {
       if (!res.ok) throw new Error(`ARKS ID answered ${res.status}`);
       const body = await res.json();
       return typeof body.clip === 'string' && /^[a-z0-9][a-z0-9_-]{0,63}$/.test(body.clip) ? body.clip : null;
+    },
+    // A photo or team picture, fetched by the arcade's server. Only ARKS ID's
+    // own /avatars/ addresses, and only real pictures -> { type, body } or null.
+    async photo(image) {
+      const p = photoPath(image, s.url);
+      if (!p) return null;
+      const res = await call(p);
+      const type = (res.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
+      if (!res.ok || !PHOTO_TYPES.includes(type)) return null;
+      const body = Buffer.from(await res.arrayBuffer());
+      return body.length && body.length <= PHOTO_MAX && looksLike(type, body) ? { type, body } : null;
     }
   };
 }
@@ -122,7 +141,10 @@ function cleanUser(u) {
     id: u.id, name, role: u.role, initials: /^[A-Z]{1,3}$/.test(board) && board !== name.toUpperCase() ? board : null,
     // The avatar comes from the account too (contract v7): the character they
     // picked there, or their icon in their color. null: leave the profile's own.
-    avatar: u.avatar && typeof u.avatar === 'object' ? Avatars.fromAccount(u.avatar) : null
+    avatar: u.avatar && typeof u.avatar === 'object' ? Avatars.fromAccount(u.avatar) : null,
+    // A photo or team picture, if they picked one. It's checked again
+    // (photoPath) before the arcade ever fetches it.
+    image: u.avatar && typeof u.avatar.image === 'string' && u.avatar.image.length < 300 ? u.avatar.image : null
   };
 }
 
@@ -156,6 +178,8 @@ db.db.exec(`
 {
   const cols = db.db.prepare('PRAGMA table_info(arcade_profiles)').all().map(c => c.name);
   if (!cols.includes('arksid_user')) db.db.exec('ALTER TABLE arcade_profiles ADD COLUMN arksid_user TEXT');
+  const acols = db.db.prepare('PRAGMA table_info(arcade_id_accounts)').all().map(c => c.name);
+  if (!acols.includes('image')) db.db.exec('ALTER TABLE arcade_id_accounts ADD COLUMN image TEXT');
 }
 
 function createArksId({ client, now = Date.now, profiles }) {
@@ -172,8 +196,11 @@ function createArksId({ client, now = Date.now, profiles }) {
   // -> the arcade profile row.
   function remember(user) {
     const t = now();
-    db.db.prepare(`INSERT INTO arcade_id_accounts (user_id, name, role, seen_at) VALUES (?, ?, ?, ?)
-      ON CONFLICT (user_id) DO UPDATE SET name = excluded.name, role = excluded.role, seen_at = excluded.seen_at`).run(user.id, user.name, user.role, t);
+    // A picture the arcade would never fetch (another site, an odd path) counts as none.
+    const image = user.avatar && user.image && client && photoPath(user.image, client.url) ? user.image : null;
+    db.db.prepare(`INSERT INTO arcade_id_accounts (user_id, name, role, seen_at, image) VALUES (?, ?, ?, ?, ?)
+      ON CONFLICT (user_id) DO UPDATE SET name = excluded.name, role = excluded.role, seen_at = excluded.seen_at, image = excluded.image`)
+      .run(user.id, user.name, user.role, t, image);
     let p = db.db.prepare('SELECT * FROM arcade_profiles WHERE arksid_user = ?').get(user.id);
     if (!p) {
       // First sign-in: the approved profile with the same name that isn't
@@ -187,10 +214,12 @@ function createArksId({ client, now = Date.now, profiles }) {
       }
     }
     // The name, the avatar and the board choice belong to ARKS ID now. The
-    // profile's own PIN and locks are off.
+    // profile's own PIN and locks are off. A photo or team picture wins over
+    // the icon, which stays inside the avatar as what to show if it can't load.
+    const avatar = image ? photoAvatar(p.id, image, user.avatar) : user.avatar || p.avatar;
     db.db.prepare(`UPDATE arcade_profiles SET name = ?, avatar = ?, board_show = ?, initials = ?, pin_hash = NULL, pin_salt = NULL,
       pin_fails = 0, locked_until = NULL, updated_at = datetime('now') WHERE id = ?`)
-      .run(user.name, user.avatar || p.avatar, user.initials ? 'initials' : 'name', user.initials, p.id);
+      .run(user.name, avatar, user.initials ? 'initials' : 'name', user.initials, p.id);
     p = db.db.prepare('SELECT * FROM arcade_profiles WHERE id = ?').get(p.id);
     profiles.syncRambler(p);
     return p;
@@ -361,6 +390,32 @@ function createArksId({ client, now = Date.now, profiles }) {
       res.json(out);
     });
 
+    // A person's photo or team picture, fetched from ARKS ID server to server
+    // and served from here, so the page never loads anything from another
+    // site. Only for someone signed in with ARKS ID or the admin: guests see
+    // the person's icon instead, so family photos aren't shown to visitors.
+    const photos = new Map();   // image address -> { type, body, at }
+    router.get('/api/arksid/photo/:profileId', async (req, res) => {
+      const nope = () => res.status(404).set('Cache-Control', 'no-store').end();
+      if (!client || !/^[A-Za-z0-9]{1,40}$/.test(req.params.profileId)) return nope();
+      if (!require('./admin-session').isAdmin(req) && !(await current(req))) return nope();
+      const row = db.db.prepare(`SELECT a.image FROM arcade_profiles p JOIN arcade_id_accounts a ON a.user_id = p.arksid_user
+        WHERE p.id = ? AND p.status = 'approved'`).get(req.params.profileId);
+      if (!row || !row.image) return nope();
+      let pic = photos.get(row.image);
+      if (!pic || now() - pic.at > PHOTO_KEEP_MS) {
+        photos.delete(row.image);
+        let got = null;
+        try { got = await client.photo(row.image); } catch { got = null; }
+        if (!got) return nope();
+        pic = { ...got, at: now() };
+        if (photos.size >= 100) photos.delete(photos.keys().next().value);
+        photos.set(row.image, pic);
+      }
+      // The address changes with each new picture (?v=), so the browser can keep it a while.
+      res.set({ 'Content-Type': pic.type, 'Cache-Control': 'private, max-age=3600', 'X-Content-Type-Options': 'nosniff' }).send(pic.body);
+    });
+
     // The adult pass, for a signed-in grown-up. It goes where the PIN used to.
     router.post('/api/arksid/adult-pass', async (req, res) => {
       res.set('Cache-Control', 'no-store');
@@ -375,4 +430,4 @@ function createArksId({ client, now = Date.now, profiles }) {
   return { routes, current, remember, start, end, passOk, passFor, deviceFrom, client };
 }
 
-module.exports = { settings, problem, createClient, createArksId, cleanUser, COOKIE, DEVICE_COOKIE, GROWN_UP };
+module.exports = { settings, problem, createClient, createArksId, cleanUser, photoPath, photoAvatar, isPhotoAvatar, COOKIE, DEVICE_COOKIE, GROWN_UP };

@@ -213,7 +213,9 @@ module.exports = function profileRoutes({ requireAdmin, notify }) {
       // Each of these is optional, so the avatar and the board choice can be
       // saved separately.
       const avatar = body.avatar === undefined ? now.avatar : body.avatar;
-      if (!Avatars.valid(avatar)) throw fail('Pick one of the avatars.');
+      // Keeping the avatar you have is always fine, even an ARKS ID photo,
+      // which isn't one of the avatars you can pick here.
+      if (avatar !== now.avatar && !Avatars.valid(avatar)) throw fail('Pick one of the avatars.');
       if (arksMode && avatar !== now.avatar) throw fail('Your avatar is picked on your ARKS ID account page on this arcade.', 403);
       if (arksMode && (body.boardShow !== undefined || body.initials !== undefined)) throw fail('Name or initials on the boards is chosen in ARKS ID on this arcade.', 403);
       const show = body.boardShow === undefined ? now.board_show : body.boardShow === 'initials' ? 'initials' : 'name';
