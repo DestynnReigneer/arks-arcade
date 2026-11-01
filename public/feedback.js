@@ -125,7 +125,10 @@
   .fb-card button.fb-send { background: ${INK}; border-color: ${INK}; color: #170a2e; }
   .fb-card button:disabled { opacity: .45; cursor: default; }
   .fb-shot { margin-top: 10px; }
-  .fb-shot canvas { display: block; width: 100%; height: auto; border-radius: 8px; border: 1px solid #3d2a63; touch-action: none; cursor: crosshair; background: #000; }
+  .fb-shot canvas { display: block; width: 100%; height: auto; border-radius: 8px; border: 1px solid #3d2a63; touch-action: pan-y; background: #000; }
+  /* Drawing only once a tool is picked; until then a finger scrolls the card. */
+  .fb-shot canvas.drawing { touch-action: none; cursor: crosshair; }
+  .fb-hint { margin: 8px 0 0; font-size: 12.5px; color: #c9b8e6; }
   .fb-msg { min-height: 20px; margin-top: 8px; font-size: 13px; color: #ffd23f; }
   .fb-hidden { display: none !important; }`;
 
@@ -179,7 +182,8 @@
 
   // ---- the card ----------------------------------------------------------------------
   let veil = null;
-  const shot = { base: null, shapes: [], tool: 'pen', drawing: null };
+  // tool: null until Pen, Box or Arrow is picked, so a finger on the picture scrolls.
+  const shot = { base: null, shapes: [], tool: null, drawing: null };
 
   function open() {
     addStyles();
@@ -206,8 +210,9 @@
         </div>
         <div class="fb-shot fb-hidden">
           <canvas></canvas>
+          <p class="fb-hint">Pick Pen, Box or Arrow to draw on the picture. Tap it again to go back to scrolling.</p>
           <div class="fb-row">
-            <button type="button" data-tool="pen" aria-pressed="true">✏️ Pen</button>
+            <button type="button" data-tool="pen" aria-pressed="false">✏️ Pen</button>
             <button type="button" data-tool="box" aria-pressed="false">⬜ Box</button>
             <button type="button" data-tool="arrow" aria-pressed="false">➡️ Arrow</button>
           </div>
@@ -246,10 +251,12 @@
     q('[data-snap]').onclick = snap;
     q('[data-upload]').onclick = () => q('[data-file]').click();
     q('[data-file]').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) upload(f); };
+    // A tool turns drawing on; tapping it again turns it off, so the card scrolls.
     for (const b of veil.querySelectorAll('[data-tool]')) {
       b.onclick = () => {
-        shot.tool = b.dataset.tool;
-        for (const x of veil.querySelectorAll('[data-tool]')) x.setAttribute('aria-pressed', String(x === b));
+        shot.tool = shot.tool === b.dataset.tool ? null : b.dataset.tool;
+        for (const x of veil.querySelectorAll('[data-tool]')) x.setAttribute('aria-pressed', String(x.dataset.tool === shot.tool));
+        q('canvas').classList.toggle('drawing', !!shot.tool);
       };
     }
     q('[data-undo]').onclick = () => { shot.shapes.pop(); redraw(); };
@@ -282,39 +289,45 @@
     });
   }
 
-  // A picture of what's on screen right now, with the card and the bug left
-  // out. The whole page is drawn, then cut down to the part in view.
+  // Snap this page (2026-11-01): the card steps aside and a frame goes over
+  // the screen. Move and pinch-zoom the page to the part you want, then tap
+  // Capture (snapframe.js, a small file shared with other apps).
+  function loadFrame() {
+    if (window.SnapFrame) return Promise.resolve(window.SnapFrame);
+    return new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = '/snapframe.js';
+      s.onload = () => resolve(window.SnapFrame);
+      s.onerror = () => reject(new Error('Could not load the snapshot tool.'));
+      document.head.appendChild(s);
+    });
+  }
   async function snap() {
-    say('Taking a picture of the page…');
+    say('');
+    let frame;
+    try { frame = await loadFrame(); } catch (e) { return say(`The snapshot didn't work (${e.message}). You can take a screenshot yourself and upload it instead.`); }
+    if (!veil) return;
     veil.classList.add('fb-hidden');
-    try {
-      const lib = await loadLibrary();
-      const bg = getComputedStyle(document.body).backgroundColor;
-      const full = await lib.toCanvas(document.body, {
-        pixelRatio: 1,
-        // Web fonts would have to be fetched from outside the arcade, which its
-        // security rules don't allow; the picture uses the fonts on hand.
-        skipFonts: true,
-        // An image that can't be fetched (say, an optional custom picture
-        // that isn't there) becomes a blank spot instead of failing the snap.
-        imagePlaceholder: 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==',
-        backgroundColor: bg && bg !== 'rgba(0, 0, 0, 0)' ? bg : '#12111c',
-        // Leave out the card and the bug, and any picture with no address yet
-        // (an empty one would make the snapshot fail).
-        filter: n => !(n.classList && n.classList.contains('fb-root')) && !(n.tagName === 'IMG' && !n.getAttribute('src'))
-      });
-      const top = document.body.getBoundingClientRect().top;
-      const view = document.createElement('canvas');
-      view.width = Math.min(innerWidth, full.width);
-      view.height = Math.min(innerHeight, full.height);
-      view.getContext('2d').drawImage(full, 0, -top, view.width, view.height, 0, 0, view.width, view.height);
-      useImage(view);
-      say('Got it. Draw on it to point at the problem, if that helps.');
-    } catch (e) {
-      say(`The snapshot didn't work (${e.message}). You can take a screenshot yourself and upload it instead.`);
-    } finally {
-      if (veil) veil.classList.remove('fb-hidden');
-    }
+    const bg = getComputedStyle(document.body).backgroundColor;
+    frame.start({
+      library: loadLibrary,
+      maxWidth: MAX_W,
+      background: bg && bg !== 'rgba(0, 0, 0, 0)' ? bg : getComputedStyle(document.documentElement).backgroundColor,
+      skip: n => !!(n.classList && n.classList.contains('fb-root')),
+      // Web fonts would have to be fetched from outside the arcade, which its
+      // security rules don't allow; the picture uses the fonts on hand.
+      options: { skipFonts: true },
+      done: canvas => {
+        if (!veil) return;
+        veil.classList.remove('fb-hidden');
+        if (canvas) { useImage(canvas); say('Got it. Pick Pen, Box or Arrow to point at the problem, if that helps.'); }
+      },
+      failed: e => {
+        if (!veil) return;
+        veil.classList.remove('fb-hidden');
+        say(`The snapshot didn't work (${e && e.message || 'no reason given'}). You can take a screenshot yourself and upload it instead.`);
+      }
+    });
   }
 
   // An uploaded file is drawn onto a canvas, which also re-encodes it, so only
@@ -326,7 +339,7 @@
     const reader = new FileReader();
     reader.onload = () => {
       const img = new Image();
-      img.onload = () => { useImage(img); say('Got it. Draw on it to point at the problem, if that helps.'); };
+      img.onload = () => { useImage(img); say('Got it. Pick Pen, Box or Arrow to point at the problem, if that helps.'); };
       img.onerror = () => say('That picture could not be opened. Try another one.');
       img.src = reader.result;
     };
@@ -357,7 +370,7 @@
       return { x: (e.clientX - r.left) * canvas.width / r.width, y: (e.clientY - r.top) * canvas.height / r.height };
     };
     canvas.addEventListener('pointerdown', e => {
-      if (!shot.base) return;
+      if (!shot.base || !shot.tool) return;
       try { canvas.setPointerCapture(e.pointerId); } catch { /* keeps drawing without it */ }
       const p = at(e);
       shot.drawing = { tool: shot.tool, points: [p, p] };
