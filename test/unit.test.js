@@ -548,7 +548,7 @@ async function run() {
 
   console.log('\n-- feedback limit --');
   {
-    const { createBurstLimit } = require('../arcade/burst-limit');
+    const { createBurstLimit } = require('../kit/burst-limit');
     let t = 0;
     const lim = createBurstLimit({ now: () => t });
     let okCount = 0;
@@ -560,7 +560,7 @@ async function run() {
     ok('the wait is over after 3 minutes', lim.take(['ip:a']).ok);
 
     // Without a profile: 5 in a rolling hour.
-    const L = require('../arcade/burst-limit');
+    const L = require('../kit/burst-limit');
     t = 0;
     const guests = createBurstLimit({ now: () => t, max: L.GUEST_MAX, windowMs: L.GUEST_WINDOW_MS, waitMs: 0 });
     for (let k = 0; k < 5; k++) { guests.take(['ip:g']); t += 60 * 1000; }
@@ -613,7 +613,7 @@ async function run() {
   }
 
   console.log('\n-- which build is running --');
-  const { version } = require(path.join(ROOT, 'arcade/version.js'));
+  const { version } = require(path.join(ROOT, 'kit/version.js'));
   const pkgVersion = require(path.join(ROOT, 'package.json')).version;
   const sha = '0123456789abcdef0123456789abcdef01234567';
   const ci = version({ GIT_SHA: sha, BUILD_DATE: '2026-11-01T12:00:00Z' });

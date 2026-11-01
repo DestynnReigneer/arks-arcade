@@ -92,12 +92,14 @@ const router = express.Router();
 
 // Admins send as much feedback as they like. A profile gets 30 in 3 minutes,
 // then a 3-minute wait; someone without a profile gets 5 an hour from one
-// device (arcade/burst-limit.js). server.js says who's an admin through
+// device (kit/burst-limit.js). server.js says who's an admin through
 // setAdminCheck. It's checked after the note itself, so a refused empty note
 // doesn't use one up.
-const limits = require('./burst-limit');
+const limits = require('../kit/burst-limit');
 const sends = limits.createBurstLimit();
 const guestSends = limits.createBurstLimit({ max: limits.GUEST_MAX, windowMs: limits.GUEST_WINDOW_MS, waitMs: 0 });
+// How the wait message talks about it here: a profile, not an account.
+const GUEST_WORDS = { without: 'Without a profile', instead: 'pick your profile first, which lets you send more' };
 let adminCheck = async () => false;
 async function overLimit(req, profile) {
   try { if (await adminCheck(req)) return null; } catch { /* not an admin */ }
@@ -106,7 +108,7 @@ async function overLimit(req, profile) {
     return r.ok ? null : limits.waitMessage(r.waitSeconds);
   }
   const r = guestSends.take(['ip:' + req.ip]);
-  return r.ok ? null : limits.guestWaitMessage(r.waitSeconds);
+  return r.ok ? null : limits.guestWaitMessage(r.waitSeconds, GUEST_WORDS);
 }
 
 // When the pictures folder is full, the admin hears about it once, as a note
