@@ -1,7 +1,8 @@
 'use strict';
 
-// A pretend ARKS ID for the tests: just enough of its contract (v7) for the
-// arcade's sign-in, "whose device is this?", sessions and the clip inbox.
+// A pretend ARKS ID for the tests: just enough of its contract (v8) for the
+// arcade's sign-in, "whose device is this?", sessions, the clip inbox, and
+// the photos and team pictures people pick (served from /avatars/).
 // Whoever is in `next` signs in on the next /signin; `deviceOwner` is who owns
 // the next device that asks /device (null for a visitor's phone).
 
@@ -12,9 +13,20 @@ function startFakeArksId({ secret, arcadeBase }) {
   const users = {
     sam: { id: 'u_sam0000001', name: 'Sam', role: 'admin', boardName: 'Sam' },
     alex: { id: 'u_alex000001', name: 'Alex', role: 'adult', boardName: 'Alex', avatar: { icon: 'cat', color: 'teal', image: null, art: null } },
-    milo: { id: 'u_milo000001', name: 'Milo', role: 'kid', boardName: 'MIL', avatar: { icon: 'rocket', color: 's1', image: null, art: 'toon:2' } }
+    milo: { id: 'u_milo000001', name: 'Milo', role: 'kid', boardName: 'MIL', avatar: { icon: 'rocket', color: 's1', image: null, art: 'toon:2' } },
+    // A photo; its address is filled in once the fake knows where it lives.
+    kim: { id: 'u_kim0000001', name: 'Kim', role: 'adult', boardName: 'Kim', avatar: { icon: 'star', color: 'pink', image: null, art: null } }
   };
-  const fake = { users, next: 'milo', deviceOwner: null, inbox: {}, sessions: new Map(), base: '', prefills: new Map(), lastPrefill: null };
+  // The pictures, as ARKS ID serves them: real 1-pixel pictures, so a browser can draw them.
+  const WEBP = Buffer.from('UklGRiQAAABXRUJQVlA4IBgAAAAwAQCdASoBAAEAAwA0JaQAA3AA/vuUAAA=', 'base64');
+  const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+  const pictures = {
+    '/avatars/u_kim0000001.webp': ['image/webp', WEBP],
+    '/avatars/teams/faithful.png': ['image/png', PNG],
+    // Says it's a picture but isn't one.
+    '/avatars/u_fake000001.webp': ['image/webp', Buffer.from('<script>alert(1)</script>')]
+  };
+  const fake = { users, next: 'milo', deviceOwner: null, inbox: {}, sessions: new Map(), base: '', prefills: new Map(), lastPrefill: null, photoFetches: 0 };
   const codes = new Map(), deviceCodes = new Map();
   const code = () => crypto.randomBytes(24).toString('base64url');
   const json = (res, status, body) => { res.writeHead(status, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(body)); };
@@ -46,6 +58,12 @@ function startFakeArksId({ secret, arcadeBase }) {
       to.searchParams.set('return', q.get('return') || '/');
       if (q.get('state')) to.searchParams.set('state', q.get('state'));
       return back(res, to.href);
+    }
+    if (req.method === 'GET' && pictures[u.pathname]) {
+      fake.photoFetches++;
+      const [type, body] = pictures[u.pathname];
+      res.writeHead(200, { 'Content-Type': type });
+      return res.end(body);
     }
     if (!u.pathname.startsWith('/api/')) return json(res, 404, { error: 'Not found.' });
     if (req.headers.authorization !== `Bearer ${secret}`) return json(res, 401, { error: 'no' });
@@ -94,6 +112,7 @@ function startFakeArksId({ secret, arcadeBase }) {
 
   return new Promise(resolve => server.listen(0, '127.0.0.1', () => {
     fake.base = `http://127.0.0.1:${server.address().port}`;
+    users.kim.avatar.image = `${fake.base}/avatars/u_kim0000001.webp?v=2`;
     fake.close = () => server.close();
     resolve(fake);
   }));

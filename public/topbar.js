@@ -37,6 +37,13 @@
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', hookUp); else hookUp();
 
+  // Who's playing? (profile.js, loaded further down the page): with ARKS ID
+  // on, a game opened straight from its address or a bookmark asks first, the
+  // same as the home page, before the game can be used.
+  // (ArcadeProfile is a top-level const, so it isn't on window: check by name.)
+  const ask = () => { if (typeof ArcadeProfile !== 'undefined') ArcadeProfile.askIfNobody(); };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ask); else ask();
+
   // The owner's logos, from the server's brand folder, as on the home page.
   fetch('/api/custom').then(r => (r.ok ? r.json() : null)).then(c => {
     const brand = c && c.brand;

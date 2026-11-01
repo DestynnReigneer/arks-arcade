@@ -424,6 +424,27 @@
   }
 
   // ---- sending -----------------------------------------------------------------------
+  // A note can carry a picture of at most 1.5 MB (the server checks too). Most
+  // screenshots fit at the first try; a busy one is saved a little softer, and
+  // then smaller, until it fits.
+  const MAX_PICTURE = 1.5 * 1024 * 1024;
+  const bytesOf = dataUrl => Math.floor((dataUrl.length - dataUrl.indexOf(',') - 1) * 3 / 4);
+  function fitPicture(canvas) {
+    let src = canvas;
+    for (let shrink = 0; shrink < 6; shrink++) {
+      for (const q of [0.85, 0.7, 0.55]) {
+        const url = src.toDataURL('image/jpeg', q);
+        if (bytesOf(url) <= MAX_PICTURE) return url;
+      }
+      const next = document.createElement('canvas');
+      next.width = Math.max(1, Math.round(src.width * 0.75));
+      next.height = Math.max(1, Math.round(src.height * 0.75));
+      next.getContext('2d').drawImage(src, 0, 0, next.width, next.height);
+      src = next;
+    }
+    return src.toDataURL('image/jpeg', 0.5);
+  }
+
   async function send() {
     const text = veil.querySelector('#fbText').value.trim();
     if (!text) return say('Write a line or two about what happened first.');
@@ -431,7 +452,7 @@
     btn.disabled = true;
     say('Sending…');
     try {
-      const picture = shot.base ? veil.querySelector('canvas').toDataURL('image/jpeg', 0.85) : null;
+      const picture = shot.base ? fitPicture(veil.querySelector('canvas')) : null;
       const profile = typeof ArcadeProfile !== 'undefined' ? ArcadeProfile : null;
       const kind = veil.querySelector('[data-kinds] [aria-pressed="true"]').dataset.kind;
       const res = await fetch('/api/comm/feedback', {
@@ -448,7 +469,10 @@
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'Sending did not work. Try again in a moment.');
       veil.querySelector('.fb-card').innerHTML =
-        '<h2>📡 Thanks! Message received.</h2><p>Whoever runs this arcade will see it on the admin page.</p><div class="fb-row"><button type="button" data-done>Close</button></div>';
+        '<h2>📡 Thanks! Message received.</h2><p>Whoever runs this arcade will see it on the admin page.</p><p data-note></p><div class="fb-row"><button type="button" data-done>Close</button></div>';
+      // The arcade had no room left for the picture: the note still arrived.
+      const note = veil.querySelector('[data-note]');
+      if (data.pictureDropped && data.note) note.textContent = data.note; else note.remove();
       veil.querySelector('[data-done]').onclick = close;
       veil.querySelector('[data-done]').focus();
     } catch (e) {

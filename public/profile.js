@@ -52,6 +52,7 @@ const ArcadeProfile = (() => {
       try { silentAt = Number(localStorage.getItem('arksid.silentAt')) || 0; } catch { silentAt = Date.now(); }
       if (Date.now() - silentAt > 60 * 60 * 1000) {
         try { localStorage.setItem('arksid.silentAt', String(Date.now())); } catch { /* no storage: don't loop */ }
+        Id.leaving = true;
         location.replace('/auth/signin?silent=1&return=' + encodeURIComponent(location.pathname + location.search + location.hash));
         return Id;
       }
@@ -59,7 +60,8 @@ const ArcadeProfile = (() => {
       // so guest play can be offered (or not). It comes straight back.
       let tried = false;
       try { tried = sessionStorage.getItem('arksid.deviceTried') === '1'; sessionStorage.setItem('arksid.deviceTried', '1'); } catch { tried = true; }
-      if (!me.deviceChecked && !tried) location.replace('/auth/device?return=' + encodeURIComponent(location.pathname + location.search + location.hash));
+      if (!me.deviceChecked && !tried) Id.leaving = true;
+      if (Id.leaving) location.replace('/auth/device?return=' + encodeURIComponent(location.pathname + location.search + location.hash));
     }
     return Id;
   });
@@ -142,6 +144,9 @@ const ArcadeProfile = (() => {
     root.innerHTML = '<div class="apf-card"></div>';
     // Tapping outside the card closes it, but only once someone is playing.
     root.addEventListener('click', e => { if (e.target === root && canClose()) close(); });
+    // Keys typed in the card stay in the card, so a game's own keys (arrows,
+    // space, Enter) don't play it behind the card.
+    for (const type of ['keydown', 'keyup', 'keypress']) root.addEventListener(type, e => e.stopPropagation());
     document.body.appendChild(root);
   }
   const card = () => root.querySelector('.apf-card');
@@ -152,17 +157,91 @@ const ArcadeProfile = (() => {
   const closeRow = () => (canClose() ? '<div class="apf-row"><button class="apf-btn" data-close>Close</button></div>' : '');
   const wireClose = c => { const b = c.querySelector('[data-close]'); if (b) b.onclick = () => close(get()); };
   let resolveOpen = null;
+
+  // While the card is open, the page behind it is out of reach: everything
+  // else is marked inert (no clicks, no keyboard focus, hidden from screen
+  // readers), Tab cycles inside the card, and when it closes, focus goes back
+  // to whatever had it before. Without this, Tab and Enter could start a game
+  // behind the card (found in review, 2026-11-01).
+  let isOpen = false, returnFocus = null, inerted = [];
+  const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]),textarea:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])';
+  const focusables = () => [...root.querySelectorAll(FOCUSABLE)].filter(el => !el.hidden && el.offsetParent !== null);
+  function shutOutPage() {
+    for (const el of document.body.children) {
+      if (el === root || el.inert || el.tagName === 'SCRIPT' || el.tagName === 'STYLE') continue;
+      el.inert = true;
+      inerted.push(el);
+    }
+  }
+  function letPageBack() {
+    for (const el of inerted) el.inert = false;
+    inerted = [];
+  }
+  function focusCard() {
+    if (!isOpen || root.contains(document.activeElement)) return;
+    const first = focusables()[0];
+    if (first) first.focus(); else { card().tabIndex = -1; card().focus(); }
+  }
+  function trapKeys(e) {
+    if (!isOpen) return;
+    // Escape never closes it: someone has to pick who's playing first.
+    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); return; }
+    if (e.key !== 'Tab') return;
+    const list = focusables();
+    if (!list.length) { e.preventDefault(); return; }
+    const i = list.indexOf(document.activeElement);
+    if (e.shiftKey && i <= 0) { e.preventDefault(); list[list.length - 1].focus(); }
+    else if (!e.shiftKey && (i === -1 || i === list.length - 1)) { e.preventDefault(); list[0].focus(); }
+  }
+  document.addEventListener('keydown', trapKeys, true);
+  // Anything that still grabs focus outside the card (something added to the
+  // page after it opened) sends it straight back.
+  document.addEventListener('focusin', e => { if (isOpen && !root.contains(e.target)) focusCard(); }, true);
+  // The card's contents change from screen to screen; keep focus in it.
+  let watching = null;
+
   function close(result = null) {
     if (root) root.style.display = 'none';
+    if (isOpen) {
+      isOpen = false;
+      letPageBack();
+      if (watching) { watching.disconnect(); watching = null; }
+      const back = returnFocus;
+      returnFocus = null;
+      if (back && back.isConnected && typeof back.focus === 'function') back.focus();
+    }
     if (resolveOpen) { resolveOpen(result); resolveOpen = null; }
   }
 
   // Opens the picker. Resolves with the chosen profile, or null.
   function open() {
     ensure();
+    if (!isOpen) {
+      returnFocus = document.activeElement && document.activeElement !== document.body ? document.activeElement : null;
+      isOpen = true;
+      shutOutPage();
+      watching = new MutationObserver(() => { shutOutPage(); requestAnimationFrame(focusCard); });
+      watching.observe(document.body, { childList: true });
+      new MutationObserver((list, obs) => { if (!isOpen) return obs.disconnect(); requestAnimationFrame(focusCard); })
+        .observe(card(), { childList: true });
+    }
     root.style.display = 'flex';
     showList();
+    requestAnimationFrame(focusCard);
     return new Promise(r => { resolveOpen = r; });
+  }
+
+  // The same check on every page (2026-11-01): if nobody is playing yet (no
+  // profile, no guest), ask before anything can be used. The home page always
+  // asks; a game page asks when this arcade signs in through ARKS ID, so
+  // opening a game's address directly or from a bookmark doesn't skip it.
+  // It waits until ARKS ID has said who's signed in, so someone just back from
+  // signing in isn't asked again.
+  function askIfNobody({ always = false, delay = 0 } = {}) {
+    return Id.ready.then(() => {
+      if (Id.leaving || get() || (!always && !Id.on)) return;
+      setTimeout(() => { if (!get() && !Id.leaving) open(); }, delay);
+    });
   }
 
   async function showList() {
@@ -493,5 +572,5 @@ const ArcadeProfile = (() => {
   }
   document.addEventListener('DOMContentLoaded', () => fillNames());
 
-  return { get, set, name, token, initials, onChange, open, avatarEl, fillNames, openAccount, arksId: () => Id };
+  return { get, set, name, token, initials, onChange, open, askIfNobody, avatarEl, fillNames, openAccount, arksId: () => Id };
 })();
