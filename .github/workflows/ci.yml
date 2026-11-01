@@ -109,11 +109,11 @@ jobs:
           exit 1
 
       # Playwright is a tool for testing only: the image is built with
-      # npm ci --omit=dev, so it must not be in there.
+      # npm ci --omit=dev, so its packages must not be in there. (npm may
+      # leave an empty @playwright folder behind; that's harmless.)
       - name: Playwright stays out of the image
         run: |
-          docker run --rm --entrypoint /bin/sh arks-arcade:ci -c 'ls -la /app/node_modules/@playwright 2>&1; true'
-          found=$(docker run --rm --entrypoint /bin/sh arks-arcade:ci -c 'ls -d /app/node_modules/*playwright* /app/node_modules/@playwright/* 2>/dev/null; true')
+          found=$(docker run --rm --entrypoint /bin/sh arks-arcade:ci -c 'for p in playwright playwright-core @playwright/test; do [ -e "/app/node_modules/$p" ] && echo "$p"; done; true')
           echo "playwright in the image: ${found:-none}"
           [ -z "$found" ]
 
