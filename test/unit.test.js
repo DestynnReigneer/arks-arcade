@@ -321,7 +321,11 @@ async function run() {
   ok('quick double turns both happen', sg.dir === 'left');
   const eat = SN.create({ cols: 10, rows: 10 });
   eat.food = { x: eat.snake[0].x + 1, y: eat.snake[0].y };
-  SN.step(eat); SN.step(eat);
+  SN.step(eat);
+  // The next apple appears at random, sometimes right in front of the snake,
+  // which made this check fail now and then. Put it out of the way.
+  eat.food = { x: 0, y: 9 };
+  SN.step(eat);
   ok('eating an apple scores and grows the snake', eat.apples === 1 && eat.score === 20 && eat.snake.length === 4 && !!eat.food);
   const wall = SN.create({ cols: 10, rows: 10 });
   wall.food = { x: 0, y: 0 };

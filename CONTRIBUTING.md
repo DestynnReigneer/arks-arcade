@@ -13,6 +13,21 @@ npm test           # boots a server on 3222 and runs everything
 `npm test` is the gate. CI runs exactly that, plus a Docker build whose
 healthcheck has to go green.
 
+### Browser tests
+
+```bash
+npx playwright install chromium   # once, to download the test browser
+npm run test:browser
+```
+
+These open the arcade in a real Chromium, at a phone's size (390 by 844) and a
+laptop's size (1280 by 800), and check what a person would see. They live in
+`test/browser/`, and `playwright.config.js` starts their own server
+(`test/browser/serve.js`): the arcade with sign-in through the pretend ARKS ID
+from `test/fake-arksid.js`, on a throwaway database. CI runs them as a separate
+job on every pull request. Playwright is a dev dependency only, so it never
+ends up in the Docker image (CI checks that too).
+
 ## Layout
 
 - `server.js` — Express app; Wordless routes live here, Rambler is mounted
