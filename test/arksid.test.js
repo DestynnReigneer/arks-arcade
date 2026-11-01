@@ -138,6 +138,11 @@ async function run({ base, root, fake, admin: ADMIN }) {
   ok('a clip is sent through ARKS ID to the person', sent.status === 200 && fake.inbox.milo[0] === 'rickroll', JSON.stringify(sent.data));
   const got = await milo.call('/api/custom/inbox', { method: 'POST', body: {} });
   ok('…and plays for them once', got.data.clip && got.data.clip.name === 'rickroll' && !(await milo.call('/api/custom/inbox', { method: 'POST', body: {} })).data.clip);
+  fake.inbox.milo = ['meme-cat'];
+  const meme = (await milo.call('/api/custom/inbox', { method: 'POST', body: {} })).data.clip;
+  ok('a meme sent from another app shows the picture from the images folder', meme && meme.meme === true && meme.url === '/custom/media/images/cat.gif', JSON.stringify(meme));
+  fake.inbox.milo = ['meme-nope'];
+  ok('…and one this arcade has no file for is skipped', !(await milo.call('/api/custom/inbox', { method: 'POST', body: {} })).data.clip);
   const moved = await asAdmin('/api/profiles/admin/abcdefabcdef0001/link', 'POST', { arksid_user: 'u_alex000001' });
   ok('the admin can move a wrong link', moved.status === 200 && (await asAdmin('/api/profiles/admin/accounts')).data.accounts.find(a => a.name === 'Alex').profile_id === 'abcdefabcdef0001');
 
