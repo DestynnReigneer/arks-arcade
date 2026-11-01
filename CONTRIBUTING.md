@@ -37,6 +37,20 @@ ends up in the Docker image (CI checks that too).
 - `words/` — the dictionaries, plain text, edit by hand
 - `test/` — `unit.test.js` needs no server, `api.test.js` needs the one the
   runner starts
+- `kit/` — shared code the arcade has in common with other apps (see below)
+
+### Shared kit
+
+A few files are kept identical across several apps from one shared kit: the
+server files in `kit/` (`version.js`, `burst-limit.js`, `security.js`,
+`feedback.js`), plus `public/dock.js`, `public/snapframe.js`,
+`public/avatars.js` and `scripts/check-kit.js`. They're copies, so please
+don't edit them in this repo. `kit/kit.json` lists each one with a SHA-256
+fingerprint, and `npm test` starts by running `scripts/check-kit.js`, which
+fails if any of them was changed here. The arcade's own settings for that
+code (its Content Security Policy, how it reads `TRUST_PROXY`, where feedback
+is stored) are in `arcade/security.js`, `arcade/feedback.js` and
+`arcade/comm.js`, and those are fine to change.
 
 ## Things that will bite you
 

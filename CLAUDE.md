@@ -51,6 +51,18 @@ private `arks-internal` repo, `conventions/writing.md`.
   get messaged to the other sessions. Never change it on the arcade's side only.
 - `docs/NOTES.md` records which contract version the arcade is built against.
 
+## Shared kit
+
+Some files are the same in every app built on this setup and come from a shared kit
+kept in the private `arks-internal` repo (local clone: `../arks-internal/kit`): the
+server files in `kit/` (`version.js`, `burst-limit.js`, `security.js`,
+`feedback.js`), `public/dock.js`, `public/snapframe.js`, `public/avatars.js` and
+`scripts/check-kit.js`. They're copies, so **don't edit them here**: change the
+original in the kit, run its sync, and open a PR here with the result. `kit/kit.json`
+lists each file with its fingerprint, and `npm test` fails if a copy was changed.
+What's only the arcade's own (its CSP, how it reads `TRUST_PROXY`, the feedback
+storage) lives in `arcade/security.js`, `arcade/feedback.js` and `arcade/comm.js`.
+
 ## Decisions already made (don't reopen unless the maintainer does)
 
 - **No server-side AI.** Themes, theme packs, trivia and Spin & Solve packs
