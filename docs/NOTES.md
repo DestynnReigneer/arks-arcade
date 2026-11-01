@@ -7,6 +7,24 @@ to-do list as checkboxes (the rule is in the maintainer's global CLAUDE.md
 and `arks-internal/conventions/sessions.md`): do the checked items in the
 order they were clicked, and keep the rest pinned here.
 
+## Feedback tracked like GitHub issues (2026-11-01)
+
+The maintainer chose this for all their apps. In the arcade:
+
+- **Statuses** keep their stored names but read New, Seen, Pending, Fixed and Won't fix
+  (`new`, `pending`, `in-progress`, `completed`, `canceled`). Opening an item's replies
+  in admin marks a new one Seen. Fixed and Won't fix move to the sender's Archive; a
+  reply from the sender after that puts it back as Seen.
+- **Replies** both ways (`comm_feedback_replies`). The admin's "note to self" stays
+  private, as before.
+- **Each side's own copy:** `admin_hidden` and `sender_hidden`. Admin's Delete is
+  "Delete for me"; it's gone for good once both deleted it, or when it came from someone
+  with no profile.
+- **My feedback** in the Who's playing? card, for a profile: Open and Archive lists,
+  the thread, a reply box, Edit (until it's done) and Delete my copy. Its calls are
+  `POST /api/comm/mine[/:id[/reply|/edit|/delete]]` with the profile's token in the
+  body, never in the address.
+
 ## The ARKS look (2026-10-29)
 
 The maintainer approved a preview and chose: the whole arcade on the Vice background,

@@ -116,6 +116,13 @@ const ArcadeProfile = (() => {
     .apf-msg{min-height:18px;color:#ff7a7a;font-size:13px;text-align:center;margin:6px 0}
     .apf-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}.apf-tabs button{padding:5px 10px;border-radius:999px;border:1px solid #3d2a63;background:transparent;color:inherit;font:inherit;font-size:12px;cursor:pointer}
     .apf-tabs button.on{border-color:#ffc72c;color:#ffc72c}
+    .apf-fbl{display:grid;gap:8px;margin:8px 0}
+    .apf-fb{display:grid;gap:4px;text-align:left;padding:10px 12px;border-radius:12px;border:1px solid #3d2a63;background:#2c1350;color:inherit;font:inherit;font-size:14px;cursor:pointer;white-space:pre-wrap;overflow-wrap:anywhere}
+    .apf-fb .apf-sub{text-align:left;margin:0}
+    .apf-fbtext{padding:10px 12px;border-radius:12px;background:#2c1350;white-space:pre-wrap;overflow-wrap:anywhere;font-size:15px}
+    .apf-rep{padding:8px 10px;border-radius:10px;background:rgba(255,255,255,.04);border-left:3px solid #ff2ec4;white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px}
+    .apf-rep.admin{border-left-color:#00ffc2}
+    .apf-ta{width:100%;box-sizing:border-box;padding:10px;border-radius:10px;border:1px solid #3d2a63;background:#0a0416;color:#fff;font:inherit;font-size:15px;margin-top:6px}
     .apf-av{display:grid;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:8px;margin:6px 0 10px}
     .apf-av button{padding:3px;border-radius:50%;border:3px solid transparent;background:none;cursor:pointer;aspect-ratio:1}.apf-av button.on{border-color:#ffc72c}
     .apf label{display:block;font-size:12px;color:#c9a8dd;margin-top:8px}
@@ -164,12 +171,14 @@ const ArcadeProfile = (() => {
     if (Id.on) return showArksId();
     c.innerHTML = '<h2>Who\'s playing?</h2><p>Pick your profile, or play as a guest.</p><div class="apf-grid"></div><div class="apf-msg"></div>' +
       '<div class="apf-row"><button class="apf-btn" data-guest>👤 Play as a guest</button><button class="apf-btn" data-new>➕ New profile</button></div>' +
-      (get() && get().id ? '<div class="apf-row"><button class="apf-btn" data-manage>⚙️ My profile: avatar, PIN &amp; name on boards</button></div>' : '') +
+      (get() && get().id ? '<div class="apf-row"><button class="apf-btn" data-manage>⚙️ My profile: avatar, PIN &amp; name on boards</button></div>' +
+        '<div class="apf-row"><button class="apf-btn" data-myfb>📬 My feedback</button></div>' : '') +
       closeRow();
     c.querySelector('[data-guest]').onclick = showGuest;
     c.querySelector('[data-new]').onclick = showNew;
     wireClose(c);
     if (c.querySelector('[data-manage]')) c.querySelector('[data-manage]').onclick = showManage;
+    if (c.querySelector('[data-myfb]')) c.querySelector('[data-myfb]').onclick = () => showMyFeedback('open');
     const grid = c.querySelector('.apf-grid');
     let list = [];
     try { list = await api(''); } catch (e) { c.querySelector('.apf-msg').textContent = e.message; }
@@ -194,6 +203,7 @@ const ArcadeProfile = (() => {
     if (me.signedIn && cur && cur.arksid) {
       c.innerHTML = '<h2>Who&#39;s playing?</h2><div class="apf-grid"></div><p data-who></p>' +
         '<div class="apf-row"><a class="apf-btn" data-account>⚙️ Change my avatar</a><button class="apf-btn" data-out>Sign out</button></div>' +
+        '<div class="apf-row"><button class="apf-btn" data-myfb>📬 My feedback</button></div>' +
         closeRow();
       const tile = document.createElement('div');
       tile.className = 'apf-tile on';
@@ -207,6 +217,7 @@ const ArcadeProfile = (() => {
       c.querySelector('[data-account]').href = me.accountUrl;
       c.querySelector('[data-account]').onclick = e => { e.preventDefault(); openAccount(); };
       c.querySelector('[data-out]').onclick = signOut;
+      c.querySelector('[data-myfb]').onclick = () => showMyFeedback('open');
       wireClose(c);
       return;
     }
@@ -225,6 +236,72 @@ const ArcadeProfile = (() => {
       c.querySelector('[data-join]').onclick = () => makeAccount(cur && cur.guest ? cur : {}, c);
     }
     wireClose(c);
+  }
+
+  // ---- My feedback (2026-11-01) ----
+  // What this profile sent with the bug, as threads with the admin: how far
+  // along each one is, the replies, and fixing or deleting your own copy.
+  // The profile's token goes in the body, never in an address.
+  const FB_STATUS = { new: '🆕 New', pending: '👀 Seen', 'in-progress': '🔧 Pending', completed: '✅ Fixed', canceled: '🚫 Won\'t fix' };
+  const mineCall = (path, body = {}) => fetch('/api/comm/mine' + path, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token: token(), ...body }) }).then(async r => { const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || 'That didn\'t work.'); return d; });
+  async function showMyFeedback(view) {
+    const c = card();
+    c.innerHTML = '<h2>My feedback</h2><p>What you sent with the little bug, and how far along it is. Fixed ones move to the Archive.</p>' +
+      '<div class="apf-tabs"><button data-v="open">Open</button><button data-v="archive">Archive</button></div><div class="apf-msg"></div><div class="apf-fbl"></div>' +
+      '<div class="apf-row"><button class="apf-btn" data-back>Back</button></div>';
+    c.querySelectorAll('[data-v]').forEach(b => { b.classList.toggle('on', b.dataset.v === view); b.onclick = () => showMyFeedback(b.dataset.v); });
+    c.querySelector('[data-back]').onclick = showList;
+    const list = c.querySelector('.apf-fbl');
+    try {
+      const { items } = await mineCall('', { view });
+      if (!items.length) list.innerHTML = '<div class="apf-sub">' + (view === 'archive' ? 'Nothing is fixed yet.' : 'You don\'t have any open feedback. Tap the little bug in the corner to send some.') + '</div>';
+      for (const f of items) {
+        const b = document.createElement('button');
+        b.className = 'apf-fb';
+        const top = document.createElement('span'); top.className = 'apf-sub'; top.textContent = `${FB_STATUS[f.status] || f.status} · #${f.id}${f.replyCount ? ` · ${f.replyCount} ${f.replyCount === 1 ? 'reply' : 'replies'}` : ''}`;
+        const tx = document.createElement('span'); tx.textContent = f.message;
+        b.append(top, tx);
+        b.onclick = () => showMyThread(f.id, view);
+        list.appendChild(b);
+      }
+    } catch (e) { c.querySelector('.apf-msg').textContent = e.message; }
+  }
+  async function showMyThread(id, view) {
+    const c = card();
+    c.innerHTML = '<h2>Feedback #' + id + '</h2><p data-status></p><div class="apf-fbtext"></div><div class="apf-fbl" data-reps></div>' +
+      '<textarea class="apf-ta" maxlength="5000" rows="3" placeholder="Reply to the admin"></textarea><div class="apf-msg"></div>' +
+      '<div class="apf-row"><button class="apf-btn apf-main" data-send>Send reply</button></div>' +
+      '<div class="apf-row"><button class="apf-btn" data-edit>✏️ Edit what I wrote</button><button class="apf-btn" data-del>🗑️ Delete my copy</button></div>' +
+      '<div class="apf-row"><button class="apf-btn" data-back>Back</button></div>';
+    c.querySelector('[data-back]').onclick = () => showMyFeedback(view);
+    const msg = c.querySelector('.apf-msg'), ta = c.querySelector('.apf-ta');
+    let t;
+    try { t = (await mineCall('/' + id)).thread; } catch (e) { msg.textContent = e.message; return; }
+    c.querySelector('[data-status]').textContent = FB_STATUS[t.status] || t.status;
+    c.querySelector('.apf-fbtext').textContent = t.message;
+    const reps = c.querySelector('[data-reps]');
+    if (!t.replies.length) reps.innerHTML = '<div class="apf-sub">No replies yet.</div>';
+    for (const r of t.replies) {
+      const d = document.createElement('div'); d.className = 'apf-rep' + (r.fromAdmin ? ' admin' : '');
+      d.textContent = `${r.fromAdmin ? 'Admin' : 'You'}: ${r.body}`;
+      reps.appendChild(d);
+    }
+    c.querySelector('[data-send]').onclick = async () => {
+      if (!ta.value.trim()) return (msg.textContent = 'Write your reply first.');
+      try { await mineCall(`/${id}/reply`, { body: ta.value }); showMyThread(id, view); } catch (e) { msg.textContent = e.message; }
+    };
+    const edit = c.querySelector('[data-edit]');
+    if (['completed', 'canceled'].includes(t.status)) edit.remove();
+    else edit.onclick = async () => {
+      if (edit.dataset.on !== '1') { edit.dataset.on = '1'; ta.value = t.message; ta.placeholder = 'What you wrote'; edit.textContent = '💾 Save what I wrote'; c.querySelector('[data-send]').hidden = true; return; }
+      try { await mineCall(`/${id}/edit`, { message: ta.value }); showMyThread(id, view); } catch (e) { msg.textContent = e.message; }
+    };
+    const del = c.querySelector('[data-del]');
+    del.onclick = async () => {
+      if (del.dataset.armed !== '1') { del.dataset.armed = '1'; del.textContent = 'Tap again to delete it for you'; return; }
+      try { await mineCall(`/${id}/delete`); showMyFeedback(view); } catch (e) { msg.textContent = e.message; }
+    };
   }
 
   async function choose(p, pin) {
