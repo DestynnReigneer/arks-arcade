@@ -7,6 +7,32 @@ to-do list as checkboxes (the rule is in the maintainer's global CLAUDE.md
 and `arks-internal/conventions/sessions.md`): do the checked items in the
 order they were clicked, and keep the rest pinned here.
 
+## Feedback goes to ARKS ID's one inbox (2026-11-01, contract v10)
+
+- **With ARKS ID on (`ARKS_ID_URL` set), new feedback isn't kept in the Comm Center.**
+  The card and `POST /api/comm/feedback` work as before (same checks and limits), then
+  `arcade/comm.js` passes the note on to ARKS ID (`POST /api/app/feedback`) through the
+  shared kit's `kit/feedback-relay.js`. Kinds map issue to broken and feature to idea;
+  the game and the device ride along as the arcade's own facts (`extra`). The sender is
+  the signed-in ARKS ID account (from the cookie, never the browser), or the name a guest
+  typed. ARKS ID pings Discord, so the arcade doesn't.
+- **ARKS ID away:** the note waits in `feedback_outbox` and goes again every minute; the
+  sender is told it arrived either way. **ARKS ID older than v10** (it answers 404): the
+  note is kept in the Comm Center as before.
+- **My feedback** (`POST /api/comm/mine...`) asks ARKS ID with the person's ARKS ID
+  session, so the admin's replies show up here. ARKS ID's stages map back to the arcade's
+  statuses: New is `new`, Seen is `pending`, Pending is `in-progress`, Fixed is
+  `completed`, and Won't fix is `canceled` (ARKS ID added Won't fix for this).
+- **The admin page** says feedback lives in ARKS ID's admin console, with a link that
+  opens it in a new tab, and how many notes are waiting to go. The Comm Center's older
+  notes stay as a read-only archive: status, replies and delete are refused (409), but
+  the note to self still saves. Nothing was moved or deleted.
+- **Without ARKS ID** (public self-hosted copies), the Comm Center inbox works exactly as
+  before.
+- Tests: the ARKS ID suite (`test/arksid.test.js`), against `test/fake-arksid.js`, which
+  gained the inbox. The "pictures folder full" checks there run with the pretend ARKS ID
+  acting like one without the inbox, so they still cover the Comm Center's own storage.
+
 ## The shared kit (2026-11-01)
 
 - Shared code now comes from one kit kept in the private repo (`../arks-internal/kit`).
@@ -166,7 +192,8 @@ board-name setting and adult PIN are only for copies running without it.
 - **Shared family accounts ("ARKS ID")**: planned and approved. The
   contract is in the private `arks-id` repo (`docs/SPEC.md`); see CLAUDE.md
   for how to use it. The arcade integrates last (after ARKS ID, the Hub's
-  sign-in and passkeys). **Built against ARKS ID contract: v8** (2026-10-28): silent
+  sign-in and passkeys). **Built against ARKS ID contract: v10** (2026-11-01): feedback
+  goes to ARKS ID's one inbox (see the top of this file). Before that, v8 (2026-10-28): silent
   sign-in (at most once an hour, `/auth/signin?silent=1`, so someone signed in to ARKS ID
   elsewhere is signed in here with no tap). Before that, v7 (2026-10-26):
   sign-in, `/device` for guest play, `boardName`, the clip inbox, avatars from

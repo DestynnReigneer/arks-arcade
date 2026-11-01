@@ -188,6 +188,9 @@ async function run({ base, root, fake, admin: ADMIN }) {
 
   console.log('\n-- feedback pictures when the folder is full --');
   // This server was started with a tiny cap, so any picture is one too many.
+  // The pretend ARKS ID acts like one without the feedback inbox, so the
+  // arcade keeps these notes itself, as it does without ARKS ID.
+  fake.inboxMissing = true;
   const pngHead = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
   const smallPng = 'data:image/png;base64,' + Buffer.concat([pngHead, Buffer.alloc(200)]).toString('base64');
   const miloToken = (await milo.me()).token;
@@ -198,6 +201,55 @@ async function run({ base, root, fake, admin: ADMIN }) {
   const flags = inbox.filter(i => i.from === 'The arcade');
   ok('the admin is told once in the Comm Center, not for every note', flags.length === 1 && /500 MB/.test(flags[0].message), String(flags.length));
   ok('…and the notes themselves have no picture', inbox.filter(i => /^(Look at this|And this)$/.test(i.message)).every(i => !i.hasPicture));
+  fake.inboxMissing = false;
+
+  console.log('\n-- feedback goes to ARKS ID\'s one inbox --');
+  // Milo signs in again (an earlier part of the suite signed this device out).
+  fake.next = 'milo';
+  await milo.call('/auth/signin?return=%2F');
+  const localBefore = (await asAdmin('/api/comm/admin/feedback')).data.items.length;
+  const fwd = await milo.call('/api/comm/feedback', { method: 'POST', body: { kind: 'issue', message: 'Snake is too fast.', game: 'snake', from: 'Not Milo', profileToken: miloToken, picture: smallPng, details: { page: '/snake.html?room=secret' } } });
+  ok('a note is passed on to ARKS ID, and the sender is told it arrived', fwd.status === 201 && fwd.data.forwarded === true, JSON.stringify(fwd.data));
+  const n1 = fake.notes[fake.notes.length - 1];
+  ok('…as ARKS ID\'s kind, from the signed-in account, never a typed name', n1 && n1.kind === 'broken' && n1.person.user === 'u_milo000001' && !n1.person.guestName, JSON.stringify(n1 && n1.person));
+  ok('…with its picture (not stored here, so the full folder doesn\'t matter)', n1.picture === true);
+  ok('…with the game and device as the arcade\'s own facts, and the page without its ? part', n1.details.extra.game === 'snake' && /,/.test(n1.details.extra.device) && n1.details.page === '/snake.html', JSON.stringify(n1.details.extra));
+  ok('…and nothing new in the Comm Center\'s own inbox', (await asAdmin('/api/comm/admin/feedback')).data.items.length === localBefore);
+  const guestFb = await visitor.call('/api/comm/feedback', { method: 'POST', body: { kind: 'feature', message: 'Add mini golf!', from: 'Zed' } });
+  ok('a guest\'s note goes with the name they typed', guestFb.status === 201 && fake.notes[fake.notes.length - 1].person.guestName === 'Zed' && fake.notes[fake.notes.length - 1].kind === 'idea');
+
+  const mine = (b, p, body = {}) => b.call('/api/comm/mine' + p, { method: 'POST', body });
+  let myList = (await mine(milo, '', { view: 'open' })).data.items;
+  ok('My feedback comes from ARKS ID, in the arcade\'s words', myList.length === 1 && myList[0].id === n1.id && myList[0].message === 'Snake is too fast.' && myList[0].status === 'new' && myList[0].kind === 'issue', JSON.stringify(myList));
+  fake.adminReply(n1.id, 'Which level?');
+  fake.setStage(n1.id, 'seen');
+  let thread = (await mine(milo, `/${n1.id}`)).data.thread;
+  ok('the admin\'s reply from ARKS ID\'s console shows up here, and Seen reads as Seen', thread.status === 'pending' && thread.replies[0].fromAdmin && thread.replies[0].body === 'Which level?');
+  ok('the sender answers', (await mine(milo, `/${n1.id}/reply`, { body: 'Level 3.' })).status === 201 && fake.notes.find(n => n.id === n1.id).replies[1].body === 'Level 3.');
+  ok('…and fixes what they wrote', (await mine(milo, `/${n1.id}/edit`, { message: 'Snake is too fast on level 3.' })).status === 200 && fake.notes.find(n => n.id === n1.id).body === 'Snake is too fast on level 3.');
+  fake.setStage(n1.id, 'wontfix');
+  myList = (await mine(milo, '', { view: 'archive' })).data.items;
+  ok('Won\'t fix in ARKS ID is the arcade\'s "canceled", in the Archive', myList.length === 1 && myList[0].status === 'canceled');
+  ok('…and can\'t be edited anymore', (await mine(milo, `/${n1.id}/edit`, { message: 'again' })).status === 409);
+  ok('Delete my copy goes through to ARKS ID', (await mine(milo, `/${n1.id}/delete`)).status === 200 && (await mine(milo, '', { view: 'archive' })).data.items.length === 0);
+  ok('someone not signed in has no My feedback here', (await mine(visitor, '', { view: 'open' })).status === 401);
+
+  // The admin page: a pointer to ARKS ID, and the older notes read-only.
+  const page = (await asAdmin('/api/comm/admin/feedback')).data;
+  ok('the admin page says where feedback lives now', page.inbox && page.inbox.url === `${fake.base}/admin` && page.inbox.waiting === 0, JSON.stringify(page.inbox));
+  const old = page.items.find(i => i.message === 'Look at this');
+  ok('older notes can\'t change status, get replies or be deleted', (await asAdmin(`/api/comm/admin/feedback/${old.id}`, 'PATCH', { status: 'completed' })).status === 409 &&
+    (await asAdmin(`/api/comm/admin/feedback/${old.id}/replies`, 'POST', { body: 'Thanks' })).status === 409 &&
+    (await asAdmin(`/api/comm/admin/feedback/${old.id}`, 'DELETE')).status === 409);
+  const noted = await asAdmin(`/api/comm/admin/feedback/${old.id}`, 'PATCH', { status: old.status, note: 'Asked Milo about it' });
+  ok('…but the admin\'s private note to self still saves', noted.status === 200 && noted.data.note === 'Asked Milo about it');
+
+  fake.feedbackDown = true;
+  const notesBefore = fake.notes.length;
+  const queued = await milo.call('/api/comm/feedback', { method: 'POST', body: { message: 'Is anyone there?', profileToken: miloToken } });
+  ok('with ARKS ID away, the sender is still told it arrived, and it waits to go later', queued.status === 201 && queued.data.forwarded === true && fake.notes.length === notesBefore &&
+    (await asAdmin('/api/comm/admin/feedback')).data.inbox.waiting === 1);
+  fake.feedbackDown = false;
 
   console.log('\n-- signing out --');
   const out = await milo.call('/auth/signout', { method: 'POST', follow: false });

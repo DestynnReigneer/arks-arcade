@@ -1,10 +1,11 @@
 {
-  "kit": "f7aae1a38a96 (2026-11-01)",
+  "kit": "8ab9818215b9 (2026-11-01)",
   "files": {
     "kit/version.js": "e56d4939ea224ba25bf93bc6de6f4ba544b4c5431249ce2e543c3ce909214ad4",
     "kit/burst-limit.js": "388fe82828c68bec3b60e4c20ba46aed6e2d2d76cbeee46fede2972c7608d717",
     "kit/security.js": "e5ade43328734bd04e77b7eb59fdd17ec75f15b4b5db0775c3ccaacfc95df65c",
     "kit/feedback.js": "6b7d7d7b75d95b6c5e1776bd5520dca03dad8b304add078018c6e8e11890bb58",
+    "kit/feedback-relay.js": "ad37d2812839af50a797aa9367994fb9a984ba3f13f56ac09004bba4ce73bcc9",
     "public/dock.js": "e09372930c4157b3cc2d40a4a3e890f7c50440e1abbfe19e4f0b904ee1f7edc5",
     "public/snapframe.js": "f164ad5403d484a2b39e0f64fa78c06bbc02e3df581dc3ae63d040b3dbc100e9",
     "public/avatars.js": "f4a59d8d75a4c4e120d6443726130cac14dcdd98558fa360046f0fc0e25b5a50",

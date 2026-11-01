@@ -167,6 +167,16 @@ set, ARKS ID takes over everything about a person:
   ARKS ID to find out.
 - **Clips** you send from admin go through ARKS ID, so they pop up in whichever
   app the person opens next.
+- **Feedback goes to ARKS ID's admin console.** When someone taps the little bug
+  and sends a note, the arcade passes it on to ARKS ID instead of keeping it, so
+  you read and answer feedback from all your apps in one place. People still see
+  your replies under **My feedback** in Who's playing?. If ARKS ID can't be
+  reached, the note waits on the arcade and goes on its own a little later, and
+  the person is told it arrived either way. Notes that came in before you turned
+  this on stay in the admin page's Comm Center inbox, where you can still read
+  them (and keep a note to self on each), but not answer or change them. If your
+  ARKS ID is too old to have a feedback inbox, the arcade keeps new notes itself,
+  as before.
 
 ## 8. Keeping it safe
 
