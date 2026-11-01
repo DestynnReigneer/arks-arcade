@@ -31,6 +31,7 @@ for (const [file, body] of [
   ['media/clips/rickroll.gif', GIF],
   ['media/clips/bad name.gif', GIF],
   ['media/clips/readme.txt', 'not a clip'],
+  ['media/images/cat.gif', GIF],
   ['media/sprites/dance-hero.gif', GIF]
 ]) {
   fs.mkdirSync(path.dirname(path.join(MEDIA_ROOT, file)), { recursive: true });
