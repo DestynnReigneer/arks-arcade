@@ -612,6 +612,26 @@ async function run() {
     ok(`public/${f} parses`, !error, error);
   }
 
+  console.log('\n-- which build is running --');
+  const { version } = require(path.join(ROOT, 'arcade/version.js'));
+  const pkgVersion = require(path.join(ROOT, 'package.json')).version;
+  const sha = '0123456789abcdef0123456789abcdef01234567';
+  const ci = version({ GIT_SHA: sha, BUILD_DATE: '2026-11-01T12:00:00Z' });
+  ok('the version comes from package.json', ci.version === pkgVersion);
+  ok('the commit is the first 7 characters', ci.commit === '0123456', ci.commit);
+  ok('the full commit is kept for the link', ci.commitFull === sha);
+  ok('the build date is passed through', ci.built === '2026-11-01T12:00:00Z');
+  ok('the Node version is the running one', ci.node === process.versions.node);
+  const local = version({});
+  ok('a local build says dev', local.commit === 'dev' && local.commitFull === null && local.built === null, JSON.stringify(local));
+  ok('the old default "dev" counts as a local build', version({ GIT_SHA: 'dev' }).commit === 'dev');
+  ok('a nonsense date is dropped', version({ GIT_SHA: sha, BUILD_DATE: 'soon' }).built === null);
+  ok('version() with no argument has every field',
+    ['version', 'commit', 'commitFull', 'built', 'node'].every(k => k in version()));
+  const feedbackApp = require(path.join(ROOT, 'arcade/feedback.js')).appVersion({ GIT_SHA: sha });
+  ok('feedback still says the app, version and commit',
+    feedbackApp.name === 'Arcade' && feedbackApp.version === pkgVersion && feedbackApp.commit === '0123456', JSON.stringify(feedbackApp));
+
   console.log(`\n  ${pass} passed, ${fail} failed`);
   return { pass, fail };
 }

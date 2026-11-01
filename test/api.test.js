@@ -296,6 +296,20 @@ async function run({ base, root }) {
   ok('the countdown is quiet while the end is far off',
     season.data.daysLeft === null || typeof season.data.closingSoon === 'boolean');
 
+  console.log('\n-- which build is running --');
+  const health = await (await fetch(base + '/healthz')).json();
+  ok('/healthz still says ok, words and themes', health.ok === true && !!health.words && health.themes > 0);
+  ok('/healthz says the version, commit, build date and Node',
+    ['version', 'commit', 'commitFull', 'built', 'node'].every(k => k in health) && health.node === process.versions.node,
+    JSON.stringify(health));
+  const versionUrl = base + '/api/admin/version';
+  ok('the admin version needs the admin password', (await fetch(versionUrl)).status === 401);
+  ok('a wrong password is refused too', (await fetch(versionUrl, { headers: { 'X-Admin-Token': 'nope' } })).status === 401);
+  const adminVersion = await fetch(versionUrl, { headers: { 'X-Admin-Token': ADMIN } });
+  const adminV = await adminVersion.json();
+  ok('the admin page gets the version', adminVersion.status === 200 &&
+    adminV.version === health.version && adminV.commit === health.commit && adminV.node === health.node, JSON.stringify(adminV));
+
   console.log('\n-- admin is locked --');
   ok('no token is refused', (await admin('/overview', 'GET', undefined, null)).status === 401);
   ok('a wrong token is refused', (await admin('/overview', 'GET', undefined, 'nope')).status === 401);
