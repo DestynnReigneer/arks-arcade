@@ -23,6 +23,31 @@ jobs:
       - run: npm ci
       - run: npm test
 
+  browser:
+    name: Browser tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+
+      - run: npm ci
+      # Only Chromium (and the system libraries it needs): the tests don't
+      # use the other browsers, and this keeps the job quick.
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser
+
+      # When something fails, the report shows what the browser saw.
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
   docker:
     name: Docker build
     runs-on: ubuntu-latest
@@ -82,6 +107,11 @@ jobs:
           echo "--- container logs ---"
           docker logs arcade2
           exit 1
+
+      # Playwright is a tool for testing only: the image is built with
+      # npm ci --omit=dev, so it must not be in there.
+      - name: Playwright stays out of the image
+        run: docker run --rm --entrypoint sh arks-arcade:ci -c 'test ! -e /app/node_modules/@playwright && test ! -e /app/node_modules/playwright-core'
 
       - name: Stop
         if: always()
