@@ -7,9 +7,26 @@ to-do list as checkboxes (the rule is in the maintainer's global CLAUDE.md
 and `arks-internal/conventions/sessions.md`): do the checked items in the
 order they were clicked, and keep the rest pinned here.
 
+## The shared kit (2026-11-01)
+
+- Shared code now comes from one kit kept in the private repo (`../arks-internal/kit`).
+  `kit/version.js` and `kit/burst-limit.js` replace `arcade/version.js` and
+  `arcade/burst-limit.js`; `kit/security.js` and `kit/feedback.js` hold the shared
+  parts, and `arcade/security.js` and `arcade/feedback.js` keep what's the arcade's
+  own (its CSP, its looser `TRUST_PROXY` reading, picture storage, the 413 for a big
+  picture). `public/dock.js`, `public/snapframe.js` and `public/avatars.js` are kit
+  copies at the same paths as before.
+- `kit/kit.json` records the kit's commit and a fingerprint for each file, and
+  `npm test` runs `scripts/check-kit.js` first, so CI fails if a kit file is edited
+  here. Change them in the kit, run its sync, and open a PR here. The Dockerfile copies
+  `kit/` into the image.
+- Messages that changed while the copies were made to agree: the profile's wait says
+  "in a short time" instead of "in a few minutes", the no-profile wait ends "this one
+  has sent them all", and the picture-too-big message uses the shared words.
+
 ## Which version is running (2026-11-01)
 
-- `arcade/version.js` reads the version (package.json), the commit (`GIT_SHA`), the
+- `kit/version.js` (part of the shared kit) reads the version (package.json), the commit (`GIT_SHA`), the
   build date (`BUILD_DATE`) and Node's version once at startup. `/healthz` returns them
   alongside what it already said, and the admin page shows one quiet line at the bottom
   from `GET /api/admin/version` (admin only), the commit linking to GitHub. Players never
@@ -79,8 +96,8 @@ smaller. While anyone is hosting a game, a LIVE pill with the number of games fa
 the bar as the lobby scrolls away, and tapping it jumps back to the lobby. The footer
 logo fades in as you reach the bottom, and nothing shows a scroll bar.
 
-- `public/dock.js` does the shrinking and fading. It's a copy of a file shared with other
-  apps, so keep the copies in step and keep this one free of anything specific to them.
+- `public/dock.js` does the shrinking and fading. It comes from the shared kit, so change
+  it there, not here.
 - The title lockup is a little smaller (46 pixels tall instead of 60), and the two side
   columns share the leftover room, so the title stays centered on a phone too.
 - The game pages keep their own headers for now.
@@ -155,8 +172,8 @@ board-name setting and adult PIN are only for copies running without it.
   sign-in, `/device` for guest play, `boardName`, the clip inbox, avatars from
   the account (`avatar.art`, or the icon as `arks:<icon>:<color>`), and
   handing a guest's name and avatar to sign-up (`/api/prefill`).
-  `public/avatars.js` is the original of the shared avatar collection; the
-  other apps keep exact copies, so copy it over after changing it.
+  `public/avatars.js` comes from the shared kit, like the other apps' copies, so
+  change it there and sync it over.
   The Hub already signs in through ARKS ID (arks-family-hub PR #26, contract
   v3). When the arcade does, its `server/arksid.js` and `test/harness.js` (a
   pretend ARKS ID for tests) are worth copying. Two lessons from it: profile

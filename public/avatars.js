@@ -8,7 +8,8 @@
 //
 // The optional sign-in service (ARKS ID) and the other apps that use it keep
 // exact copies of this file, so a character picked in one app looks the same
-// in all of them. Change it here first, then copy it over unchanged.
+// in all of them. It is part of the shared kit (kit/kit.json lists it): change
+// the kit's original and copy it over with the sync, never one app's copy.
 
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();

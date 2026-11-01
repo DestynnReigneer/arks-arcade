@@ -56,7 +56,7 @@ const adminSession = require('./arcade/admin-session');
 const { requireAdmin } = adminSession;
 app.use('/api/admin', adminSession.routes());
 // Which build is running, for the line at the bottom of the admin page.
-const { version } = require('./arcade/version');
+const { version } = require('./kit/version');
 app.get('/api/admin/version', requireAdmin, (req, res) => res.json(version()));
 
 // ---- Optional: signing in through ARKS ID (arcade/arksid.js) ----
