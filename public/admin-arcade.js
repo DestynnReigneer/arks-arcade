@@ -27,6 +27,10 @@
   ];
 
   const state = { filter: 'all' };
+  // With ARKS ID on, new feedback lives in ARKS ID's admin console: { url,
+  // waiting }. The items here are then the arcade's older notes, read-only
+  // except for your own note to self.
+  let inbox = null;
 
   async function api(path, { method = 'GET', body } = {}) {
     const res = await fetch(API + path, {
@@ -54,7 +58,10 @@
   async function loadFeedback() {
     const host = $('feedbackList');
     try {
-      const { statuses, items } = await api('/feedback');
+      const data = await api('/feedback');
+      const { statuses, items } = data;
+      inbox = data.inbox || null;
+      renderInboxNote();
       renderFeedbackTabs(statuses, items);
       const shown = state.filter === 'all' ? items : items.filter(i => i.status === state.filter);
       host.innerHTML = '';
@@ -66,6 +73,25 @@
     } catch (e) {
       host.textContent = e.message;
     }
+  }
+
+  // The pointer to ARKS ID's console, above the older notes.
+  function renderInboxNote() {
+    let box = $('feedbackInbox');
+    if (!inbox) { if (box) box.remove(); return; }
+    if (!box) {
+      box = document.createElement('div');
+      box.id = 'feedbackInbox';
+      box.className = 'fb-inbox';
+      $('feedbackTabs').before(box);
+    }
+    box.innerHTML = '<p></p><p data-waiting></p><a target="_blank" rel="noopener">Open ARKS ID\'s admin console</a><p class="fb-inbox-sub"></p>';
+    box.querySelector('p').textContent = 'Feedback now lives in ARKS ID\'s admin console. When someone taps the little bug here, their note goes there, next to the notes from your other apps, and you answer it there. Your reply reaches them under My feedback here in the arcade.';
+    const waiting = box.querySelector('[data-waiting]');
+    if (inbox.waiting) waiting.textContent = `${inbox.waiting} ${inbox.waiting === 1 ? 'note is' : 'notes are'} waiting to go to ARKS ID because it couldn't be reached. The arcade tries again every minute, so you don't need to do anything.`;
+    else waiting.remove();
+    box.querySelector('a').href = inbox.url;
+    box.querySelector('.fb-inbox-sub').textContent = 'Below are the notes that came in before. They stay so you can still read them, with their screenshots and details, and you can still keep a note to self on each one, but they can\'t be answered, moved or deleted anymore.';
   }
 
   function renderFeedbackTabs(statuses, items) {
@@ -180,6 +206,12 @@
     select.value = item.status;
     const note = card.querySelector('input');
     note.value = item.note || '';
+    // The older notes, once ARKS ID has the inbox: only the note to self changes.
+    if (inbox) {
+      select.disabled = true;
+      select.title = 'Older feedback can only be read here now.';
+      card.querySelector('[data-act="delete"]').remove();
+    }
 
     card.querySelector('[data-act="save"]').onclick = async () => {
       try {
@@ -210,7 +242,8 @@
           div.append(who, tx);
           thread.appendChild(div);
         }
-        if (item.fromProfile) {
+        if (inbox) thread.insertAdjacentHTML('beforeend', '<div class="empty-note">This came in before feedback moved to ARKS ID, so it can only be read here.</div>');
+        else if (item.fromProfile) {
           const ta = document.createElement('textarea');
           ta.maxLength = 5000; ta.rows = 3; ta.placeholder = 'Your reply. Only the person who sent it sees it.';
           const send = document.createElement('button');

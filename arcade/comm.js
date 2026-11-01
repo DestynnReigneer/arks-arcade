@@ -46,6 +46,41 @@ function forgetFeedback(id) {
   if (row) extras.removePicture(row.picture);
 }
 
+// ---- ARKS ID's one feedback inbox (optional) --------------------------------
+// When the arcade signs in through ARKS ID, feedback isn't kept here anymore:
+// each note goes on to ARKS ID's inbox (its contract v10) through the shared
+// kit's feedback-relay.js, where the admin reads every app's feedback in one
+// place, and "My feedback" comes from there. If ARKS ID can't be reached, the
+// note waits in the relay's queue and goes later. The notes the Comm Center
+// already holds stay here, readable on the admin page, but can't be changed
+// anymore (except the admin's own note to self). Without ARKS ID, nothing
+// here changes. server.js calls setInbox({ relay, current, url }).
+let inbox = null;
+const READ_ONLY = "Feedback lives in ARKS ID's admin console now, so the arcade's older feedback can only be read here.";
+const AWAY = "ARKS ID can't be reached right now, and that's where your feedback lives. Try again in a few minutes.";
+// The arcade's words for the kinds and statuses, and ARKS ID's.
+const TO_ID_KIND = { issue: 'broken', feature: 'idea', message: 'message' };
+const FROM_ID_KIND = { broken: 'issue', idea: 'feature', message: 'message' };
+const FROM_ID_STAGE = { new: 'new', seen: 'pending', pending: 'in-progress', fixed: 'completed', wontfix: 'canceled' };
+// The arcade's own time format ("2026-11-01 18:00:00", UTC), from ARKS ID's milliseconds.
+const sqlTime = ms => new Date(Number(ms) || 0).toISOString().slice(0, 19).replace('T', ' ');
+// ARKS ID's note, in the shape the "My feedback" card already draws.
+const fromId = n => ({
+  id: n.id, kind: FROM_ID_KIND[n.kind] || 'message', message: String(n.body || ''), game: null, status: FROM_ID_STAGE[n.stage] || 'new',
+  createdAt: sqlTime(n.at), editedAt: n.editedAt ? sqlTime(n.editedAt) : null, hasPicture: !!n.picture, replyCount: Number(n.replyCount) || 0,
+  ...(Array.isArray(n.replies) ? { replies: n.replies.map(x => ({ id: x.id, fromAdmin: !!x.fromAdmin, name: x.name || null, body: String(x.body || ''), createdAt: sqlTime(x.at) })) } : {})
+});
+// One of the person's calls, through the ARKS ID session the arcade holds for them.
+async function viaId(req, res, ask, shape) {
+  let me = null;
+  try { me = await inbox.current(req); } catch { /* counts as signed out */ }
+  if (!me) return res.status(401).json({ error: 'Sign in with ARKS ID to see your feedback.' });
+  let r;
+  try { r = await ask(me.sessionId); } catch { return res.status(503).json({ error: AWAY }); }
+  if (r.status >= 400) return res.status(r.status).json({ error: r.data.error || AWAY });
+  res.status(r.status).json(shape ? shape(r.data) : { ok: true });
+}
+
 function fail(message, status) {
   return Object.assign(new Error(message), { status });
 }
@@ -141,6 +176,11 @@ router.post('/feedback', express.json({ limit: extras.BODY_LIMIT }), async (req,
     const profile = body.profileToken ? require('./profiles').verify(body.profileToken) : null;
     const limited = await overLimit(req, profile);
     if (limited) throw fail(limited, 429);
+    if (inbox) {
+      const sent = await forward(req, body, { kind, message, picture });
+      if (sent) return res.status(sent.status).json(sent.body);
+      // An ARKS ID without the inbox yet (older than v10): kept here, as before.
+    }
     // No room left for pictures: the note still goes in, without it.
     let pictureDropped = false;
     if (picture && !extras.pictureFits(picture)) { picture = null; pictureDropped = true; flagPicturesFull(); }
@@ -165,6 +205,29 @@ router.post('/feedback', express.json({ limit: extras.BODY_LIMIT }), async (req,
   } catch (e) { next(e); }
 });
 
+// Passes a note on to ARKS ID. -> { status, body } to answer with, or null
+// when ARKS ID has no inbox yet and the note should be kept here. Who sent it
+// comes from the ARKS ID sign-in on this device, never from the browser; a
+// guest goes with the name they typed. ARKS ID pings Discord itself.
+async function forward(req, body, { kind, message, picture }) {
+  let me = null;
+  try { me = await inbox.current(req); } catch { /* a guest */ }
+  const { device, version, app, server, ...rest } = extras.details(req, body.details);
+  const game = gameOrNull(body.game);
+  const from = clean(body.from, 30);
+  const r = await inbox.relay.send({
+    kind: TO_ID_KIND[kind], body: message, picture: picture ? body.picture : null,
+    details: { ...rest, app, server: { userAgent: server.userAgent }, extra: { ...(game ? { game } : {}), device } },
+    person: me ? { user: me.account.user_id } : from ? { guestName: from } : {}
+  });
+  if (r.older) return null;
+  if (r.error) return { status: 400, body: { error: r.error } };
+  return { status: 201, body: r.pictureDropped ? {
+    forwarded: true, pictureDropped: true,
+    note: 'Your note arrived, but the picture couldn\'t come with it, because there\'s no room left for screenshots right now. The admin has been told.'
+  } : { forwarded: true } };
+}
+
 // ---- the sender's side: "My feedback" (2026-11-01) ---------------------------
 // Everything here takes the profile's token in the body, so it never sits in
 // an address. Only feedback that profile sent, and only its copy.
@@ -183,6 +246,7 @@ const senderView = (r, full) => ({
   hasPicture: !!r.picture, replyCount: replyCount(r.id), ...(full ? { replies: repliesOf(r.id) } : {})
 });
 router.post('/mine', (req, res, next) => {
+  if (inbox) return viaId(req, res, s => inbox.relay.mine(s, (req.body || {}).view), d => ({ items: (d.items || []).map(fromId) }));
   try {
     const profile = mine(req);
     const archive = (req.body || {}).view === 'archive';
@@ -191,9 +255,11 @@ router.post('/mine', (req, res, next) => {
   } catch (e) { next(e); }
 });
 router.post('/mine/:id', (req, res, next) => {
+  if (inbox) return viaId(req, res, s => inbox.relay.thread(s, req.params.id), d => ({ thread: fromId(d.thread || {}) }));
   try { const p = mine(req); res.json({ thread: senderView(minePiece(req, p), true) }); } catch (e) { next(e); }
 });
 router.post('/mine/:id/edit', (req, res, next) => {
+  if (inbox) return viaId(req, res, s => inbox.relay.edit(s, req.params.id, (req.body || {}).message));
   try {
     const p = mine(req), row = minePiece(req, p);
     if (ARCHIVED.includes(row.status)) throw fail('That one is done already, so it can\'t be changed. Send a new one instead.', 409);
@@ -204,6 +270,7 @@ router.post('/mine/:id/edit', (req, res, next) => {
   } catch (e) { next(e); }
 });
 router.post('/mine/:id/reply', (req, res, next) => {
+  if (inbox) return viaId(req, res, s => inbox.relay.reply(s, req.params.id, (req.body || {}).body));
   try {
     const p = mine(req), row = minePiece(req, p);
     const body = clean((req.body || {}).body, 5000);
@@ -216,6 +283,7 @@ router.post('/mine/:id/reply', (req, res, next) => {
   } catch (e) { next(e); }
 });
 router.post('/mine/:id/delete', (req, res, next) => {
+  if (inbox) return viaId(req, res, s => inbox.relay.remove(s, req.params.id), () => ({ deleted: true }));
   try {
     const p = mine(req), row = minePiece(req, p);
     if (row.admin_hidden) forgetFeedback(row.id);
@@ -238,7 +306,9 @@ function adminRouter(requireAdmin) {
     const rows = status
       ? db.db.prepare('SELECT * FROM comm_feedback WHERE admin_hidden = 0 AND status = ? ORDER BY created_at DESC').all(status)
       : db.db.prepare('SELECT * FROM comm_feedback WHERE admin_hidden = 0 ORDER BY created_at DESC').all();
-    res.json({ statuses: STATUSES, items: rows.map(rowToFeedback) });
+    // inbox: with ARKS ID, where new feedback lives, and how many notes are
+    // still waiting to go there. The items below are then a read-only archive.
+    res.json({ statuses: STATUSES, items: rows.map(rowToFeedback), inbox: inbox ? { url: `${inbox.url}/admin`, waiting: inbox.relay.waiting() } : null });
   });
 
   admin.patch('/feedback/:id', (req, res, next) => {
@@ -248,6 +318,8 @@ function adminRouter(requireAdmin) {
       if (!row) throw fail('No such message.', 404);
       const status = body.status === undefined ? row.status : body.status;
       if (!STATUSES.includes(status)) throw fail('Unknown status.', 400);
+      // The archive: only the admin's own note to self can still change.
+      if (inbox && status !== row.status) throw fail(READ_ONLY, 409);
       const note = body.note === undefined ? row.admin_note : clean(body.note, 500);
       db.db.prepare(`
         UPDATE comm_feedback SET status = ?, admin_note = ?, updated_at = datetime('now') WHERE id = ?
@@ -269,12 +341,13 @@ function adminRouter(requireAdmin) {
     try {
       const row = db.db.prepare('SELECT * FROM comm_feedback WHERE id = ? AND admin_hidden = 0').get(Number(req.params.id));
       if (!row) throw fail('No such message.', 404);
-      if (row.status === 'new') db.db.prepare("UPDATE comm_feedback SET status = 'pending', updated_at = datetime('now') WHERE id = ?").run(row.id);
+      if (row.status === 'new' && !inbox) db.db.prepare("UPDATE comm_feedback SET status = 'pending', updated_at = datetime('now') WHERE id = ?").run(row.id);
       res.json({ replies: repliesOf(row.id) });
     } catch (e) { next(e); }
   });
   admin.post('/feedback/:id/replies', (req, res, next) => {
     try {
+      if (inbox) throw fail(READ_ONLY, 409);
       const row = db.db.prepare('SELECT * FROM comm_feedback WHERE id = ? AND admin_hidden = 0').get(Number(req.params.id));
       if (!row) throw fail('No such message.', 404);
       const body = clean((req.body || {}).body, 5000);
@@ -287,6 +360,7 @@ function adminRouter(requireAdmin) {
   // Delete for me: the sender keeps their copy unless they deleted it too, or
   // it came from someone with no profile.
   admin.delete('/feedback/:id', (req, res) => {
+    if (inbox) return res.status(409).json({ error: READ_ONLY });
     const row = db.db.prepare('SELECT * FROM comm_feedback WHERE id = ?').get(Number(req.params.id) || 0);
     if (row && (row.sender_hidden || !row.profile_id)) forgetFeedback(row.id);
     else if (row) db.db.prepare('UPDATE comm_feedback SET admin_hidden = 1 WHERE id = ?').run(row.id);
@@ -333,4 +407,5 @@ router.use((err, req, res, next) => {
   res.status(err.status || 500).json({ error: err.message });
 });
 
-module.exports = { router, adminRouter, post, safePost, listPosts, STATUSES, setFeedbackNotify: fn => { onFeedback = fn; }, setAdminCheck: fn => { adminCheck = fn; } };
+module.exports = { router, adminRouter, post, safePost, listPosts, STATUSES, setFeedbackNotify: fn => { onFeedback = fn; }, setAdminCheck: fn => { adminCheck = fn; },
+  setInbox: v => { inbox = v; } };

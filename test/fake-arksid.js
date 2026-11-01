@@ -1,7 +1,8 @@
 'use strict';
 
-// A pretend ARKS ID for the tests: just enough of its contract (v8) for the
-// arcade's sign-in, "whose device is this?", sessions, the clip inbox, and
+// A pretend ARKS ID for the tests: just enough of its contract (v10) for the
+// arcade's sign-in, "whose device is this?", sessions, the clip inbox, the
+// feedback inbox, and
 // the photos and team pictures people pick (served from /avatars/).
 // Whoever is in `next` signs in on the next /signin; `deviceOwner` is who owns
 // the next device that asks /device (null for a visitor's phone).
@@ -26,7 +27,11 @@ function startFakeArksId({ secret, arcadeBase }) {
     // Says it's a picture but isn't one.
     '/avatars/u_fake000001.webp': ['image/webp', Buffer.from('<script>alert(1)</script>')]
   };
-  const fake = { users, next: 'milo', deviceOwner: null, inbox: {}, sessions: new Map(), base: '', prefills: new Map(), lastPrefill: null, photoFetches: 0 };
+  const fake = { users, next: 'milo', deviceOwner: null, inbox: {}, sessions: new Map(), base: '', prefills: new Map(), lastPrefill: null, photoFetches: 0,
+    // The feedback inbox (v10), and what the admin does in ARKS ID's console.
+    notes: [], feedbackDown: false, inboxMissing: false,
+    adminReply(id, text) { fake.notes.find(n => n.id === id).replies.push({ id: 99, fromAdmin: true, name: 'Sam', body: text, at: Date.now() }); },
+    setStage(id, stage) { fake.notes.find(n => n.id === id).stage = stage; } };
   const codes = new Map(), deviceCodes = new Map();
   const code = () => crypto.randomBytes(24).toString('base64url');
   const json = (res, status, body) => { res.writeHead(status, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(body)); };
@@ -101,6 +106,45 @@ function startFakeArksId({ secret, arcadeBase }) {
       if (!keys.length) return json(res, 400, { error: 'nobody' });
       keys.forEach(k => { (fake.inbox[k] = fake.inbox[k] || []).push(b.clip); });
       return json(res, 200, { sent: keys.length });
+    }
+    // The one feedback inbox (contract v10). feedbackDown answers 503 (the
+    // arcade keeps the note in its queue); inboxMissing answers 404, like an
+    // ARKS ID older than v10 (the arcade keeps the note itself).
+    if (u.pathname === '/api/app/feedback' || u.pathname.startsWith('/api/app/feedback/')) {
+      if (fake.inboxMissing) return json(res, 404, { error: 'Not found.' });
+      if (fake.feedbackDown) return json(res, 503, { error: 'down' });
+      const b = req.method === 'GET' || req.method === 'DELETE' ? {} : await readBody(req);
+      const route = u.pathname.slice('/api/app/feedback'.length);
+      if (req.method === 'POST' && route === '') {
+        const dup = fake.notes.find(n => n.appRef === b.appRef);
+        if (dup) return json(res, 200, { id: dup.id, duplicate: true });
+        const n = { id: fake.notes.length + 1, kind: b.kind, body: b.body, picture: !!b.picture, details: b.details, person: b.person,
+          appRef: b.appRef, stage: 'new', replies: [], at: Date.now(), editedAt: null, hidden: false };
+        fake.notes.push(n);
+        return json(res, 201, { id: n.id });
+      }
+      const s = fake.sessions.get(req.method === 'GET' || req.method === 'DELETE' ? q.get('session') : b.session);
+      if (!s || !s.valid) return json(res, 401, { error: 'Sign in again to see your feedback.' });
+      const uid = users[s.key].id;
+      const closed = n => ['fixed', 'wontfix'].includes(n.stage);
+      const view = (n, full) => ({ id: n.id, kind: n.kind, body: n.body, at: n.at, editedAt: n.editedAt, stage: n.stage, closed: closed(n),
+        picture: n.picture, app: 'arcade', appName: 'Arcade', replyCount: n.replies.length, ...(full ? { replies: n.replies } : {}) });
+      if (req.method === 'GET' && route === '') {
+        const archive = q.get('view') === 'archive';
+        return json(res, 200, { items: fake.notes.filter(n => n.person && n.person.user === uid && !n.hidden && closed(n) === archive).reverse().map(n => view(n)) });
+      }
+      const fm = /^\/(\d+)(\/replies)?$/.exec(route);
+      const n = fm && fake.notes.find(x => x.id === Number(fm[1]) && x.person && x.person.user === uid && !x.hidden);
+      if (!n) return json(res, 404, { error: "That feedback isn't there anymore." });
+      if (req.method === 'GET') return json(res, 200, { thread: view(n, true) });
+      if (req.method === 'PUT') {
+        if (closed(n)) return json(res, 409, { error: "That one is closed already, so it can't be changed. Send a new one instead." });
+        n.body = b.body; n.editedAt = Date.now();
+        return json(res, 200, { ok: true });
+      }
+      if (req.method === 'POST' && fm[2]) { n.replies.push({ id: n.replies.length + 1, fromAdmin: false, name: users[s.key].name, body: b.body, at: Date.now() }); return json(res, 201, { ok: true }); }
+      if (req.method === 'DELETE') { n.hidden = true; return json(res, 200, { ok: true }); }
+      return json(res, 404, { error: 'Not found.' });
     }
     m = /^\/api\/clips\/(s_[0-9a-f]+)$/.exec(u.pathname);
     if (req.method === 'GET' && m) {
