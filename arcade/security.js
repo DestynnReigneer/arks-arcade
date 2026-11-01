@@ -1,17 +1,10 @@
 'use strict';
 
-// Small, dependency-free hardening shared by the whole arcade.
+// The arcade's security settings. The shared code (the constant-time
+// compare and the headers) is kit/security.js, a copy of the shared kit that
+// every app uses; this file only says what's the arcade's own.
 
-const crypto = require('node:crypto');
-
-// Compares the admin password in constant time, so response timing can't be
-// used to guess it a character at a time.
-function sameSecret(supplied, expected) {
-  if (!expected) return false;
-  const a = crypto.createHash('sha256').update(String(supplied || '')).digest();
-  const b = crypto.createHash('sha256').update(String(expected)).digest();
-  return crypto.timingSafeEqual(a, b);
-}
+const kit = require('../kit/security');
 
 // Browser-side protection on every response:
 // - scripts may only come from this server (no injected outside scripts),
@@ -19,36 +12,30 @@ function sameSecret(supplied, expected) {
 // - browsers don't guess file types or leak full URLs to other sites.
 // Inline scripts/styles stay allowed: a few pages use them, and every page
 // writes player text with textContent, not as HTML.
-const CSP = [
-  "default-src 'self'",
-  "script-src 'self' 'unsafe-inline'",
-  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-  "font-src 'self' https://fonts.gstatic.com data:",
-  "img-src 'self' data:",
-  "connect-src 'self'",
-  "media-src 'self' data: blob:",
-  "worker-src 'self'",
-  "object-src 'none'",
-  "base-uri 'self'",
-  "form-action 'self'",
-  "frame-ancestors 'self'"
-].join('; ');
-
-function headers(req, res, next) {
-  res.set({
-    'Content-Security-Policy': CSP,
-    'X-Content-Type-Options': 'nosniff',
-    'X-Frame-Options': 'SAMEORIGIN',
-    'Referrer-Policy': 'same-origin',
-    'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=()',
-    'Cross-Origin-Opener-Policy': 'same-origin'
-  });
-  next();
-}
+const { headers, CSP } = kit.createHeaders({
+  csp: [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline'",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com data:",
+    "img-src 'self' data:",
+    "connect-src 'self'",
+    "media-src 'self' data: blob:",
+    "worker-src 'self'",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'self'"
+  ],
+  frameOptions: 'SAMEORIGIN',
+  referrerPolicy: 'same-origin',
+  permissionsPolicy: 'camera=(), microphone=(), geolocation=(), payment=()'
+});
 
 // Only believe X-Forwarded-For (the visitor's real address, for rate limits)
 // when you've said the arcade sits behind a reverse proxy. Otherwise anyone
-// could send that header and dodge every rate limit.
+// could send that header and dodge every rate limit. The arcade runs behind
+// whatever proxy its owner has, so it also takes a hop count or true.
 function trustProxySetting() {
   const v = String(process.env.TRUST_PROXY || '').trim().toLowerCase();
   if (!v || v === '0' || v === 'false' || v === 'no') return false;
@@ -56,4 +43,4 @@ function trustProxySetting() {
   return /^\d+$/.test(v) ? Number(v) : v;   // a hop count, or a subnet like "172.16.0.0/12"
 }
 
-module.exports = { sameSecret, headers, trustProxySetting };
+module.exports = { sameSecret: kit.sameSecret, headers, CSP, trustProxySetting };

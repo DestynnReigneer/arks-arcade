@@ -20,6 +20,7 @@ RUN npm ci --omit=dev
 COPY db.js server.js ./
 COPY rambler ./rambler
 COPY arcade ./arcade
+COPY kit ./kit
 COPY chess ./chess
 COPY spinsolve ./spinsolve
 COPY trivia ./trivia
