@@ -554,6 +554,46 @@ async function run() {
     ok('still waiting after 2 minutes', !lim.take(['ip:a']).ok);
     t += 61 * 1000;
     ok('the wait is over after 3 minutes', lim.take(['ip:a']).ok);
+
+    // Without a profile: 5 in a rolling hour.
+    const L = require('../arcade/burst-limit');
+    t = 0;
+    const guests = createBurstLimit({ now: () => t, max: L.GUEST_MAX, windowMs: L.GUEST_WINDOW_MS, waitMs: 0 });
+    for (let k = 0; k < 5; k++) { guests.take(['ip:g']); t += 60 * 1000; }
+    const sixth = guests.take(['ip:g']);
+    ok('a 6th note in an hour without a profile waits until the oldest is an hour old', !sixth.ok && sixth.waitSeconds === 55 * 60, String(sixth.waitSeconds));
+    t = 60 * 60 * 1000;
+    ok('…then one more can go', guests.take(['ip:g']).ok && !guests.take(['ip:g']).ok);
+    ok('the wait message says how long, in plain words', /Try again in 2 minutes/.test(L.guestWaitMessage(90)));
+  }
+
+  console.log('\n-- ARKS ID photos --');
+  {
+    const a = require('../arcade/arksid-photo');
+    const base = 'https://id.example.com';
+    ok('a photo from ARKS ID\'s own avatars folder is fetched', a.photoPath(base + '/avatars/u_abc123.webp?v=3', base) === '/avatars/u_abc123.webp?v=3');
+    ok('…and so is a team picture', a.photoPath(base + '/avatars/teams/faithful.png', base) === '/avatars/teams/faithful.png');
+    ok('anything on another site is not', a.photoPath('https://elsewhere.example.com/avatars/u_abc123.webp', base) === null);
+    ok('…nor any other path on ARKS ID', [base + '/api/me', base + '/avatars/../api/me', base + '/avatars/u_abc.webp?v=1&x=2', 'not a url']
+      .every(u => a.photoPath(u, base) === null));
+    const id = a.photoAvatar('abcdefabcdef0001', base + '/avatars/u_abc123.webp?v=3', 'arks:cat:teal');
+    ok('a photo avatar keeps the icon to fall back on', /^photo:abcdefabcdef0001:[0-9a-f]{8}:arks:cat:teal$/.test(id) && a.isPhotoAvatar(id), id);
+    ok('…and changes with each new picture', id !== a.photoAvatar('abcdefabcdef0001', base + '/avatars/u_abc123.webp?v=4', 'arks:cat:teal'));
+  }
+
+  console.log('\n-- every page asks who\'s playing and draws photos --');
+  {
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const dir = path.join(__dirname, '..', 'public');
+    for (const f of fs.readdirSync(dir).filter(n => n.endsWith('.html'))) {
+      const html = fs.readFileSync(path.join(dir, f), 'utf8');
+      if (!html.includes('src="avatars.js"')) continue;
+      ok(`${f} draws ARKS ID photos (avatar-photo.js right after avatars.js)`, /<script src="avatars\.js"><\/script>\s*<script src="avatar-photo\.js"><\/script>/.test(html));
+      if (f !== 'index.html' && f !== 'admin.html') {
+        ok(`${f} runs the Who's playing? check (topbar.js and profile.js)`, html.includes('src="topbar.js"') && html.includes('src="profile.js"'));
+      }
+    }
   }
 
   // The browser scripts aren't run by the other tests, so at least make sure

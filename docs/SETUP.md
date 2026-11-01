@@ -149,6 +149,14 @@ set, ARKS ID takes over everything about a person:
   copy of the arcade's avatar collection, so someone can pick a Shiba or a toon
   there, and it shows here. Someone using one of ARKS ID's plain icons gets that
   icon here in their color.
+- **Photos and team pictures** picked in ARKS ID show here too, in Who's
+  playing?, the top bar and the high-score boards. The arcade's server fetches
+  each picture from ARKS ID (through `ARKS_ID_API_URL` if you set it) and serves
+  it from the arcade's own address, so browsers never load anything from
+  ARKS ID and nothing needs changing in your proxy. Only people signed in with
+  ARKS ID (and the admin) see the photos; a guest sees that person's icon.
+- **Who's playing?** also comes up on a game page opened straight from its
+  address or a bookmark, so nobody plays as no one.
 - **Guests pick an avatar for fun.** **Make an account** sends them to ARKS ID's
   sign-up page with the name and avatar they played with already filled in.
 - **Adult levels follow the person's role**: a signed-in adult or admin opens

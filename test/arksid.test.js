@@ -146,6 +146,59 @@ async function run({ base, root, fake, admin: ADMIN }) {
   const moved = await asAdmin('/api/profiles/admin/abcdefabcdef0001/link', 'POST', { arksid_user: 'u_alex000001' });
   ok('the admin can move a wrong link', moved.status === 200 && (await asAdmin('/api/profiles/admin/accounts')).data.accounts.find(a => a.name === 'Alex').profile_id === 'abcdefabcdef0001');
 
+  console.log('\n-- ARKS ID photos and team pictures --');
+  // A fetch that sends a browser's cookies and keeps the raw bytes.
+  const host = new URL(base).host;
+  const getPicture = async (b, url, headers = {}) => {
+    const cookie = b ? [...b.jar].filter(([k]) => k.startsWith(host + ' ')).map(([k, v]) => `${k.split(' ')[1]}=${v}`).join('; ') : '';
+    const res = await fetch(base + url, { headers: { ...(cookie ? { Cookie: cookie } : {}), ...headers } });
+    return { status: res.status, type: res.headers.get('content-type') || '', body: Buffer.from(await res.arrayBuffer()) };
+  };
+  const kim = browser();
+  fake.next = 'kim';
+  await kim.call('/auth/signin?return=%2F');
+  let kimMe = await kim.me();
+  const kimAvatar = kimMe.profile && kimMe.profile.avatar;
+  ok('a photo picked in ARKS ID becomes the avatar, with the icon kept to fall back on', /^photo:[A-Za-z0-9]+:[0-9a-f]{8}:arks:star:pink$/.test(kimAvatar), kimAvatar);
+  const photoUrl = av => `/api/arksid/photo/${kimMe.profile.id}?v=${av.split(':')[2]}`;
+  const before = fake.photoFetches;
+  let pic = await getPicture(kim, photoUrl(kimAvatar));
+  ok('the arcade serves the photo from its own address', pic.status === 200 && pic.type.startsWith('image/webp') && pic.body.subarray(0, 4).toString() === 'RIFF', `${pic.status} ${pic.type}`);
+  await getPicture(kim, photoUrl(kimAvatar));
+  ok('…fetching it from ARKS ID once and keeping it for a while', fake.photoFetches === before + 1, String(fake.photoFetches - before));
+  ok('the admin page can show it too', (await getPicture(null, photoUrl(kimAvatar), { 'X-Admin-Token': ADMIN })).status === 200);
+  ok('someone not signed in gets no photo, so their page draws the icon', (await getPicture(visitor, photoUrl(kimAvatar))).status === 404);
+  ok('an address that isn\'t a profile gets nothing', (await getPicture(kim, '/api/arksid/photo/..%2F..%2Fetc')).status === 404);
+  const csp = (await fetch(base + '/')).headers.get('content-security-policy') || '';
+  ok('pages still only load pictures from the arcade itself', /img-src 'self' data:(;|$)/.test(csp), csp);
+  fake.users.kim.avatar.image = `${fake.base}/avatars/teams/faithful.png`;
+  await kim.call('/auth/signin?return=%2F');
+  kimMe = await kim.me();
+  pic = await getPicture(kim, photoUrl(kimMe.profile.avatar));
+  ok('a team picture works the same way, under a new address', kimMe.profile.avatar !== kimAvatar && pic.status === 200 && pic.type.startsWith('image/png'), `${kimMe.profile.avatar} ${pic.status} ${pic.type}`);
+  fake.users.kim.avatar.image = `${fake.base}/avatars/u_fake000001.webp?v=1`;
+  await kim.call('/auth/signin?return=%2F');
+  kimMe = await kim.me();
+  ok('a file that only claims to be a picture is never served', (await getPicture(kim, photoUrl(kimMe.profile.avatar))).status === 404);
+  fake.users.kim.avatar.image = 'https://elsewhere.example.com/avatars/u_kim0000001.webp';
+  await kim.call('/auth/signin?return=%2F');
+  kimMe = await kim.me();
+  ok('a picture on some other site is ignored, and the icon shows', kimMe.profile.avatar === 'arks:star:pink', kimMe.profile.avatar);
+  fake.users.kim.avatar.image = null;
+
+  console.log('\n-- feedback pictures when the folder is full --');
+  // This server was started with a tiny cap, so any picture is one too many.
+  const pngHead = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+  const smallPng = 'data:image/png;base64,' + Buffer.concat([pngHead, Buffer.alloc(200)]).toString('base64');
+  const miloToken = (await milo.me()).token;
+  const full1 = await milo.call('/api/comm/feedback', { method: 'POST', body: { message: 'Look at this', picture: smallPng, profileToken: miloToken } });
+  ok('the note still arrives, without its picture, and says so kindly', full1.status === 201 && full1.data.pictureDropped === true && /no room left/.test(full1.data.note), JSON.stringify(full1.data));
+  await milo.call('/api/comm/feedback', { method: 'POST', body: { message: 'And this', picture: smallPng, profileToken: miloToken } });
+  const inbox = (await asAdmin('/api/comm/admin/feedback')).data.items;
+  const flags = inbox.filter(i => i.from === 'The arcade');
+  ok('the admin is told once in the Comm Center, not for every note', flags.length === 1 && /500 MB/.test(flags[0].message), String(flags.length));
+  ok('…and the notes themselves have no picture', inbox.filter(i => /^(Look at this|And this)$/.test(i.message)).every(i => !i.hasPicture));
+
   console.log('\n-- signing out --');
   const out = await milo.call('/auth/signout', { method: 'POST', follow: false });
   ok('signing out ends the arcade sign-in and goes on to ARKS ID\'s sign-out', out.data.next === `${fake.base}/signout?app=arcade&return=%2F`);
