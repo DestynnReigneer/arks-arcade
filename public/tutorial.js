@@ -6,7 +6,7 @@
 // so their HTML is trusted.
 //
 //   const help = Tutorial.create('partdeux', [{ emoji, title, html }, ...]);
-//   help.autoOpen();          // first visit only
+//   help.autoOpen();          // first visit only (on this device)
 //   help.open(2);             // jump to a step
 
 const Tutorial = (() => {
@@ -107,8 +107,13 @@ const Tutorial = (() => {
       if (onClose) onClose();
     }
 
+    // Counts as seen the moment it opens by itself, not only when it's closed
+    // with its button: leaving the game with the rules still open used to
+    // bring them back every time (found by the maintainer, 2026-11-01).
     function autoOpen() {
-      if (!hasSeen(id)) open(0);
+      if (hasSeen(id)) return;
+      markSeen(id);
+      open(0);
     }
 
     return { open, close, autoOpen, get isOpen() { return !!root && !root.hidden; } };
