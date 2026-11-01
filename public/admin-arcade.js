@@ -7,9 +7,12 @@
   const API = '/api/comm/admin';
   const $ = id => document.getElementById(id);
 
+  // The same words as the maintainer's other apps (2026-11-01): New, Seen,
+  // Pending (you're on it), Fixed, plus Won't fix. Fixed and Won't fix move to
+  // the sender's Archive.
   const STATUS_LABELS = {
-    new: '🆕 New', pending: '⏳ Pending', 'in-progress': '🔧 In progress',
-    completed: '✅ Completed', canceled: '🚫 Canceled'
+    new: '🆕 New', pending: '👀 Seen', 'in-progress': '🔧 Pending',
+    completed: '✅ Fixed', canceled: '🚫 Won\'t fix'
   };
   const KIND_LABELS = { feature: '💡 Feature idea', issue: '🐛 Issue', message: '💬 Message' };
   const GAME_LABELS = { wordless: 'Wordless', rambler: 'Rambler', spinsolve: 'Spin & Solve', chess: 'Chess', dino: 'Dino Dash', trivia: 'Know-It-All', partdeux: 'Uh-Oh: Part Deux', daredevil: 'Dare Devil', snake: 'Snake', bricks: 'Brick Breaker', blocks: 'Block Drop', towers: 'Tower Defense' };
@@ -90,8 +93,10 @@
         <input type="text" maxlength="500" placeholder="Note to self (optional)">
         <button data-act="save">Save</button>
         <button data-act="copy">📋 Copy for chat</button>
-        <button data-act="delete" class="danger">Delete</button>
-      </div>`;
+        <button data-act="replies">💬 Replies</button>
+        <button data-act="delete" class="danger">Delete for me</button>
+      </div>
+      <div class="fb-thread" hidden></div>`;
     card.querySelector('.fb-kind').textContent = KIND_LABELS[item.kind] || item.kind;
     card.querySelector('.fb-from').textContent =
       `from ${item.from || 'anonymous'}${item.game ? ' · ' + GAME_LABELS[item.game] : ''}`;
@@ -183,8 +188,45 @@
         loadFeedback();
       } catch (e) { say($('feedbackMsg'), e.message, false); }
     };
+    // The thread: replies between you and the sender, and a box to answer.
+    // Someone who sent it without a profile can't see a reply, so there's no box.
+    const thread = card.querySelector('.fb-thread');
+    const repliesBtn = card.querySelector('[data-act="replies"]');
+    repliesBtn.textContent = `💬 Replies${item.replyCount ? ` (${item.replyCount})` : ''}`;
+    repliesBtn.onclick = async () => {
+      if (!thread.hidden) { thread.hidden = true; return; }
+      try {
+        const { replies } = await api(`/feedback/${item.id}/replies`);
+        thread.innerHTML = '';
+        if (!replies.length) thread.insertAdjacentHTML('beforeend', '<div class="empty-note">No replies yet.</div>');
+        for (const r of replies) {
+          const div = document.createElement('div');
+          div.className = 'fb-rep' + (r.fromAdmin ? ' admin' : '');
+          const who = document.createElement('div');
+          who.className = 'fb-rep-who';
+          who.textContent = `${r.fromAdmin ? 'You' : r.name || 'Them'} · ${when(r.createdAt)}`;
+          const tx = document.createElement('div');
+          tx.textContent = r.body;
+          div.append(who, tx);
+          thread.appendChild(div);
+        }
+        if (item.fromProfile) {
+          const ta = document.createElement('textarea');
+          ta.maxLength = 5000; ta.rows = 3; ta.placeholder = 'Your reply. Only the person who sent it sees it.';
+          const send = document.createElement('button');
+          send.textContent = 'Send reply';
+          send.onclick = async () => {
+            if (!ta.value.trim()) return;
+            try { await api(`/feedback/${item.id}/replies`, { method: 'POST', body: { body: ta.value } }); loadFeedback(); }
+            catch (e) { say($('feedbackMsg'), e.message, false); }
+          };
+          thread.append(ta, send);
+        } else thread.insertAdjacentHTML('beforeend', '<div class="empty-note">They sent it without a profile, so they can\'t see a reply.</div>');
+        thread.hidden = false;
+      } catch (e) { say($('feedbackMsg'), e.message, false); }
+    };
     card.querySelector('[data-act="delete"]').onclick = async () => {
-      if (!confirm('Delete this message for good?')) return;
+      if (!confirm('Delete your copy? The person who sent it keeps theirs until they delete it too.')) return;
       try {
         await api(`/feedback/${item.id}`, { method: 'DELETE' });
         loadFeedback();
