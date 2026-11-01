@@ -23,7 +23,7 @@ const MAX_TOTAL = process.env.NODE_ENV === 'test' && Number(process.env.FEEDBACK
 // A JSON body that holds the biggest picture (base64 makes it a third
 // bigger) plus the note and its details.
 const BODY_LIMIT = '2.5mb';
-const VERSION = require('../package.json').version;
+const { version } = require('./version');
 
 function fail(message, status = 400) {
   return Object.assign(new Error(message), { status });
@@ -95,10 +95,10 @@ function deviceOf(ua) {
   return `${kind}, ${system}, ${browser}`;
 }
 
-// Which build this is. CI bakes the git commit into the image (GIT_SHA).
-function appVersion(env = process.env) {
-  const sha = String(env.GIT_SHA || '').trim();
-  return { name: 'Arcade', version: VERSION, commit: /^[0-9a-f]{7,40}$/.test(sha) ? sha.slice(0, 12) : 'dev' };
+// Which build this is (see version.js).
+function appVersion(env) {
+  const v = version(env);
+  return { name: 'Arcade', version: v.version, commit: v.commit };
 }
 
 // One line of plain text: no control characters, cut to n.
@@ -129,7 +129,7 @@ function details(req, sent = {}) {
     errors: list(d.errors, 10).map(e => ({ at: str(e && e.at, 30), message: str(e && e.message, 300), source: str(e && e.source, 200) })),
     requests: list(d.requests, 10).map(r => ({ at: str(r && r.at, 30), method: str(r && r.method, 8).toUpperCase(), path: cleanPath(r && r.path), status: num(r && r.status), ms: num(r && r.ms) })),
     device: deviceOf(req.get('User-Agent')),
-    version: VERSION,
+    version: version().version,
     app: appVersion(),
     server: { receivedAt: new Date().toISOString(), userAgent: str(req.get('User-Agent'), 300) }
   };

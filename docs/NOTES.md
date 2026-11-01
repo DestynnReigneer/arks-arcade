@@ -7,6 +7,20 @@ to-do list as checkboxes (the rule is in the maintainer's global CLAUDE.md
 and `arks-internal/conventions/sessions.md`): do the checked items in the
 order they were clicked, and keep the rest pinned here.
 
+## Which version is running (2026-11-01)
+
+- `arcade/version.js` reads the version (package.json), the commit (`GIT_SHA`), the
+  build date (`BUILD_DATE`) and Node's version once at startup. `/healthz` returns them
+  alongside what it already said, and the admin page shows one quiet line at the bottom
+  from `GET /api/admin/version` (admin only), the commit linking to GitHub. Players never
+  see it. Feedback's "which build" uses the same module, so its commit is now 7
+  characters instead of 12.
+- CI also labels every image `sha-<commit>` and passes the build date in. Rolling back
+  is in `CONTRIBUTING.md`.
+- Worth a look later: `/healthz` still runs the Rambler season check and a forced theme
+  pack refresh on every call (lines that slipped in there back in #6 and #7). It
+  works, but it isn't as cheap as it could be for a dashboard that polls it.
+
 ## Review fixes and browser tests (2026-11-01)
 
 - **#65** Who's playing? keeps keyboard focus inside its card, marks the rest of the

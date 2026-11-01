@@ -275,10 +275,40 @@ ${theme.words.join(', ')}`;
     }
   });
 
+  // One quiet line at the bottom: which build is running.
+  const REPO_COMMIT_URL = 'https://github.com/DestynnReigneer/arks-arcade/commit/';
+  async function loadVersion() {
+    const line = document.getElementById('versionLine');
+    if (!line) return;
+    try {
+      const v = await apiGet('/api/admin/version');
+      line.textContent = '';
+      line.append(`Version ${v.version} · `);
+      if (v.commitFull) {
+        line.append('commit ');
+        const a = document.createElement('a');
+        a.href = REPO_COMMIT_URL + v.commitFull;
+        a.target = '_blank';
+        a.rel = 'noopener';
+        a.textContent = v.commit;
+        line.append(a);
+      } else {
+        line.append('a local build (not from GitHub)');
+      }
+      if (v.built) {
+        const when = new Date(v.built).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        line.append(` · built ${when}`);
+      }
+      line.append(` · Node ${v.node}`);
+    } catch (e) {
+      line.textContent = '';
+    }
+  }
+
   async function showAdmin() {
     lockScreen.classList.add('hidden');
     adminContent.classList.remove('hidden');
-    await Promise.all([loadRequests(), loadThemes()]);
+    await Promise.all([loadRequests(), loadThemes(), loadVersion()]);
   }
 
   // The server checks the password once and answers with a session cookie the
