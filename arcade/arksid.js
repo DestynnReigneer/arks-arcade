@@ -20,6 +20,8 @@
 //     admin owns, so nobody can dodge the adult rules by playing as a guest.
 //   - Clips the admin sends go through ARKS ID's clip inbox, so they pop up in
 //     whichever app the person opens next.
+//   - Feedback goes to ARKS ID's one inbox instead of the Comm Center's, and
+//     "My feedback" comes from there (see comm.js).
 //   - A photo or team picture someone picked on ARKS ID shows here too. The
 //     arcade's server fetches it from ARKS ID and serves it from the arcade
 //     itself (/api/arksid/photo/<profile>), so the browser only ever talks to
@@ -116,6 +118,14 @@ function createClient(s = settings(), fetchImpl = fetch) {
       if (!res.ok) throw new Error(`ARKS ID answered ${res.status}`);
       const body = await res.json();
       return typeof body.clip === 'string' && /^[a-z0-9][a-z0-9_-]{0,63}$/.test(body.clip) ? body.clip : null;
+    },
+    // ARKS ID's one feedback inbox (its contract v10): everything under
+    // /api/app/feedback, for the shared kit's feedback-relay.js.
+    // -> { status, data }. Throws when ARKS ID can't be reached.
+    async appFeedback(method, path, body) {
+      const init = body === undefined ? { method } : { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
+      const res = await call('/api/app/feedback' + path, init);
+      return { status: res.status, data: await res.json().catch(() => ({})) };
     },
     // A photo or team picture, fetched by the arcade's server. Only ARKS ID's
     // own /avatars/ addresses, and only real pictures -> { type, body } or null.
