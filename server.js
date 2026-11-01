@@ -55,6 +55,9 @@ const INITIALS_RE = /^[A-Z0-9]{1,3}$/;
 const adminSession = require('./arcade/admin-session');
 const { requireAdmin } = adminSession;
 app.use('/api/admin', adminSession.routes());
+// Which build is running, for the line at the bottom of the admin page.
+const { version } = require('./arcade/version');
+app.get('/api/admin/version', requireAdmin, (req, res) => res.json(version()));
 
 // ---- Optional: signing in through ARKS ID (arcade/arksid.js) ----
 // Off unless ARKS_ID_URL and ARKS_ID_SECRET are set. With it on, profiles,
@@ -140,7 +143,9 @@ app.get('/healthz', (req, res) => {
       ok: true,
       uptime: Math.round(process.uptime()),
       words: { kids: stats.kids, adult: stats.adult },
-      themes
+      themes,
+      // Which build answered (read once at startup, so this stays cheap).
+      ...version()
     });
   } catch (e) {
     res.status(503).json({ ok: false, error: e.message });

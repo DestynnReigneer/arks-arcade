@@ -64,3 +64,13 @@ git push origin v1.1.0
 ```
 
 Then on the server: `docker compose pull && docker compose up -d`.
+
+### Rolling back
+
+Every image CI publishes is also labeled `sha-` plus the first seven
+characters of the commit it was built from (for example `sha-abc1234`). The
+admin page and `/healthz` say which commit is running. To go back to an
+earlier build, put that label in `docker-compose.yml` in place of `latest`
+(`ghcr.io/destynnreigneer/arks-arcade:sha-abc1234`), then run
+`docker compose pull && docker compose up -d`. To return to the newest build,
+switch it back to `latest` and run the same two commands.
