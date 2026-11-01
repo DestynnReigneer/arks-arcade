@@ -1,9 +1,9 @@
 # syntax=docker/dockerfile:1
 
-# An exact version, not node:22-alpine: Dependabot can only offer an update
-# for a version it can see. 22.23.4 has the 2026-10-21 security fixes
-# (CVE-2026-111497). Dependabot proposes newer 22.x releases weekly.
-FROM node:22.23.4-alpine
+# An exact version, not node:26-alpine: Dependabot can only offer an update
+# for a version it can see. Node 26 became long-term support on
+# 2026-10-28 (26.13.0). Dependabot proposes newer 26.x releases weekly.
+FROM node:26.13.0-alpine
 
 # Tini reaps zombies and forwards signals, so `docker compose stop` actually
 # stops the process instead of waiting out the 10s kill timeout.
