@@ -25,3 +25,8 @@ Thumbs.db
 # Your own logos and media (docs/CUSTOM-MEDIA.md). Never committed.
 brand/
 media/
+
+# Browser tests (npm run test:browser): results, traces and reports
+test-results/
+playwright-report/
+blob-report/

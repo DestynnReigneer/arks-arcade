@@ -1,11 +1,32 @@
 # Status and to-dos
 
-Last updated 2026-10-24. Update this file whenever a piece of work lands or
+Last updated 2026-11-01. Update this file whenever a piece of work lands or
 a plan changes, so the next session can pick up from here. When the
 maintainer says "I'm back", start from "Last session" below, then show the
 to-do list as checkboxes (the rule is in the maintainer's global CLAUDE.md
 and `arks-internal/conventions/sessions.md`): do the checked items in the
 order they were clicked, and keep the rest pinned here.
+
+## Review fixes and browser tests (2026-11-01)
+
+- **#65** Who's playing? keeps keyboard focus inside its card, marks the rest of the
+  page `inert` while it's open, and gives focus back when it closes. With ARKS ID on,
+  every game page asks too (`ArcadeProfile.askIfNobody()`, called from `topbar.js`;
+  the home page calls it from `hub.js`).
+- **#65** Feedback limits shared with the other apps: pictures at most 1.5 MB (the card
+  shrinks screenshots to fit), 500 MB of pictures in all (past it, notes arrive without
+  their picture and the admin gets one note in the Comm Center, flag
+  `feedback_pictures_full_flagged` in settings), and 5 notes an hour from one device
+  for people without a profile. Profiles keep 30 in 3 minutes; the admin has no limit.
+- **#65** ARKS ID photos and team pictures: the server fetches them from ARKS ID and
+  serves them at `/api/arksid/photo/<profile>` (only to people signed in with ARKS ID
+  and the admin). A profile's avatar is then `photo:<profile>:<version>:<icon>`, drawn
+  by `public/avatar-photo.js` (kept out of the shared `avatars.js`), and the icon
+  shows whenever the picture can't load. The address checks are in
+  `arcade/arksid-photo.js`.
+- **Browser tests** (`npm run test:browser`, Playwright, a dev dependency only): every
+  page loads cleanly at phone and laptop size, Who's playing? can't be skipped, and a
+  guest can't open adult levels. CI runs them as their own job. See `CONTRIBUTING.md`.
 
 ## Feedback tracked like GitHub issues (2026-11-01)
 
@@ -99,8 +120,8 @@ board-name setting and adult PIN are only for copies running without it.
   `body-parser` warning was patched with `npm audit fix` instead of Express 5
   (2026-10-25), so Dependabot #3 closed as replaced; Express 5 can come later
   as its own change.
-- **Get Claude in Chrome connected,** so pages can be checked in a real
-  browser. Until then, headless Chrome screenshots work.
+- ~~**Get Claude in Chrome connected**~~: done. It was used on 2026-11-01 to check
+  the review fixes, and the Playwright browser tests now run in CI as well.
 
 ## Parked until closer to finished
 
