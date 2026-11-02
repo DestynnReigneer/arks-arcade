@@ -12,6 +12,9 @@ test('dropping balls in Disco Drop', async ({ page, isMobile }) => {
   test.setTimeout(75000);
   await quietFonts(page);
   const problems = watchProblems(page);
+  // The page's clock, so the test can stop time at the right moment (below).
+  // It runs at the normal speed until then.
+  await page.clock.install();
   await openPage(page, '/discodrop.html');
   await page.getByRole('button', { name: /Play as a guest/ }).click();
   await page.getByRole('button', { name: 'Play', exact: true }).click();
@@ -32,11 +35,26 @@ test('dropping balls in Disco Drop', async ({ page, isMobile }) => {
   // of a window that's wide enough to hit from a test.
   const runId = await page.evaluate(() => window.DiscoDropClock.runId());
   const now = await page.evaluate(() => window.DiscoDropClock.elapsed());
-  const { windows } = await (await page.request.get(`/api/discodrop/test/jackpot/${runId}?after=${now + 500}`)).json();
+  const { windows } = await (await page.request.get(`/api/discodrop/test/jackpot/${runId}?after=${now + 3000}`)).json();
   const [lo, hi] = windows.find(([a, b]) => b - a >= 120);
-  const aim = Math.floor((lo + hi) / 2) - 15;
-  await page.waitForFunction(t => window.DiscoDropClock.elapsed() >= t, aim, { polling: 'raf', timeout: 40000 });
+  const aim = Math.floor((lo + hi) / 2);
+  // Waiting for that moment and then pressing used to be a race: the press
+  // takes a while to reach the page (on a busy machine, a tap took up to half
+  // a second), so the ball sometimes let go after the jackpot cup had passed
+  // and the test failed now and then. Instead the page's clock is stopped a
+  // little early, the test waits until the arcade's own clock is past the
+  // moment (a drop from the future is turned away), moves the page's clock
+  // to exactly that moment, and drops the ball while time stands still. The
+  // arcade still checks the drop as usual.
+  await page.waitForFunction(t => window.DiscoDropClock.elapsed() >= t, aim - 2500, { polling: 'raf', timeout: 40000 });
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000));
+  const paused = await page.evaluate(() => window.DiscoDropClock.elapsed());
+  // The page's clock jumped a second ahead, so the real moment comes a second later.
+  await new Promise(done => setTimeout(done, aim - paused + 1000 + 150));
+  await page.clock.runFor(aim - paused);
+  expect(await page.evaluate(() => window.DiscoDropClock.elapsed())).toBe(aim);
   await drop();
+  await page.clock.resume();
   await expect(page.locator('.fx-banner .fx-title')).toHaveText('JACKPOT!');
   await expect(page.locator('#score')).toHaveText('500');
 
