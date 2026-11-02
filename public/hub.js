@@ -18,7 +18,8 @@
     bricks: { label: 'Brick Breaker', href: 'bricks.html' },
     blocks: { label: 'Block Drop', href: 'blocks.html' },
     towers: { label: 'Tower Defense', href: 'towers.html' },
-    sudoku: { label: 'Sudoku', href: 'sudoku.html' }
+    sudoku: { label: 'Sudoku', href: 'sudoku.html' },
+    scuffle: { label: 'Shuffle Scuffle', href: 'scuffle.html' }
   };
 
   // ---- who's playing ---------------------------------------------------------
