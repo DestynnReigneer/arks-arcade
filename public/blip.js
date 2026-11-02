@@ -191,6 +191,12 @@ const Blip = (() => {
       chords: [[0, 4, 7], [-3, 0, 4], [-7, -3, 0], [-5, -1, 2]],
       tune: [7, _, _, 4, 5, _, 4, _,  2, _, _, _, 0, _, _, _,  4, _, _, 5, 7, _, 9, _,  7, _, _, _, _, _, _, _]
     },
+    // Tumbler Rumble: driving and bright, a cabinet in a loud arcade.
+    tumbler: {
+      bpm: 132, root: 45, wave: 'square', hat: true, arp: [0, 2, 1, 2, 0, 2, 1, 2],
+      chords: [[0, 3, 7], [-4, 0, 3], [-2, 2, 5], [-5, -2, 2]],
+      tune: [12, _, 10, 12, _, 7, _, 3,  5, _, 7, _, 10, _, 7, _,  12, _, 15, _, 14, 12, 10, _,  7, _, 5, _, 7, _, _, _]
+    },
     // Clueless: light and thoughtful, for puzzling over a clue.
     clueless: {
       bpm: 80, root: 55, wave: 'triangle', hat: false, arp: [0, 2, 1, 2, 0, 1, 2, 1],

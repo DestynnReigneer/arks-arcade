@@ -30,6 +30,7 @@ COPY sudoku ./sudoku
 COPY scuffle ./scuffle
 COPY crisscross ./crisscross
 COPY clueless ./clueless
+COPY tumbler ./tumbler
 COPY words ./words
 COPY public ./public
 
