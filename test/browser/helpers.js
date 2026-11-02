@@ -5,7 +5,7 @@
 // Every page the arcade serves to people: the home page, each game, and the
 // admin sign-in page.
 const PAGES = ['/', '/wordless.html', '/rambler.html', '/spinsolve.html', '/chess.html', '/dino.html', '/snake.html',
-  '/bricks.html', '/blocks.html', '/towers.html', '/trivia.html', '/partdeux.html', '/daredevil.html', '/admin.html'];
+  '/bricks.html', '/blocks.html', '/towers.html', '/sudoku.html', '/trivia.html', '/partdeux.html', '/daredevil.html', '/admin.html'];
 
 // The top bar asks Google Fonts for its lettering. The tests answer that
 // themselves with an empty stylesheet, so they don't depend on the internet

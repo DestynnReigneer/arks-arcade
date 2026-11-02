@@ -7,6 +7,39 @@ to-do list as checkboxes (the rule is in the maintainer's global CLAUDE.md
 and `arks-internal/conventions/sessions.md`): do the checked items in the
 order they were clicked, and keep the rest pinned here.
 
+## Sudoku (2026-11-01)
+
+The maintainer picked Sudoku as the next game: the classic 9x9, a daily puzzle everyone
+shares, Family, Easy, Medium and Hard, pencil marks, fastest-time boards, and phones first.
+
+- **Puzzles** come from `sudoku/generator.js`, our own code: a seeded full grid (the same
+  mulberry32 as the Rambler daily, seeded with `sudoku|<date>|<level>|<try>`), then
+  numbers taken away in mirrored pairs while there's still one answer. Grading tries the
+  puzzle like a person would: tier 1 is naked singles, tier 2 adds hidden singles, tier 3
+  adds pointing/claiming and naked and hidden pairs, tier 4 is "tier 3 gets stuck". Family
+  must be tier 1 with at least 46 numbers, Easy tier 2 with at least 36, Medium exactly tier
+  3 (at least 27), Hard tier 4. A try that doesn't fit is thrown away and the next try is
+  made, still from the date, so everyone gets the same puzzle. A day's four take a few
+  milliseconds; `sudoku/routes.js` keeps them in memory.
+- **Scoring** (`sudoku/routes.js`, tables `sudoku_runs` and `sudoku_scores`): Start records
+  the start time on the server and returns a 32-hex run id and the puzzle (never the
+  answer). Pause and resume are recorded there too. Finish checks the full grid against the
+  answer and works out the time; anything the browser sends as a time is ignored. A finish
+  faster than 0.4 seconds per square left to fill is refused (`SUDOKU_MIN_MS_PER_SQUARE`
+  shortens that for the test suite only). Hints add 30 seconds, Check 15, and each wrong
+  number caught by "Show my mistakes as I go" 10. Only the first saved finish per player per
+  day per level counts (`UNIQUE (day, level, who)`, who being the profile or the guest's
+  initials), and a profile gets one run per day per level, so reopening carries the clock on.
+- **The page** (`public/sudoku.html`, `.js`, `.css`): a cover with Start (so the clock
+  doesn't start while someone reads How to play), the board, Undo, Erase, Notes, Hint and
+  Check, and a row of nine number buttons. Leaving the page pauses the run. Progress lives in
+  this device's storage, keyed by run id. Opening How to play mid-puzzle pauses it.
+- Wired into the home page card, the QR picker, the admin game switches ("Pardon our
+  dust"), stats, feedback, Comm Center posts (a new fastest-ever time per level) and the
+  Playwright page list. It has its own calm music in `public/blip.js`.
+- Not done yet: the admin can't remove a single Sudoku time from a board (no game's
+  arcade-wide board has that yet either).
+
 ## Feedback goes to ARKS ID's one inbox (2026-11-01, contract v10)
 
 - **With ARKS ID on (`ARKS_ID_URL` set), new feedback isn't kept in the Comm Center.**
@@ -168,8 +201,8 @@ board-name setting and adult PIN are only for copies running without it.
 
 - **Play-test on the server:** pull the new image on the server and try
   everything from #15 to #37. Fix what turns up.
-- **Start a new game:** Sudoku, a crossword, a word scramble, or a
-  cabinet-style game (the list is in the private feedback list).
+- **Start a new game:** a crossword, a word scramble, or a cabinet-style game
+  (the list is in the private feedback list). Sudoku was built on 2026-11-01.
 - **Achievements step 1:** waits for the maintainer's markup of the private
   plan. Then build step 1 (age groups, the feats engine, Rambler milestones
   moved over).

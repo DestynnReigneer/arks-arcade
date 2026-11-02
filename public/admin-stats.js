@@ -21,7 +21,7 @@
     hub: ['🏠', 'Home page'], wordless: ['🔤', 'Wordless'], rambler: ['🔠', 'Rambler'], spinsolve: ['🎡', 'Spin & Solve'],
     chess: ['♞', 'Chess'], dino: ['🦖', 'Dino Dash'], trivia: ['🧠', 'Know-It-All'], partdeux: ['🚨', 'Uh-Oh: Part Deux'],
     daredevil: ['😈', 'Dare Devil'], snake: ['🐍', 'Snake'], bricks: ['🧱', 'Brick Breaker'], blocks: ['🟪', 'Block Drop'],
-    towers: ['🏰', 'Tower Defense'], admin: ['🛠️', 'Admin']
+    towers: ['🏰', 'Tower Defense'], sudoku: ['🧩', 'Sudoku'], admin: ['🛠️', 'Admin']
   };
   const gameName = id => (GAMES[id] ? `${GAMES[id][0]} ${GAMES[id][1]}` : id || 'The arcade');
   const DEVICE_EMOJI = { phone: '📱', tablet: '📲', desktop: '🖥️' };
