@@ -384,7 +384,7 @@
       const li = document.createElement('li');
       li.innerHTML = '<span></span><small></small><b></b>';
       li.firstChild.textContent = p.name + (p.id === snap.you ? ' (you)' : '');
-      li.children[1].textContent = `+${p.roundScore} this round`;
+      li.children[1].textContent = `+${p.roundScore.toLocaleString('en-US')} this round`;
       li.lastChild.textContent = p.score.toLocaleString('en-US');
       ol.appendChild(li);
     }
