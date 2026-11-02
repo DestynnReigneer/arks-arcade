@@ -24,7 +24,8 @@
     clueless: { label: 'Clueless', href: 'clueless.html' },
     tumbler: { label: 'Tumbler Rumble', href: 'tumbler.html' },
     discodrop: { label: 'Disco Drop', href: 'discodrop.html' },
-    royale: { label: 'Roll Royale', href: 'royale.html' }
+    royale: { label: 'Roll Royale', href: 'royale.html' },
+    moonshot: { label: 'Moonshot', href: 'moonshot.html' }
   };
 
   // ---- who's playing ---------------------------------------------------------
