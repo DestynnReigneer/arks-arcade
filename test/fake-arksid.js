@@ -1,6 +1,6 @@
 'use strict';
 
-// A pretend ARKS ID for the tests: just enough of its contract (v10) for the
+// A pretend ARKS ID for the tests: just enough of its contract (v12) for the
 // arcade's sign-in, "whose device is this?", sessions, the clip inbox, the
 // feedback inbox, and
 // the photos and team pictures people pick (served from /avatars/).
@@ -30,6 +30,8 @@ function startFakeArksId({ secret, arcadeBase }) {
   const fake = { users, next: 'milo', deviceOwner: null, inbox: {}, sessions: new Map(), base: '', prefills: new Map(), lastPrefill: null, photoFetches: 0,
     // The feedback inbox (v10), and what the admin does in ARKS ID's console.
     notes: [], feedbackDown: false, inboxMissing: false,
+    // Status reports and events for ARKS ID's admin console (v12).
+    reports: [], events: [],
     adminReply(id, text) { fake.notes.find(n => n.id === id).replies.push({ id: 99, fromAdmin: true, name: 'Sam', body: text, at: Date.now() }); },
     setStage(id, stage) { fake.notes.find(n => n.id === id).stage = stage; } };
   const codes = new Map(), deviceCodes = new Map();
@@ -106,6 +108,17 @@ function startFakeArksId({ secret, arcadeBase }) {
       if (!keys.length) return json(res, 400, { error: 'nobody' });
       keys.forEach(k => { (fake.inbox[k] = fake.inbox[k] || []).push(b.clip); });
       return json(res, 200, { sent: keys.length });
+    }
+    // Status reports and events (contract v12).
+    if (req.method === 'POST' && u.pathname === '/api/app/status') {
+      fake.reports.push(await readBody(req));
+      return json(res, 200, { ok: true, every: 300 });
+    }
+    if (req.method === 'POST' && u.pathname === '/api/app/event') {
+      const b = await readBody(req);
+      if (b.kind !== 'console-opened') return json(res, 400, { error: 'kind has to be console-opened.' });
+      fake.events.push(b);
+      return json(res, 201, { ok: true });
     }
     // The one feedback inbox (contract v10). feedbackDown answers 503 (the
     // arcade keeps the note in its queue); inboxMissing answers 404, like an
