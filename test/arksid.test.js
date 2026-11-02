@@ -287,6 +287,50 @@ async function run({ base, root, fake, admin: ADMIN }) {
   ok('a kid holding a grown-up\'s pass still can\'t start one', (await cc('/games', miloCC, { method: 'POST', body: { kind: 'local', players: [{ name: 'A' }, { name: 'B' }], dictionary: 'adult' }, pass: kimPass })).status === 403);
   ok('a kid can start a family-words game with a grown-up', (await cc('/games', miloCC, { method: 'POST', body: { kind: 'online', invite: [kimCC.profile.id] } })).status === 201);
 
+  console.log('\n-- game switches and the banner from the sign-in service --');
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+  const guest = browser();
+  const closedFor = async b => (await b.call('/api/arcade-info')).data.games.closed;
+  // A no-op save on the admin page's game list: it also sends the list again
+  // and forgets the answers it kept, so the next question is a fresh one.
+  const resave = async (closed) => {
+    const h = (await asAdmin('/api/comm/admin/home-games')).data;
+    return asAdmin('/api/comm/admin/home-games', 'POST', { order: h.order, hidden: h.hidden, closed: closed || h.closed, sort: h.sort });
+  };
+  const home = (await asAdmin('/api/comm/admin/home-games')).data;
+  ok('the admin page says the sign-in service can switch games too', home.arksId === true);
+  for (let i = 0; i < 40 && !fake.features; i++) await wait(250);
+  const chessF = (fake.features || []).find(x => x.key === 'game.chess');
+  ok('the arcade tells it every game, named, each on for everyone by default',
+    !!fake.features && fake.features.every(x => x.key.startsWith('game.') && x.group === 'Games') && fake.features.length >= 14 &&
+    !!chessF && chessF.name === 'Chess' && chessF.on === true && chessF.roles.guest === true && chessF.roles.kid === true, JSON.stringify(chessF));
+  ok('nothing is closed until someone closes something', (await closedFor(guest)).length === 0 && (await closedFor(milo)).length === 0);
+
+  await resave(['snake']);
+  for (let i = 0; i < 40 && (fake.features.find(x => x.key === 'game.snake') || {}).on !== false; i++) await wait(250);
+  ok('turning a game off on the admin page still works, and becomes its default there', (await closedFor(guest)).includes('snake') &&
+    fake.features.find(x => x.key === 'game.snake').on === false);
+
+  fake.set['game.chess'] = { all: false };
+  await resave();
+  ok('Chess turned off for everyone in the sign-in service closes it for guests and the signed in', (await closedFor(guest)).includes('chess') &&
+    (await closedFor(milo)).includes('chess'));
+  fake.set['game.chess'].people = { [fake.users.milo.id]: 'on' };
+  await resave();
+  ok('…except for someone it turned on for', !(await closedFor(milo)).includes('chess') && (await closedFor(guest)).includes('chess'));
+  fake.set['game.snake'] = { all: true };
+  await resave();
+  ok('a game the sign-in service turned on opens, even when the admin page has it off', !(await closedFor(guest)).includes('snake'));
+  fake.set = {};
+  await resave([]);
+  ok('…and with nothing set there, everything is back the way it was', (await closedFor(guest)).length === 0);
+
+  fake.banner = { id: 3, text: 'The arcade is getting an update tonight at 9.', tone: 'warning', until: null, at: Date.now() };
+  const bn = (await guest.call('/api/banner')).data;
+  ok('the banner from the sign-in service is handed to the pages', !!bn.banner && bn.banner.text === fake.banner.text && bn.banner.tone === 'warning', JSON.stringify(bn));
+  const chessPage = await fetch(base + '/chess.html').then(r => r.text());
+  ok('…and every page loads the banner script', chessPage.includes('<script src="banner.js" defer></script>'));
+
   console.log('\n-- signing out --');
   const out = await milo.call('/auth/signout', { method: 'POST', follow: false });
   ok('signing out ends the arcade sign-in and goes on to ARKS ID\'s sign-out', out.data.next === `${fake.base}/signout?app=arcade&return=%2F`);

@@ -21,7 +21,9 @@ for (const end of ['', '-journal', '-wal', '-shm']) {
 
 (async () => {
   const secret = 'browser-test-secret-'.padEnd(43, 's');
-  const fake = await startFakeArksId({ secret, arcadeBase: `http://localhost:${PORT}` });
+  // The pretend sign-in service sits on the next port up, where the
+  // switches test reaches its /test/... addresses.
+  const fake = await startFakeArksId({ secret, arcadeBase: `http://localhost:${PORT}`, port: PORT + 1 });
   fake.next = null;          // a silent sign-in finds nobody
   fake.deviceOwner = null;   // a visitor's device: guests are welcome
   const child = spawn(process.execPath, ['server.js'], {

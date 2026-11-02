@@ -1,6 +1,6 @@
 'use strict';
 
-// A pretend ARKS ID for the tests: just enough of its contract (v12) for the
+// A pretend ARKS ID for the tests: just enough of its contract (v13) for the
 // arcade's sign-in, "whose device is this?", sessions, the clip inbox, the
 // feedback inbox, and
 // the photos and team pictures people pick (served from /avatars/).
@@ -10,7 +10,8 @@
 const http = require('node:http');
 const crypto = require('node:crypto');
 
-function startFakeArksId({ secret, arcadeBase }) {
+// port: a fixed port (the browser tests use one, so they can reach /test/...).
+function startFakeArksId({ secret, arcadeBase, port = 0 }) {
   const users = {
     sam: { id: 'u_sam0000001', name: 'Sam', role: 'admin', boardName: 'Sam' },
     alex: { id: 'u_alex000001', name: 'Alex', role: 'adult', boardName: 'Alex', avatar: { icon: 'cat', color: 'teal', image: null, art: null } },
@@ -32,6 +33,10 @@ function startFakeArksId({ secret, arcadeBase }) {
     notes: [], feedbackDown: false, inboxMissing: false,
     // Status reports and events for ARKS ID's admin console (v12).
     reports: [], events: [],
+    // Switches and the banner (v13): the arcade's list of games, what the
+    // admin set in the console (set[key] = { all, roles, people }), and the
+    // banner showing.
+    features: null, set: {}, banner: null,
     adminReply(id, text) { fake.notes.find(n => n.id === id).replies.push({ id: 99, fromAdmin: true, name: 'Sam', body: text, at: Date.now() }); },
     setStage(id, stage) { fake.notes.find(n => n.id === id).stage = stage; } };
   const codes = new Map(), deviceCodes = new Map();
@@ -72,6 +77,9 @@ function startFakeArksId({ secret, arcadeBase }) {
       res.writeHead(200, { 'Content-Type': type });
       return res.end(body);
     }
+    // For the browser tests, which can't reach this object: play the admin in
+    // the sign-in service's console. POST /test/switches { set }.
+    if (req.method === 'POST' && u.pathname === '/test/switches') { fake.set = (await readBody(req)).set || {}; return json(res, 200, { ok: true }); }
     if (!u.pathname.startsWith('/api/')) return json(res, 404, { error: 'Not found.' });
     if (req.headers.authorization !== `Bearer ${secret}`) return json(res, 401, { error: 'no' });
     if (req.method === 'POST' && u.pathname === '/api/prefill') {
@@ -120,6 +128,28 @@ function startFakeArksId({ secret, arcadeBase }) {
       fake.events.push(b);
       return json(res, 201, { ok: true });
     }
+    // Switches and the banner (contract v13).
+    if (req.method === 'PUT' && u.pathname === '/api/app/features') {
+      fake.features = (await readBody(req)).features;
+      return json(res, 200, { ok: true, count: fake.features.length });
+    }
+    if (req.method === 'GET' && u.pathname === '/api/app/switches') {
+      const s = fake.sessions.get(q.get('session'));
+      const user = s && s.valid ? users[s.key] : null;
+      const switches = {}, decided = [];
+      for (const f of fake.features || []) {
+        const st = fake.set[f.key] || {};
+        const own = user && (st.people || {})[user.id];
+        const role = user ? user.role : 'guest';
+        const roleSet = typeof (st.roles || {})[role] === 'boolean';
+        if (own) { switches[f.key] = own === 'on'; decided.push(f.key); continue; }
+        const all = typeof st.all === 'boolean' ? st.all : f.on;
+        switches[f.key] = !!(all && (roleSet ? st.roles[role] : f.roles[role]));
+        if (typeof st.all === 'boolean' || roleSet) decided.push(f.key);
+      }
+      return json(res, 200, { switches, decided, signedIn: !!user });
+    }
+    if (req.method === 'GET' && u.pathname === '/api/app/banner') return json(res, 200, { banner: fake.banner });
     // The one feedback inbox (contract v10). feedbackDown answers 503 (the
     // arcade keeps the note in its queue); inboxMissing answers 404, like an
     // ARKS ID older than v10 (the arcade keeps the note itself).
@@ -167,7 +197,7 @@ function startFakeArksId({ secret, arcadeBase }) {
     json(res, 404, { error: 'Not found.' });
   });
 
-  return new Promise(resolve => server.listen(0, '127.0.0.1', () => {
+  return new Promise(resolve => server.listen(port, '127.0.0.1', () => {
     fake.base = `http://127.0.0.1:${server.address().port}`;
     users.kim.avatar.image = `${fake.base}/avatars/u_kim0000001.webp?v=2`;
     fake.close = () => server.close();

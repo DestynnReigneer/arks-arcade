@@ -1,0 +1,33 @@
+/* The banner across the top of every page (public/banner.js, from the shared
+   kit). Its own colors, so it looks the same in every app: the dark plate,
+   with the status color as a line down the left, the icon and the word.
+   Blue for "Heads up", gold for "Warning" (the ARKS color spec's info and
+   warn colors). */
+.arks-banner{
+  --ab-plate:#0a0416; --ab-text:#f5eaff; --ab-tone:#3ec6ff;
+  position:relative; z-index:40; margin:0; padding:0;
+  background:var(--ab-plate); color:var(--ab-text);
+  border-bottom:1px solid color-mix(in srgb, var(--ab-tone) 45%, var(--ab-plate));
+  box-shadow:inset 4px 0 0 var(--ab-tone);
+  font-family:"Rajdhani", "Segoe UI", system-ui, sans-serif; font-weight:600; font-size:16px; line-height:1.35;
+  text-align:left;
+}
+.arks-banner.is-warning{ --ab-tone:#ffd23f }
+.arks-banner-in{
+  display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+  max-width:1168px; margin:0 auto; padding:9px 16px 9px 20px; box-sizing:border-box;
+}
+.arks-banner-word{
+  display:inline-flex; align-items:center; gap:6px; flex:none;
+  color:var(--ab-tone); font:500 12px/1 "JetBrains Mono", ui-monospace, Consolas, monospace;
+  letter-spacing:.08em; text-transform:uppercase;
+}
+.arks-banner-icon{ width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round }
+.arks-banner-text{ flex:1 1 220px; min-width:0; overflow-wrap:anywhere }
+.arks-banner-hide{
+  flex:none; margin-left:auto; padding:6px 12px; border-radius:8px; cursor:pointer;
+  background:transparent; color:var(--ab-text); border:1px solid color-mix(in srgb, var(--ab-text) 25%, transparent);
+  font:inherit; font-size:14px;
+}
+.arks-banner-hide:hover, .arks-banner-hide:focus-visible{ border-color:var(--ab-tone); color:var(--ab-tone); outline:none }
+@media print{ .arks-banner{ display:none } }
