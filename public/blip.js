@@ -203,6 +203,12 @@ const Blip = (() => {
       chords: [[0, 4, 7], [-5, -1, 2], [-3, 0, 4], [-7, -3, 0]],
       tune: [4, _, 7, _, _, 5, 4, _,  2, _, _, _, 4, _, _, _,  0, _, 2, _, 4, _, 5, _,  4, _, _, 2, _, _, _, _]
     },
+    // Disco Drop: four on the floor, for a night at the disco.
+    discodrop: {
+      bpm: 118, root: 45, wave: 'square', hat: true, arp: [0, 2, 1, 2, 0, 2, 1, 2],
+      chords: [[0, 3, 7], [-2, 2, 5], [-4, 0, 3], [-5, -2, 2]],
+      tune: [12, _, 12, 10, _, 7, _, 10,  12, _, _, 15, _, 12, _, _,  10, _, 10, 8, _, 7, _, 5,  7, _, _, _, _, _, _, _]
+    },
     // Shuffle Scuffle: bouncy and a bit urgent, for a race against the clock.
     scuffle: {
       bpm: 126, root: 48, wave: 'square', hat: true, arp: [0, 1, 2, 1, 0, 2, 1, 2],

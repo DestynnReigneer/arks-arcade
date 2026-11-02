@@ -173,6 +173,7 @@ app.use('/api/daredevil', require('./daredevil/routes'));
 app.use('/api/sudoku', require('./sudoku/routes').router);
 app.use('/api/scuffle', require('./scuffle/routes'));
 app.use('/api/crisscross', require('./crisscross/routes'));
+app.use('/api/discodrop', require('./discodrop/routes').router);
 app.use('/api/clueless', require('./clueless/routes')({ requireAdmin }));
 app.use('/api/tumbler', require('./tumbler/routes').router);
 app.use('/api', require('./arcade/lobby').router);

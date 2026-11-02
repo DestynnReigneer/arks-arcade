@@ -41,6 +41,44 @@ The name is ours: a lock's tumblers are the pins you pop, and "rumble" is the ar
   that reads the seed could still play perfectly. The server only makes sure the taps could have
   happened, which is the same trust the other timing games have.
 
+## Disco Drop, the drop cabinet (2026-11-01)
+
+The "cabinet-style game" from the to-do list, in the spirit of the arcade cabinets where a
+prize hangs over moving holes and you press a button to drop it. Its id is `discodrop` (page
+`public/discodrop.*`, server `discodrop/`, accent neon pink `#ff5cf0`, emoji 🪩). Our own name
+and look: a disco ball over a row of neon cups, with chasing bulbs and spotlights. The name
+was picked because the thing you drop is a disco ball and the cabinet is a little dance floor,
+and it's nobody's trademark.
+
+- **The motion** (`public/discodrop-engine.js`, loaded by the page and required by the server):
+  a stage 1000 units wide, a looping belt of 12 cups (10, 25, 50, 100, two BUST cups and one
+  80-unit jackpot worth 500), whole-number math only, mulberry32 seeded random numbers. The
+  seed decides each ball's belt speed and direction, the arm's speed (still for balls 1-3), the
+  cup order (reshuffled after balls 2, 5 and 7), and where the belt starts. The motion of ball
+  k starts where ball k-1 landed, so `replay(seed, times)` works out every landing from the
+  drop times alone. Balls 8-10 score double; the most a run can score is 6,500.
+- **Scoring** (`discodrop/routes.js`, tables `discodrop_runs` and `discodrop_scores`): the
+  server makes the seed and records the start. The page posts each drop's time (ms since the
+  run arrived) as it happens; the server checks it's a whole number, no later than its own
+  clock allows (300 ms grace), no more than 10 seconds old, and at least 1 second after the
+  last drop (the 0.65-second fall plus the 0.35-second reload), replays the run and keeps the
+  times. Save takes only initials or a profile; the score is the server's replay. Every saved
+  run counts (it's an arcade game, not a daily puzzle). A run expires after 30 minutes.
+- **Honest celebrations:** the jackpot banner and coins fire on the server's answer, and "So
+  close!" only when the server measured the ball within 18 units of the jackpot cup.
+- **The page:** the whole stage is the tap area, plus a big DROP button; Space and Enter; a
+  controller's A button (Gamepad API, polled each frame, acts on the press). The stage shrinks
+  to fit short screens so the button stays in view. `window.DiscoDropClock` exposes the run's
+  clock (it reveals nothing the page doesn't already have) so the browser test can aim.
+  `GET /api/discodrop/test/jackpot/:id` gives jackpot drop windows only under `NODE_ENV=test`.
+- Wired into the home card, the QR picker, admin switches and stats, `NAMES` in
+  `arcade/switches.js`, the banner, feedback, the dust sign, Comm Center posts (a new best
+  run ever), its own disco music in `public/blip.js`, the Dockerfile, the Playwright page list
+  and a browser test that drops the first ball into the jackpot and saves the run.
+- Not done: no multiplayer or party mode yet (taking turns on one cabinet would be a good
+  next step), no pause (the cups keep moving, but nothing drops until you tap), and no
+  removing a single score from a board (no game has that yet).
+
 ## Game switches and the banner from ARKS ID (2026-11-01, contract v13)
 
 - **With ARKS ID on, its admin console can turn games on and off** for everyone, for a
@@ -398,9 +436,10 @@ board-name setting and adult PIN are only for copies running without it.
 
 - **Play-test on the server:** pull the new image on the server and try
   everything from #15 to #37. Fix what turns up.
-- **Start a new game:** a crossword or a cabinet-style game (the list is in the
-  private feedback list). Sudoku, Shuffle Scuffle (the word scramble), Criss Cross (the
-  crossword tile game) and Clueless (the daily crossword) were built on 2026-11-01.
+- **Start a new game:** the next one from the private feedback list. Sudoku, Shuffle
+  Scuffle (the word scramble), Criss Cross (the crossword tile game), Clueless (the daily
+  crossword), Tumbler Rumble (the lock cabinet) and Disco Drop (the drop cabinet) were
+  built on 2026-11-01.
 - **Achievements step 1:** waits for the maintainer's markup of the private
   plan. Then build step 1 (age groups, the feats engine, Rambler milestones
   moved over).

@@ -15,7 +15,7 @@
     completed: '✅ Fixed', canceled: '🚫 Won\'t fix'
   };
   const KIND_LABELS = { feature: '💡 Feature idea', issue: '🐛 Issue', message: '💬 Message' };
-  const GAME_LABELS = { wordless: 'Wordless', rambler: 'Rambler', spinsolve: 'Spin & Solve', chess: 'Chess', dino: 'Dino Dash', trivia: 'Know-It-All', partdeux: 'Uh-Oh: Part Deux', daredevil: 'Dare Devil', snake: 'Snake', bricks: 'Brick Breaker', blocks: 'Block Drop', towers: 'Tower Defense', sudoku: 'Sudoku', scuffle: 'Shuffle Scuffle', crisscross: 'Criss Cross', clueless: 'Clueless', tumbler: 'Tumbler Rumble' };
+  const GAME_LABELS = { wordless: 'Wordless', rambler: 'Rambler', spinsolve: 'Spin & Solve', chess: 'Chess', dino: 'Dino Dash', trivia: 'Know-It-All', partdeux: 'Uh-Oh: Part Deux', daredevil: 'Dare Devil', snake: 'Snake', bricks: 'Brick Breaker', blocks: 'Block Drop', towers: 'Tower Defense', sudoku: 'Sudoku', scuffle: 'Shuffle Scuffle', crisscross: 'Criss Cross', clueless: 'Clueless', tumbler: 'Tumbler Rumble', discodrop: 'Disco Drop' };
 
   // One-tap posts. Gaming culture is half the fun of the board.
   const QUICK_POSTS = [
@@ -530,7 +530,7 @@
 
   // ---- home page games -------------------------------------------------------
 
-  const GAME_EMOJI = { wordless: '🔤', rambler: '🔠', spinsolve: '🎡', chess: '♞', dino: '🦖', trivia: '🧠', partdeux: '🚨', daredevil: '😈', snake: '🐍', bricks: '🧱', blocks: '🟪', towers: '🏰', sudoku: '🧩', scuffle: '🔀', crisscross: '🔡', clueless: '📰', tumbler: '🔓' };
+  const GAME_EMOJI = { wordless: '🔤', rambler: '🔠', spinsolve: '🎡', chess: '♞', dino: '🦖', trivia: '🧠', partdeux: '🚨', daredevil: '😈', snake: '🐍', bricks: '🧱', blocks: '🟪', towers: '🏰', sudoku: '🧩', scuffle: '🔀', crisscross: '🔡', clueless: '📰', tumbler: '🔓', discodrop: '🪩' };
   let home = null;
 
   async function loadHomeGames() {

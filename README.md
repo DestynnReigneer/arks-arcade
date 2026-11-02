@@ -160,6 +160,29 @@ Six maps from easy to hard (Meadow, Frozen Lake, Canyon, Swamp, Castle, Volcano;
 
 The four share `public/game-shell.js` (game-over panel, saving scores, high-score boards, personal bests) and `public/game-shell.css`. Each has its own soft background music, generated in the browser like the sound effects (`public/blip.js`): the 🎵 button turns it off and on, the browser remembers the choice, and 🔊/🔇 mutes everything. It stops while the game is paused or over.
 
+### Disco Drop (`/discodrop.html`)
+
+An arcade cabinet game for one player. A disco ball hangs from an arm at the top of the cabinet, and a row of cups slides past underneath it, each worth a different number of points. Tap to let go, and the ball falls straight down into whichever cup is under it when it gets there. The narrower the cup, the more it's worth: wide ones give 10 or 25, narrower ones 50 or 100, two dark BUST cups give nothing, and one tiny gold cup is the 500-point jackpot.
+
+- **Ten balls a run, and it gets harder as you go.** The cups speed up after every ball and can change direction from the fourth ball on, the arm starts sliding back and forth on the fourth ball, the cups shuffle into a new order after balls 2, 5 and 7, and the last three balls score double (so the jackpot is worth 1,000 there). The number on each cup is always what it gives right now.
+- **The server decides every score.** Starting a run picks a random seed on the server and writes down the moment it started. Everything that moves comes from that seed and the moments the balls were dropped, using whole-number math in one shared file (`public/discodrop-engine.js`), so the page and the server always agree. For each ball the page sends only *when* it let go, in milliseconds since the run started. The server replays the whole run from the seed to find where every ball landed and adds up the score itself. It turns away a drop that couldn't have happened: one before the last ball had landed and the next was back on the arm (a ball takes 0.65 seconds to fall and 0.35 to come back), one later than the server's own clock says the run has been going, or one that arrives more than ten seconds after it happened. A score sent by the page is ignored.
+- **Celebrations are earned.** A jackpot gets a banner, a coin shower and a jingle, but only when the server says the ball landed in it. "So close!" only shows when the server measured the ball landing right next to the jackpot cup.
+- **Boards** for today and for all time. Every run you save counts. Profiles show their name or initials (their own choice), and guests type initials. A new best-ever run posts to the Comm Center.
+- **Phones first, and TV-ready:** the whole cabinet is the tap area, with a big DROP button under it, and it fits a phone screen with no sideways scrolling. **Space** or **Enter** drops on a keyboard, and a game controller's **A** button works through the browser's Gamepad API. The animation runs on `requestAnimationFrame`, and with reduced motion turned on the lights, spotlights and sparkle hold still (the cups still move, since that's the game).
+
+#### The Disco Drop API
+
+Everything is under `/api/discodrop`.
+
+| Call | What it does |
+|---|---|
+| `GET /rules` | The number of balls, how long a ball takes to fall and reload, when double points start, and what each cup is worth. |
+| `POST /start` `{ profileToken? }` | Starts a run. Returns its id and seed. |
+| `GET /run/:id` | Where a run stands: the drop times so far, where each ball landed, the total. |
+| `POST /run/:id/drop` `{ t }` | Drops the next ball `t` milliseconds after the run started. Returns where it landed, its points and the new total. |
+| `POST /run/:id/save` `{ initials?, profileToken? }` | Puts a finished run on the boards. Returns today's and all-time rank, and how far behind the next score up today it is. |
+| `GET /board?scope=day\|all&day=` | The best runs, highest first. |
+
 ### Sudoku (`/sudoku.html`)
 
 The classic 9x9 number puzzle: fill every empty square with 1 to 9 so no row, column or 3x3 box has the same number twice. There's a new puzzle at midnight on each of four levels, and it's the same puzzle for everyone that day (it's made from the date alone), so the family can race each other.
@@ -462,6 +485,7 @@ chess/                    Two-phone chess rooms (/api/chess)
 sudoku/                   Sudoku's puzzle maker (generator.js) and its runs and boards (/api/sudoku)
 scuffle/                  Shuffle Scuffle: letters and points (game.js), solo games and the daily board (solo.js), rooms (rooms.js), /api/scuffle
 crisscross/               Criss Cross: the rules (engine.js), the computer player (bot.js), games in the database (games.js), /api/crisscross
+discodrop/                Disco Drop: runs, the replayed drops and the boards (/api/discodrop); the motion is public/discodrop-engine.js
 clueless/                 Clueless: shapes and the filler (grid.js), clue checks (clues.js), the day's puzzles (maker.js, puzzles.js), the built-in clues, /api/clueless
 tumbler/                  Tumbler Rumble's runs, the replay check and the boards (/api/tumbler; the rules are public/tumbler-engine.js)
 spinsolve/                Spin & Solve levels, adult banks, packs and requests (/api/spinsolve)
@@ -482,6 +506,7 @@ public/scuffle.*          Shuffle Scuffle
 public/crisscross.*       Criss Cross
 public/clueless.*         Clueless (admin side in admin-clueless.js)
 public/tumbler.*          Tumbler Rumble (the rules, shared with the server, in tumbler-engine.js)
+public/discodrop*         Disco Drop (discodrop-engine.js is shared with the server)
 public/game-shell.*       Shared game-over panel and high scores for those four
 public/arcade-ui.css      Shared look for the newer games, with arcade-kit.js and blip.js
 public/admin.html/.js     Admin panel
