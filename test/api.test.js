@@ -781,10 +781,10 @@ async function run({ base, root }) {
 
   // ---- home page game order -------------------------------------------------------
   const startInfo = (await wl('/arcade-info')).data;
-  ok('the home page gets every game in an order', startInfo.games.order.length === 16 && startInfo.games.hidden.length === 0);
+  ok('the home page gets every game in an order', startInfo.games.order.length === 17 && startInfo.games.hidden.length === 0);
   const reordered = await asAdmin('/comm/admin/home-games', 'POST', { order: ['dino', 'chess'], hidden: ['spinsolve'] });
   ok('the admin can reorder and hide games', reordered.status === 200 && reordered.data.order[0] === 'dino' &&
-    reordered.data.order.length === 16 && reordered.data.hidden.join() === 'spinsolve', JSON.stringify(reordered.data));
+    reordered.data.order.length === 17 && reordered.data.hidden.join() === 'spinsolve', JSON.stringify(reordered.data));
   ok('the home page sees the new order', (await wl('/arcade-info')).data.games.order[0] === 'dino');
   ok('sorting by most played is on by default', startInfo.games.sort === 'played');
   ok('the admin can switch it off', (await asAdmin('/comm/admin/home-games', 'POST', { order: ['dino'], hidden: [], sort: 'fixed' })).data.sort === 'fixed');

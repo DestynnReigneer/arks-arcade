@@ -38,6 +38,7 @@ ends up in the Docker image (CI checks that too).
 - `scuffle/` — Shuffle Scuffle's letters, points, solo games, daily board and rooms
 - `crisscross/` — Criss Cross: the rules (`engine.js`), the computer player (`bot.js`) and the games kept in the database (`games.js`)
 - `clueless/` — Clueless, the daily crossword: the grid shapes and filler (`grid.js`), the clue checks (`clues.js`), the built-in clues, the day's puzzles and clue packs (`maker.js`, `puzzles.js`) and the routes
+- `tumbler/` — Tumbler Rumble's runs, the replay that works out each score, and the boards; the rules themselves are `public/tumbler-engine.js`, which the page and the server both load
 - `words/` — the dictionaries, plain text, edit by hand
 - `test/` — `unit.test.js` needs no server, `api.test.js` needs the one the
   runner starts

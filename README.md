@@ -282,6 +282,27 @@ Everything is under `/api/clueless`. A grid is one character per square, row by 
 | `GET /admin/summary`, `/admin/batch?kind=kids\|grownup&count=`, `/admin/packs` | Admin only: how many words have clues, words for the next prompt, and the clue packs. |
 | `POST /admin/packs` `{ label, kind, text }`, `DELETE /admin/packs/:id` | Admin only: checks and saves a pasted clue pack (it lists what it skipped and why), or deletes one. |
 
+### Tumbler Rumble (`/tumbler.html`)
+
+A timing game in the style of a coin-op cabinet. A bright light races around a lock, and one spot on the ring glows gold: that's the **pin**. Tap the moment the light is on the pin to pop it, and the light turns around while a new pin lights up somewhere ahead of it. Pop every pin to open the lock. The first lock needs 3 pins and each lock after it needs one more (up to 20), and the light turns a little faster every lock (140 degrees a second on the first, topping out at 400 from lock 20). The run ends the first time you tap when the light isn't on the pin, or let it slide past the pin without a tap. There's no last lock, so it's all about how far you get.
+
+- **Controls:** tap anywhere on the lock or the big POP! button on a phone, press Space or Enter on a keyboard, or press a game controller's A button (through the browser's Gamepad API; Start pauses). The lock is drawn on a canvas at the screen's frame rate. With reduced motion turned on, the glowing trail, the shake and most of the confetti are left out, and the game plays the same.
+- **Points:** every pin is worth 10 points times the lock number, and opening a lock is worth 50 times the lock number. Popping a pin right on the white stripe in its middle is a **bullseye**, worth the pin's points again times your streak of bullseyes in a row (up to 5 times).
+- **The server works out every score.** Starting a run writes down the moment on the server's clock and hands the page a random seed, which decides where every pin goes. The page and the server run the same small simulation (`public/tumbler-engine.js`): the page plays it live, and when the run ends it sends only the list of its tap times, in whole milliseconds since the run started. The server replays those taps through the simulation and gets the score itself. It refuses taps that couldn't have come from a real run: two taps closer together than 60 milliseconds, taps out of order, more than 4,000 of them, a tap after the run was already over, or times later than the run has really lasted by the server's clock. Opening How to play or leaving the page pauses the run, and there's a countdown before the light moves again.
+- **High-score boards** for today and for all time. Every run you save counts, profiles show their name or initials the way they chose, and guests type initials. After a run the game says how many more points would have passed the next real score on today's board. A new best score ever posts to the Comm Center.
+
+#### The Tumbler Rumble API
+
+Everything is under `/api/tumbler`.
+
+| Call | What it does |
+|---|---|
+| `POST /start` `{ profileToken? }` | Starts a run. Returns the run id, the seed and the rules. |
+| `GET /run/:id` | Where a run stands, and its score once it's finished. |
+| `POST /run/:id/finish` `{ taps }` | Replays the tap times (whole milliseconds since the run started) and keeps the score the server worked out. Impossible taps are refused. |
+| `POST /run/:id/save` `{ initials?, profileToken? }` | Puts a finished run's score on the boards. Returns today's and all-time rank. |
+| `GET /board?scope=day\|all&day=` | The best scores, highest first. |
+
 ### Know-It-All (`/trivia.html`)
 
 Multiple-choice trivia. Solo (high-score board), take turns on one phone, or a room where everyone answers on their own phone at the same time and faster right answers score more. Pick genres, difficulty, how many questions and how long to answer.
@@ -442,6 +463,7 @@ sudoku/                   Sudoku's puzzle maker (generator.js) and its runs and 
 scuffle/                  Shuffle Scuffle: letters and points (game.js), solo games and the daily board (solo.js), rooms (rooms.js), /api/scuffle
 crisscross/               Criss Cross: the rules (engine.js), the computer player (bot.js), games in the database (games.js), /api/crisscross
 clueless/                 Clueless: shapes and the filler (grid.js), clue checks (clues.js), the day's puzzles (maker.js, puzzles.js), the built-in clues, /api/clueless
+tumbler/                  Tumbler Rumble's runs, the replay check and the boards (/api/tumbler; the rules are public/tumbler-engine.js)
 spinsolve/                Spin & Solve levels, adult banks, packs and requests (/api/spinsolve)
 trivia/                   Know-It-All questions, packs, Open Trivia DB download, rooms (/api/trivia)
 arcade/                   Arcade-wide pieces: Comm Center, adult PIN, high scores, profiles, stats and the error log, Wordless hints
@@ -459,6 +481,7 @@ public/sudoku.*           Sudoku
 public/scuffle.*          Shuffle Scuffle
 public/crisscross.*       Criss Cross
 public/clueless.*         Clueless (admin side in admin-clueless.js)
+public/tumbler.*          Tumbler Rumble (the rules, shared with the server, in tumbler-engine.js)
 public/game-shell.*       Shared game-over panel and high scores for those four
 public/arcade-ui.css      Shared look for the newer games, with arcade-kit.js and blip.js
 public/admin.html/.js     Admin panel

@@ -7,6 +7,40 @@ to-do list as checkboxes (the rule is in the maintainer's global CLAUDE.md
 and `arks-internal/conventions/sessions.md`): do the checked items in the
 order they were clicked, and keep the rest pinned here.
 
+## Tumbler Rumble (2026-11-01)
+
+A cabinet-style timing game like the ticket-redemption lock games at arcades, with our own name,
+rules and look. Its id is `tumbler` (page `public/tumbler.*`, rules
+`public/tumbler-engine.js`, server `tumbler/routes.js`, accent electric blue `#3d8bff`, emoji 🔓).
+The name is ours: a lock's tumblers are the pins you pop, and "rumble" is the arcade noise.
+
+- **Rules** (`public/tumbler-engine.js`, loaded by both the page and the server): a 2.2-second
+  "ready" before the first lock, pins 75 to 300 degrees ahead of the marker (seeded mulberry32),
+  12 degrees either side of the pin's middle counts and 4 is a bullseye, 3 pins on lock 1 and one
+  more per lock (at most 20), speed 140 degrees a second plus 14 per lock (at most 400), a
+  1.8-second break after each lock with the marker back at the top. A tap off the pin or the marker
+  passing the pin's far edge ends the run. Points: 10 x lock per pin, the same again x the bullseye
+  streak (capped at 5) for a bullseye, 50 x lock for opening it.
+- **Scoring the server can trust** (`tumbler/routes.js`, tables `tumbler_runs` and `tumbler_scores`):
+  `/start` keeps the start time and a random 32-bit seed; `/finish` takes only the tap times
+  (whole ms since the run started) and replays them. Refused: taps under 60 ms apart (the page
+  counts a double tap once), out of order, over 4,000, during the ready or a break, after the run
+  ended, or later than the server's clock says the run lasted (1.5 s slack; `TUMBLER_SLACK_MS` for
+  the test suite only). Pausing (How to play, leaving the page) stops the page's game clock, so it
+  never runs ahead of the server's. Every saved run counts on the boards (today and all time). A
+  new best ever posts to the Comm Center. `testHook` in the `/start` answer, only under
+  `NODE_ENV=test`, turns on `window.TumblerTest` for the browser test.
+- **The page:** a canvas lock (shackle that lifts when a lock opens, a ring of 48 lights with a
+  trail behind the marker, the gold pin with its bullseye stripe), the POP! button, Space and
+  Enter, and the Gamepad API (A pops, Start pauses or starts again). After a run, the line under
+  the score is the real gap to the next score up on today's board.
+- Wired into the home card, the QR picker, the admin game switches, stats, feedback, the dust sign,
+  `NAMES` in `arcade/switches.js`, Comm Center posts, its own music in `public/blip.js`, the
+  Dockerfile, the Playwright page list and a browser test that pops the first lock.
+- Not done: no per-person "best only" view of the boards (every saved run is listed), and a bot
+  that reads the seed could still play perfectly. The server only makes sure the taps could have
+  happened, which is the same trust the other timing games have.
+
 ## Game switches and the banner from ARKS ID (2026-11-01, contract v13)
 
 - **With ARKS ID on, its admin console can turn games on and off** for everyone, for a
