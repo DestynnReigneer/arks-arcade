@@ -80,6 +80,50 @@ The name is ours: a lock's tumblers are the pins you pop, and "rumble" is the ar
   that reads the seed could still play perfectly. The server only makes sure the taps could have
   happened, which is the same trust the other timing games have.
 
+## Moonshot, the batting cage (2026-11-01)
+
+A cabinet-style timing game in the spirit of the arcade batting-cage cabinets, with our own
+name, rules and look (no real teams, leagues or logos). Its id is `moonshot` (page
+`public/moonshot.*`, rules `public/moonshot-engine.js`, server `moonshot/routes.js`, accent
+ice blue `#7cf5ff`, emoji ⚾). "Moonshot" is baseball slang for a towering home run, and a
+perfect swing here really does fly to the moon.
+
+- **Rules** (`public/moonshot-engine.js`, loaded by both the page and the server): 12 pitches,
+  levels of 4 (points x1, x2, x3). The seed alone sets every pitch: its kind (fastball, changeup,
+  curveball that bows out and back; the first pitch is always a fastball), its windup (600-1400
+  ms, shorter at higher levels), and its travel time (fastball 1250/1020/840 ms by level,
+  changeup 1700/1450/1250, curve 1500/1280/1100, each ±60). The schedule doesn't depend on the
+  swings: 1.8 s ready, then windup, flight, 220 ms where a late swing still counts, 1.6 s
+  between pitches. A run takes about 50 seconds. Timing bands either side of perfect: 25 ms home
+  run (100), 50 triple (60), 80 double (40), 120 single (25), 160 grounder (5), 210 foul (2),
+  else a strike. Home runs in a row add 50 for each one before (up to 200), then the level
+  multiplies. Most a run can score: 6,700.
+- **Scoring the server can trust** (`moonshot/routes.js`, tables `moonshot_runs` and
+  `moonshot_scores`): `/start` keeps the start time and a random 32-bit seed. The page posts each
+  swing's time as it happens; the server checks it's a whole number, no later than its own
+  clock allows (300 ms grace; `MOONSHOT_SLACK_MS` widens it for the test suite only), no more
+  than 10 seconds old, not while paused, and inside a pitch's swing window with one swing per
+  pitch, then replays the run. Save takes only initials or a profile; the score is the server's
+  replay. **Pausing** (How to play, the boards, leaving the page, P/Esc, a controller's Start)
+  stops the page's clock and calls `/pause` and `/resume`, so the server leaves paused time
+  off the run's clock and the 10-second check still works. A run expires after 30 minutes.
+- **Honest celebrations:** the HOME RUN! banner, coins and moon fireworks fire on the server's
+  answer, and "So close!" only when the server measured the swing within 15 ms of the home-run
+  window (it says the real gap). After a save, the line under the score is the real gap to the
+  next score up on today's board.
+- **The page:** a canvas cage (stadium lights, a moon, a chasing-light outfield wall, a pitching
+  machine whose light ring fills during the windup, the glowing ring over the plate, a neon
+  bat), the SWING button (acts on the press), Space and Enter, and the Gamepad API (A swings,
+  Start pauses). `window.MoonshotClock` exposes the run's clock so the browser test can aim, and
+  `GET /api/moonshot/test/homer/:id` gives the perfect swing time only under `NODE_ENV=test`.
+- Wired into the home card, the QR picker, admin switches and stats, `NAMES` in
+  `arcade/switches.js`, the banner, feedback, the dust sign, Comm Center posts (a new best run
+  ever), its own ballpark-organ music in `public/blip.js`, the Dockerfile, the Playwright page
+  list and a browser test that hits a home run on the first pitch and saves the run.
+- Not done: no left/right aiming (the timing alone decides the hit; early goes left and late
+  goes right), no party mode with turns, and a bot that reads the seed could still swing
+  perfectly (the same trust the other timing games have).
+
 ## Disco Drop, the drop cabinet (2026-11-01)
 
 The "cabinet-style game" from the to-do list, in the spirit of the arcade cabinets where a
@@ -477,8 +521,8 @@ board-name setting and adult PIN are only for copies running without it.
   everything from #15 to #37. Fix what turns up.
 - **Start a new game:** the next one from the private feedback list. Sudoku, Shuffle
   Scuffle (the word scramble), Criss Cross (the crossword tile game), Clueless (the daily
-  crossword), Tumbler Rumble (the lock cabinet) and Disco Drop (the drop cabinet) were
-  built on 2026-11-01.
+  crossword), Tumbler Rumble (the lock cabinet), Disco Drop (the drop cabinet) and Moonshot
+  (the batting cage) were built on 2026-11-01.
 - **Achievements step 1:** waits for the maintainer's markup of the private
   plan. Then build step 1 (age groups, the feats engine, Rambler milestones
   moved over).

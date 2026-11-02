@@ -46,6 +46,7 @@ ends up in the Docker image (CI checks that too).
 - `tumbler/` — Tumbler Rumble's runs, the replay that works out each score, and the boards; the rules themselves are `public/tumbler-engine.js`, which the page and the server both load
 - `discodrop/` — Disco Drop's runs and boards. The motion and the scoring rules are in `public/discodrop-engine.js`, which the page and the server both load, so they always agree
 - `royale/` — Roll Royale's runs, the replay that works out each score, and the boards; the rules themselves are `public/royale-engine.js`, which the page and the server both load
+- `moonshot/` — Moonshot's runs, swings, pauses and boards. The pitches and the scoring rules are in `public/moonshot-engine.js`, which the page and the server both load, so they always agree
 - `words/` — the dictionaries, plain text, edit by hand
 - `test/` — `unit.test.js` needs no server, `api.test.js` needs the one the
   runner starts
