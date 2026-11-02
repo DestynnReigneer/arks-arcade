@@ -251,6 +251,16 @@ async function run({ base, root, fake, admin: ADMIN }) {
     (await asAdmin('/api/comm/admin/feedback')).data.inbox.waiting === 1);
   fake.feedbackDown = false;
 
+  console.log('\n-- status reports --');
+  // The first report goes a few seconds after the server starts.
+  for (let i = 0; i < 40 && !fake.reports.length; i++) await new Promise(r => setTimeout(r, 250));
+  const report = fake.reports[0] || {};
+  ok('the arcade tells the sign-in service how it is doing, a few seconds after starting', fake.reports.length >= 1, JSON.stringify(fake.reports));
+  ok('…with its build, Node version and how long it has been up', typeof report.version === 'string' && typeof report.commit === 'string' &&
+    report.node === process.versions.node && Number.isInteger(report.uptimeSec), JSON.stringify(report));
+  ok('…its database size and the free disk space where its data lives', report.dbBytes > 0 && report.diskTotalBytes > 0 &&
+    report.diskFreeBytes >= 0 && report.diskFreeBytes <= report.diskTotalBytes, JSON.stringify(report));
+
   console.log('\n-- signing out --');
   const out = await milo.call('/auth/signout', { method: 'POST', follow: false });
   ok('signing out ends the arcade sign-in and goes on to ARKS ID\'s sign-out', out.data.next === `${fake.base}/signout?app=arcade&return=%2F`);
