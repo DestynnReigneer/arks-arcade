@@ -163,6 +163,7 @@ app.use('/api/trivia', require('./trivia/routes')({ requireAdmin, notify: notify
 app.use('/api/partdeux', require('./partdeux/routes'));
 app.use('/api/daredevil', require('./daredevil/routes'));
 app.use('/api/sudoku', require('./sudoku/routes').router);
+app.use('/api/scuffle', require('./scuffle/routes'));
 app.use('/api', require('./arcade/lobby').router);
 app.use('/api/profiles', require('./arcade/profiles')({ requireAdmin, notify: notifyDiscord }));
 app.use('/api/scores', require('./arcade/scores').router);

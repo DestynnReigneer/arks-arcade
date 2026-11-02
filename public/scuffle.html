@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Shuffle Scuffle</title>
+<link rel="icon" href="/custom/brand/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/custom/brand/app-icon-180.png">
+<link rel="stylesheet" href="arcade-ui.css">
+<link rel="stylesheet" href="tutorial.css">
+<link rel="stylesheet" href="scuffle.css">
+<link rel="stylesheet" href="adult-mode.css">
+<link rel="stylesheet" href="look.css">
+<link rel="stylesheet" href="topbar.css">
+</head>
+<body>
+<script src="topbar.js"></script>
+
+<header class="top">
+  <a href="/" class="icon-btn" title="Back to the arcade">←</a>
+  <h1><i class="t-emoji">🔀 </i>SHUFFLE <span>SCUFFLE</span></h1>
+  <div class="btns">
+    <button class="icon-btn" id="muteBtn" title="Sound">🔊</button>
+    <button class="icon-btn music-btn" id="musicBtn" title="Music">🎵</button>
+    <button class="icon-btn" id="scoresBtn" title="Daily high scores">🏆</button>
+    <button class="icon-btn" id="helpBtn" title="How to play">?</button>
+  </div>
+</header>
+
+<!-- ============ setup ============ -->
+<section id="setup">
+  <div class="panel">
+    <h2>How do you want to play?</h2>
+    <div class="seg mode-seg" id="modeSeg">
+      <button data-mode="daily" aria-pressed="true">📅 Daily</button>
+      <button data-mode="free" aria-pressed="false">🎲 Free play</button>
+      <button data-mode="host" aria-pressed="false">📡 Host</button>
+      <button data-mode="join" aria-pressed="false">🔗 Join</button>
+    </div>
+    <p class="hint" id="modeHint"></p>
+    <div id="hostSetup" class="hidden">
+      <label>Your name<input id="hostName" maxlength="16" placeholder="e.g. Sam"></label>
+    </div>
+    <div id="joinSetup" class="hidden">
+      <label>Game code<input id="joinCode" maxlength="4" placeholder="ABCD" autocapitalize="characters" class="code-input"></label>
+      <label>Your name<input id="joinName" maxlength="16" placeholder="e.g. Alex"></label>
+    </div>
+  </div>
+
+  <div class="panel" id="wordsPanel">
+    <h2>Which words count?</h2>
+    <div class="seg" id="dictSeg">
+      <button data-v="kids" aria-pressed="true">🧒 Family words</button>
+      <button data-v="adult" aria-pressed="false">🔞 Unfiltered</button>
+    </div>
+    <p class="hint" id="dictHint"></p>
+  </div>
+
+  <div class="panel" id="optionsPanel">
+    <h2>How long?</h2>
+    <div class="hint">Rounds</div>
+    <div class="seg" id="roundsSeg"></div>
+    <div class="hint">Seconds a round</div>
+    <div class="seg" id="secondsSeg"></div>
+  </div>
+
+  <div class="msg center" id="setupMsg"></div>
+  <button class="primary big" id="goBtn">Let's play</button>
+</section>
+
+<!-- ============ room lobby ============ -->
+<section id="lobby" class="hidden">
+  <div class="panel center">
+    <div class="hint">Game code</div>
+    <div class="code" id="lobbyCode">----</div>
+    <img class="join-qr hidden" id="joinQr" width="150" height="150" alt="QR code to join">
+    <div class="join-link" id="joinLink"></div>
+    <p class="hint">Scan the code with another phone, or open Shuffle Scuffle there, tap Join and type the code in.</p>
+    <p class="hint" id="lobbySettings"></p>
+  </div>
+  <div class="panel">
+    <h2>Players <span id="lobbyCount"></span></h2>
+    <ul class="people" id="lobbyPlayers"></ul>
+    <button class="primary big hidden" id="startBtn">Start the game</button>
+    <p class="hint center" id="waitHost">Waiting for the host to start…</p>
+    <button class="ghost" id="lobbyLeave">Leave</button>
+  </div>
+</section>
+
+<!-- ============ a round ============ -->
+<section id="play" class="hidden">
+  <div class="hud">
+    <div><small>Round</small><b id="roundLabel">1/5</b></div>
+    <div class="clock-box"><small>Time left</small><b id="clock">1:15</b></div>
+    <div><small>Score</small><b id="scoreLabel">0</b></div>
+  </div>
+  <div class="sc-news" id="news" aria-live="polite"></div>
+
+  <div class="sc-guess" id="guess" aria-label="Your word so far"></div>
+  <div class="sc-tiles" id="tiles" aria-label="Letters"></div>
+  <div class="sc-keys">
+    <button class="sc-key" id="shuffleBtn" title="Shuffle the letters (Space)"><span>🔀</span><small>Shuffle</small></button>
+    <button class="sc-key" id="clearBtn" title="Clear (Esc)"><span>✕</span><small>Clear</small></button>
+    <button class="sc-key" id="backBtn" title="Take back a letter (Backspace)"><span>⌫</span><small>Back</small></button>
+    <button class="sc-key sc-enter" id="enterBtn" title="Try the word (Enter)"><span>✔</span><small>Enter</small></button>
+  </div>
+  <p class="hint center keys-hint">On a keyboard, type the letters, press <b>Enter</b> to try a word, <b>Space</b> to shuffle and <b>Esc</b> to clear.</p>
+
+  <div class="sc-goal" id="goal"></div>
+  <ul class="sc-found" id="found"></ul>
+  <ul class="score-strip hidden" id="strip"></ul>
+  <button class="ghost" id="doneBtn">I'm done with this round</button>
+</section>
+
+<!-- ============ after a round ============ -->
+<section id="reveal" class="hidden">
+  <div class="panel center">
+    <div class="over-top"><button class="primary hidden" id="againBtn">Play again</button></div>
+    <div class="hint" id="revealRound"></div>
+    <div class="hint">The full word was</div>
+    <div class="sc-full" id="revealFull"></div>
+    <p class="hint" id="revealFirst"></p>
+    <div class="final-line" id="revealScore"></div>
+  </div>
+  <div class="panel hidden" id="standingsPanel">
+    <h2 id="standingsTitle">Scores</h2>
+    <ol class="sc-standings" id="standings"></ol>
+  </div>
+  <div class="panel">
+    <h2>Words you found</h2>
+    <ul class="sc-found" id="revealFound"></ul>
+    <h2 class="sc-missed-title" id="missedTitle">Words you missed</h2>
+    <ul class="sc-found missed" id="revealMissed"></ul>
+  </div>
+  <div class="panel center hidden" id="overPanel">
+    <h2 id="overTitle">Game over</h2>
+    <ol class="sc-rounds" id="roundList"></ol>
+    <div id="savePart" class="hidden">
+      <p class="hint" id="saveHint">Type your initials to put your score on today's board.</p>
+      <div class="initials" id="iniRow">
+        <input maxlength="1" class="ini" autocomplete="off" aria-label="First initial"><input maxlength="1" class="ini" autocomplete="off" aria-label="Second initial"><input maxlength="1" class="ini" autocomplete="off" aria-label="Third initial">
+      </div>
+      <button class="primary big" id="saveBtn">Save my score</button>
+      <div class="msg" id="saveMsg"></div>
+    </div>
+    <p class="hint" id="rankLine"></p>
+  </div>
+  <div class="stack">
+    <button class="primary big hidden" id="nextBtn">Next round</button>
+    <p class="hint center hidden" id="waitNext">Waiting for the host to start the next round…</p>
+    <button class="ghost" id="menuBtn">Back to the menu</button>
+  </div>
+</section>
+
+<!-- ============ overlays ============ -->
+<div class="overlay hidden" id="pinView">
+  <div class="card-panel center">
+    <div class="big-emoji">🔞</div>
+    <h2>Adults only</h2>
+    <p class="hint">The unfiltered word list has rude words in it. Enter the adult PIN to use it.</p>
+    <input type="password" id="pinInput" inputmode="numeric" maxlength="6" class="code-input" autocomplete="off">
+    <div class="msg" id="pinMsg"></div>
+    <div class="stack"><button class="ghost" id="pinCancel">Cancel</button></div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="scores" role="dialog" aria-label="Daily high scores">
+  <div class="card-panel">
+    <h2>🏆 Daily high scores</h2>
+    <div class="seg" id="scoreScope">
+      <button data-scope="day" aria-pressed="true">Today</button>
+      <button data-scope="all" aria-pressed="false">All time</button>
+    </div>
+    <ul class="scores" id="scoreList"></ul>
+    <p class="hint center" id="scoreNote"></p>
+    <div class="stack"><button class="ghost" id="scoresClose">Close</button></div>
+  </div>
+</div>
+
+<script src="feedback.js"></script>
+<script src="avatars.js"></script>
+<script src="avatar-photo.js"></script>
+<script src="pin-pad.js"></script>
+<script src="profile.js"></script>
+<script src="custom-media.js"></script>
+<script src="stats.js"></script>
+<script src="dust-sign.js"></script>
+<script src="tutorial.js"></script>
+<script src="blip.js"></script>
+<script src="fx.js"></script>
+<script src="arcade-kit.js"></script>
+<script src="arcade-qr.js"></script>
+<script src="room-password.js"></script>
+<script src="scuffle.js"></script>
+</body>
+</html>
