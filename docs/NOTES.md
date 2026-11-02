@@ -7,6 +7,45 @@ to-do list as checkboxes (the rule is in the maintainer's global CLAUDE.md
 and `arks-internal/conventions/sessions.md`): do the checked items in the
 order they were clicked, and keep the rest pinned here.
 
+## Roll Royale (2026-11-01)
+
+A cabinet-style ball-rolling game like the skee-ball machines with a power meter, with our own
+name, rules and look. Its id is `royale` (page `public/royale.*`, rules `public/royale-engine.js`,
+server `royale/routes.js`, accent neon mint `#2effb4`, emoji 🎳). The name is ours: you roll
+the ball, and "royale" is the casino-floor glamour the arcade's look goes for.
+
+- **Rules** (`public/royale-engine.js`, loaded by both the page and the server, only adding,
+  multiplying and rounding down so every device gets the same answer): 9 balls, the first ready
+  1.5 seconds in and each next one 2.2 seconds after the last was let go. The aim is a triangle
+  wave from -1 to 1 that starts at a seeded point (mulberry32) for each ball and takes 2.6, 2.1 or
+  1.7 seconds there and back; pressing locks it. Power is a triangle wave on the hold time (1
+  second up, 1 second down); the ball travels 0.6 + 0.75 x power lane units, and sideways aim x
+  0.22 x that distance. Rings around (0, 1) have radii 0.035, 0.075, 0.115, 0.155 and 0.2 for 50
+  down to 10; the jackpot cup is at y 1.24, radius 0.032, worth 100, and on balls 7 to 9 it slides
+  0.12 either way (seeded, 2.6-second trip) and is worth 200. The cup is checked at landing time,
+  0.95 seconds after letting go. Most a run can score: 1,200.
+- **Scoring the server can trust** (`royale/routes.js`, tables `royale_runs` and `royale_scores`):
+  `/start` keeps the start time and a random 32-bit seed; `/finish` takes only the 9
+  `[press, release]` pairs (whole ms since the run started) and replays them. Refused: not exactly
+  9 pairs, a press before the ball was ready, a hold under 80 ms or over 4 seconds, or a release
+  later than the server's clock says the run lasted (1.5 s slack; `ROYALE_SLACK_MS` for the test
+  suite only). Pausing (How to play, leaving the page) stops the page's game clock and drops a ball
+  that was being held. `testHook` in the `/start` answer, only under `NODE_ENV=test`, turns on
+  `window.RoyaleTest` (when to press and how long to hold) for the browser test.
+- **The page:** a canvas lane seen from behind (rows of lights, the gold lip, the tilted board with
+  its neon rings, the cup, the swaying arrow with the ball's real path dashed across the board, a
+  power meter with the 50 band in pink and the cup band in gold, and the 9 balls' points along the
+  top). Press and hold on the lane or the HOLD · ROLL button, Space or Enter held, or the Gamepad
+  API (A or the right trigger held, Start pauses or starts again). Jackpots get a banner and a coin
+  burst. After a run, the line under the score is the real gap to the next score up on today's board.
+- Wired into the home card, the QR picker, the admin game switches, stats, feedback, the dust sign,
+  `NAMES` in `arcade/switches.js`, Comm Center posts, its own music in `public/blip.js`, the
+  Dockerfile, the Playwright page list and a browser test that rolls a ball into the middle.
+- Not done: a swipe whose speed sets the power. The server can only check times, so touch uses the
+  same press, hold and let go as the keyboard (a flick up the lane as you let go still works). No
+  per-person "best only" view of the boards, and as with the other timing games, a bot that reads
+  the seed could play perfectly; the server only makes sure the times could have happened.
+
 ## Tumbler Rumble (2026-11-01)
 
 A cabinet-style timing game like the ticket-redemption lock games at arcades, with our own name,

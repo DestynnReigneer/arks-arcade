@@ -21,7 +21,7 @@
     hub: ['🏠', 'Home page'], wordless: ['🔤', 'Wordless'], rambler: ['🔠', 'Rambler'], spinsolve: ['🎡', 'Spin & Solve'],
     chess: ['♞', 'Chess'], dino: ['🦖', 'Dino Dash'], trivia: ['🧠', 'Know-It-All'], partdeux: ['🚨', 'Uh-Oh: Part Deux'],
     daredevil: ['😈', 'Dare Devil'], snake: ['🐍', 'Snake'], bricks: ['🧱', 'Brick Breaker'], blocks: ['🟪', 'Block Drop'],
-    towers: ['🏰', 'Tower Defense'], sudoku: ['🧩', 'Sudoku'], scuffle: ['🔀', 'Shuffle Scuffle'], crisscross: ['🔡', 'Criss Cross'], clueless: ['📰', 'Clueless'], tumbler: ['🔓', 'Tumbler Rumble'], discodrop: ['🪩', 'Disco Drop'], admin: ['🛠️', 'Admin']
+    towers: ['🏰', 'Tower Defense'], sudoku: ['🧩', 'Sudoku'], scuffle: ['🔀', 'Shuffle Scuffle'], crisscross: ['🔡', 'Criss Cross'], clueless: ['📰', 'Clueless'], tumbler: ['🔓', 'Tumbler Rumble'], discodrop: ['🪩', 'Disco Drop'], royale: ['🎳', 'Roll Royale'], admin: ['🛠️', 'Admin']
   };
   const gameName = id => (GAMES[id] ? `${GAMES[id][0]} ${GAMES[id][1]}` : id || 'The arcade');
   const DEVICE_EMOJI = { phone: '📱', tablet: '📲', desktop: '🖥️' };

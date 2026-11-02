@@ -1,0 +1,76 @@
+/* Roll Royale: the lane, the ROLL button and the game-over extras. The
+   shared look comes from arcade-ui.css, game-shell.css and look.css. */
+:root {
+  --accent: #2effb4; --on-accent: #00261a; --gold: #ffd23f;
+  --ring10: #3d8bff; --ring20: #2de2e6; --ring30: #3ddc84; --ring40: #ffd23f; --ring50: #ff3df2; --miss: #ff5e5e;
+}
+
+.hud { gap: 6px; }
+.hud div { padding: 6px 8px; }
+.hud b { font-size: 17px; }
+
+/* One big place to press: the lane and the button under it. */
+.rr-zone { max-width: 480px; margin: 0 auto; user-select: none; -webkit-user-select: none; touch-action: none; }
+.rr-stage {
+  width: 100%; aspect-ratio: 5 / 6; max-height: 60vh; cursor: pointer; background: var(--plate, #0a0416);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 20%, transparent), 0 10px 30px rgba(0, 0, 0, 0.5),
+    inset 0 0 40px color-mix(in srgb, var(--accent) 12%, transparent);
+  -webkit-tap-highlight-color: transparent; touch-action: none;
+}
+/* When the screen is short the lane gets shorter, and narrower to match, so
+   the board never looks squashed. */
+@supports (aspect-ratio: 1) {
+  .rr-stage { width: min(100%, calc(60vh * 5 / 6)); margin: 0 auto; }
+}
+.rr-stage:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.rr-stage canvas { width: 100%; height: 100%; display: block; }
+.rr-stage .stage-msg { background: color-mix(in srgb, var(--plate, #0a0416) 70%, transparent); }
+.rr-stage .stage-msg b { font: 800 22px/1.2 Orbitron, var(--font); color: var(--accent); text-shadow: 0 0 12px color-mix(in srgb, var(--accent) 70%, transparent); }
+.rr-stage .stage-msg span { max-width: 280px; line-height: 1.5; }
+.rr-stage.shake { animation: rr-shake 0.35s linear; }
+@keyframes rr-shake {
+  20% { transform: translateX(-6px); } 40% { transform: translateX(5px); }
+  60% { transform: translateX(-3px); } 80% { transform: translateX(2px); }
+}
+
+.rr-roll {
+  display: block; width: 100%; height: 72px; margin-top: 12px; border-radius: 16px; cursor: pointer;
+  font: 900 24px/1 Orbitron, var(--font); letter-spacing: 4px; color: var(--on-accent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 75%, #fff), var(--accent));
+  border: 2px solid color-mix(in srgb, var(--accent) 60%, #fff);
+  box-shadow: 0 6px 0 color-mix(in srgb, var(--accent) 45%, #000), 0 0 22px color-mix(in srgb, var(--accent) 45%, transparent);
+  touch-action: none; -webkit-tap-highlight-color: transparent;
+}
+.rr-roll.down { transform: translateY(4px); box-shadow: 0 2px 0 color-mix(in srgb, var(--accent) 45%, #000), 0 0 30px var(--accent); }
+body[data-state="over"] .rr-roll { opacity: 0.45; }
+
+/* The real gap to the next score up on today's board. */
+.rr-chase { margin: 6px 0 2px; font-size: 14px; line-height: 1.5; color: var(--gold); font-weight: 600; }
+.rr-chase:empty { display: none; }
+
+/* Where each of the 9 balls landed, on the game-over panel. */
+.rr-tally { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin: 8px 0 4px; padding: 0; list-style: none; }
+.rr-tally li { min-width: 34px; padding: 5px 6px; border-radius: 8px; font: 800 13px/1 Orbitron, var(--font);
+  background: color-mix(in srgb, var(--accent) 12%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent); }
+.rr-tally li.zero { opacity: 0.5; }
+.rr-tally li.cup { color: var(--gold); border-color: var(--gold); }
+
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Celebrations (fx.js): the confetti layer and the big banner, as on the other games. */
+#fxCanvas { position: fixed; inset: 0; pointer-events: none; z-index: 90; }
+.fx-banner { position: fixed; inset: 0; z-index: 95; display: flex; align-items: center; justify-content: center; pointer-events: none; opacity: 0; transition: opacity .25s ease; padding: 20px; }
+.fx-banner.on { opacity: 1; }
+.fx-banner-inner { text-align: center; transform: scale(.7); transition: transform .4s cubic-bezier(.2, .9, .25, 1.4); }
+.fx-banner.on .fx-banner-inner { transform: scale(1); }
+.fx-title { font-family: "Orbitron", system-ui, sans-serif; font-weight: 800; font-size: clamp(30px, 11vw, 74px); line-height: 1; text-wrap: balance; }
+.fx-sub { font-weight: 700; font-size: clamp(13px, 4vw, 19px); letter-spacing: .2em; text-transform: uppercase; margin-top: 12px; color: #f5eaff; }
+.fx-banner.tone-gold .fx-title { color: #ffd23f; text-shadow: 0 0 26px rgba(255, 210, 63, .9), 0 0 70px rgba(46, 255, 180, .7), 0 4px 0 #7a4e08; animation: rrStrobe .34s steps(2) infinite; }
+@keyframes rrStrobe { 50% { filter: brightness(1.45); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .rr-stage.shake { animation: none; }
+  .fx-banner-inner { transition: none !important; }
+  .fx-title { animation: none !important; }
+}
