@@ -393,14 +393,14 @@
     ctx.textAlign = 'center';
     if (S.mode === 'ready') {
       ctx.fillStyle = ink;
-      ctx.fillText('TAP OR PRESS SPACE TO RUN', W / 2, 70);
+      ctx.fillText(TvPlay.on ? 'PRESS OK ON PLAY TO RUN' : 'TAP OR PRESS SPACE TO RUN', W / 2, 70);
     } else if (S.mode === 'over') {
       ctx.fillStyle = ink;
       ctx.font = 'bold 20px ui-monospace, Menlo, Consolas, monospace';
       ctx.fillText('G A M E   O V E R', W / 2, 54);
       ctx.font = 'bold 12px ui-monospace, Menlo, Consolas, monospace';
       ctx.fillStyle = dim;
-      ctx.fillText('TAP TO RUN AGAIN', W / 2, 84);
+      ctx.fillText(TvPlay.on ? 'PRESS OK ON RUN AGAIN' : 'TAP TO RUN AGAIN', W / 2, 84);
     }
   }
 
@@ -423,7 +423,8 @@
     if (!who) { $('scoreMsg').textContent = 'Type your initials first.'; return; }
     $('saveScoreBtn').disabled = true;
     try {
-      const r = await ArcadeKit.saveScore('dino', { initials: who, score: score(), board: 'run', detail: '' });
+      // On a TV it's the initials' score, not the TV's (see tv-play.js).
+      const r = await ArcadeKit.saveScore('dino', { initials: who, score: score(), board: 'run', detail: '', ...(TvPlay.on ? { profileToken: null } : {}) });
       initials.remember(who);
       $('savePart').classList.add('hidden');
       openScores(r.id);
@@ -466,7 +467,21 @@
   $('scoresClose').addEventListener('click', () => $('scoresView').classList.add('hidden'));
   $('helpBtn').addEventListener('click', () => help.open());
   Blip.muteButton($('muteBtn'));
-  initials = ArcadeKit.wireInitials([...document.querySelectorAll('#overPanel .ini')], saveScore);
+  initials = ArcadeKit.wireInitials([...document.querySelectorAll('#overPanel .ini')], saveScore, { guest: TvPlay.on });
+
+  // ---- on the TV ----------------------------------------------------------------------------
+  // The desert on the right, wide. OK or up jumps (hold for a big jump),
+  // down ducks. A controller's A, X, R1 or right trigger jump too.
+  TvPlay.setup({
+    stage: document.querySelector('.dino-stage'),
+    steering: () => S.mode === 'running',
+    begin: () => jump(),
+    ready: () => S.mode === 'ready',
+    enter: ' ',
+    buttons: { 0: ' ', 2: ' ', 5: ' ', 7: ' ' },
+    dirs: true,
+    hint: 'Press OK or up on the remote to jump (hold it for a big jump), and down to duck. On a game controller, A, X, R1 or the right trigger jumps too, and the D-pad or left stick ducks.'
+  });
 
   document.body.dataset.state = 'ready';
   S.clouds = [{ x: 420, y: 40 }, { x: 160, y: 66 }];

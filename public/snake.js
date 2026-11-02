@@ -50,7 +50,7 @@
     document.body.dataset.state = 'ready';
     paintOptions();
     $('options').classList.remove('hidden');
-    message('Ready?', 'Swipe, tap a button, or press an arrow key to go.');
+    message('Ready?', TvPlay.on ? 'Pick a mode and a speed, then press OK on Play.' : 'Swipe, tap a button, or press an arrow key to go.');
     hud();
   }
   function start() {
@@ -64,7 +64,7 @@
     if (window.ArcadeStats) ArcadeStats.play();
   }
   function pause(on = state === 'playing') {
-    if (on && state === 'playing') { state = 'paused'; message('Paused', 'Tap the board or press P to keep going.'); }
+    if (on && state === 'playing') { state = 'paused'; message('Paused', TvPlay.on ? 'Press OK to keep going.' : 'Tap the board or press P to keep going.'); }
     else if (!on && state === 'paused') { state = 'playing'; last = performance.now(); message(null); }
     $('pauseBtn').textContent = state === 'paused' ? '▶' : '⏸';
   }
@@ -372,6 +372,24 @@
     }
   ]);
   $('helpBtn').addEventListener('click', () => help.open());
+
+  // ---- on the TV ----------------------------------------------------------------------------
+  // The board on the right, big. Pick the mode and speed on the left, then
+  // Play. The arrows (or a controller's D-pad and left stick) steer; OK, X
+  // and Start pause and carry on.
+  TvPlay.setup({
+    stage: $('stage'),
+    // Until the game-over panel is up (a moment after the crash), OK and
+    // the arrows stay with the game, so a late press can't leave the page.
+    steering: () => state === 'playing' || state === 'paused' || (state === 'over' && !shell.isOver),
+    active: () => state === 'playing',
+    begin: () => start(),
+    ready: () => state === 'ready',
+    enter: ' ',
+    buttons: { 0: ' ', 2: 'p', 9: 'p' },
+    dirs: true,
+    hint: 'The arrows on the remote steer the snake, and OK pauses and carries on. On a game controller, the D-pad or the left stick steers, and X or Start pauses.'
+  });
 
   reset();
   requestAnimationFrame(frame);

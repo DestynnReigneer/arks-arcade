@@ -150,7 +150,7 @@
   function pause(on = !paused) {
     if (state === 'over') return;
     paused = on;
-    if (on) message('Paused', 'Tap or press P to keep going.');
+    if (on) message('Paused', TvPlay.on ? 'Press OK on the map, or Start on a game controller, to keep going.' : 'Tap or press P to keep going.');
     else { last = performance.now(); message(null); }
     $('pauseBtn').textContent = paused ? '▶' : '⏸';
   }
@@ -219,9 +219,10 @@
     }
     const p = document.createElement('p');
     p.className = 'hint';
+    const how = TvPlay.on ? 'Move around the map with the arrows and press OK on an empty square to build a tower there.' : 'Tap an empty square to build a tower.';
     p.textContent = state === 'ready'
-      ? 'Tap an empty square to build a tower. Once you build, wave 1 comes in 30 seconds, and after each wave you get a short break to build more.'
-      : 'Tap an empty square to build a tower. Tap a tower to upgrade or sell it. Monsters walk the road to your castle: don\'t let them in!';
+      ? `${how} Once you build, wave 1 comes in 30 seconds, and after each wave you get a short break to build more.`
+      : `${how} ${TvPlay.on ? 'Press OK on a tower' : 'Tap a tower'} to upgrade or sell it. Monsters walk the road to your castle: don't let them in!`;
     box.appendChild(p);
   }
 
@@ -577,6 +578,17 @@
       }
     }
 
+    // the remote's cursor on the TV, while the map has the highlight
+    if (cursor && document.activeElement === $('stage')) {
+      ctx.strokeStyle = '#00ffc2';
+      ctx.lineWidth = Math.max(3, c * 0.09);
+      ctx.shadowColor = '#00ffc2';
+      ctx.shadowBlur = c * 0.3;
+      rounded(ctx, P(cursor.x) + 2, P(cursor.y) + 2, c - 4, c - 4, c * 0.15);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    }
+
     // monsters, back to front
     const enemies = g.enemies.slice().sort((a, b) => a.y - b.y);
     for (const e of enemies) {
@@ -737,6 +749,9 @@
     const r = $('canvas').getBoundingClientRect();
     const x = Math.floor(((e.clientX - r.left) / r.width) * g.map.cols);
     const y = Math.floor(((e.clientY - r.top) / r.height) * g.map.rows);
+    pickSquare(x, y);
+  });
+  function pickSquare(x, y) {
     if (x < 0 || y < 0 || x >= g.map.cols || y >= g.map.rows) return;
     const tile = E.tileAt(g, x, y);
     if (E.towerAt(g, x, y) || tile === '.') {
@@ -748,7 +763,7 @@
       toast(why ? `${why} Pick an empty square.` : 'That\'s the road! Build next to it.', 1500);
     }
     renderInfo(true);
-  });
+  }
   $('waveBtn').addEventListener('click', callWave);
   const SPEEDS = [1, 2, 3];
   function setSpeed(s) {
@@ -803,6 +818,46 @@
     }
   ]);
   $('helpBtn').addEventListener('click', () => help.open());
+
+  // ---- on the TV ----------------------------------------------------------------------------
+  // The map on the right, big, and everything else on the left. The map
+  // takes the highlight like a button; while it has it, the arrows move a
+  // cursor around the map (off the edge, the highlight leaves the map), and
+  // OK picks the square under it, the same as a tap. Picking a square to
+  // build on moves the highlight to the towers to choose from.
+  let cursor = null;
+  TvPlay.setup({
+    stage: $('stage'),
+    steering: () => false,
+    active: () => state === 'playing' && !paused,
+    start: () => (state !== 'over' ? $('stage') : null),
+    navButtons: { 2: ' ', 3: 'u', 4: '-', 5: '+', 9: 'p' },
+    hint: 'Move around the map with the arrows and press OK on a square to build there, or on a tower to upgrade or sell it. Press OK on Start wave when you\'re ready. On a game controller, X calls the next wave, Y upgrades the picked tower, L1 and R1 change the speed, and Start pauses.'
+  });
+  if (TvPlay.on) {
+    const map = $('stage');
+    map.tabIndex = 0;
+    map.setAttribute('aria-label', 'The map. The arrows move around it, and OK picks the square.');
+    window.addEventListener('keydown', e => {
+      if (document.activeElement !== map || help.isOpen || state === 'over' || e.altKey || e.ctrlKey || e.metaKey) return;
+      if (!cursor || cursor.x >= g.map.cols || cursor.y >= g.map.rows) cursor = picked ? { ...picked } : { x: Math.floor(g.map.cols / 2), y: Math.floor(g.map.rows / 2) };
+      const step = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] }[e.key];
+      if (step) {
+        const x = cursor.x + step[0], y = cursor.y + step[1];
+        if (x < 0 || y < 0 || x >= g.map.cols || y >= g.map.rows) return;
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        cursor = { x, y };
+      } else if (e.key === 'Enter' && !e.repeat) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        if (paused) { pause(false); return; }
+        pickSquare(cursor.x, cursor.y);
+        const choice = picked && $('info').querySelector('.build-grid button:not(:disabled)');
+        if (choice) choice.focus();
+      }
+    }, true);
+  }
 
   reset();
   requestAnimationFrame(frame);

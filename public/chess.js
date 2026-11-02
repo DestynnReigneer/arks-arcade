@@ -70,6 +70,8 @@
 
   function show(screen) {
     for (const id of ['setup', 'lobby', 'game']) $(id).classList.toggle('hidden', id !== screen);
+    const tvBoard = $('boardWrap').closest('.tv-stage');
+    if (tvBoard) tvBoard.classList.toggle('hidden', screen !== 'game');
   }
 
   async function start() {
@@ -338,6 +340,7 @@
     if (!S.state) return;
     const bottom = bottomColor();
     const board = $('board');
+    const focusedSq = board.contains(document.activeElement) ? document.activeElement.dataset.sq : null;
     board.innerHTML = '';
     const check = !S.ended && E.inCheck(S.state) ? S.state.board.indexOf(S.state.turn === 'w' ? 'K' : 'k') : -1;
     for (let i = 0; i < 64; i++) {
@@ -361,9 +364,11 @@
       // File letters along the bottom row, rank numbers up the left side.
       if (i >= 56) btn.insertAdjacentHTML('beforeend', `<span class="coord file">${'abcdefgh'[col]}</span>`);
       if (i % 8 === 0) btn.insertAdjacentHTML('beforeend', `<span class="coord rank">${8 - row}</span>`);
+      btn.dataset.sq = sq;
       btn.addEventListener('click', () => onSquare(sq));
       board.appendChild(btn);
     }
+    if (focusedSq != null) { const again = board.querySelector(`[data-sq="${focusedSq}"]`); if (again) again.focus({ preventScroll: true }); }
     renderBars(bottom);
     renderLastMove();
     renderStatus();
@@ -605,7 +610,9 @@
       const myMoves = Math.ceil(S.moves.length / 2);
       const r = await ArcadeKit.saveScore('chess', {
         initials: who, score: winPoints(), board: S.level,
-        detail: `Won as ${COLOR_NAME[S.me]} in ${myMoves} moves${S.suggestions ? ` · ${S.suggestions} 💡` : ''}`
+        detail: `Won as ${COLOR_NAME[S.me]} in ${myMoves} moves${S.suggestions ? ` · ${S.suggestions} 💡` : ''}`,
+        // On a TV it's the initials' score, not the TV's (see tv-play.js).
+        ...(TvPlay.on ? { profileToken: null } : {})
       });
       initials.remember(who);
       $('overScore').classList.add('hidden');
@@ -757,7 +764,26 @@
   $('scoresClose').addEventListener('click', () => $('scoresView').classList.add('hidden'));
   $('helpBtn').addEventListener('click', () => help.open());
   Blip.muteButton($('muteBtn'));
-  initials = ArcadeKit.wireInitials([...document.querySelectorAll('#overScore .ini')], saveScore);
+  initials = ArcadeKit.wireInitials([...document.querySelectorAll('#overScore .ini')], saveScore, { guest: TvPlay.on });
+
+  // ---- on the TV ---------------------------------------------------------------------------
+  // The board on the right, big; the players, the moves and the buttons on
+  // the left. The squares are buttons, so the remote's arrows move the
+  // highlight from square to square and OK picks a piece, then the square to
+  // move it to. Playing the computer or two players sharing the remote; the
+  // two-phone games (Host and Join) stay on phones.
+  TvPlay.setup({
+    stage: $('boardWrap'),
+    steering: () => false,
+    active: () => !!S.state && !S.ended && !$('game').classList.contains('hidden'),
+    start: () => {
+      if ($('game').classList.contains('hidden')) return null;
+      const b = $('board');
+      return b.querySelector('.sq.picked') || b.querySelector(`[data-sq="${S.lastMove ? S.lastMove.to : (S.me === 'b' && S.mode !== 'local' ? 12 : 52)}"]`);
+    },
+    hint: 'Move around the board with the arrows and press OK on one of your pieces, then OK on the square to move it to. Left of the board are Suggest, Undo and the rest.'
+  });
+  if (TvPlay.on) $('boardWrap').closest('.tv-stage').classList.add('hidden');
 
   // ---- boot --------------------------------------------------------------------------------
 
