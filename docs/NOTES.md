@@ -21,6 +21,40 @@ order they were clicked, and keep the rest pinned here.
 - Tests: the ARKS ID suite waits for the first report and checks its numbers;
   `test/fake-arksid.js` takes reports and events (`fake.reports`, `fake.events`).
 
+## Criss Cross (2026-11-01)
+
+The crossword tile game from the to-do list ("a crossword"), built for playing on everyone's
+own phone over days. Its id is `crisscross` (page `public/crisscross.*`, server `crisscross/`,
+accent coral `#ff7a59`, emoji 🔡). Our own name, board, bonus pattern and tile bag.
+
+- **Rules** (`crisscross/engine.js`, no database): an 11 by 11 board (fits a phone) with our
+  own symmetric bonus pattern (3W corners, 2W diagonals and the star, 2L and 3L scattered), a
+  66-tile bag (two blanks; values 1 to 10, balanced for our lists), racks of 7, +40 for all
+  seven, swap needs 7 in the bag, six scoreless turns end the game, the usual leftover-tile
+  adjustments at the end. Two-letter words come straight from `enable1.txt` (the dictionary
+  tree only holds 3+), with British spellings and the kids blocklist applied the same way.
+- **Games** (`crisscross/games.js`, tables `crisscross_games` and `crisscross_seats`): the whole
+  game is one JSON blob that never leaves the server; `view()` builds what one player may see
+  (their own rack, the bag as a count). `turn_profile` makes "your turn" counts cheap. Online
+  games are profiles only (`X-Profile-Token`); pass-and-play games get a device key
+  (`X-Game-Key`, stored hashed) and are open to guests. Waiting games and untouched local games
+  are swept after 14 and 30 days.
+- **Adult rules:** an unfiltered game needs the adult PIN or pass on every request, from every
+  player; with ARKS ID on, invitees must be grown-ups' accounts and so must whoever asks.
+- **The computer** (`crisscross/bot.js`): greedy, best score along every row and column via the
+  dictionary tree, no blanks, main word 3+ letters. A whole bot-vs-bot game takes well under a
+  second.
+- **"Your turn"**: the home card gets a badge (`GET /api/crisscross/turns`, every minute), and
+  the game's list shows whose turn, the last move and when. An open game polls every 8 seconds.
+  No push nudges: ARKS ID's contract (v12) has no short-message channel (the clip inbox is for
+  media clips), so none were added.
+- Wired into the home card, the QR picker, admin switches and stats, feedback, the dust sign,
+  its own music in `public/blip.js`, the Dockerfile, the Playwright page list and a browser
+  test that places a first word. The stats `visit` limit is 2000 under `NODE_ENV=test`, because
+  the browser suite now opens more pages from one address than the old 120 allowed.
+- Not done: no Comm Center post for a big score, no chat (on purpose), no time limit on a turn,
+  and the computer can't sit in an online game.
+
 ## Shuffle Scuffle (2026-11-01)
 
 The word scramble from the to-do list, built as a timed race: everyone gets the same 6 or 7
@@ -252,8 +286,8 @@ board-name setting and adult PIN are only for copies running without it.
 - **Play-test on the server:** pull the new image on the server and try
   everything from #15 to #37. Fix what turns up.
 - **Start a new game:** a crossword or a cabinet-style game (the list is in the
-  private feedback list). Sudoku and Shuffle Scuffle (the word scramble) were built on
-  2026-11-01.
+  private feedback list). Sudoku, Shuffle Scuffle (the word scramble) and Criss Cross (the
+  crossword tile game) were built on 2026-11-01.
 - **Achievements step 1:** waits for the maintainer's markup of the private
   plan. Then build step 1 (age groups, the feats engine, Rambler milestones
   moved over).

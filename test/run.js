@@ -19,7 +19,8 @@ const SUITES = [
   ['unit', require('./unit.test.js')],
   ['api', require('./api.test.js')],
   ['sudoku', require('./sudoku.test.js')],
-  ['scuffle', require('./scuffle.test.js')]
+  ['scuffle', require('./scuffle.test.js')],
+  ['crisscross', require('./crisscross.test.js')]
 ];
 
 // A throwaway brand/ and media/ folder, so the tests can check what the
