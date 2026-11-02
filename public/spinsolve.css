@@ -280,3 +280,27 @@ body::before {
 .actions #spinBtn:not(:disabled):hover .btn-wheel { animation: logoSpin 1s linear infinite; }
 @keyframes logoSpin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .logo-wheel { animation: none; } }
+
+/* ---- on a TV (tv.js puts .tv on <html>): the remote is passed around, and
+   solving uses this keyboard on the screen. */
+.solve-keys { display: none; }
+html.tv .solve-keys { display: flex; flex-direction: column; gap: 6px; margin: 10px 0 4px; }
+html.tv .solve-keys .row { display: flex; gap: 6px; justify-content: center; }
+html.tv .solve-keys button {
+  min-width: 46px; height: 46px; border-radius: 10px; border: 1px solid var(--border, #3a2a5a);
+  background: var(--card-2, #2c1350); color: inherit; font-weight: 800; font-size: 18px; cursor: pointer;
+}
+html.tv .solve-keys button.wide { min-width: 120px; }
+html.tv #solveView .card-panel { max-width: 620px; }
+/* The puzzle across the top, then the wheel on the left with the players
+   and the buttons beside it, so it's all on the screen at once. */
+html.tv #game:not(.hidden) { display: grid; grid-template-columns: 220px 1fr; column-gap: 28px; align-items: center; }
+html.tv #game > * { grid-column: 1 / -1; }
+html.tv #game > .wheel-area { grid-column: 1; grid-row: 4 / span 6; width: 100%; }
+html.tv #game > #playerList { grid-column: 2; grid-row: 4; }
+html.tv #game > .turn-line, html.tv #game > #turnTimer, html.tv #game > .actions,
+html.tv #game > #usedLetters, html.tv #game > #quitBtn { grid-column: 2; }
+html.tv .host-lane { height: 56px; }
+/* Wide, short letter tiles, so the whole puzzle stays in sight. */
+html.tv .puzzle-board .tile { aspect-ratio: 1 / 1; }
+html.tv .stage { width: 100%; max-width: 640px; margin: 0 auto; box-sizing: border-box; }

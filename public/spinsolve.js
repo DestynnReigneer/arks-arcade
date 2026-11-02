@@ -2,9 +2,15 @@
 
 // Spin & Solve: spin the wheel, call a consonant, buy vowels, solve the
 // phrase. Solo plays for the high-score board; 2-4 players share a phone.
+//
+// On a TV (tv.js), the game shows big and the remote is passed around: the
+// arrows move between Spin, Buy a vowel and Solve and across the letters, OK
+// presses, and solving uses a keyboard on the screen. Adult puzzles need an
+// adults' night, never a PIN on the TV.
 
 (() => {
   const { $, toast, api } = ArcadeKit;
+  const TV = !!(window.ArcadeTV && ArcadeTV.on);
   const VOWELS = 'AEIOU';
   const VOWEL_COST = 250;
   const SOLVE_MIN = 1000;     // solving always banks at least this much
@@ -25,18 +31,19 @@
   const SLICE = 360 / WEDGES.length;
 
   const S = {
-    names: [typeof ArcadeProfile !== 'undefined' ? ArcadeProfile.name() : '', ''], rounds: 3, players: [], cur: 0, round: 0, puzzle: null,
+    names: [typeof ArcadeProfile !== 'undefined' && !TV ? ArcadeProfile.name() : '', ''], rounds: 3, players: [], cur: 0, round: 0, puzzle: null,
     revealed: new Set(), used: new Set(), strikes: 0, wedge: null, busy: false,
     rotation: 0, usedPuzzles: new Set(),
     config: null, level: 'kids', pack: 'all', pool: [], banter: null,
     turnSecs: 45, timeLeft: 0, idleSince: 0, jokedThisTurn: false, heckledThisRound: false, heckling: false,
-    pin: (() => { try { return sessionStorage.getItem('spin.adultPin') || ''; } catch { return ''; } })(),
-    adultOk: (() => { try { return sessionStorage.getItem('spin.adultOk') === 'yes'; } catch { return false; } })()
+    pin: TV ? '' : (() => { try { return sessionStorage.getItem('spin.adultPin') || ''; } catch { return ''; } })(),
+    adultOk: !TV && (() => { try { return sessionStorage.getItem('spin.adultOk') === 'yes'; } catch { return false; } })()
   };
   const pinHeaders = () => (S.pin ? { 'X-Adult-Pin': S.pin } : {});
   const levelInfo = id => (S.config ? S.config.levels.find(l => l.id === id) : null) || { id: 'kids', label: 'Kids', adult: false, builtin: 0 };
   const isAdult = () => levelInfo(S.level).adult;
-  const unlocked = () => (S.config && S.config.adultRequiresPin ? !!S.pin : S.adultOk);
+  // On a TV, adult puzzles follow adults' night, with the TV's adult pass.
+  const unlocked = () => (TV ? ArcadeTV.adult() && !!S.pin : S.config && S.config.adultRequiresPin ? !!S.pin : S.adultOk);
   const solo = () => S.players.length === 1;
   const money = n => '$' + n.toLocaleString('en-US');
   const letters = s => s.replace(/[^A-Z]/g, '');
@@ -114,7 +121,13 @@
   }
 
   // The adult PIN if one is set, otherwise a one-tap "I'm an adult".
+  async function unlockOnTv() {
+    S.pin = await ArcadeTV.adultPass();
+    return !!S.pin;
+  }
+
   function unlockAdult() {
+    if (TV) return unlockOnTv();
     if (!S.config.adultRequiresPin) {
       const ok = confirm('These puzzles are for adults only (18+). Continue?');
       if (ok) { S.adultOk = true; try { sessionStorage.setItem('spin.adultOk', 'yes'); } catch { /* unavailable */ } }
@@ -804,7 +817,30 @@
     $('solveInput').value = '';
     $('solveMsg').textContent = '';
     $('solveView').classList.remove('hidden');
-    $('solveInput').focus();
+    // On a TV the answer is typed on the keyboard on the screen, with the remote.
+    if (TV) { const first = $('solveKeys').querySelector('button'); if (first) first.focus(); } else $('solveInput').focus();
+  }
+  // The keyboard on the screen for solving on a TV: the letters, a space and ⌫.
+  function buildSolveKeys() {
+    const box = $('solveKeys');
+    for (const row of ['ABCDEFG', 'HIJKLMN', 'OPQRSTU', 'VWXYZ', [' ', '⌫']]) {
+      const r = document.createElement('div');
+      r.className = 'row';
+      for (const k of row) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.textContent = k === ' ' ? 'Space' : k;
+        b.className = k.length > 1 || k === ' ' || k === '⌫' ? 'wide' : '';
+        b.setAttribute('aria-label', k === ' ' ? 'Space' : k === '⌫' ? 'Erase' : k);
+        b.addEventListener('click', () => {
+          const input = $('solveInput');
+          input.value = k === '⌫' ? input.value.slice(0, -1) : (input.value + k).slice(0, 80);
+          $('solveMsg').textContent = '';
+        });
+        r.appendChild(b);
+      }
+      box.appendChild(r);
+    }
   }
 
   function trySolve() {
@@ -999,7 +1035,35 @@
   $('nextRoundBtn').addEventListener('click', nextRound);
   $('againBtn').addEventListener('click', startGame);
   $('menuBtn').addEventListener('click', backToSetup);
-  $('quitBtn').addEventListener('click', () => { if (confirm('Leave this game?')) backToSetup(); });
+  $('quitBtn').addEventListener('click', async () => { if (await (TV ? ArcadeTV.confirm('Leave this game?') : Promise.resolve(confirm('Leave this game?')))) backToSetup(); });
+  if (TV) {
+    buildSolveKeys();
+    // Typing on a TV pops up its own keyboard over everything; the one on the screen is easier.
+    $('solveInput').readOnly = true;
+    // A spin on the TV counts as a game being played (adults' night keeps going).
+    $('spinBtn').addEventListener('click', () => ArcadeTV.played());
+    // During a game the puzzle stays in sight under the top bar, whichever
+    // button the highlight is on.
+    document.addEventListener('focusin', () => requestAnimationFrame(() => {
+      if ($('game').classList.contains('hidden') || !document.activeElement.closest('#game')) return;
+      const bar = document.querySelector('.ah');
+      const top = Math.max(0, $('game').getBoundingClientRect().top + window.scrollY - (bar ? bar.getBoundingClientRect().bottom : 0) - 8);
+      // Only if the button the highlight is on stays clear of the bar at the bottom.
+      const below = document.activeElement.getBoundingClientRect().bottom + window.scrollY - top;
+      if (below < window.innerHeight - 110) window.scrollTo({ top });
+    }));
+    // Adults' night ended (Back to family, or it ran out): family puzzles at once.
+    document.addEventListener('arcadetv:mode', e => {
+      if (e.detail.adult) return;
+      S.pin = '';
+      if (isAdult()) {
+        if (S.puzzle) { backToSetup(); toast('Back to family mode.'); }
+        S.level = 'kids';
+        S.pack = 'all';
+      }
+      loadConfig();
+    });
+  }
   $('saveScoreBtn').addEventListener('click', saveScore);
   $('scoresBtn').addEventListener('click', () => openScores());
   $('scoresClose').addEventListener('click', () => $('scoresView').classList.add('hidden'));
@@ -1012,5 +1076,6 @@
   Host.setHost('vee');
   renderNames();
   loadConfig();
-  help.autoOpen();
+  // On a TV, How to play waits for the ? button instead of opening by itself.
+  if (!TV) help.autoOpen();
 })();

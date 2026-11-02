@@ -5,9 +5,15 @@
 // page draws the grid and the clues, takes taps and keys, and remembers your
 // progress on this device. It never has the answers until you've finished
 // (or until it asks the server to reveal a square, which costs time).
+//
+// On a TV (tv.js), the remote's arrows move the highlight from square to
+// square, OK picks the square it's on (OK again switches between across and
+// down), and the keyboard on the screen types into the picked square.
+// Arrowing back up from the keyboard lands on the picked square.
 
 (() => {
   const { $, toast, api } = ArcadeKit;
+  const TV = !!(window.ArcadeTV && ArcadeTV.on);
   const LEVELS = [['mini', 'Family mini · 5×5'], ['big', 'Grown-ups · 7×7']];
   const LABEL = { mini: 'Family mini', big: 'Grown-ups' };
   const store = (k, v) => { try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch { /* private mode */ } };
@@ -51,6 +57,11 @@
         if (P.numbers[i]) { const s = document.createElement('span'); s.className = 'num'; s.textContent = P.numbers[i]; b.appendChild(s); }
         const t = document.createElement('span'); t.className = 'ltr'; b.appendChild(t);
         b.addEventListener('click', () => tapSquare(i));
+        // Coming back to the grid from the keyboard or the tools: back to your square.
+        if (TV) b.addEventListener('focus', e => {
+          if (!playing() || i === sel || sel < 0) return;
+          if (!(e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest('#grid'))) cells[sel].focus();
+        });
       } else {
         b.disabled = true;
         b.tabIndex = -1;
@@ -316,6 +327,12 @@
     } else {
       $('cover').classList.add('hidden');
       document.body.dataset.state = 'playing';
+      // On a TV the highlight starts on your square, and a puzzle counts as a game being played.
+      if (TV) {
+        ArcadeTV.played();
+        if (sel < 0 && words.length) select(firstEmpty(words[0]));
+        if (sel >= 0) requestAnimationFrame(() => cells[sel].focus());
+      }
     }
     paintPause();
   }
@@ -444,9 +461,13 @@
       ? `${clock(run.timeMs - run.penaltyMs)} solving, plus ${clock(run.penaltyMs)} for help (${help}).`
       : 'No help used. That\'s a clean solve!';
     const p = profile();
+    // A TV has no keyboard for initials: the time goes on the board from your own phone.
+    const noBoard = TV && !p;
     $('savePart').classList.toggle('hidden', run.saved);
-    $('iniRow').classList.toggle('hidden', !!p);
-    $('saveHint').textContent = p ? `Saving as ${p.name}.` : 'Type your initials to put your time on today\'s board and see where you stack up.';
+    $('iniRow').classList.toggle('hidden', !!p || noBoard);
+    $('saveBtn').classList.toggle('hidden', noBoard);
+    $('saveHint').textContent = noBoard ? 'Times solved on the TV don\'t go on the board, because there\'s no keyboard for initials. Solve it on your own phone to get on it.'
+      : p ? `Saving as ${p.name}.` : 'Type your initials to put your time on today\'s board and see where you stack up.';
     $('saveMsg').textContent = '';
     $('saveBtn').disabled = false;
     $('rankLine').textContent = run.saved ? 'Your time is on the board.' : '';
@@ -577,6 +598,9 @@
     const k = e.key;
     if (k === 'Escape') { closeMenus(); return; }
     if (!playing()) return;
+    // On a TV the arrows move the highlight (which picks the square), and OK
+    // presses what it's on: a square, a key on the screen, a tool.
+    if (TV && ['Enter', ' ', 'Tab', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(k) && e.target.closest && e.target.closest('button, a')) return;
     if (/^[a-zA-Z]$/.test(k)) { e.preventDefault(); type(k.toUpperCase()); return; }
     if (k === 'Backspace' || k === 'Delete') { e.preventDefault(); erase(); return; }
     if (k === ' ') { e.preventDefault(); toggleDir(); return; }
@@ -653,5 +677,6 @@
     $('costCheckPuzzle').textContent = s(penalties.checkPuzzle);
     document.querySelectorAll('.cost-reveal').forEach((el, k) => { el.textContent = k ? `${s(penalties.reveal)} a letter` : s(penalties.reveal); });
   }).catch(() => {}).finally(() => openLevel(level));
-  help.autoOpen();
+  // On a TV, How to play waits for the ? button instead of opening by itself.
+  if (!TV) help.autoOpen();
 })();
