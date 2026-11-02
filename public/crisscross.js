@@ -4,9 +4,17 @@
 // rack, checks every move and decides every score. This page draws the board
 // and your tiles, lets you tap or drag them into place, and sends only where
 // they went.
+//
+// On a TV (tv.js), it's played on the TV against the computer, or with the
+// remote passed between players: OK on one of your tiles picks it up and
+// sends the highlight to the board, the arrows move it from square to
+// square, and OK puts the tile down. The games on everyone's own phone need
+// to know who you are, so they stay on the phones.
 
 (() => {
   const { $, toast, api } = ArcadeKit;
+  const TV = !!(window.ArcadeTV && ArcadeTV.on);
+  const ask = text => (TV ? ArcadeTV.confirm(text) : Promise.resolve(confirm(text)));
   const store = (k, v) => { try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch { /* private mode */ } };
   const recall = (k, d = null) => { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch { return d; } };
   const token = () => (typeof ArcadeProfile !== 'undefined' ? ArcadeProfile.token() : null);
@@ -20,8 +28,8 @@
 
   const S = {
     config: null,
-    pin: (() => { try { return sessionStorage.getItem('crisscross.adultPin') || ''; } catch { return ''; } })(),
-    adultOk: (() => { try { return sessionStorage.getItem('crisscross.adultOk') === 'yes'; } catch { return false; } })(),
+    pin: TV ? '' : (() => { try { return sessionStorage.getItem('crisscross.adultPin') || ''; } catch { return ''; } })(),
+    adultOk: !TV && (() => { try { return sessionStorage.getItem('crisscross.adultOk') === 'yes'; } catch { return false; } })(),
     view: null,          // the game, as the server showed it to us
     key: null,           // a pass-and-play game's key, from this device's list
     rack: [],            // [{ id, letter }] in the order shown; letter '?' is a blank
@@ -58,8 +66,14 @@
     }
   }
 
-  function unlocked() { return S.config && S.config.adultRequiresPin ? !!S.pin : S.adultOk; }
+  // On a TV, the unfiltered list follows adults' night, with the TV's adult pass.
+  function unlocked() { return TV ? ArcadeTV.adult() && !!S.pin : S.config && S.config.adultRequiresPin ? !!S.pin : S.adultOk; }
+  async function unlockOnTv() {
+    S.pin = await ArcadeTV.adultPass();
+    return !!S.pin;
+  }
   function unlockAdult() {
+    if (TV) return unlockOnTv();
     if (!S.config || !S.config.adultRequiresPin) {
       const ok = confirm('The unfiltered list is for adults only (18+). Continue?');
       if (ok) { S.adultOk = true; try { sessionStorage.setItem('crisscross.adultOk', 'yes'); } catch { /* unavailable */ } }
@@ -126,7 +140,7 @@
     const p = me();
     $('noProfile').classList.toggle('hidden', !!p);
     $('minepanel').classList.toggle('hidden', !p);
-    if (!p) return;
+    if (!p || TV) return;
     await loadMine();
     S.poll = setInterval(() => { if (!document.hidden) loadMine(); }, 30000);
   }
@@ -372,6 +386,9 @@
     if (g.status === 'waiting') { paintWaiting(g); startPoll(); return; }
     show('game');
     adultMode(g.dictionary === 'adult');
+    // A move on the TV counts as a game being played (adults' night keeps going).
+    if (TV && (changedGame || S.movesSeen !== g.moves.length)) ArcadeTV.played();
+    S.movesSeen = g.moves.length;
     syncRack(g);
     paintGame();
     startPoll();
@@ -492,6 +509,8 @@
       b.appendChild(v);
       b.setAttribute('aria-label', t.letter === '?' ? 'Blank tile' : `${t.letter}, worth ${S.config.values[t.letter]}`);
       hookTile(b, t);
+      // On a TV the highlight starts on your tiles.
+      if (TV && !box.children.length) b.dataset.tvStart = '';
       box.appendChild(b);
     }
   }
@@ -631,7 +650,7 @@
     $('rack').style.visibility = need ? 'hidden' : '';
     if (!need) return;
     const name = g.players[g.turn].name;
-    $('handoffTitle').textContent = `Pass the phone to ${name}`;
+    $('handoffTitle').textContent = `Pass the ${TV ? 'remote' : 'phone'} to ${name}`;
     $('handoffText').textContent = `It's ${possessive(name)} turn. Only ${name} should look at the tiles that come up next.`;
     $('handoffGo').textContent = `I'm ${name}, show my tiles`;
     $('handoffGo').onclick = () => { S.handoffSeen = key; handoff(); };
@@ -642,6 +661,7 @@
     const g = S.view;
     if (!g || g.over || g.board[i] || S.pending.has(i)) return;
     const finish = letter => {
+      S.lastCell = i;
       S.pending.set(i, { id: tile.id, letter, blank: tile.letter === '?' });
       S.selected = null;
       Blip.tone(520, 0.04, { type: 'triangle', volume: 0.05 });
@@ -735,6 +755,14 @@
     if ([...S.pending.values()].some(p => p.id === t.id)) return;
     S.selected = S.selected === t.id ? null : t.id;
     paintRack();
+    // On a TV, a tile picked up sends the highlight to the board: next to
+    // the last tile put down, or the middle square, so the arrows can take it
+    // to its square.
+    if (TV && S.selected) {
+      const at = cells[S.lastCell] && !cells[S.lastCell].classList.contains('filled') ? S.lastCell : S.config.center;
+      cells[at].focus();
+      cells[at].scrollIntoView({ block: 'center', inline: 'nearest' });
+    }
   }
 
   // ---- the score before you play --------------------------------------------------------------------------------
@@ -835,7 +863,7 @@
     try { showGame((await call(`/games/${S.view.id}/start`, {})).game); } catch (e) { toast(e.message); }
   };
   $('waitLeave').onclick = async () => {
-    if (!confirm(S.view.host ? 'Call this game off? Everyone who joined will lose it.' : 'Leave this game?')) return;
+    if (!(await ask(S.view.host ? 'Call this game off? Everyone who joined will lose it.' : 'Leave this game?'))) return;
     await act('resign');
   };
   $('backBtn').onclick = home;
@@ -857,16 +885,16 @@
     if (!tiles.length) { toast('Tap the tiles you want to swap first.'); return; }
     act('swap', { tiles });
   };
-  $('passBtn').onclick = () => {
+  $('passBtn').onclick = async () => {
     const g = S.view;
     if (!g.yourTurn) { toast('You can pass on your turn.'); return; }
-    if (confirm('Skip your turn without playing?')) act('pass');
+    if (await ask('Skip your turn without playing?')) act('pass');
   };
   $('playBtn').onclick = playWord;
-  $('resignBtn').onclick = () => {
+  $('resignBtn').onclick = async () => {
     const g = S.view;
     const who = g.kind === 'local' ? g.players[g.turn].name : 'you';
-    if (confirm(g.kind === 'local' ? `Should ${who} leave this game? Their score stays, but they can't win.` : 'Leave this game? Your score stays, but you can\'t win, and the others carry on without you.')) act('resign');
+    if (await ask(g.kind === 'local' ? `Should ${who} leave this game? Their score stays, but they can't win.` : 'Leave this game? Your score stays, but you can\'t win, and the others carry on without you.')) act('resign');
   };
   $('zoomBtn').onclick = () => {
     const box = $('boardBox');
@@ -886,6 +914,8 @@
   };
   window.addEventListener('keydown', e => {
     if ((e.target.closest && e.target.closest('input, textarea, select')) || help.isOpen || !S.view || $('game').classList.contains('hidden')) return;
+    // On a TV, OK (Enter) presses whatever the highlight is on: a tile, a square, Play.
+    if (TV && e.target.closest && e.target.closest('button, a')) return;
     if (e.key === 'Enter') { e.preventDefault(); playWord(); }
     if (e.key === 'Escape') $('recallBtn').click();
   });
@@ -942,7 +972,7 @@
   $('helpBtn').addEventListener('click', () => help.open());
 
   // ---- start ---------------------------------------------------------------------------------------------------------
-  if (recall('crisscross.zoom') === 'on') { $('boardBox').classList.add('zoomed'); $('zoomBtn').textContent = '🔍 Zoom out'; }
+  if (recall('crisscross.zoom') === 'on' && !TV) { $('boardBox').classList.add('zoomed'); $('zoomBtn').textContent = '🔍 Zoom out'; }
   if (typeof ArcadeProfile !== 'undefined') ArcadeProfile.onChange(() => { if (!$('home').classList.contains('hidden')) home(); });
   api('/api/crisscross/config').then(cfg => {
     S.config = cfg;
@@ -952,5 +982,16 @@
     else if (q.get('game')) openGame(q.get('game'));
     else home();
   }).catch(e => toast(e.message, 5000));
-  help.autoOpen();
+  // On a TV, How to play waits for the ? button instead of opening by itself.
+  if (!TV) help.autoOpen();
+  if (TV) {
+    // Adults' night ended (Back to family, or it ran out): family words at once.
+    document.addEventListener('arcadetv:mode', e => {
+      if (e.detail.adult) return;
+      S.pin = '';
+      S.localDict = 'kids';
+      if (S.view && S.view.dictionary === 'adult') { home(); toast('Back to family mode.'); }
+      else if (!$('newLocal').classList.contains('hidden')) paintLocalDict();
+    });
+  }
 })();

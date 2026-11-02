@@ -461,3 +461,10 @@ header h1 span#titleSuffix { color: var(--accent); }
    scroll past the scores to find it. */
 .over-top { display: flex; justify-content: flex-end; margin-bottom: 6px; }
 .over-top button { width: auto; flex: 0 0 auto; margin: 0; }
+
+/* ---- on a TV (tv.js puts .tv on <html>): the keyboard on the screen is how
+   you type, so its keys are big targets for the remote's highlight. */
+html.tv #tvHint { text-align: center; font-size: 13px; opacity: 0.7; margin: 10px 0 0; }
+html.tv .key { min-height: 46px; font-size: 18px; }
+html.tv .key.wide { max-width: 90px; font-size: 13px; }
+html.tv #board { --tile-size: 54px !important; }

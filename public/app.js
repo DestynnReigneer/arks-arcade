@@ -1,4 +1,8 @@
+// Wordless. On a TV (tv.js), it's played with the remote: the arrows move
+// along the keyboard on the screen and OK types the letter (or presses
+// Enter or ⌫ on it). Adult themes need an adults' night, never a PIN on the TV.
 (function() {
+  const TV = !!(window.ArcadeTV && ArcadeTV.on);
   const MAX_GUESSES = 6;
   const MAX_HINTS = 3;
   const THEME_KEY = 'wordless_theme_v2';
@@ -129,8 +133,8 @@
   // Hidden until unlocked with the arcade's adult PIN (or a one-tap "I'm an
   // adult" when no PIN is set). Remembered for this browser tab only.
   const adult = {
-    on: (() => { try { return sessionStorage.getItem('wordless.adult') === 'on'; } catch { return false; } })(),
-    pin: (() => { try { return sessionStorage.getItem('wordless.adultPin') || ''; } catch { return ''; } })(),
+    on: !TV && (() => { try { return sessionStorage.getItem('wordless.adult') === 'on'; } catch { return false; } })(),
+    pin: TV ? '' : (() => { try { return sessionStorage.getItem('wordless.adultPin') || ''; } catch { return ''; } })(),
     requiresPin: false
   };
   const adultQuery = sep => (adult.on ? `${sep}adult=1` : '');
@@ -204,6 +208,16 @@
       if (currentTheme && currentTheme.adult) { setTheme('classic'); newGame(); }
       else themeSelect.value = currentTheme.id;
       showMessage('Adult themes hidden.');
+      return;
+    }
+    // On a TV: an adults' night, then the TV's adult pass goes where the PIN would.
+    if (TV) {
+      const pass = await ArcadeTV.adultPass();
+      if (!pass) return;
+      setAdult(true, pass);
+      await refreshThemes();
+      themeSelect.value = currentTheme.id;
+      showMessage(themes.some(t => t.adult) ? 'Adult themes unlocked. Pick one from the Theme menu.' : 'Unlocked, but no adult themes have been made yet.');
       return;
     }
     const pinInput = document.getElementById('adultPinInput');
@@ -346,6 +360,8 @@
 
   function newGame() {
     if (window.ArcadeStats) ArcadeStats.play();
+    // A word on the TV counts as a game being played (adults' night keeps going).
+    if (TV) ArcadeTV.played();
     answer = pickAnswer();
     wordLen = answer.length;
     guesses = [];
@@ -566,6 +582,9 @@
 
   window.addEventListener('keydown', (e) => {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
+    // On a TV, OK (Enter) presses whatever the highlight is on: a key on the
+    // screen, or a button. The arrows belong to the highlight.
+    if (TV && (e.key === 'Enter' || e.key.startsWith('Arrow')) && e.target.closest && e.target.closest('button, a, select')) return;
     if (!initialsOverlay.classList.contains('hidden')) return;
     if (!leaderboardOverlay.classList.contains('hidden')) return;
     if (!themeRequestOverlay.classList.contains('hidden')) return;
@@ -611,10 +630,17 @@
     // Playing as a profile: the score is theirs, so don't ask for initials.
     const mine = typeof ArcadeProfile !== 'undefined' && ArcadeProfile.token() ? ArcadeProfile.initials() : '';
     initialBoxes.forEach((b, i) => { b.value = mine[i] || ''; b.classList.remove('error'); });
+    // A TV has no keyboard for initials: the score goes on the board from your own phone.
+    const noBoard = TV && !mine;
+    document.getElementById('initialsHint').textContent = noBoard
+      ? 'Scores from the TV don\'t go on the board, because there\'s no keyboard for initials. Play on your own phone to get on it.'
+      : 'Enter your initials';
     document.getElementById('initialsHint').classList.toggle('hidden', !!mine);
-    document.getElementById('initialsBoxes').classList.toggle('hidden', !!mine);
+    document.getElementById('initialsBoxes').classList.toggle('hidden', !!mine || noBoard);
+    saveScoreBtn.classList.toggle('hidden', noBoard);
     initialsOverlay.classList.remove('hidden');
-    if (!mine) initialBoxes[0].focus();
+    if (TV) document.getElementById('playAgainBtn').focus();
+    else if (!mine) initialBoxes[0].focus();
   }
 
   initialBoxes.forEach((box, i) => {
@@ -802,6 +828,17 @@
     // Ask before the first game; picking one starts it. First-timers see how
     // to play on top of it, and land on the difficulty question after.
     openDifficulty();
-    window.wordlessTutorial.autoOpen();
+    // On a TV, How to play waits for the ? button instead of opening by itself.
+    if (!TV) window.wordlessTutorial.autoOpen();
+    if (TV) {
+      // Adults' night ended (Back to family, or it ran out): family themes at once.
+      document.addEventListener('arcadetv:mode', async e => {
+        if (e.detail.adult || !adult.on) return;
+        setAdult(false);
+        await refreshThemes();
+        if (currentTheme && currentTheme.adult) { setTheme('classic'); newGame(); } else themeSelect.value = currentTheme.id;
+        showMessage('Back to family mode.');
+      });
+    }
   })();
 })();
