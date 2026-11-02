@@ -15,7 +15,8 @@ const GAMES = {
   chess: { label: 'Chess', emoji: '♞', page: 'chess.html' },
   trivia: { label: 'Know-It-All', emoji: '🧠', page: 'trivia.html' },
   partdeux: { label: 'Uh-Oh: Part Deux', emoji: '🚨', page: 'partdeux.html' },
-  daredevil: { label: 'Dare Devil', emoji: '😈', page: 'daredevil.html' }
+  daredevil: { label: 'Dare Devil', emoji: '😈', page: 'daredevil.html' },
+  scuffle: { label: 'Shuffle Scuffle', emoji: '🔀', page: 'scuffle.html' }
 };
 
 // Each game keeps its rooms in its own module; this reads them without
@@ -70,6 +71,19 @@ function collect() {
         detail: `${r.level[0].toUpperCase() + r.level.slice(1)} deck${r.drinking ? ' · 🍺' : ''}`
       });
     }
+  }
+
+  const scuffle = require('../scuffle/rooms');
+  for (const r of scuffle._rooms.values()) {
+    const host = r.players.find(p => p.id === r.hostId);
+    const adult = r.settings.dictionary === 'adult';
+    add('scuffle', {
+      adult, locked: !!r.password,
+      code: r.code, host: host ? host.name : '', players: r.players.length, max: scuffle.MAX_PLAYERS,
+      // Latecomers can jump in mid-game, so a running game is still open.
+      status: r.players.length >= scuffle.MAX_PLAYERS ? 'full' : 'open',
+      detail: `${r.settings.rounds} rounds · ${r.settings.seconds}s each${adult ? ' · Unfiltered' : ''}`
+    });
   }
 
   const rank = { open: 0, playing: 1, full: 2 };
