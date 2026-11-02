@@ -32,8 +32,9 @@ order they were clicked, and keep the rest pinned here.
   Roll Royale, Shuffle Scuffle, Wordless (by difficulty) and the older games' shared
   `arcade_scores` (each game by its own boards). **Any other `<game>_scores` table** with
   `id`, `initials` and `score` or `time_ms` is found by itself (named from `NAMES` in
-  `arcade/switches.js`, split by `level` if it has one, by day if it has `day`), so the
-  baseball game picks it up when it lands. Rambler is left out: it has its own Remove and
+  `arcade/switches.js`, split by `level` if it has one, by day if it has `day`). Moonshot,
+  the batting-cage game that landed the same evening, is picked up that way with no code of
+  its own (the boards test checks it). Rambler is left out: it has its own Remove and
   Clear on the Rambler tab, and its seasons turn the boards into badges. Tests in
   `test/boards.test.js` and `test/browser/boards.spec.js`.
 - **`/healthz` only looks now.** The Rambler season check and the forced theme-pack

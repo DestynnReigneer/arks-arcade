@@ -496,7 +496,7 @@ Visit `/admin.html` and enter your `ADMIN_PASSWORD`.
 - Comm Center: the feedback inbox (with screenshots, the page and device each message came from, and a Copy for chat button), announcements, high-score boards, Spin & Solve and Know-It-All packs and requests
 
 **Boards:**
-- Take a single score off any game's board (Sudoku, Clueless, Tumbler Rumble, Disco Drop, Roll Royale, Shuffle Scuffle, Wordless, and the games that share the older high-score board). Pick the game and board, then tap Remove twice. It leaves the board and everyone's ranks straight away but isn't deleted: it's kept in a list under the board with when it was taken off and by whom, and Put back returns it exactly as it was. A game added later shows up here by itself, as long as its scores live in a table named `<game>_scores`. Rambler's boards keep their own tools on the Rambler tab.
+- Take a single score off any game's board (Sudoku, Clueless, Tumbler Rumble, Disco Drop, Roll Royale, Moonshot, Shuffle Scuffle, Wordless, and the games that share the older high-score board). Pick the game and board, then tap Remove twice. It leaves the board and everyone's ranks straight away but isn't deleted: it's kept in a list under the board with when it was taken off and by whom, and Put back returns it exactly as it was. A game added later shows up here by itself, as long as its scores live in a table named `<game>_scores`. Rambler's boards keep their own tools on the Rambler tab.
 
 **Rambler:**
 - See the current season, how long is left, and rename it ("Spooky Season")

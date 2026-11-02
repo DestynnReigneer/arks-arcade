@@ -37,6 +37,8 @@ async function run({ base, root }) {
   ok('Sudoku has a board per level, timed, by day', sudoku && sudoku.boards.map(b => b.id).join() === 'family,easy,medium,hard' && sudoku.unit === 'time' && sudoku.daily);
   ok('Snake\'s boards are its own (classic and wrap-around)', list.data.games.find(g => g.id === 'snake').boards.map(b => b.id).join() === 'classic,wrap');
   ok('Rambler is left to its own tab', !ids.includes('rambler'));
+  const moon = list.data.games.find(g => g.id === 'moonshot');
+  ok('Moonshot, added after the Boards tab, was found on its own (by day, in points)', !!moon && moon.label === 'Moonshot' && moon.daily && moon.unit === 'points', JSON.stringify(moon));
 
   console.log('\n-- boards: removing and putting back (the older games\' shared board) --');
   const top = (await call('/api/scores/snake', 'POST', { initials: 'TOP', score: 199990, board: 'classic' })).data;
