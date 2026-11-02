@@ -19,7 +19,8 @@
     blocks: { label: 'Block Drop', href: 'blocks.html' },
     towers: { label: 'Tower Defense', href: 'towers.html' },
     sudoku: { label: 'Sudoku', href: 'sudoku.html' },
-    scuffle: { label: 'Shuffle Scuffle', href: 'scuffle.html' }
+    scuffle: { label: 'Shuffle Scuffle', href: 'scuffle.html' },
+    crisscross: { label: 'Criss Cross', href: 'crisscross.html' }
   };
 
   // ---- who's playing ---------------------------------------------------------
@@ -42,6 +43,33 @@
   // The same check every game page runs (topbar.js), except that the home
   // page asks even without ARKS ID.
   ArcadeProfile.askIfNobody({ always: true, delay: 600 });
+
+  // ---- Criss Cross turns waiting on you ---------------------------------------
+  // A Criss Cross game can wait days for a turn, so its card says when some
+  // are waiting on whoever is playing on this phone.
+  async function paintTurns() {
+    const card = document.querySelector('.game.crisscross');
+    if (!card) return;
+    let badge = card.querySelector('.turn-badge');
+    const token = ArcadeProfile.token();
+    let n = 0;
+    if (token) {
+      try {
+        const r = await fetch('/api/crisscross/turns', { headers: { 'X-Profile-Token': token }, cache: 'no-store' });
+        n = r.ok ? (await r.json()).yourTurn || 0 : 0;
+      } catch { /* leave it off */ }
+    }
+    if (!n) { if (badge) badge.remove(); return; }
+    if (!badge) {
+      badge = document.createElement('div');
+      badge.className = 'turn-badge';
+      card.querySelector('h2').after(badge);
+    }
+    badge.textContent = `🔔 Your turn in ${n} game${n === 1 ? '' : 's'}`;
+  }
+  ArcadeProfile.onChange(paintTurns);
+  paintTurns();
+  setInterval(() => { if (!document.hidden) paintTurns(); }, 60 * 1000);
 
   // ---- join a game -----------------------------------------------------------
   // Every room being hosted anywhere in the arcade, refreshed every few seconds.

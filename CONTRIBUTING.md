@@ -36,6 +36,7 @@ ends up in the Docker image (CI checks that too).
 - `rambler/` — Rambler, self-contained; see the README for what each file does
 - `sudoku/` — Sudoku's puzzle maker and its routes (runs, the clock, the boards)
 - `scuffle/` — Shuffle Scuffle's letters, points, solo games, daily board and rooms
+- `crisscross/` — Criss Cross: the rules (`engine.js`), the computer player (`bot.js`) and the games kept in the database (`games.js`)
 - `words/` — the dictionaries, plain text, edit by hand
 - `test/` — `unit.test.js` needs no server, `api.test.js` needs the one the
   runner starts

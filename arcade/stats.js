@@ -194,7 +194,9 @@ function routes({ requireAdmin }) {
     }
   };
 
-  router.post('/visit', limiter(120, 'visits'), send((req, res) => {
+  // The browser tests open every page from one address, more than a person
+  // ever would, so they get more room (NODE_ENV=test only).
+  router.post('/visit', limiter(process.env.NODE_ENV === 'test' ? 2000 : 120, 'visits'), send((req, res) => {
     const b = req.body || {};
     res.status(201).json({ id: startVisit({ game: String(b.game || ''), name: b.name, token: b.token, ua: req.get('User-Agent') }) });
   }));

@@ -28,6 +28,7 @@ COPY partdeux ./partdeux
 COPY daredevil ./daredevil
 COPY sudoku ./sudoku
 COPY scuffle ./scuffle
+COPY crisscross ./crisscross
 COPY words ./words
 COPY public ./public
 

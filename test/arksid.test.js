@@ -261,6 +261,32 @@ async function run({ base, root, fake, admin: ADMIN }) {
   ok('…its database size and the free disk space where its data lives', report.dbBytes > 0 && report.diskTotalBytes > 0 &&
     report.diskFreeBytes >= 0 && report.diskFreeBytes <= report.diskTotalBytes, JSON.stringify(report));
 
+  console.log('\n-- criss cross: grown-ups only on the unfiltered list --');
+  const kimCB = browser();
+  fake.next = 'kim';
+  await kimCB.call('/auth/signin?return=%2F');
+  const samCB = browser();
+  fake.next = 'sam';
+  await samCB.call('/auth/signin?return=%2F');
+  const [kimCC, samCC, miloCC] = [await kimCB.me(), await samCB.me(), await milo.me()];
+  const kimPass = (await kimCB.call('/api/arksid/adult-pass', { method: 'POST' })).data.pass;
+  const samPass = (await samCB.call('/api/arksid/adult-pass', { method: 'POST' })).data.pass;
+  const cc = (p, who, { method = 'GET', body, pass } = {}) => fetch(`${base}/api/crisscross${p}`, {
+    method, headers: { 'X-Profile-Token': who.token, ...(pass ? { 'X-Adult-Pin': pass } : {}), ...(body ? { 'Content-Type': 'application/json' } : {}) },
+    body: body ? JSON.stringify(body) : undefined
+  }).then(async r => ({ status: r.status, data: await r.json().catch(() => null) }));
+  const invitable = (await cc('/people', kimCC)).data;
+  ok('the invite list says who could join an unfiltered game', invitable.find(p => p.id === miloCC.profile.id).adultOk === false &&
+    invitable.find(p => p.id === samCC.profile.id).adultOk === true);
+  const withKid = await cc('/games', kimCC, { method: 'POST', body: { kind: 'online', invite: [miloCC.profile.id], dictionary: 'adult' }, pass: kimPass });
+  ok('a kid can\'t be invited to an unfiltered game', withKid.status === 403 && /Milo/.test(withKid.data.error), JSON.stringify(withKid.data));
+  const grown = await cc('/games', kimCC, { method: 'POST', body: { kind: 'online', invite: [samCC.profile.id], dictionary: 'adult' }, pass: kimPass });
+  ok('two grown-ups can play one', grown.status === 201);
+  ok('…each opening it with their own adult pass', (await cc(`/games/${grown.data.id}`, samCC)).status === 403 &&
+    (await cc(`/games/${grown.data.id}`, samCC, { pass: samPass })).status === 200);
+  ok('a kid holding a grown-up\'s pass still can\'t start one', (await cc('/games', miloCC, { method: 'POST', body: { kind: 'local', players: [{ name: 'A' }, { name: 'B' }], dictionary: 'adult' }, pass: kimPass })).status === 403);
+  ok('a kid can start a family-words game with a grown-up', (await cc('/games', miloCC, { method: 'POST', body: { kind: 'online', invite: [kimCC.profile.id] } })).status === 201);
+
   console.log('\n-- signing out --');
   const out = await milo.call('/auth/signout', { method: 'POST', follow: false });
   ok('signing out ends the arcade sign-in and goes on to ARKS ID\'s sign-out', out.data.next === `${fake.base}/signout?app=arcade&return=%2F`);
