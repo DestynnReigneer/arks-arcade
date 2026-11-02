@@ -7,6 +7,20 @@ to-do list as checkboxes (the rule is in the maintainer's global CLAUDE.md
 and `arks-internal/conventions/sessions.md`): do the checked items in the
 order they were clicked, and keep the rest pinned here.
 
+## Status reports to ARKS ID (2026-11-01, contract v12)
+
+- **With ARKS ID on, the arcade reports how it's doing every five minutes** (the first
+  one a few seconds after it starts): the version, commit, build date and Node version,
+  how long it has been running, the size of its database, and the free and total disk
+  space where its data lives. It goes to `POST /api/app/status` through the shared kit's
+  new `kit/status-report.js` and the client's `appReport()`. ARKS ID shows it on the
+  status page of its admin console, and marks the arcade "not reporting" after 15 quiet
+  minutes.
+- The arcade's admin page still opens with its own password, so it doesn't send the
+  "console opened" events the Hub sends. Nothing changes in `.env` or the compose file.
+- Tests: the ARKS ID suite waits for the first report and checks its numbers;
+  `test/fake-arksid.js` takes reports and events (`fake.reports`, `fake.events`).
+
 ## Sudoku (2026-11-01)
 
 The maintainer picked Sudoku as the next game: the classic 9x9, a daily puzzle everyone
@@ -225,8 +239,9 @@ board-name setting and adult PIN are only for copies running without it.
 - **Shared family accounts ("ARKS ID")**: planned and approved. The
   contract is in the private `arks-id` repo (`docs/SPEC.md`); see CLAUDE.md
   for how to use it. The arcade integrates last (after ARKS ID, the Hub's
-  sign-in and passkeys). **Built against ARKS ID contract: v10** (2026-11-01): feedback
-  goes to ARKS ID's one inbox (see the top of this file). Before that, v8 (2026-10-28): silent
+  sign-in and passkeys). **Built against ARKS ID contract: v12** (2026-11-01): status
+  reports for ARKS ID's admin console (see the top of this file). Before that, v10
+  (2026-11-01): feedback goes to ARKS ID's one inbox. Before that, v8 (2026-10-28): silent
   sign-in (at most once an hour, `/auth/signin?silent=1`, so someone signed in to ARKS ID
   elsewhere is signed in here with no tap). Before that, v7 (2026-10-26):
   sign-in, `/device` for guest play, `boardName`, the clip inbox, avatars from
