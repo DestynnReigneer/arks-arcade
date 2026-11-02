@@ -324,7 +324,12 @@ async function run({ base, root }) {
   ok('the schedule can be changed', settings.data.intervalLabel === 'every 2 weeks', settings.data.intervalLabel);
   ok('and the warning window with it', settings.data.warnDays === 3, String(settings.data.warnDays));
 
-  // Put a score up so the season has something to freeze.
+  // Put a score up so the season has something to freeze. The 4x4 board is
+  // already full from the checks above, and this score comes off a random
+  // board, so whether it beat the tenth score was up to the dice (and the
+  // badge checks below hang on it). Clearing the board first means any score
+  // above zero gets on, whatever the dice did.
+  await admin('/arcade/4/clear', 'POST', { confirm: true });
   const seasonPlayer = await api('/players', 'POST', { name: 'Seasonal' });
   const sBoard = await api('/board', 'POST', { size: 4, profile: 'kids' });
   const sWords = solver.solveWords(sBoard.data.board, square(4), 'kids').slice(0, 30);
