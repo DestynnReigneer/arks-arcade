@@ -160,6 +160,35 @@ Six maps from easy to hard (Meadow, Frozen Lake, Canyon, Swamp, Castle, Volcano;
 
 The four share `public/game-shell.js` (game-over panel, saving scores, high-score boards, personal bests) and `public/game-shell.css`. Each has its own soft background music, generated in the browser like the sound effects (`public/blip.js`): the 🎵 button turns it off and on, the browser remembers the choice, and 🔊/🔇 mutes everything. It stops while the game is paused or over.
 
+### Sudoku (`/sudoku.html`)
+
+The classic 9x9 number puzzle: fill every empty square with 1 to 9 so no row, column or 3x3 box has the same number twice. There's a new puzzle at midnight on each of four levels, and it's the same puzzle for everyone that day (it's made from the date alone), so the family can race each other.
+
+- **Levels, graded by how a person would solve them.** The server tries each puzzle with the tricks people use and keeps it only if it fits its level. **Family** starts with at least 46 numbers and every square can be found by spotting the one number it's missing, so it's good for kids. **Easy** starts with about 36 and also needs "this number can only go in one place in this row, column or box". **Medium** (about 27 to 30) gets stuck on those and needs pencil-mark tricks (pairs, and a number pinned to one line of a box) to finish. **Hard** is one those tricks can't finish. Every puzzle has exactly one answer.
+- **Pencil marks.** The Notes button puts small numbers in a square as reminders; placing a real number rubs it out of the notes around it.
+- **Made on the server, with no outside library** (`sudoku/generator.js`): a seeded random full grid, then numbers taken away in mirrored pairs while a solver checks there's still only one answer. A whole day's puzzles take a few milliseconds and are kept in memory.
+- **The server keeps the time.** Start records the moment on the server and hands the page a long random run id and the puzzle, never the answer. When the board is full the page sends the grid; the server checks it against the answer and works the time out itself, leaving out pauses (Pause, or leaving the page, stops the clock and hides the board). A finish quicker than 0.4 seconds per square is turned away.
+- **Help costs time, decided by the server:** a hint fills in (or fixes) one square for 30 seconds, Check marks every wrong number for 15 seconds, and the "Show my mistakes as I go" setting (off to start with) adds 10 seconds for each wrong number it catches.
+- **Fastest-time boards** for today and for all time, per level. Only a player's first finish of the day counts, because a second go at the same puzzle would be easy. Profiles show their name or initials (their own choice, as on every board), and guests type initials. A profile has one clock per puzzle, so opening it again on another device carries on with the same time. A new fastest-ever time posts to the Comm Center.
+- **Phones first:** the board fills the width, a row of nine big number buttons sits under it, and the keyboard works too (arrows, 1-9, Delete, N for notes, P to pause).
+
+#### The Sudoku API
+
+Everything is under `/api/sudoku`. A grid is 81 characters, row by row, with `0` for an empty square.
+
+| Call | What it does |
+|---|---|
+| `GET /levels` | Today's date, when the puzzles turn over, the levels and what help costs. |
+| `POST /start` `{ level, profileToken? }` | Starts (or, for a profile, carries on with) today's puzzle on that level. Returns the run id, the puzzle and the clock so far. |
+| `GET /run/:id` | Where a run stands: the puzzle, time played, penalties, paused, finished, saved. |
+| `POST /run/:id/pause`, `/resume` | Stops and restarts the clock. |
+| `POST /run/:id/check` `{ grid }` | The wrong squares on the board so far. Adds 15 seconds. |
+| `POST /run/:id/cell` `{ index, value }` | Whether one number is right. A wrong one adds 10 seconds. |
+| `POST /run/:id/hint` `{ grid }` | The right number for one square. Adds 30 seconds. |
+| `POST /run/:id/finish` `{ grid }` | Checks the full grid and fixes the time. A wrong grid is refused. |
+| `POST /run/:id/save` `{ initials?, profileToken? }` | Puts a finished time on the boards. Returns today's and all-time rank. |
+| `GET /board?level=&scope=day\|all&day=` | The fastest times, quickest first. |
+
 ### Know-It-All (`/trivia.html`)
 
 Multiple-choice trivia. Solo (high-score board), take turns on one phone, or a room where everyone answers on their own phone at the same time and faster right answers score more. Pick genres, difficulty, how many questions and how long to answer.
@@ -312,6 +341,7 @@ rambler/                   Rambler, self-contained
   routes.js               Everything under /api/rambler
 
 chess/                    Two-phone chess rooms (/api/chess)
+sudoku/                   Sudoku's puzzle maker (generator.js) and its runs and boards (/api/sudoku)
 spinsolve/                Spin & Solve levels, adult banks, packs and requests (/api/spinsolve)
 trivia/                   Know-It-All questions, packs, Open Trivia DB download, rooms (/api/trivia)
 arcade/                   Arcade-wide pieces: Comm Center, adult PIN, high scores, profiles, stats and the error log, Wordless hints
@@ -325,6 +355,7 @@ public/spinsolve.*        Spin & Solve (puzzles in spin-puzzles.js)
 public/chess.*            Chess (chess-engine.js, chess-worker.js)
 public/dino.*             Dino Dash
 public/snake*, bricks*, blocks*, towers*   Snake, Brick Breaker, Block Drop, Tower Defense (each with an -engine.js for its rules)
+public/sudoku.*           Sudoku
 public/game-shell.*       Shared game-over panel and high scores for those four
 public/arcade-ui.css      Shared look for the newer games, with arcade-kit.js and blip.js
 public/admin.html/.js     Admin panel

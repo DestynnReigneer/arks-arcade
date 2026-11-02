@@ -17,7 +17,8 @@
     snake: { label: 'Snake', href: 'snake.html' },
     bricks: { label: 'Brick Breaker', href: 'bricks.html' },
     blocks: { label: 'Block Drop', href: 'blocks.html' },
-    towers: { label: 'Tower Defense', href: 'towers.html' }
+    towers: { label: 'Tower Defense', href: 'towers.html' },
+    sudoku: { label: 'Sudoku', href: 'sudoku.html' }
   };
 
   // ---- who's playing ---------------------------------------------------------

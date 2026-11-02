@@ -34,6 +34,7 @@ ends up in the Docker image (CI checks that too).
   from `rambler/routes.js`
 - `db.js` — every table for both games, plus the Wordless scoring formula
 - `rambler/` — Rambler, self-contained; see the README for what each file does
+- `sudoku/` — Sudoku's puzzle maker and its routes (runs, the clock, the boards)
 - `words/` — the dictionaries, plain text, edit by hand
 - `test/` — `unit.test.js` needs no server, `api.test.js` needs the one the
   runner starts
