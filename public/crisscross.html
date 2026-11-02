@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-tv-nav>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
@@ -13,6 +13,10 @@
 <link rel="stylesheet" href="adult-mode.css">
 <link rel="stylesheet" href="look.css">
 <link rel="stylesheet" href="topbar.css">
+<link rel="stylesheet" href="tv.css">
+<!-- On a TV: the TV layout, the remote's arrows, and setting the TV up (tv.js). -->
+<script src="tv-core.js"></script>
+<script src="tv.js"></script>
 </head>
 <body>
 <script src="topbar.js"></script>
@@ -29,22 +33,24 @@
 
 <!-- ============ your games ============ -->
 <section id="home">
-  <div class="panel" id="minepanel">
+  <div class="panel no-tv" id="minepanel">
     <h2 id="mineTitle">Your games</h2>
     <p class="hint" id="mineHint"></p>
     <ul class="cc-list" id="mineList"></ul>
     <button class="primary big" id="newOnlineBtn">📱 New game with the family</button>
   </div>
-  <div class="panel" id="noProfile">
+  <div class="panel no-tv" id="noProfile">
     <h2>Playing on everyone's own phone</h2>
     <p class="hint">A game can last a few days, with each person taking their turn whenever they're free, so the arcade needs to know who you are. Pick your profile to start one or to see the games you've been invited to.</p>
     <button class="primary big" id="pickProfileBtn">Pick my profile</button>
   </div>
   <div class="panel">
-    <h2>On this phone</h2>
-    <p class="hint">Pass one phone around the table, or play against the computer. Guests are welcome.</p>
+    <h2 class="no-tv">On this phone</h2>
+    <p class="hint no-tv">Pass one phone around the table, or play against the computer. Guests are welcome.</p>
+    <h2 class="tv-only">On the TV</h2>
+    <p class="hint tv-only">Play against the computer with the remote, or pass the remote between players. The tiles show on the TV, so everyone in the room can see them. For secret tiles, start a game with the family on your own phones.</p>
     <ul class="cc-list" id="localList"></ul>
-    <button class="ghost big" id="newLocalBtn">🤝 Play on this phone</button>
+    <button class="ghost big" id="newLocalBtn" data-tv-start>🤝 <span class="no-tv">Play on this phone</span><span class="tv-only">Play on the TV</span></button>
   </div>
 </section>
 
@@ -129,7 +135,7 @@
     <div class="cc-board" id="board" role="grid" aria-label="The board"></div>
   </div>
   <div class="cc-board-tools">
-    <button class="cc-mini" id="zoomBtn" title="Zoom the board in or out">🔍 Zoom in</button>
+    <button class="cc-mini no-tv" id="zoomBtn" title="Zoom the board in or out">🔍 Zoom in</button>
     <span class="cc-bag" id="bagLabel"></span>
   </div>
   <div class="cc-rack" id="rack" aria-label="Your tiles"></div>

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-tv-nav>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -16,6 +16,10 @@
 <link rel="stylesheet" href="adult-mode.css">
 <link rel="stylesheet" href="look.css">
 <link rel="stylesheet" href="topbar.css">
+<link rel="stylesheet" href="tv.css">
+<!-- On a TV: the TV layout, the remote's arrows, and setting the TV up (tv.js). -->
+<script src="tv-core.js"></script>
+<script src="tv.js"></script>
 </head>
 <body>
 <script src="topbar.js"></script>
@@ -39,12 +43,13 @@
     <label style="margin-top:14px">Puzzles
       <select id="packSelect"></select>
     </label>
-    <button class="ghost" id="suggestBtn" style="width:100%">💡 Suggest a theme</button>
+    <button class="ghost no-tv" id="suggestBtn" style="width:100%">💡 Suggest a theme</button>
   </div>
 
   <div class="panel">
     <h2>Who's playing?</h2>
-    <p class="hint">One player plays solo for the 🏆 board. Two to four take turns on this phone.</p>
+    <p class="hint no-tv">One player plays solo for the 🏆 board. Two to four take turns on this phone.</p>
+    <p class="hint tv-only">One player plays solo for the 🏆 board. Two to four take turns with the remote: pass it to whoever's turn it is. Add everyone's names, or leave them as they are.</p>
     <div id="nameList"></div>
     <button class="ghost" id="addPlayerBtn">+ Add player</button>
     <h2 style="margin-top:18px">How many rounds?</h2>
@@ -125,6 +130,7 @@
     <h2>Solve the puzzle</h2>
     <p class="hint" id="solveCategory"></p>
     <input id="solveInput" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Type the whole answer">
+    <div class="solve-keys" id="solveKeys" aria-label="Keyboard"></div>
     <div class="msg" id="solveMsg"></div>
     <div class="stack">
       <button class="primary" id="solveOk">That's my answer</button>

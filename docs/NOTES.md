@@ -7,6 +7,38 @@ to-do list as checkboxes (the rule is in the maintainer's global CLAUDE.md
 and `arks-internal/conventions/sessions.md`): do the checked items in the
 order they were clicked, and keep the rest pinned here.
 
+## The puzzles and Spin & Solve on the TV (2026-11-02, contract v14)
+
+The second half of the TV work for the word, board and party games (the first half is the next section).
+These are all played with the remote alone; nothing changed on the server.
+
+- **Wordless** (`public/app.js`): the arrows move along the keyboard on the screen and OK presses a key.
+  The page's own key handler leaves Enter and the arrows to the highlight when it's on a button.
+- **Clueless:** the arrows move the highlight around the grid, OK picks a square (OK again switches across
+  and down), and the keyboard on the screen (shown on a TV, not only on phones) types into the picked
+  square. Arrowing back up from the keyboard lands on the picked square, so passing over other squares on
+  the way down doesn't change which one you type in. Start has `data-tv-start`, and the highlight starts on
+  the first square to fill.
+- **Criss Cross:** against the computer or the remote passed around. OK on a tile picks it up and sends the
+  highlight to the board (next to the last tile put down, or the middle square). The highlight starts on
+  your first tile. The board sits on the left with the tiles and buttons beside it. The games on everyone's
+  own phone, which need a person's profile, are hidden on a TV; so is Zoom.
+- **Spin & Solve:** the remote passed between one to four players. Solving types on a keyboard on the
+  screen (the text box is read-only on a TV so Android's own keyboard doesn't pop up). The wheel sits on the
+  left of the players and buttons, and the page keeps the puzzle in sight under the top bar.
+- **All four:** How to play doesn't open by itself, confirm boxes use `ArcadeTV.confirm()`, adult themes and
+  levels unlock with `ArcadeTV.adultPass()` and Back to family puts family mode back at once, a new word,
+  puzzle, move or spin calls `ArcadeTV.played()`, and a solo score made on the TV without a profile doesn't
+  ask for initials (there's no keyboard) and says to play on your own phone to get on the board.
+- **Tests:** `test/browser/tv-puzzles.spec.js` at 1920x1080 with the TV app's user agent, using only the
+  arrow keys and Enter: each page fits, a Wordless guess, moving and typing in Clueless, a first word
+  against the computer in Criss Cross, and a spin, a letter and typing an answer in Spin & Solve. It sets up
+  the pretend ARKS ID's third TV account (`kitchen`), so all the TV browser test files can run at once.
+- **Left for later:** Spin & Solve and Criss Cross on everyone's own phone with the TV as the screen (both
+  need new server-side rooms: Spin & Solve runs in the browser today, and Criss Cross's games on everyone's
+  phone are per-profile games that can last days). Rambler with the remote (tracing words needs a finger).
+  Per-controller seats.
+
 ## The party and word games on the TV (2026-11-01, contract v14)
 
 Following Know-It-All's pattern, so read its section below first. Built against ARKS ID contract v14

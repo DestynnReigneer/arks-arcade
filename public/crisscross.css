@@ -148,3 +148,12 @@ body.waiting-turn .cc-play { opacity: .45; }
   .fx-banner-inner { transition: none !important; }
   .fx-title { animation: none !important; }
 }
+
+/* ---- on a TV (tv.js puts .tv on <html>): the board on the left, sized to
+   fit the screen, your tiles and the buttons beside it, and the square the
+   remote is on wearing the ring. */
+html.tv #game:not(.hidden) { display: grid; grid-template-columns: 430px 1fr; column-gap: 24px; align-items: start; }
+html.tv #game > * { grid-column: 2; }
+html.tv #game > #scoreStrip, html.tv #game > #status { grid-column: 1 / -1; }
+html.tv #game > #boardBox { grid-column: 1; grid-row: 3 / span 9; max-width: none; }
+html.tv .cc-cell:focus { z-index: 3; }

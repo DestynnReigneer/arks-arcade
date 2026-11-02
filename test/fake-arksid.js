@@ -20,9 +20,10 @@ function startFakeArksId({ secret, arcadeBase, port = 0 }) {
     kim: { id: 'u_kim0000001', name: 'Kim', role: 'adult', boardName: 'Kim', avatar: { icon: 'star', color: 'pink', image: null, art: null } },
     // A TV's own account (v14): always the kid role.
     tv: { id: 'u_tv00000001', name: 'Living room TV', role: 'kid', kind: 'tv', boardName: '', avatar: { icon: 'controller', color: 'turquoise', image: null, art: null } },
-    // A second TV, so browser tests in different files can each set one up
+    // More TVs, so browser tests in different files can each set one up
     // at the same time (setting a TV up again signs its old sign-in out).
-    den: { id: 'u_tv00000002', name: 'Den TV', role: 'kid', kind: 'tv', boardName: '', avatar: { icon: 'controller', color: 'pink', image: null, art: null } }
+    den: { id: 'u_tv00000002', name: 'Den TV', role: 'kid', kind: 'tv', boardName: '', avatar: { icon: 'controller', color: 'pink', image: null, art: null } },
+    kitchen: { id: 'u_tv00000003', name: 'Kitchen TV', role: 'kid', kind: 'tv', boardName: '', avatar: { icon: 'controller', color: 'gold', image: null, art: null } }
   };
   // The pictures, as ARKS ID serves them: real 1-pixel pictures, so a browser can draw them.
   const WEBP = Buffer.from('UklGRiQAAABXRUJQVlA4IBgAAAAwAQCdASoBAAEAAwA0JaQAA3AA/vuUAAA=', 'base64');

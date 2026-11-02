@@ -403,7 +403,7 @@ A party deck for 2-12: draw a card and do the dare, answer the truth, follow the
 
 Both card games share their one-phone and room plumbing (`arcade/party-tables.js`, `arcade/party-routes.js`).
 
-#### The party and word games on a TV
+#### The party games, word games and puzzles on a TV
 
 These games work on a TV the same way as Know-It-All (see "Know-It-All on a TV" above): the TV layout, the remote's arrows and OK, and adult levels only during an adults' night. In each, the TV can host a room as its **screen**: it shows the game big, with the code and a QR code to join, and it starts the game but isn't a player. The server still decides every move and every score.
 
@@ -413,6 +413,17 @@ These games work on a TV the same way as Know-It-All (see "Know-It-All on a TV" 
 | Dare Devil | **Everyone on their own phone** or **one phone passed around:** the card shows up big on the TV, and whoever's turn it is draws and says whether they did it on the phone. **Play with the remote:** the players take turns with the remote right on the TV. |
 | Shuffle Scuffle | **Everyone on their own phone:** the TV shows the letters, the clock and everyone's count, and after each round the full word and every word in the letters. The daily letters and free play also work with the remote alone: the arrows move along the tiles and OK picks one. |
 | Rambler | **Everyone on their own phone:** the TV shows the board big with the clock and everyone's count, and the results after. Tracing words needs a finger, so the TV doesn't play itself. |
+
+The puzzles and Spin & Solve are played on the TV with the remote alone, and their scores are still decided by the server as before:
+
+| Game | On a TV |
+|---|---|
+| Wordless | The arrows move along the keyboard on the screen and OK types a letter (or presses Enter or ⌫ on it). |
+| Clueless | The arrows move the highlight around the grid, OK picks a square (OK again switches between across and down), and the keyboard on the screen types into it. Arrowing back up from the keyboard lands on the picked square. |
+| Criss Cross | Against the computer, or with the remote passed between players: OK on one of your tiles picks it up and sends the highlight to the board, the arrows take it to a square, and OK puts it down. The tiles show on the TV, so for secret tiles play on your own phones. The games on everyone's own phone stay on the phones. |
+| Spin & Solve | One to four players pass the remote around. The arrows move between Spin, Buy a vowel and Solve and across the letters, and solving uses a keyboard on the screen. |
+
+Initials can't be typed on a TV, so a solo score made there only goes on a board when the TV is signed in as a profile; otherwise the page says to play on your own phone for that.
 
 The rooms gained `screen: true` when making one (`POST /api/partdeux/rooms`, `/api/daredevil/rooms`, `/api/scuffle/rooms`, `/api/rambler/rooms`), and `screen` and `isScreen` in what the room sends. The card games also gained `POST /rooms/:code/seats` `{ name }` and `/seats/remove` `{ seat }` (more players on one phone, before the game starts), `as` on `/act` (which of the phone's players is moving), and `mine` (the players this phone holds) and `as` (whose hand the snapshot shows) in the room's state. With ARKS ID on, a phone signed in as a kid, a teen or a TV is turned away from a grown-ups room in all four games, password or not (`arcade/adult-join.js`); guests still get in with the lobby password.
 
