@@ -127,6 +127,13 @@ function createClient(s = settings(), fetchImpl = fetch) {
       const res = await call('/api/app/feedback' + path, init);
       return { status: res.status, data: await res.json().catch(() => ({})) };
     },
+    // Status reports for ARKS ID's admin console (its contract v12): path is
+    // '/status' or '/event', for the shared kit's status-report.js.
+    // -> { status, data }. Throws when ARKS ID can't be reached.
+    async appReport(path, body) {
+      const res = await post('/api/app' + path, body);
+      return { status: res.status, data: await res.json().catch(() => ({})) };
+    },
     // A photo or team picture, fetched by the arcade's server. Only ARKS ID's
     // own /avatars/ addresses, and only real pictures -> { type, body } or null.
     async photo(image) {

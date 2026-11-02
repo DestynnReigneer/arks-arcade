@@ -78,6 +78,11 @@ if (arks) {
   // small queue that's sent again every minute when ARKS ID can't be reached.
   const relay = require('./kit/feedback-relay').createRelay({ db: require('./db').db, call: (method, p, body) => arks.client.appFeedback(method, p, body) });
   relay.start();
+  // Every five minutes, tell ARKS ID which build is running, how long it has
+  // been up, the database size and the free disk space, for the status page
+  // in its admin console (kit/status-report.js).
+  const dbFile = require('./db').db.location();
+  require('./kit/status-report').createStatusReporter({ dbFile, call: (p, body) => arks.client.appReport(p, body) }).start();
   comm.setInbox({ relay, current: arks.current, url: arks.client.url });
   adultPin.usePasses(arks.passOk);
   app.use(arks.routes());
