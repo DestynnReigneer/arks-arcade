@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-tv-nav>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -16,6 +16,10 @@
 <link rel="stylesheet" href="adult-mode.css">
 <link rel="stylesheet" href="look.css">
 <link rel="stylesheet" href="topbar.css">
+<link rel="stylesheet" href="tv.css">
+<!-- On a TV: the TV layout, the remote's arrows, and setting the TV up (tv.js). -->
+<script src="tv-core.js"></script>
+<script src="tv.js"></script>
 </head>
 <body>
 <script src="topbar.js"></script>
@@ -39,9 +43,17 @@
   <div class="panel">
     <h2>How are you playing?</h2>
     <div class="seg" id="modeSeg">
-      <button data-mode="local" aria-pressed="true">📱 Share a phone</button>
-      <button data-mode="host" aria-pressed="false">📡 Host</button>
-      <button data-mode="join" aria-pressed="false">🔗 Join</button>
+      <button data-mode="local" aria-pressed="true" class="no-tv">📱 Share a phone</button>
+      <button data-mode="host" aria-pressed="false" class="no-tv">📡 Host</button>
+      <button data-mode="join" aria-pressed="false" class="no-tv">🔗 Join</button>
+      <button data-mode="tvphones" aria-pressed="false" class="tv-only">📱 Everyone on their own phone</button>
+      <button data-mode="tvpass" aria-pressed="false" class="tv-only">🔁 Pass one phone around</button>
+    </div>
+    <div id="tvphonesSetup" class="hidden">
+      <p class="hint">The TV shows the table: the card on top of the pile, how many cards everyone has, and whose turn it is. Everyone scans the code on the TV with their own phone and plays their hand there, where nobody else can see it.</p>
+    </div>
+    <div id="tvpassSetup" class="hidden">
+      <p class="hint">The TV shows the table, and one phone holds everyone's hands. Scan the code on the TV with that phone, add everyone's names on it, and hand it to whoever's turn it is. The phone hides the cards between turns.</p>
     </div>
     <div id="localSetup">
       <p class="hint">Pass the phone around. The screen hides your hand between turns.</p>
@@ -71,10 +83,16 @@
          style="width:150px;height:150px;background:#fff;padding:6px;border-radius:10px;margin:10px auto 2px;display:block">
     <div class="join-link" id="joinLink" style="font-size:11px;opacity:0.65;word-break:break-all"></div>
     <div class="hint" id="lobbyInfo"></div>
+    <p class="hint" id="lobbyHow"></p>
   </div>
   <div class="panel">
     <h2>Players <span id="lobbyCount"></span></h2>
     <ul class="people" id="lobbyPlayers"></ul>
+    <div id="seatBox" class="hidden">
+      <p class="hint">Passing this phone around? Add everyone who'll share it, and it shows each person their own cards on their turn.</p>
+      <label>Another player on this phone<input id="seatName" maxlength="16" placeholder="e.g. Jordan"></label>
+      <button class="ghost" id="seatAdd" style="width:100%;margin-bottom:10px">+ Add player</button>
+    </div>
     <div id="hostControls" class="hidden">
       <div class="levels small" id="lobbyLevels"></div>
       <label class="toggle hidden" id="lobbyDrinkRow"><input type="checkbox" id="lobbyDrinking"> 🍺 Drinking</label>

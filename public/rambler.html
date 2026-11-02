@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-tv-nav>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -15,6 +15,10 @@
 <link rel="stylesheet" href="adult-mode.css">
 <link rel="stylesheet" href="look.css">
 <link rel="stylesheet" href="topbar.css">
+<link rel="stylesheet" href="tv.css">
+<!-- On a TV: the TV layout, the remote's arrows, and setting the TV up (tv.js). -->
+<script src="tv-core.js"></script>
+<script src="tv.js"></script>
 </head>
 <body>
 <script src="topbar.js"></script>
@@ -22,7 +26,7 @@
 <header>
   <a href="/" class="icon-btn" title="Back to the arcade">←</a>
   <h1><img src="rambler-logo.svg" alt="" class="logo-grid">RAM<span class="lit">BLER</span></h1>
-  <button id="profileBtn" class="profile-chip" title="Switch profile">
+  <button id="profileBtn" class="profile-chip no-tv" title="Switch profile">
     <span class="pc-av" id="pcAvatar">👤</span>
     <span class="pc-info">
       <span class="pc-name" id="pcName">Guest</span>
@@ -44,7 +48,7 @@
     </span>
   </div>
 
-  <button class="daily-card" id="dailyCard" type="button">
+  <button class="daily-card no-tv" id="dailyCard" type="button">
     <span class="dc-date">
       <span class="dc-day" id="dcDay">--</span>
       <span class="dc-month" id="dcMonth">---</span>
@@ -59,35 +63,42 @@
   <div class="field">
     <label>How are you playing?</label>
     <div class="modes" id="modeList">
-      <button class="mode" data-mode="solo" aria-pressed="true">
+      <button class="mode tv-only" data-mode="room" aria-pressed="false" id="tvRoomMode">
+        <span class="emoji">📺</span>
+        <span class="body">
+          <span class="name">On the TV, everyone on their own phone</span>
+          <span class="desc">The TV shows the board big and the clock. Everyone scans the code on the TV and traces words on their own phone, all on the same board at the same time.</span>
+        </span>
+      </button>
+      <button class="mode no-tv" data-mode="solo" aria-pressed="true">
         <span class="emoji">🙂</span>
         <span class="body">
           <span class="name">Solo</span>
           <span class="desc">Just you and the clock. Beat your own best.</span>
         </span>
       </button>
-      <button class="mode" data-mode="turns" aria-pressed="false">
+      <button class="mode no-tv" data-mode="turns" aria-pressed="false">
         <span class="emoji">🤝</span>
         <span class="body">
           <span class="name">Pass &amp; Play</span>
           <span class="desc">One phone, 2–8 players. Same board each turn, hand it on when your time is up.</span>
         </span>
       </button>
-      <button class="mode" data-mode="tabletop" aria-pressed="false">
+      <button class="mode no-tv" data-mode="tabletop" aria-pressed="false">
         <span class="emoji">📝</span>
         <span class="body">
           <span class="name">Tabletop</span>
           <span class="desc">Real Boggle rules. One shared timer, everyone writes on paper, then type the lists in to score. Best with a drink in hand.</span>
         </span>
       </button>
-      <button class="mode mode-marathon" data-mode="marathon" aria-pressed="false">
+      <button class="mode mode-marathon no-tv" data-mode="marathon" aria-pressed="false">
         <span class="emoji">🔥</span>
         <span class="body">
           <span class="name">Marathon</span>
           <span class="desc">Every word buys you more time, and the grid grows as you go. You don't win — you last.</span>
         </span>
       </button>
-      <button class="mode" data-mode="room" aria-pressed="false">
+      <button class="mode no-tv" data-mode="room" aria-pressed="false">
         <span class="emoji">📱</span>
         <span class="body">
           <span class="name">Own Phones</span>
@@ -103,7 +114,7 @@
     <button id="addPlayerBtn" class="ghost-btn" style="margin-top:8px;width:100%">+ Add player</button>
   </div>
 
-  <div class="field" id="nameField">
+  <div class="field no-tv" id="nameField">
     <label>Your name</label>
     <input type="text" id="nameInput" maxlength="16" placeholder="Who's playing?" autocomplete="off">
   </div>
@@ -118,7 +129,7 @@
     <div class="seg" id="durationSeg"></div>
   </div>
 
-  <div class="field" id="difficultyField">
+  <div class="field no-tv" id="difficultyField">
     <label>Difficulty</label>
     <div class="seg" id="difficultySeg"></div>
     <div class="note" id="difficultyNote" style="margin-top:8px"></div>
@@ -133,8 +144,8 @@
   <div class="msg" id="setupMsg"></div>
   <button id="startBtn" class="primary-btn">Slide to victory</button>
 
-  <div class="divider" id="joinDivider">or</div>
-  <div class="field" id="joinField">
+  <div class="divider no-tv" id="joinDivider">or</div>
+  <div class="field no-tv" id="joinField">
     <label>Join someone's room</label>
     <div class="type-row" style="max-width:none;margin-top:0">
       <input type="text" id="joinCodeInput" maxlength="4" placeholder="CODE" autocomplete="off"
@@ -195,7 +206,7 @@
     <div class="join-link" id="joinLink" style="font-size:11px;opacity:0.65;text-align:center;word-break:break-all"></div>
     <div style="font-size:12px;opacity:0.75;text-align:center">Scan to join from another phone</div>
   </div>
-  <div class="code-hint">Everyone opens this page and taps Join, then types that code.</div>
+  <div class="code-hint" id="lobbyHow">Everyone opens this page and taps Join, then types that code.</div>
   <div class="code-hint" id="lobbyPassword"></div>
 
   <div class="field">
@@ -258,7 +269,7 @@
   </div>
 
   <div id="playRoster" class="found hidden" style="margin-top:20px">
-    <div class="head"><span>Everyone else</span></div>
+    <div class="head"><span id="playRosterTitle">Everyone else</span></div>
     <div class="roster" id="playRosterList" style="margin-bottom:0"></div>
   </div>
 

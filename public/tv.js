@@ -18,6 +18,9 @@
 // Pages use window.ArcadeTV: on, adult(), unlock(), backToFamily(), played(),
 // onPad(fn) for a controller's X, Y and shoulder buttons, and the
 // 'arcadetv:mode' event on document when adults' night starts or ends.
+// Also adultPass() (adults' night, then the pass that goes where the adult
+// PIN would) and confirm(text) (a yes-or-no card the remote can answer,
+// because the TV app can't show the browser's own confirm box).
 
 const ArcadeTV = (() => {
   const Core = window.TvCore;
@@ -28,7 +31,10 @@ const ArcadeTV = (() => {
   const inApp = Core.isTvAgent(navigator.userAgent);
   const api = { on: want.on, inApp, state: { on: false, signedIn: false, tv: null, adultMode: null } };
   if (!want.on) {
-    return Object.assign(api, { adult: () => false, unlock: async () => false, backToFamily() {}, played() {}, onPad() {}, ready: Promise.resolve(api.state) });
+    return Object.assign(api, {
+      adult: () => false, unlock: async () => false, adultPass: async () => '', backToFamily() {}, played() {}, onPad() {},
+      confirm: async text => window.confirm(text), ready: Promise.resolve(api.state)
+    });
   }
   document.documentElement.classList.add('tv');
   // Pages loaded without tv.css in their head get it now.
@@ -128,18 +134,46 @@ const ArcadeTV = (() => {
     }
   }, true);
 
+  // Where the highlight last was, as "the nth button inside #something", so a
+  // game that draws its buttons again (a hand of cards, a row of tiles) keeps
+  // the highlight in the same place instead of sending it back to the start.
+  let lastAt = null;
+  function placeOf(e) {
+    const steps = [];
+    for (let n = e; n && n !== document.body; n = n.parentElement) {
+      if (n.id) return { id: n.id, steps };
+      const p = n.parentElement;
+      if (!p) return null;
+      steps.unshift([...p.children].indexOf(n));
+    }
+    return null;
+  }
+  function atPlace(at) {
+    let n = at && document.getElementById(at.id);
+    for (const i of at ? at.steps : []) {
+      if (!n || !n.children.length) return null;
+      n = n.children[Math.min(i, n.children.length - 1)];
+    }
+    return n && n.matches(FOCUSABLE) ? n : null;
+  }
+  document.addEventListener('focusin', e => { if (e.target !== document.body) lastAt = placeOf(e.target); });
+
   // When the screen changes under the highlight (a dialog opens, a button
-  // goes away), it moves to the new screen's starting point by itself.
-  setInterval(() => {
+  // goes away), it stays where it was if that spot is still there, or moves
+  // to the new screen's starting point by itself.
+  function settle() {
     if (!navOn() || document.hidden) return;
     const root = scope();
     const cur = document.activeElement;
     if (!cur || cur === document.body || !root.contains(cur) || !usable(cur)) {
-      const s = startOf(root);
+      const back = atPlace(lastAt);
+      const s = back && root.contains(back) && usable(back) ? back : startOf(root);
       if (s) s.focus({ preventScroll: true });
       if (s) s.scrollIntoView({ block: 'center', inline: 'nearest' });
     }
-  }, 250);
+  }
+  setInterval(settle, 250);
+  document.addEventListener('focusout', e => { if (!e.relatedTarget) requestAnimationFrame(settle); });
 
   // ---- a game controller ----------------------------------------------------------------
   // In the TV app, A is OK and B is Back already, and the D-pad sends arrow
@@ -308,6 +342,36 @@ const ArcadeTV = (() => {
     return unlocking;
   }
 
+  // The pass that goes wherever the adult PIN would: adults' night first (a
+  // QR code for a grown-up's phone), then the arcade hands one out. '' if not.
+  async function adultPass() {
+    if (!adultOn() && !(await unlock())) return '';
+    try {
+      const data = await post('/api/arksid/adult-pass');
+      return data.pass || '';
+    } catch (e) { toast(e.message); return ''; }
+  }
+
+  // A yes-or-no question the remote can answer. Resolves true for yes.
+  function confirmOnTv(text, { yes = 'Yes', no = 'No' } = {}) {
+    return new Promise(resolve => {
+      const o = overlay('tv-confirm');
+      const card = el('div', 'tv-card');
+      card.append(el('h2', null, text));
+      const btns = el('div', 'tv-btns');
+      const done = ok => { o.remove(); resolve(ok); };
+      const n = el('button', 'tv-btn', no);
+      n.dataset.tvStart = '';
+      n.onclick = () => done(false);
+      const y = el('button', 'tv-btn', yes);
+      y.onclick = () => done(true);
+      btns.append(n, y);
+      card.appendChild(btns);
+      o.appendChild(card);
+      requestAnimationFrame(() => n.focus());
+    });
+  }
+
   // Back to family: at once on this TV, and ARKS ID is told.
   function backToFamily() {
     setMode(null);
@@ -389,7 +453,7 @@ const ArcadeTV = (() => {
   setInterval(() => { if (state.adultMode && !adultOn()) setMode(null); }, 5000);
 
   return Object.assign(api, {
-    adult: adultOn, unlock, backToFamily, played,
+    adult: adultOn, unlock, adultPass, confirm: confirmOnTv, backToFamily, played,
     onPad: fn => padListeners.push(fn), toast, focusStart: () => focusOn(startOf(scope()))
   });
 })();

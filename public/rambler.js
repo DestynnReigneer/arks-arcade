@@ -4,9 +4,15 @@
 //
 // Four modes share one board and one scoring path. The server owns the board
 // and every verdict; this file owns the clock, the dragging, and the fuss.
+//
+// On a TV (tv.js), the TV hosts a room as its screen: it shows the board big,
+// the clock and how many words everyone has found, and everyone traces words
+// on their own phone. Tracing needs a finger, so the TV doesn't play itself.
+// The unfiltered dictionary needs an adults' night, never a PIN on the TV.
 
 const API = '/api/rambler';
 const $ = id => document.getElementById(id);
+const TV = !!(window.ArcadeTV && ArcadeTV.on);
 
 const S = {
   config: null,
@@ -234,7 +240,7 @@ const TRACERS = {
     traceEl: () => $('traceBar'),
     tiles: () => S.board,
     cols: () => S.size,
-    enabled: () => S.mode !== 'tabletop',
+    enabled: () => S.mode !== 'tabletop' && !(S.room && S.room.isScreen),
     submit: w => submitWord(w)
   },
   maraBoard: {
@@ -1380,6 +1386,9 @@ function closeStream() {
 function applyRoomState(snap) {
   const previous = S.room;
   S.room = snap;
+  document.body.classList.toggle('tv-screen', !!snap.isScreen);
+  // A new round on the TV counts as a game being played (adults' night keeps going).
+  if (TV && snap.state === 'playing' && (!previous || previous.state !== 'playing')) ArcadeTV.played();
   S.clockSkew = snap.serverNow - Date.now();
   S.size = snap.settings.size;
   S.duration = snap.settings.durationSec;
@@ -1405,10 +1414,12 @@ function applyRoomState(snap) {
       paintTrace();
       renderFound();
       $('turnName').innerHTML = `Room <b>${snap.code}</b>`;
-      $('typeRow').classList.remove('hidden');
-      $('traceBar').classList.remove('hidden');
+      // The TV only shows the board: the words are traced on the phones.
+      $('typeRow').classList.toggle('hidden', !!snap.isScreen);
+      $('traceBar').classList.toggle('hidden', !!snap.isScreen);
       $('tabletopHint').classList.add('hidden');
       $('doneBtn').textContent = "I'm done";
+      $('playRosterTitle').textContent = snap.isScreen ? 'Words found so far' : 'Everyone else';
       screen('play');
       startClock(snap.endsAt, () => { /* the server ends the round */ });
     }
@@ -1453,6 +1464,9 @@ function renderPlayRoster(snap) {
 
 function renderLobby(snap) {
   $('lobbyPassword').textContent = snap.lobbyPassword ? `🔒 Lobby password: ${snap.lobbyPassword}` : snap.locked ? '🔒 This game is locked with a password.' : '';
+  $('lobbyHow').textContent = snap.isScreen
+    ? 'Everyone scans the code with their own phone and types their name. The board shows up big here on the TV, and you all trace words on your phones at the same time.'
+    : 'Everyone opens this page and taps Join, then types that code.';
   $('roomCode').textContent = snap.code;
   if ($('joinQr').dataset.code !== snap.code) { $('joinQr').dataset.code = snap.code; ArcadeQR.forGame($('joinQr'), 'rambler.html', snap.code, $('joinLink')); }
   const roster = $('lobbyRoster');
@@ -1466,9 +1480,13 @@ function renderLobby(snap) {
     row.querySelector('.nm').textContent = p.name + (p.id === snap.you?.id ? ' (you)' : '');
     roster.appendChild(row);
   }
+  if (!snap.players.length) roster.innerHTML = '<div class="note">Nobody yet. Scan the code to join.</div>';
 
   $('hostControls').classList.toggle('hidden', !snap.youAreHost);
-  $('guestWaiting').classList.toggle('hidden', snap.youAreHost);
+  $('guestWaiting').classList.toggle('hidden', snap.youAreHost && snap.players.length > 0);
+  $('guestWaiting').textContent = snap.youAreHost ? 'Waiting for someone to join…' : snap.screen ? 'Waiting for the TV to start the round…' : 'Waiting for the host to start…';
+  $('lobbyStartBtn').disabled = !snap.players.length;
+  $('lobbyStartBtn').toggleAttribute('data-tv-start', snap.players.length > 0);
 
   if (snap.youAreHost) {
     segment($('lobbySizeSeg'), S.config.sizes.map(s => ({ label: s.label, value: s.size })),
@@ -1493,6 +1511,8 @@ function showResults(results) {
   const mine = S.mode === 'room' && S.room?.you
     ? results.results.find(r => r.playerId === S.room.you.id)
     : results.results[0];
+  // The TV didn't play, so nothing on the results is "yours" there.
+  const onScreen = S.mode === 'room' && S.room && S.room.isScreen;
   const top = results.results[0];
 
   // Duplicate cancellation makes ties genuinely common, so don't crown the
@@ -1568,10 +1588,10 @@ function showResults(results) {
   }
   showArcadePanel(results.arcade, scoreTarget() ? scoreTarget().score : 0);
   refreshSeason();
-  $('saveScoreBtn').classList.toggle('hidden', !canSaveScore());
+  $('saveScoreBtn').classList.toggle('hidden', onScreen || !canSaveScore());
   // A score that made the board is only kept once initials go on it, and a
   // button alone was easy to walk past. Ask straight after the banner.
-  if (canSaveScore()) setTimeout(() => { if (S.results === results) openInitials(); }, 2100);
+  if (!onScreen && canSaveScore()) setTimeout(() => { if (S.results === results) openInitials(); }, 2100);
   $('againBtn').textContent = S.mode === 'room'
     ? (S.room && S.room.youAreHost ? 'New round' : 'Back to lobby')
     : S.mode === 'daily' ? 'Back to today\u2019s board'
@@ -1864,8 +1884,8 @@ function renderSetup() {
     ? `${profile.words.toLocaleString()} words. ${profile.blurb}.`
     : '';
 
-  $('startBtn').textContent =
-    S.mode === 'room' ? 'Open a room' : S.mode === 'marathon' ? 'Start the run' : 'Slide to victory';
+  $('startBtn').textContent = TV ? 'Show the code on the TV'
+    : S.mode === 'room' ? 'Open a room' : S.mode === 'marathon' ? 'Start the run' : 'Slide to victory';
 }
 
 // The PIN is checked with the server before it's kept, so a wrong one can't
@@ -1881,6 +1901,16 @@ function forgetAdult() {
 }
 
 async function pickProfile(value) {
+  // On a TV: an adults' night, then the TV's adult pass goes where the PIN would.
+  if (TV) {
+    if (value === 'adult' && !(ArcadeTV.adult() && S.adultPin)) {
+      S.adultPin = await ArcadeTV.adultPass();
+      if (!S.adultPin) return;
+    }
+    S.profile = value;
+    renderSetup();
+    return;
+  }
   let unlocked = sessionStorage.getItem('rambler.adult') === 'yes';
   if (value === 'adult' && unlocked && S.config.adultRequiresPin && !(S.adultPin && await adultPinOk(S.adultPin).catch(() => false))) {
     forgetAdult();
@@ -1909,6 +1939,23 @@ async function startPressed() {
     if (S.mode === 'marathon') {
       M.growEvery = (S.config.marathon.start[S.difficulty] || S.config.marathon.start.normal).growEvery;
       await startMarathon();
+      return;
+    }
+
+    if (S.mode === 'room' && TV) {
+      // The TV hosts as its screen. An Unfiltered room needs a lobby password
+      // for the guests' phones; the TV makes one up and shows it in its lobby.
+      const PASSWORDS = ['tacos', 'disco', 'pickle', 'waffle', 'banjo', 'noodle', 'meteor', 'cactus', 'walrus', 'jelly'];
+      const data = await api('/rooms', {
+        method: 'POST',
+        body: {
+          name: (ArcadeTV.state.tv && ArcadeTV.state.tv.name) || 'TV', screen: true,
+          size: S.size, profile: S.profile, durationSec: S.duration, adultPin: S.adultPin,
+          password: S.profile === 'adult' ? PASSWORDS[Math.floor(Math.random() * PASSWORDS.length)] + (10 + Math.floor(Math.random() * 90)) : undefined
+        }
+      });
+      S.creds = { code: data.code, playerId: data.playerId, token: data.token };
+      openStream();
       return;
     }
 
@@ -2186,7 +2233,23 @@ function bind() {
   // so the very first tap anywhere is what wakes the audio engine.
   document.addEventListener('pointerdown', () => Sound.arm(), { once: true });
   $('helpBtn').onclick = () => window.ramblerTutorial.open();
-  window.ramblerTutorial.autoOpen();
+  // On a TV, How to play waits for the ? button instead of opening by itself.
+  if (!TV) window.ramblerTutorial.autoOpen();
+  // No touch on a TV: the remote's first press wakes the sound instead.
+  document.addEventListener('keydown', () => Sound.arm(), { once: true });
+  if (TV) {
+    // Adults' night ended (Back to family, or it ran out): family words at once.
+    document.addEventListener('arcadetv:mode', e => {
+      if (e.detail.adult) return;
+      S.adultPin = '';
+      if (S.room && S.room.settings.profile === 'adult') {
+        if (S.creds) api(`/rooms/${S.creds.code}/leave`, { method: 'POST', body: S.creds }).catch(() => {});
+        backToSetup();
+      }
+      S.profile = 'kids';
+      renderSetup();
+    });
+  }
 
   $('lobbyStartBtn').onclick = () => {
     api(`/rooms/${S.creds.code}/start`, { method: 'POST', body: S.creds })
@@ -2243,6 +2306,7 @@ async function boot() {
   S.duration = S.config.defaultDuration;
   S.difficulty = S.config.defaultDifficulty || 'normal';
   S.players = defaultPlayers(2);
+  if (TV) { S.mode = 'room'; S.adultPin = ''; }
   bind();
   S.season = S.config.season || null;
   applyTheme(S.config.theme || null);
@@ -2254,7 +2318,7 @@ async function boot() {
   // A link like rambler.html?join=ABCD (from a QR code or the arcade's
   // "Join a game" list) lands on Own Phones with the code filled in.
   const joinParam = new URLSearchParams(location.search).get('join');
-  if (joinParam) {
+  if (joinParam && !TV) {
     S.mode = 'room';
     renderSetup();
     $('joinCodeInput').value = joinParam.toUpperCase().slice(0, 4);
@@ -2263,7 +2327,7 @@ async function boot() {
 
   // First visit with profiles already on the server and none chosen: ask who
   // is playing rather than silently banking nothing.
-  if (!S.player && S.profiles.length) showProfilePicker();
+  if (!S.player && S.profiles.length && !TV) showProfilePicker();
 }
 
 boot();

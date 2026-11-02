@@ -88,6 +88,8 @@ if (arks) {
   // (arcade/switches.js): the list of games goes now, and again when it changes.
   require('./arcade/switches').createArcadeSwitches({ client: arks.client }).start();
   adultPin.usePasses(arks.passOk);
+  // A kid's, a teen's or a TV's phone can't join a grown-ups room (arcade/adult-join.js).
+  require('./arcade/adult-join').use(req => arks.current(req));
   app.use(arks.routes());
   // The arcade on a TV (contract v14): setting a TV up with a pairing code,
   // and adults' night (arcade/tv.js).
