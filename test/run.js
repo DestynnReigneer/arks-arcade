@@ -22,7 +22,8 @@ const SUITES = [
   ['scuffle', require('./scuffle.test.js')],
   ['crisscross', require('./crisscross.test.js')],
   ['clueless', require('./clueless.test.js')],
-  ['tumbler', require('./tumbler.test.js')]
+  ['tumbler', require('./tumbler.test.js')],
+  ['discodrop', require('./discodrop.test.js')]
 ];
 
 // A throwaway brand/ and media/ folder, so the tests can check what the
