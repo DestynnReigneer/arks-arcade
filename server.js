@@ -459,7 +459,14 @@ app.post('/api/leaderboard', leaderboardLimiter, (req, res) => {
 // player is told something went wrong (and the code to mention).
 app.use(stats.errorHandler);
 
-app.listen(PORT, () => {
+app.listen(PORT, err => {
+  // Express 5 calls this even when the port could not be opened (another
+  // copy of the arcade already has it). Say so and stop, rather than print
+  // "running at" for a server that is not actually listening.
+  if (err) {
+    console.error(`Could not open port ${PORT}: ${err.message}`);
+    process.exit(1);
+  }
   // Build the trie now rather than on the first player's request -- it takes
   // about 200ms, which is a visible stutter if it lands mid-round.
   const stats = dictionary.stats;

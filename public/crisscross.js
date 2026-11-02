@@ -157,7 +157,7 @@
       tag = 'Waiting';
       sub = `${g.players.length} of ${g.seats} players are in. It starts when the seats fill up.`;
     } else {
-      const lead = g.players.map(p => `${p.you ? 'You' : p.name} ${p.score}`).join(' · ');
+      const lead = g.players.map(p => `${p.you ? 'You' : p.name} ${p.score.toLocaleString('en-US')}`).join(' · ');
       sub = g.lastMove ? `${moveText({ ...g.lastMove, words: (g.lastMove.words || []).map(w => ({ word: w })) }, g.players)}, ${ago(g.lastMove.at)} · ${lead}` : `Started ${ago(g.updatedAt)} · ${lead}`;
       if (g.status === 'over') {
         const winners = (g.over && g.over.winners || []).map(s => g.players[s]);
@@ -512,7 +512,7 @@
       nm.append(p.you ? 'You' : p.name);
       const pts = document.createElement('div');
       pts.className = 'cc-pts';
-      pts.textContent = p.score;
+      pts.textContent = p.score.toLocaleString('en-US');
       const sm = document.createElement('small');
       sm.textContent = p.resigned ? 'left' : `${p.tiles} tile${p.tiles === 1 ? '' : 's'}`;
       li.append(nm, pts, sm);
@@ -603,7 +603,7 @@
         left.appendChild(sm);
       }
       const right = document.createElement('b');
-      right.textContent = p.score;
+      right.textContent = p.score.toLocaleString('en-US');
       li.append(left, right);
       list.appendChild(li);
     }
@@ -615,7 +615,7 @@
     if (celebrated !== g.id) {
       celebrated = g.id;
       if (youWon || g.kind === 'local') {
-        if (window.Fx) { Fx.burst({ count: 200, coins: 30 }); Fx.banner(youWon ? 'You won!' : `${winners[0].name} wins!`, `${winners[0].score} points`); }
+        if (window.Fx) { Fx.burst({ count: 200, coins: 30 }); Fx.banner(youWon ? 'You won!' : `${winners[0].name} wins!`, `${winners[0].score.toLocaleString('en-US')} points`); }
         Blip.tune([[523, 0.1], [659, 0.1], [784, 0.1], [1047, 0.3]], { type: 'triangle', volume: 0.06 });
       }
     }

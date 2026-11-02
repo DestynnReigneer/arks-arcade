@@ -387,10 +387,10 @@ Then open `http://localhost:3000`.
 npm test
 ```
 
-Boots a server on port 3222, runs 108 checks across a unit suite (dice, board
-shapes, the solver, scoring, streaks, Marathon) and an API suite (every route,
-the event stream, the anti-cheat guarantees), then shuts it down. CI runs
-exactly this, and publishing to GHCR depends on it passing.
+Boots a server on a free port, runs over a thousand checks across a unit suite
+(dice, board shapes, the solver, scoring, streaks, Marathon) and an API suite
+(every route, the event stream, the anti-cheat guarantees), then shuts it
+down. CI runs exactly this, and publishing to GHCR depends on it passing.
 
 ## Running with Docker
 

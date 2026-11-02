@@ -215,10 +215,10 @@ const Fx = (() => {
   }
 
   // Rolls a number up rather than snapping it. Slot machines do this because
-  // watching a total climb is more satisfying than seeing it appear. Big
-  // numbers get their thousands separators (4,560, not 4560).
+  // watching a total climb is more satisfying than seeing it appear. Every
+  // frame gets thousands separators, so a big total reads 4,560, not 4560.
   function countUp(el, from, to, ms = 600) {
-    if (reduced || from === to) { el.textContent = Number(to).toLocaleString('en-US'); return; }
+    if (reduced || from === to) { el.textContent = to.toLocaleString('en-US'); return; }
     const start = performance.now();
     const step = t => {
       const k = Math.min(1, (t - start) / ms);
