@@ -1491,3 +1491,22 @@ body.in-vice .screen { position: relative; z-index: 1; }
 .chip[data-word], .word-line[data-word] { cursor: pointer; }
 .chip.picked { border-color: var(--trace); color: var(--text); }
 .word-line.picked .w { color: var(--trace); }
+
+/* ---- on a TV (tv.js puts .tv on <html>) ----
+   The TV hosting a room shows the board big, the clock, and how many words
+   everyone has found. The tracing and typing happen on the phones. */
+/* The board on the left, the players and their counts on the right. */
+body.tv-screen #playScreen:not(.hidden) {
+  max-width: 1000px; display: grid; grid-template-columns: 340px 1fr; column-gap: 36px; align-items: start;
+}
+body.tv-screen #playScreen .play-top,
+body.tv-screen #playScreen .timer-track { grid-column: 1 / -1; }
+body.tv-screen #playScreen .board-wrap { grid-column: 1; max-width: 340px; margin: 0; }
+body.tv-screen #playScreen #playRoster { grid-column: 2; margin-top: 0 !important; }
+body.tv-screen #playScreen .trace-bar,
+body.tv-screen #playScreen .type-row,
+body.tv-screen #playScreen .found:not(#playRoster),
+body.tv-screen #playScreen .mara-actions { display: none; }
+body.tv-screen #playRoster .who { font-size: 18px; }
+html.tv .code-display .code { font-size: 64px; letter-spacing: 12px; }
+html.tv #joinQr { width: 220px !important; height: 220px !important; }

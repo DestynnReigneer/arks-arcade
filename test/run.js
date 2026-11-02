@@ -60,7 +60,8 @@ const SUITES = [
   ['moonshot', require('./moonshot.test.js')],
   ['housekeeping', require('./housekeeping.test.js')],
   ['boards', require('./boards.test.js')],
-  ['tv', require('./tv.test.js')]
+  ['tv', require('./tv.test.js')],
+  ['tv-party', require('./tv-party.test.js')]
 ];
 
 // A throwaway brand/ and media/ folder, so the tests can check what the
@@ -189,6 +190,14 @@ function resetTestDb() {
     const tvResult = await require('./tv-arksid.test.js').run({ base: ID_BASE, root: ROOT, fake });
     total += tvResult.pass + tvResult.fail;
     failed += tvResult.fail;
+    // The party and word games on a TV with ARKS ID: grown-ups rooms, kids' phones.
+    console.log(`
+${'='.repeat(60)}
+  tv-party-arksid
+${'='.repeat(60)}`);
+    const partyResult = await require('./tv-party-arksid.test.js').run({ base: ID_BASE, root: ROOT, fake });
+    total += partyResult.pass + partyResult.fail;
+    failed += partyResult.fail;
   } catch (e) {
     console.error('\nRUNNER FAILED:', e.message);
     failed++;

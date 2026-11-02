@@ -7,6 +7,43 @@ to-do list as checkboxes (the rule is in the maintainer's global CLAUDE.md
 and `arks-internal/conventions/sessions.md`): do the checked items in the
 order they were clicked, and keep the rest pinned here.
 
+## The party and word games on the TV (2026-11-01, contract v14)
+
+Following Know-It-All's pattern, so read its section below first. Built against ARKS ID contract v14
+(nothing new in the contract).
+
+- **Which ways each game supports:** Uh-Oh: Part Deux: everyone on their own phone, and one phone passed
+  around (no remote-only way, because the TV would show everyone's hand). Dare Devil: all three (phones,
+  one phone passed around, the remote on the TV, which is the old one-phone game run on the TV). Shuffle
+  Scuffle: everyone on their own phone, plus the daily letters and free play with the remote alone (the
+  arrows move along the tiles). Rambler: everyone on their own phone only (tracing words needs a finger).
+- **Screen hosts** in `arcade/party-tables.js` (Part Deux, Dare Devil), `scuffle/rooms.js` and
+  `rambler/rooms.js`: `screen: true` makes the room with the TV as host and not a player, the same as
+  Know-It-All. It can't start with nobody there, can't send words or moves, and its leaving ends the room.
+  Snapshots say `screen` and `isScreen`.
+- **Seats in the card games** (`party-tables.js`): `POST /rooms/:code/seats` and `/seats/remove` (lobby
+  only, not the screen), `as` on `/act` (must be one of the phone's own players), and `mine` and `as` in
+  the room's state. A phone holding several players gets only the hand of whoever's turn it is, and only on
+  their turn, so passing the phone can't leak another hand; the page shows the old pass-the-phone cover
+  first. A phone leaving takes its seats with it.
+- **Kids' phones** (`arcade/adult-join.js`, wired up in `server.js` with ARKS ID on): joining a grown-ups
+  room in all four games refuses a phone signed in as a kid, a teen or a TV, the same rule as Know-It-All's.
+- **Pages:** each opts in with `<html data-tv-nav>` and loads tv-core.js and tv.js itself. On a TV the
+  phone-only modes are hidden (`no-tv`), the TV ways show (`tv-only`), How to play doesn't open by itself,
+  adult levels unlock with `ArcadeTV.adultPass()`, the TV makes up the lobby password, Back to family ends an
+  adult game, and each move or round calls `ArcadeTV.played()`. `body.tv-screen` styles the screen view in
+  each game's own CSS (not tv.css, so the two TV helpers didn't touch the same lines).
+- **tv.js additions** (small and backward-compatible): the highlight stays in the same spot when a page
+  draws its buttons again (a hand, a row of tiles) instead of jumping back to the start; `ArcadeTV.confirm()`
+  is a yes-or-no card the remote can answer (the TV app's web view can't show `confirm()`); and
+  `ArcadeTV.adultPass()` does adults' night and fetches the pass in one call.
+- **Tests:** `test/tv-party.test.js` (the screen and seats in each room API), `test/tv-party-arksid.test.js`
+  (adult rooms only during adults' night, kids' phones turned away in all four), and
+  `test/browser/tv-party.spec.js` at 1920x1080 with the TV app's user agent (each page fits with the TV
+  ways showing, and the TV hosts each game while a phone joins in its own browser and plays). The pretend
+  ARKS ID gained a second TV account (`den`, "Den TV") so browser test files can each set up their own TV
+  at the same time (setting a TV up again signs its old sign-in out); `/test/tv/approve` takes `as`.
+
 ## Know-It-All on the TV (2026-11-01, contract v14)
 
 - **The TV layout** (`public/tv-core.js`, `public/tv.js`, `public/tv.css`): on when the user agent has

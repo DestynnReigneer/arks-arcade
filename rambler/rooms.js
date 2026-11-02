@@ -7,6 +7,9 @@ const boards = require('./boards');
 // Rooms are deliberately in-memory only. A room is worth less than the three
 // minutes it lasts, so there is nothing here worth surviving a restart --
 // only finished results go to SQLite.
+//
+// A room can be hosted by a screen (a TV): it shows the board, the clock and
+// everyone's word counts to the whole room, and isn't a player itself.
 const rooms = new Map();
 
 const MAX_PLAYERS = 8;
@@ -56,6 +59,9 @@ function snapshot(room, forPlayerId) {
     state: room.state,
     hostId: room.hostId,
     youAreHost: room.hostId === forPlayerId,
+    // screen: a TV hosts this room; isScreen: you're that TV.
+    screen: !!room.screen,
+    isScreen: !!(room.screen && room.screen.id === forPlayerId),
     locked: !!room.password,
     lobbyPassword: room.hostId === forPlayerId ? room.password : null,
     you: me ? { id: me.id, name: me.name } : null,
@@ -126,7 +132,8 @@ function addPlayer(room, rawName) {
 
 const roomPassword = require('../arcade/room-password');
 
-function createRoom({ hostName, size, profile, durationSec, password }) {
+// screen: this device (a TV) hosts and shows the game, and doesn't play.
+function createRoom({ hostName, size, profile, durationSec, password, screen = false }) {
   if (rooms.size >= MAX_ROOMS) {
     sweep();
     if (rooms.size >= MAX_ROOMS) throw fail('Too many rooms open right now.', 503);
@@ -150,12 +157,18 @@ function createRoom({ hostName, size, profile, durationSec, password }) {
     timer: null,
     hostId: null,
     onFinish: null,
-    password: null
+    password: null,
+    screen: null
   };
   // The Unfiltered dictionary is adult: those rooms get a lobby password.
   if (room.settings.profile === 'adult') room.password = roomPassword.requireNew(password);
   rooms.set(room.code, room);
 
+  if (screen) {
+    room.screen = { id: makePlayerId(), token: makeToken(), name: cleanName(hostName, 'TV'), clients: 0, screen: true };
+    room.hostId = room.screen.id;
+    return { room, player: room.screen };
+  }
   const host = addPlayer(room, hostName || 'Host');
   room.hostId = host.id;
   return { room, player: host };
@@ -172,7 +185,8 @@ function requireRoom(code) {
 }
 
 function authenticate(room, id, suppliedToken) {
-  const player = room.players.get(String(id || ''));
+  const key = String(id || '');
+  const player = room.players.get(key) || (room.screen && room.screen.id === key ? room.screen : null);
   if (!player || !suppliedToken || player.token !== String(suppliedToken)) {
     throw fail('Not a member of this room.', 403);
   }
@@ -197,9 +211,14 @@ function joinRoom(code, name, password) {
 function leaveRoom(code, id, suppliedToken) {
   const room = requireRoom(code);
   const player = authenticate(room, id, suppliedToken);
+  // The screen going away ends the game: there's nothing left to look at.
+  if (player.screen) {
+    closeRoom(room);
+    return;
+  }
   room.players.delete(player.id);
 
-  if (room.players.size === 0) {
+  if (room.players.size === 0 && !room.screen) {
     closeRoom(room);
     return;
   }
@@ -230,6 +249,7 @@ function startRound(code, id, suppliedToken) {
   const player = authenticate(room, id, suppliedToken);
   requireHost(room, player);
   if (room.state === 'playing') throw fail('Round already running.', 409);
+  if (room.players.size === 0) throw fail('Nobody has joined yet.', 409);
 
   const built = round.createBoard({ size: room.settings.size, profile: room.settings.profile });
 
@@ -263,6 +283,7 @@ function startRound(code, id, suppliedToken) {
 function submitWords(code, id, suppliedToken, words) {
   const room = requireRoom(code);
   const player = authenticate(room, id, suppliedToken);
+  if (player.screen) throw fail('The TV shows the board; words come from the phones.', 403);
   if (room.state !== 'playing') throw fail('No round in progress.', 409);
   if (Date.now() > room.endsAt + GRACE_MS) throw fail('Time is up.', 409);
 
@@ -285,6 +306,7 @@ function submitWords(code, id, suppliedToken, words) {
 function markReady(code, id, suppliedToken) {
   const room = requireRoom(code);
   const player = authenticate(room, id, suppliedToken);
+  if (player.screen) return room;
   player.ready = true;
   touch(room);
 

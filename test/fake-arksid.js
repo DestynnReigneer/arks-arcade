@@ -19,7 +19,10 @@ function startFakeArksId({ secret, arcadeBase, port = 0 }) {
     // A photo; its address is filled in once the fake knows where it lives.
     kim: { id: 'u_kim0000001', name: 'Kim', role: 'adult', boardName: 'Kim', avatar: { icon: 'star', color: 'pink', image: null, art: null } },
     // A TV's own account (v14): always the kid role.
-    tv: { id: 'u_tv00000001', name: 'Living room TV', role: 'kid', kind: 'tv', boardName: '', avatar: { icon: 'controller', color: 'turquoise', image: null, art: null } }
+    tv: { id: 'u_tv00000001', name: 'Living room TV', role: 'kid', kind: 'tv', boardName: '', avatar: { icon: 'controller', color: 'turquoise', image: null, art: null } },
+    // A second TV, so browser tests in different files can each set one up
+    // at the same time (setting a TV up again signs its old sign-in out).
+    den: { id: 'u_tv00000002', name: 'Den TV', role: 'kid', kind: 'tv', boardName: '', avatar: { icon: 'controller', color: 'pink', image: null, art: null } }
   };
   // The pictures, as ARKS ID serves them: real 1-pixel pictures, so a browser can draw them.
   const WEBP = Buffer.from('UklGRiQAAABXRUJQVlA4IBgAAAAwAQCdASoBAAEAAwA0JaQAA3AA/vuUAAA=', 'base64');
@@ -42,13 +45,15 @@ function startFakeArksId({ secret, arcadeBase, port = 0 }) {
     // TVs (v14): pairings waiting for an adult's phone (pollToken -> pairing),
     // adults' night per TV session, unlock codes showing, and every TV call.
     pairs: new Map(), pairInterval: 2, adult: new Map(), unlocks: new Map(), tvCalls: [],
-    // An adult approves the code on their phone: the TV signs in as `tv`.
-    approvePair(userCode) {
+    // An adult approves the code on their phone: the TV signs in as `tv`
+    // (or as another TV account, by its key in users).
+    approvePair(userCode, as = 'tv') {
       const p = [...fake.pairs.values()].find(x => x.userCode === userCode && x.status === 'pending');
-      if (!p) return false;
+      if (!p || !users[as] || users[as].kind !== 'tv') return false;
       p.status = 'approved';
       p.code = code();
-      codes.set(p.code, 'tv');
+      p.key = as;
+      codes.set(p.code, as);
       return true;
     },
     // An adult (by: a key in users) unlocks adults' night from their phone.
@@ -106,7 +111,7 @@ function startFakeArksId({ secret, arcadeBase, port = 0 }) {
     if (req.method === 'POST' && u.pathname === '/test/switches') { fake.set = (await readBody(req)).set || {}; return json(res, 200, { ok: true }); }
     // The same for TVs: the codes showing now, and an adult's phone saying yes.
     if (req.method === 'GET' && u.pathname === '/test/tv') return json(res, 200, fake.latest);
-    if (req.method === 'POST' && u.pathname === '/test/tv/approve') return json(res, 200, { ok: fake.approvePair((await readBody(req)).userCode) });
+    if (req.method === 'POST' && u.pathname === '/test/tv/approve') return json(res, 200, { ok: await readBody(req).then(b => fake.approvePair(b.userCode, b.as || 'tv')) });
     if (req.method === 'POST' && u.pathname === '/test/tv/unlock') { const b = await readBody(req); return json(res, 200, { ok: fake.approveUnlock(b.userCode, b.by || 'alex') }); }
     if (!u.pathname.startsWith('/api/')) return json(res, 404, { error: 'Not found.' });
     if (req.headers.authorization !== `Bearer ${secret}`) return json(res, 401, { error: 'no' });
@@ -150,7 +155,7 @@ function startFakeArksId({ secret, arcadeBase, port = 0 }) {
       if (!p || p.status === 'done') return json(res, 200, { status: 'expired' });
       const early = Date.now() - p.lastPoll < p.interval * 1000 - 300;
       p.lastPoll = Date.now();
-      if (p.status === 'approved') { p.status = 'done'; return json(res, 200, { status: 'approved', code: p.code, tv: { id: users.tv.id, name: users.tv.name } }); }
+      if (p.status === 'approved') { p.status = 'done'; return json(res, 200, { status: 'approved', code: p.code, tv: { id: users[p.key].id, name: users[p.key].name } }); }
       if (early) { p.interval += 5; return json(res, 200, { status: 'slow_down', interval: p.interval, expiresAt: Date.now() + 600000 }); }
       return json(res, 200, { status: 'pending', interval: p.interval, expiresAt: Date.now() + 600000 });
     }

@@ -5,6 +5,7 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const adultPin = require('../arcade/adult-pin');
+const adultJoin = require('../arcade/adult-join');
 const roomPassword = require('../arcade/room-password');
 const { today } = require('../rambler/progress');
 const game = require('./game');
@@ -66,10 +67,17 @@ router.post('/rooms', roomLimit, (req, res, next) => {
   try {
     const settings = rooms.cleanSettings(body(req).settings || {});
     assertDictionary(settings.dictionary, req);
-    res.status(201).json(rooms.create({ name: body(req).name, settings, password: body(req).password }));
+    // screen: a TV hosts the room and shows it; it doesn't play.
+    res.status(201).json(rooms.create({ name: body(req).name, settings, password: body(req).password, screen: body(req).screen === true }));
   } catch (e) { next(e); }
 });
-router.post('/rooms/:code/join', roomLimit, wrap(req => rooms.join(req.params.code, body(req).name, body(req).password)));
+// A phone signed in to ARKS ID as a kid, a teen or a TV can't join a room on the unfiltered list.
+router.post('/rooms/:code/join', roomLimit, async (req, res, next) => {
+  try {
+    await adultJoin.refuseKids(req, rooms.room(req.params.code).settings.dictionary === 'adult');
+    res.json(rooms.join(req.params.code, body(req).name, body(req).password));
+  } catch (e) { next(e); }
+});
 router.post('/rooms/:code/settings', (req, res, next) => {
   try {
     const s = body(req).settings || {};

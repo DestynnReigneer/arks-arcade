@@ -7,6 +7,7 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const adultPin = require('./adult-pin');
+const adultJoin = require('./adult-join');
 const roomPassword = require('./room-password');
 
 function fail(message, status = 400) {
@@ -44,17 +45,24 @@ function makeRoutes({ tables, config }) {
     try {
       const body = req.body || {};
       assertLevelAllowed(body.level, req);
-      const { table, player } = tables.createRoom({ name: body.name, level: body.level, drinking: body.drinking, password: body.password, options: body.options });
+      // screen: a TV hosts the room and shows the table; it doesn't play.
+      const { table, player } = tables.createRoom({ name: body.name, level: body.level, drinking: body.drinking, password: body.password, options: body.options, screen: body.screen === true });
       res.status(201).json({ code: table.id, playerId: player.id, token: player.token });
     } catch (e) { next(e); }
   });
-  router.post('/rooms/:code/join', limiter, (req, res, next) => {
+  // Guests get into a grown-ups room with its lobby password; a phone signed
+  // in to ARKS ID as a kid, a teen or a TV doesn't, whatever it types.
+  router.post('/rooms/:code/join', limiter, async (req, res, next) => {
     try {
       const body = req.body || {};
+      await adultJoin.refuseKids(req, tables.isAdult(tables.room(req.params.code).level));
       const { table, player } = tables.joinRoom(req.params.code, body.name, body.password);
       res.status(201).json({ code: table.id, playerId: player.id, token: player.token });
     } catch (e) { next(e); }
   });
+  // Passing one phone around: more players on it, or taking one off again.
+  router.post('/rooms/:code/seats', (req, res, next) => { try { res.status(201).json(tables.addSeat(...creds(req), (req.body || {}).name)); } catch (e) { next(e); } });
+  router.post('/rooms/:code/seats/remove', (req, res, next) => { try { tables.removeSeat(...creds(req), (req.body || {}).seat); res.json({ ok: true }); } catch (e) { next(e); } });
   router.post('/rooms/:code/settings', (req, res, next) => {
     try {
       const body = req.body || {};

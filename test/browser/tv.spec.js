@@ -75,7 +75,7 @@ test('the TV sets itself up and the home screen works with only the remote', asy
   await expect(page.locator('a.game.trivia')).toBeFocused({ timeout: 5000 });
   const ring = await page.evaluate(() => parseFloat(getComputedStyle(document.activeElement).outlineWidth));
   expect(ring).toBeGreaterThanOrEqual(3);
-  await expect(page.locator('.tv-badge')).toBeVisible();
+  await expect(page.locator('.game.trivia .tv-badge')).toBeVisible();
   // No hover-only corners, and no admin link on the TV.
   await expect(page.locator('.fb-bug')).toBeHidden();
   await expect(page.locator('.ah-lock')).toBeHidden();
