@@ -21,7 +21,8 @@ const SUITES = [
   ['sudoku', require('./sudoku.test.js')],
   ['scuffle', require('./scuffle.test.js')],
   ['crisscross', require('./crisscross.test.js')],
-  ['clueless', require('./clueless.test.js')]
+  ['clueless', require('./clueless.test.js')],
+  ['tumbler', require('./tumbler.test.js')]
 ];
 
 // A throwaway brand/ and media/ folder, so the tests can check what the
@@ -63,7 +64,10 @@ function startServer(port = PORT, extraEnv = {}) {
         // Lets the Shuffle Scuffle tests ask for 2-second rounds.
         SCUFFLE_TEST_SECONDS: '2',
         // Clueless turns away a finish faster than this per square.
-        CLUELESS_MIN_MS_PER_SQUARE: '20'
+        CLUELESS_MIN_MS_PER_SQUARE: '20',
+        // Tumbler Rumble refuses taps later than the run has really lasted;
+        // this lets the suite send a whole run without playing it in real time.
+        TUMBLER_SLACK_MS: '60000'
       },
       stdio: ['ignore', 'pipe', 'pipe']
     });

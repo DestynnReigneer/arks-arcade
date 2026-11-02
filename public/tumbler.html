@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Tumbler Rumble</title>
+<link rel="icon" href="/custom/brand/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/custom/brand/app-icon-180.png">
+<link rel="stylesheet" href="arcade-ui.css">
+<link rel="stylesheet" href="game-shell.css">
+<link rel="stylesheet" href="tutorial.css">
+<link rel="stylesheet" href="tumbler.css">
+<link rel="stylesheet" href="look.css">
+<link rel="stylesheet" href="topbar.css">
+</head>
+<body data-state="idle">
+<script src="topbar.js"></script>
+
+<header class="top">
+  <a href="/" class="icon-btn" title="Back to the arcade">←</a>
+  <h1><i class="t-emoji">🔓 </i>TUMBLER <span>RUMBLE</span></h1>
+  <div class="btns">
+    <button class="icon-btn" id="muteBtn" title="Sound">🔊</button>
+    <button class="icon-btn music-btn" id="musicBtn" title="Music">🎵</button>
+    <button class="icon-btn" id="scoresBtn" title="High scores">🏆</button>
+    <button class="icon-btn" id="helpBtn" title="How to play">?</button>
+  </div>
+</header>
+
+<div class="hud">
+  <div><small>Lock</small><b id="hudLevel">1</b></div>
+  <div><small>Score</small><b id="hudScore">0</b></div>
+  <div><small>Pins left</small><b id="hudPins">3</b></div>
+  <div><small>Streak</small><b id="hudStreak">0</b></div>
+</div>
+
+<!-- The whole lock and the POP button under it are one big place to tap. -->
+<div class="tr-zone" id="zone">
+  <div class="stage tr-stage" id="stage" role="button" tabindex="0"
+    aria-label="The lock. Tap, or press Space or Enter, when the light is on the glowing pin.">
+    <canvas id="lock"></canvas>
+    <div class="stage-msg" id="msg">
+      <b id="msgTitle">Tap to play</b>
+      <span id="msgText">Tap anywhere on the lock, or press Space, to start.</span>
+    </div>
+  </div>
+  <button class="tr-pop" id="popBtn" type="button" aria-label="Pop">POP!</button>
+</div>
+<p class="hint center keys-hint">Keyboard: <b>Space</b> or <b>Enter</b> to pop. A game controller's <b>A</b> button works too.</p>
+<div class="sr-only" id="say" aria-live="polite"></div>
+
+<div class="panel center hidden over-panel" id="over" role="dialog" aria-live="polite">
+  <div class="over-top"><button class="primary" id="againBtn">Play again</button></div>
+  <h2 class="over-title" id="overTitle">The lock held!</h2>
+  <div class="final-score" id="overScore">0</div>
+  <div class="over-detail hint" id="overDetail"></div>
+  <p class="tr-chase" id="chaseLine"></p>
+  <div id="savePart">
+    <p class="hint" id="saveHint">Type your initials to put your score on the board.</p>
+    <div class="initials" id="iniRow">
+      <input maxlength="1" class="ini" autocomplete="off" aria-label="First initial"><input maxlength="1" class="ini" autocomplete="off" aria-label="Second initial"><input maxlength="1" class="ini" autocomplete="off" aria-label="Third initial">
+    </div>
+    <button class="primary big" id="saveBtn">Save my score</button>
+    <div class="msg" id="saveMsg"></div>
+  </div>
+  <p class="hint" id="rankLine"></p>
+  <div class="stack"><button class="ghost" id="overScoresBtn">🏆 High scores</button></div>
+</div>
+
+<div class="overlay hidden" id="scores" role="dialog" aria-label="High scores">
+  <div class="card-panel">
+    <h2>🏆 High scores</h2>
+    <div class="seg board-tabs" id="scoreScope"></div>
+    <ul class="scores" id="scoreList"></ul>
+    <p class="hint center" id="scoreNote"></p>
+    <div class="stack"><button class="ghost" id="scoresClose">Close</button></div>
+  </div>
+</div>
+
+<script src="feedback.js"></script>
+<script src="avatars.js"></script>
+<script src="avatar-photo.js"></script>
+<script src="pin-pad.js"></script>
+<script src="profile.js"></script>
+<script src="custom-media.js"></script>
+<script src="stats.js"></script>
+<script src="dust-sign.js"></script>
+<script src="tutorial.js"></script>
+<script src="blip.js"></script>
+<script src="fx.js"></script>
+<script src="arcade-kit.js"></script>
+<script src="tumbler-engine.js"></script>
+<script src="tumbler.js"></script>
+<script src="banner.js" defer></script>
+</body>
+</html>

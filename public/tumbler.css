@@ -1,0 +1,61 @@
+/* Tumbler Rumble: the lock, the POP button and the game-over extras. The
+   shared look comes from arcade-ui.css, game-shell.css and look.css. */
+:root { --accent: #3d8bff; --on-accent: #020a1c; --pin: #ffd23f; --marker: #e9fbff; --miss: #ff5e5e; }
+
+.hud { gap: 6px; }
+.hud div { padding: 6px 8px; }
+.hud b { font-size: 17px; }
+
+/* One big place to tap: the lock and the button under it. */
+.tr-zone { max-width: 480px; margin: 0 auto; user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+.tr-stage {
+  aspect-ratio: 1; width: 100%; cursor: pointer; background: var(--plate, #0a0416);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 20%, transparent), 0 10px 30px rgba(0, 0, 0, 0.5),
+    inset 0 0 40px color-mix(in srgb, var(--accent) 12%, transparent);
+  -webkit-tap-highlight-color: transparent;
+}
+.tr-stage:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.tr-stage canvas { width: 100%; height: 100%; }
+.tr-stage .stage-msg { background: color-mix(in srgb, var(--plate, #0a0416) 70%, transparent); }
+.tr-stage .stage-msg b { font: 800 22px/1.2 Orbitron, var(--font); color: var(--accent); text-shadow: 0 0 12px color-mix(in srgb, var(--accent) 70%, transparent); }
+.tr-stage .stage-msg span { max-width: 280px; line-height: 1.5; }
+.tr-stage.shake { animation: tr-shake 0.35s linear; }
+@keyframes tr-shake {
+  20% { transform: translateX(-7px); } 40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); } 80% { transform: translateX(2px); }
+}
+
+.tr-pop {
+  display: block; width: 100%; height: 76px; margin-top: 12px; border-radius: 16px; cursor: pointer;
+  font: 900 28px/1 Orbitron, var(--font); letter-spacing: 6px; color: var(--on-accent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 80%, #fff), var(--accent));
+  border: 2px solid color-mix(in srgb, var(--accent) 60%, #fff);
+  box-shadow: 0 6px 0 color-mix(in srgb, var(--accent) 45%, #000), 0 0 22px color-mix(in srgb, var(--accent) 45%, transparent);
+  touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+}
+.tr-pop.down { transform: translateY(4px); box-shadow: 0 2px 0 color-mix(in srgb, var(--accent) 45%, #000), 0 0 30px var(--accent); }
+body[data-state="over"] .tr-pop { opacity: 0.45; }
+
+/* The real gap to the next score up on today's board. */
+.tr-chase { margin: 6px 0 2px; font-size: 14px; line-height: 1.5; color: var(--pin); font-weight: 600; }
+.tr-chase:empty { display: none; }
+
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Celebrations (fx.js): the confetti layer and the big banner, as on the other games. */
+#fxCanvas { position: fixed; inset: 0; pointer-events: none; z-index: 90; }
+.fx-banner { position: fixed; inset: 0; z-index: 95; display: flex; align-items: center; justify-content: center; pointer-events: none; opacity: 0; transition: opacity .25s ease; padding: 20px; }
+.fx-banner.on { opacity: 1; }
+.fx-banner-inner { text-align: center; transform: scale(.7); transition: transform .4s cubic-bezier(.2, .9, .25, 1.4); }
+.fx-banner.on .fx-banner-inner { transform: scale(1); }
+.fx-title { font-family: "Orbitron", system-ui, sans-serif; font-weight: 800; font-size: clamp(30px, 11vw, 74px); line-height: 1; text-wrap: balance; }
+.fx-sub { font-weight: 700; font-size: clamp(13px, 4vw, 19px); letter-spacing: .2em; text-transform: uppercase; margin-top: 12px; color: #f5eaff; }
+.fx-banner.tone-gold .fx-title { color: #ffd23f; text-shadow: 0 0 26px rgba(255, 210, 63, .9), 0 0 70px rgba(61, 139, 255, .7), 0 4px 0 #7a4e08; animation: trStrobe .34s steps(2) infinite; }
+@keyframes trStrobe { 50% { filter: brightness(1.45); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .tr-stage.shake { animation: none; }
+  .fx-banner-inner { transition: none !important; }
+  .fx-title { animation: none !important; }
+}
