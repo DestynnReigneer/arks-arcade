@@ -655,6 +655,7 @@ async function run({ base, root }) {
     easyBoard.some(r => r.initials === 'EZY') && easyBoard.every(r => r.difficulty === 'easy'));
 
   ok('the arcade name endpoint answers', typeof (await wl('/arcade-info')).data.name === 'string');
+  ok('without a sign-in service there is no banner', (await wl('/banner')).data.banner === null);
 
   // ---- Comm Center ------------------------------------------------------------
   const asAdmin = async (p, method = 'GET', body, token = ADMIN) => {

@@ -577,6 +577,12 @@
       row.querySelector('[data-act="hide"]').onclick = () => toggleHidden(id);
       box.appendChild(row);
     });
+    if (home.arksId) {
+      const note = document.createElement('p');
+      note.className = 'admin-msg';
+      note.textContent = 'Games can also be turned on and off on the Switches page in ARKS ID\'s admin console, for everyone, for a role or for one person. A game set there follows ARKS ID. Every other game follows the buttons here.';
+      box.appendChild(note);
+    }
   }
 
   async function saveHomeGames(next) {
