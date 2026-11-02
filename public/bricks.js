@@ -9,6 +9,7 @@
   const ROW_COLORS = ['#ff5e5e', '#ff9f2c', '#ffc72c', '#3ddc84', '#2de2e6', '#2e9bff', '#c86bff', '#ff4fa3'];
 
   let g = null;
+  const TAP_LAUNCH = TvPlay.on ? 'Press OK to launch' : 'Tap to launch';
   let state = 'ready';     // ready (serving) | playing | paused | cleared | over
   let pointerX = null;     // where a finger or mouse wants the paddle (world units)
   let keys = { left: false, right: false };
@@ -27,7 +28,7 @@
     counted = false;
     particles = []; flash = 0;
     document.body.dataset.state = 'ready';
-    message(`Level 1: ${E.levelName(0)}`, 'Tap to launch');
+    message(`Level 1: ${E.levelName(0)}`, TAP_LAUNCH);
     hud();
   }
 
@@ -52,8 +53,8 @@
     }
   }
   function pause(on = state === 'playing' || state === 'ready') {
-    if (on && (state === 'playing' || state === 'ready')) { state = 'paused'; message('Paused', 'Tap or press P to keep going.'); }
-    else if (!on && state === 'paused') { state = g.phase === 'serve' ? 'ready' : 'playing'; message(g.phase === 'serve' ? 'Ready' : null, 'Tap to launch'); last = performance.now(); }
+    if (on && (state === 'playing' || state === 'ready')) { state = 'paused'; message('Paused', TvPlay.on ? 'Press OK to keep going.' : 'Tap or press P to keep going.'); }
+    else if (!on && state === 'paused') { state = g.phase === 'serve' ? 'ready' : 'playing'; message(g.phase === 'serve' ? 'Ready' : null, TAP_LAUNCH); last = performance.now(); }
     $('pauseBtn').textContent = state === 'paused' ? '▶' : '⏸';
   }
 
@@ -98,7 +99,7 @@
       } else if (ev === 'lost') {
         flash = 1; shake = 10;
         Blip.tone([400, 120], 0.35, { type: 'sawtooth', volume: 0.07 });
-        if (g.phase === 'serve') { state = 'ready'; message('Oops!', 'Tap to launch'); }
+        if (g.phase === 'serve') { state = 'ready'; message('Oops!', TAP_LAUNCH); }
       } else if (ev === 'over') {
         state = 'over';
         Blip.noise(0.3, 0.15);
@@ -110,7 +111,7 @@
         setTimeout(() => {
           E.nextLevel(g);
           state = 'ready';
-          message(`Level ${g.level + 1}: ${E.levelName(g.level)}`, 'Tap to launch');
+          message(`Level ${g.level + 1}: ${E.levelName(g.level)}`, TAP_LAUNCH);
           hud();
         }, 1800);
       }
@@ -412,6 +413,24 @@
     }
   ]);
   $('helpBtn').addEventListener('click', () => help.open());
+
+  // ---- on the TV ----------------------------------------------------------------------------
+  // The bricks on the right, big. Play hands the remote to the game: left
+  // and right move the paddle, OK (or up) launches the ball. A controller's
+  // A, X, R1 or right trigger launch, and Start pauses.
+  let tvPlaying = false;
+  TvPlay.setup({
+    stage: $('stage'),
+    // Until the game-over panel is up, OK and the arrows stay with the game.
+    steering: () => tvPlaying && (state !== 'over' || !shell.isOver),
+    active: () => state === 'playing',
+    begin: () => { tvPlaying = true; },
+    ready: () => !tvPlaying,
+    enter: ' ',
+    buttons: { 0: ' ', 2: ' ', 5: ' ', 7: ' ', 9: 'p' },
+    dirs: true,
+    hint: 'Press OK on Play, then the arrows on the remote move the paddle and OK launches the ball. On a game controller, the D-pad or left stick moves, A, X, R1 or the right trigger launches, and Start pauses.'
+  });
 
   newGame();
   requestAnimationFrame(frame);

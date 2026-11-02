@@ -12,6 +12,12 @@
 <link rel="stylesheet" href="tutorial.css">
 <link rel="stylesheet" href="look.css">
 <link rel="stylesheet" href="topbar.css">
+<link rel="stylesheet" href="tv.css">
+<link rel="stylesheet" href="tv-play.css">
+<!-- On a TV: the TV layout, the remote and a game controller (tv.js, tv-play.js). -->
+<script src="tv-core.js"></script>
+<script src="tv.js"></script>
+<script src="tv-play.js"></script>
 </head>
 <body>
 <script src="topbar.js"></script>
@@ -33,8 +39,8 @@
     <div class="seg" id="modeSeg">
       <button data-mode="ai" aria-pressed="true">🤖 vs Computer</button>
       <button data-mode="local" aria-pressed="false">📱 Share a phone</button>
-      <button data-mode="host" aria-pressed="false">📡 Host</button>
-      <button data-mode="join" aria-pressed="false">🔗 Join</button>
+      <button data-mode="host" aria-pressed="false" class="no-tv">📡 Host</button>
+      <button data-mode="join" aria-pressed="false" class="no-tv">🔗 Join</button>
     </div>
 
     <div id="aiSetup">
