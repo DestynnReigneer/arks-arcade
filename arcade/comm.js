@@ -30,7 +30,7 @@ db.db.exec(`CREATE TABLE IF NOT EXISTS comm_feedback_replies (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 )`);
 
-const GAMES = ['wordless', 'rambler', 'spinsolve', 'chess', 'dino', 'trivia', 'partdeux', 'daredevil', 'snake', 'bricks', 'blocks', 'towers', 'sudoku'];
+const GAMES = ['wordless', 'rambler', 'spinsolve', 'chess', 'dino', 'trivia', 'partdeux', 'daredevil', 'snake', 'bricks', 'blocks', 'towers', 'sudoku', 'scuffle'];
 const FEEDBACK_KINDS = ['feature', 'issue', 'message'];
 const STATUSES = ['new', 'pending', 'in-progress', 'completed', 'canceled'];
 // Done ones (Fixed, Won't fix) move to the Archive, for the admin and the sender.

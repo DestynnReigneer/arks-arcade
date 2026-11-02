@@ -191,6 +191,12 @@ const Blip = (() => {
       chords: [[0, 4, 7], [-3, 0, 4], [-7, -3, 0], [-5, -1, 2]],
       tune: [7, _, _, 4, 5, _, 4, _,  2, _, _, _, 0, _, _, _,  4, _, _, 5, 7, _, 9, _,  7, _, _, _, _, _, _, _]
     },
+    // Shuffle Scuffle: bouncy and a bit urgent, for a race against the clock.
+    scuffle: {
+      bpm: 126, root: 48, wave: 'square', hat: true, arp: [0, 1, 2, 1, 0, 2, 1, 2],
+      chords: [[0, 4, 7], [5, 9, 12], [-3, 0, 4], [-5, -1, 2]],
+      tune: [12, _, 7, _, 9, 7, 4, _,  5, _, 9, _, 12, _, _, _,  7, _, 4, 7, 9, _, 7, _,  2, _, 4, _, 7, _, _, _]
+    },
     towers: {
       bpm: 84, root: 52, wave: 'triangle', hat: false, arp: [0, 1, 2, 3, 2, 1, 0, 1],
       chords: [[0, 3, 7], [-2, 2, 5], [-4, 0, 3], [-2, 2, 5]],
