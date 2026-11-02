@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Sudoku</title>
+<link rel="icon" href="/custom/brand/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/custom/brand/app-icon-180.png">
+<link rel="stylesheet" href="arcade-ui.css">
+<link rel="stylesheet" href="game-shell.css">
+<link rel="stylesheet" href="tutorial.css">
+<link rel="stylesheet" href="sudoku.css">
+<link rel="stylesheet" href="look.css">
+<link rel="stylesheet" href="topbar.css">
+</head>
+<body>
+<script src="topbar.js"></script>
+
+<header class="top">
+  <a href="/" class="icon-btn" title="Back to the arcade">←</a>
+  <h1><i class="t-emoji">🧩 </i><span>SUDOKU</span></h1>
+  <div class="btns">
+    <button class="icon-btn" id="pauseBtn" title="Pause (P)">⏸</button>
+    <button class="icon-btn" id="muteBtn" title="Sound">🔊</button>
+    <button class="icon-btn music-btn" id="musicBtn" title="Music">🎵</button>
+    <button class="icon-btn" id="scoresBtn" title="Fastest times">🏆</button>
+    <button class="icon-btn" id="helpBtn" title="How to play">?</button>
+  </div>
+</header>
+
+<div class="seg level-seg" id="levelSeg" role="group" aria-label="Level"></div>
+
+<div class="hud">
+  <div><small>Time</small><b id="clock">0:00</b></div>
+  <div><small>Help added</small><b id="penalty">0:00</b></div>
+  <div><small>Puzzle</small><b id="dayLabel">Today</b></div>
+</div>
+
+<div class="sd-wrap">
+  <div class="sd-board" id="board" role="grid" aria-label="Sudoku board"></div>
+  <div class="sd-cover" id="cover">
+    <div class="sd-cover-box">
+      <b id="coverTitle">Today's puzzle</b>
+      <p id="coverText"></p>
+      <button class="primary big" id="coverBtn">Start</button>
+    </div>
+  </div>
+</div>
+
+<div class="sd-tools" id="tools">
+  <button class="sd-tool" id="undoBtn" title="Undo (Ctrl+Z)"><span>↶</span><small>Undo</small></button>
+  <button class="sd-tool" id="eraseBtn" title="Erase (Delete)"><span>⌫</span><small>Erase</small></button>
+  <button class="sd-tool" id="notesBtn" title="Pencil marks (N)" aria-pressed="false"><span>✏️</span><small>Notes off</small></button>
+  <button class="sd-tool" id="hintBtn" title="Fill in one square for you (adds 30 seconds)"><span>💡</span><small>Hint +30s</small></button>
+  <button class="sd-tool" id="checkBtn" title="Mark wrong numbers (adds 15 seconds)"><span>✔️</span><small>Check +15s</small></button>
+</div>
+
+<div class="sd-pad" id="pad" aria-label="Numbers"></div>
+
+<div class="sd-settings">
+  <label class="sd-switch"><input type="checkbox" id="liveMistakes"> Show my mistakes as I go <span class="hint">(each wrong number adds 10 seconds)</span></label>
+  <label class="sd-switch"><input type="checkbox" id="sameHighlight" checked> Light up the same number around the board</label>
+</div>
+<p class="hint center keys-hint">Keyboard: <b>arrow keys</b> to move, <b>1-9</b> to fill, <b>Delete</b> to erase, <b>N</b> for notes, <b>P</b> to pause.</p>
+
+<div class="panel center hidden over-panel" id="over" role="dialog" aria-live="polite">
+  <div class="over-top"><button class="primary" id="otherLevelBtn">Try another level</button></div>
+  <h2 class="over-title" id="overTitle">Solved! 🎉</h2>
+  <div class="final-score" id="overTime">0:00</div>
+  <div class="over-detail hint" id="overDetail"></div>
+  <div id="savePart">
+    <p class="hint" id="saveHint">Put your time on today's board and see where you stack up.</p>
+    <div class="initials" id="iniRow">
+      <input maxlength="1" class="ini" autocomplete="off" aria-label="First initial"><input maxlength="1" class="ini" autocomplete="off" aria-label="Second initial"><input maxlength="1" class="ini" autocomplete="off" aria-label="Third initial">
+    </div>
+    <button class="primary big" id="saveBtn">Save my time</button>
+    <div class="msg" id="saveMsg"></div>
+  </div>
+  <p class="hint" id="rankLine"></p>
+  <div class="stack"><button class="ghost" id="overScoresBtn">🏆 Fastest times</button></div>
+</div>
+
+<div class="overlay hidden" id="scores" role="dialog" aria-label="Fastest times">
+  <div class="card-panel">
+    <h2>🏆 Fastest times</h2>
+    <div class="seg board-tabs" id="scoreLevels"></div>
+    <div class="seg board-tabs" id="scoreScope"></div>
+    <ul class="scores" id="scoreList"></ul>
+    <p class="hint center" id="scoreNote"></p>
+    <div class="stack"><button class="ghost" id="scoresClose">Close</button></div>
+  </div>
+</div>
+
+<script src="feedback.js"></script>
+<script src="avatars.js"></script>
+<script src="avatar-photo.js"></script>
+<script src="pin-pad.js"></script>
+<script src="profile.js"></script>
+<script src="custom-media.js"></script>
+<script src="stats.js"></script>
+<script src="dust-sign.js"></script>
+<script src="tutorial.js"></script>
+<script src="blip.js"></script>
+<script src="fx.js"></script>
+<script src="arcade-kit.js"></script>
+<script src="sudoku.js"></script>
+</body>
+</html>

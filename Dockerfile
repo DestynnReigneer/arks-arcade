@@ -26,6 +26,7 @@ COPY spinsolve ./spinsolve
 COPY trivia ./trivia
 COPY partdeux ./partdeux
 COPY daredevil ./daredevil
+COPY sudoku ./sudoku
 COPY words ./words
 COPY public ./public
 
