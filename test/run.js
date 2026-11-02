@@ -56,7 +56,8 @@ const SUITES = [
   ['clueless', require('./clueless.test.js')],
   ['tumbler', require('./tumbler.test.js')],
   ['discodrop', require('./discodrop.test.js')],
-  ['royale', require('./royale.test.js')]
+  ['royale', require('./royale.test.js')],
+  ['moonshot', require('./moonshot.test.js')]
 ];
 
 // A throwaway brand/ and media/ folder, so the tests can check what the
@@ -103,7 +104,9 @@ function startServer(port, extraEnv = {}) {
         // this lets the suite send a whole run without playing it in real time.
         TUMBLER_SLACK_MS: '60000',
         // The same for Roll Royale's press and release times.
-        ROYALE_SLACK_MS: '60000'
+        ROYALE_SLACK_MS: '60000',
+        // The same for Moonshot's swings.
+        MOONSHOT_SLACK_MS: '60000'
       },
       stdio: ['ignore', 'pipe', 'pipe']
     });

@@ -203,6 +203,12 @@ const Blip = (() => {
       chords: [[0, 4, 7], [2, 5, 9], [-3, 0, 4], [-5, -1, 2]],
       tune: [7, _, 9, 7, _, 4, _, 2,  4, _, 5, _, 9, _, _, _,  12, _, 11, 9, _, 7, _, 4,  5, _, 4, _, 2, _, _, _]
     },
+    // Moonshot: a bouncy ballpark organ, for a night game under the lights.
+    moonshot: {
+      bpm: 124, root: 48, wave: 'triangle', hat: true, arp: [0, 1, 2, 1, 0, 2, 1, 2],
+      chords: [[0, 4, 7], [5, 9, 12], [-5, -1, 2], [0, 4, 7]],
+      tune: [0, _, 4, _, 7, _, 12, _,  9, _, 12, _, 7, _, _, _,  7, _, 5, 4, _, 2, _, 4,  0, _, _, _, _, _, _, _]
+    },
     // Clueless: light and thoughtful, for puzzling over a clue.
     clueless: {
       bpm: 80, root: 55, wave: 'triangle', hat: false, arp: [0, 2, 1, 2, 0, 1, 2, 1],
