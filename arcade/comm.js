@@ -383,9 +383,15 @@ function adminRouter(requireAdmin) {
 
   // The home page's game list: order and which ones show.
   const homeGames = require('./home-games');
-  admin.get('/home-games', (req, res) => res.json(homeGames.get()));
+  // With ARKS ID on, its admin console can switch games too (arcade/switches.js).
+  const switches = require('./switches');
+  admin.get('/home-games', (req, res) => res.json({ ...homeGames.get(), ...switches.adminNote() }));
   admin.post('/home-games', (req, res, next) => {
-    try { res.json(homeGames.set(req.body || {})); } catch (e) { next(e); }
+    try {
+      const saved = homeGames.set(req.body || {});
+      switches.changed();
+      res.json({ ...saved, ...switches.adminNote() });
+    } catch (e) { next(e); }
   });
 
   // The adult PIN lives here rather than under one game: it guards adult

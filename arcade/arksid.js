@@ -134,6 +134,14 @@ function createClient(s = settings(), fetchImpl = fetch) {
       const res = await post('/api/app' + path, body);
       return { status: res.status, data: await res.json().catch(() => ({})) };
     },
+    // Switches and the banner from ARKS ID's admin console (its contract
+    // v13): everything under /api/app that the shared kit's switches.js asks
+    // for. -> { status, data }. Throws when ARKS ID can't be reached.
+    async appCall(method, path, body) {
+      const init = body === undefined ? { method } : { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
+      const res = await call('/api/app' + path, init);
+      return { status: res.status, data: await res.json().catch(() => ({})) };
+    },
     // A photo or team picture, fetched by the arcade's server. Only ARKS ID's
     // own /avatars/ addresses, and only real pictures -> { type, body } or null.
     async photo(image) {

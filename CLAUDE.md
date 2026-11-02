@@ -56,7 +56,7 @@ private `arks-internal` repo, `conventions/writing.md`.
 Some files are the same in every app built on this setup and come from a shared kit
 kept in the private `arks-internal` repo (local clone: `../arks-internal/kit`): the
 server files in `kit/` (`version.js`, `burst-limit.js`, `security.js`,
-`feedback.js`), `public/dock.js`, `public/snapframe.js`, `public/avatars.js` and
+`feedback.js`, `feedback-relay.js`, `status-report.js`, `switches.js`), `public/dock.js`, `public/snapframe.js`, `public/avatars.js`, `public/banner.js`, `public/banner.css` and
 `scripts/check-kit.js`. They're copies, so **don't edit them here**: change the
 original in the kit, run its sync, and open a PR here with the result. `kit/kit.json`
 lists each file with its fingerprint, and `npm test` fails if a copy was changed.
