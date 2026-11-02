@@ -191,6 +191,12 @@ const Blip = (() => {
       chords: [[0, 4, 7], [-3, 0, 4], [-7, -3, 0], [-5, -1, 2]],
       tune: [7, _, _, 4, 5, _, 4, _,  2, _, _, _, 0, _, _, _,  4, _, _, 5, 7, _, 9, _,  7, _, _, _, _, _, _, _]
     },
+    // Clueless: light and thoughtful, for puzzling over a clue.
+    clueless: {
+      bpm: 80, root: 55, wave: 'triangle', hat: false, arp: [0, 2, 1, 2, 0, 1, 2, 1],
+      chords: [[0, 4, 7], [-5, -1, 2], [-3, 0, 4], [-7, -3, 0]],
+      tune: [4, _, 7, _, _, 5, 4, _,  2, _, _, _, 4, _, _, _,  0, _, 2, _, 4, _, 5, _,  4, _, _, 2, _, _, _, _]
+    },
     // Shuffle Scuffle: bouncy and a bit urgent, for a race against the clock.
     scuffle: {
       bpm: 126, root: 48, wave: 'square', hat: true, arp: [0, 1, 2, 1, 0, 2, 1, 2],

@@ -37,7 +37,10 @@ for (const end of ['', '-journal', '-wal', '-shm']) {
       ADMIN_TOKEN: 'browser-test-admin',
       ARKS_ID_URL: fake.base,
       ARKS_ID_SECRET: secret,
-      CLIP_SURPRISE: '0'
+      CLIP_SURPRISE: '0',
+      // Clueless turns away a finish faster than 0.3 seconds a square; the
+      // browser test types quicker than a person.
+      CLUELESS_MIN_MS_PER_SQUARE: '20'
     }
   });
   const stop = () => { child.kill(); fake.close(); process.exit(0); };

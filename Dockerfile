@@ -29,6 +29,7 @@ COPY daredevil ./daredevil
 COPY sudoku ./sudoku
 COPY scuffle ./scuffle
 COPY crisscross ./crisscross
+COPY clueless ./clueless
 COPY words ./words
 COPY public ./public
 

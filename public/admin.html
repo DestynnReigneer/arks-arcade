@@ -270,6 +270,7 @@
     <button id="tabWordless" aria-pressed="false">🔤 Wordless</button>
     <button id="tabSpin" aria-pressed="false">🎡 Spin &amp; Solve</button>
     <button id="tabTrivia" aria-pressed="false">🧠 Trivia</button>
+    <button id="tabClueless" aria-pressed="false">📰 Clueless</button>
     <button id="tabStats" aria-pressed="false">📊 Stats</button>
   </div>
 
@@ -320,6 +321,7 @@
             <option value="sudoku">Sudoku</option>
             <option value="scuffle">Shuffle Scuffle</option>
             <option value="crisscross">Criss Cross</option>
+            <option value="clueless">Clueless</option>
           </select>
         </div>
         <button class="small-btn" id="postBtn">Post to home page</button>
@@ -595,6 +597,54 @@
     </div>
   </div>
 
+  <div id="cluelessPanel" class="hidden">
+    <div class="admin-section">
+      <h2>📰 Crossword clue packs</h2>
+      <p class="admin-note">Clueless only builds its daily crosswords from words that have a clue. It comes with about a thousand clues written for it, and every pack you add here gives it more words to choose from, so the grids get more varied. The family mini only uses Family clues; the grown-ups' crossword uses both kinds.</p>
+      <div class="admin-note" id="cluelessSummary">Loading…</div>
+    </div>
+
+    <div class="admin-section">
+      <h2>🛠️ Make a clue pack</h2>
+      <div class="field-row" style="margin-top:0">
+        <div>
+          <label for="cluelessKind">Kind of clues</label>
+          <select id="cluelessKind">
+            <option value="kids">👪 Family (fine for kids)</option>
+            <option value="grownup">🧠 Grown-up (trickier)</option>
+          </select>
+        </div>
+        <div>
+          <label for="cluelessCount">How many words</label>
+          <select id="cluelessCount">
+            <option value="30">30</option>
+            <option value="40" selected>40</option>
+            <option value="60">60</option>
+          </select>
+        </div>
+        <button class="small-btn" id="cluelessNewWords">🔀 New words</button>
+        <button class="small-btn" id="cluelessCopyPrompt">📋 Copy prompt</button>
+      </div>
+      <p class="admin-note">Copy the prompt, paste it into any AI chatbot, then paste its answer below. The words in the prompt come from the arcade's everyday word list, and ones that don't have a clue yet are picked first.</p>
+      <div class="admin-note" id="cluelessWords"></div>
+      <div class="field-row">
+        <div class="grow">
+          <label for="cluelessLabel">Pack name</label>
+          <input type="text" id="cluelessLabel" maxlength="40" placeholder="e.g. Family clues, November" style="width:100%">
+        </div>
+      </div>
+      <textarea id="cluelessText" rows="8" class="admin-textarea" placeholder="APPLE: Fruit for the teacher&#10;RIVER: Flowing water"></textarea>
+      <button id="cluelessCreate" class="primary-btn" style="border:none;border-radius:8px;padding:10px 16px;font-weight:700;cursor:pointer;margin-top:8px;">Save clue pack</button>
+      <div id="cluelessStatus" class="status-msg"></div>
+      <p class="admin-note">Each clue is checked before it's kept: the word has to be on the family word list (3 to 7 letters), the clue has to be short, it can't contain its own answer, and it can't use a word the kids blocklist removes. Anything that fails is skipped, and you'll see which and why. Today's crosswords are already made, so new clues show up from tomorrow.</p>
+    </div>
+
+    <div class="admin-section">
+      <h2>📚 All clue packs</h2>
+      <div id="cluelessPacks"></div>
+    </div>
+  </div>
+
   <div id="statsPanel" class="hidden">
     <div class="admin-section">
       <h2>📊 Stats</h2>
@@ -682,6 +732,7 @@
 <script src="admin-arcade.js"></script>
 <script src="admin-spinsolve.js"></script>
 <script src="admin-trivia.js"></script>
+<script src="admin-clueless.js"></script>
 <script src="admin-profiles.js"></script>
 <script src="admin-stats.js"></script>
 <script src="banner.js" defer></script>

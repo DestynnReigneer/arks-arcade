@@ -49,6 +49,57 @@ order they were clicked, and keep the rest pinned here.
 - Tests: the ARKS ID suite waits for the first report and checks its numbers;
   `test/fake-arksid.js` takes reports and events (`fake.reports`, `fake.events`).
 
+## Clueless, the daily crossword (2026-11-01)
+
+The "small daily crossword" from the to-do list. Its id is `clueless` (page `public/clueless.*`,
+admin side `public/admin-clueless.js`, server `clueless/`, accent periwinkle `#9d8cff`, emoji 📰).
+The name rhymes with Wordless, the arcade's first game, and is what you are before you read the
+clues.
+
+- **Two crosswords a day**, seeded with `clueless|<date>|<level>`: the **Family mini** (`mini`,
+  5 by 5, family clues only, words up to 5 letters) and **Grown-ups** (`big`, 7 by 7, family and
+  grown-up clues, grown-up ones picked first). 7 by 7 rather than 9 by 9 because it fits a phone
+  with big squares and fills reliably from a modest clue list. No unfiltered crossword: there are
+  no adult clue packs, and adding them would need their own gated level.
+- **Grids** (`clueless/grid.js`, no database): six hand-picked shapes per size (every word 3+
+  letters, every square checked both ways, symmetric, in one piece; picked by trying every
+  symmetric shape against the built-in clues and keeping the ones that fill most often), filled
+  by backtracking with the most-constrained spot first, words in a date-seeded order, no repeats,
+  a try budget per shape. `maker.js` adds the clues (seeded pick when a word has several).
+  `puzzles.js` builds from every clued word, falls back to the built-in clues alone, and saves
+  the result in `clueless_puzzles`, so a day's puzzle never changes once made (packs added or
+  deleted mid-day only affect tomorrow). The built-in clues filled every shape on 1,100
+  consecutive days in testing, in at most about half a second.
+- **Clues:** `clueless/starter-clues.txt` has about 1,000 hand-written family clues (3 to 7
+  letters, weighted toward crossword-friendly letters, because the first few hundred common words
+  couldn't fill a 7 by 7). Clue packs come from the admin's Clueless tab: copy the prompt (a batch
+  of words from `common-10k.txt` without a clue of that kind yet), paste the chatbot's `WORD: clue`
+  lines (JSON works too). `clueless/clues.js` checks each one: on the family list, 3-7 letters,
+  not British, clue 3-80 characters, the answer (or a word starting with it, or a 4+ letter word
+  it starts with) not in the clue, and no clue word that only the unfiltered list has (that's the
+  kids blocklist and the adult supplement). The same rules apply to grown-up clues, since that
+  crossword isn't behind the adult PIN. Tables `clueless_packs` and `clueless_clues`.
+- **Scoring** (`clueless/routes.js`, tables `clueless_runs` and `clueless_scores`), built like
+  Sudoku's: the start time on the server, a 32-hex run id, pause and resume, the page never gets
+  letters until the finish (Reveal returns only the asked-for squares, logs them in
+  `revealed`, and they come back on reload). Check costs 5/10/20 seconds (square/word/puzzle),
+  Reveal 15 seconds a letter, counted once per square. Finish checks the grid and refuses
+  anything under 0.3 seconds per square typed (`CLUELESS_MIN_MS_PER_SQUARE` for the test suites
+  only). First finish per player per day per crossword counts (`UNIQUE (day, level, who)`); one
+  run per profile per day. `GET /test/answer/:id` exists only under `NODE_ENV=test`, for the
+  browser test.
+- **The page:** clue bar above the grid (tap to switch direction, arrows step through clues),
+  Check and Reveal menus, Pencil, a direction switch, a QWERTY keyboard on phones (narrow screens
+  or touch), the real keyboard everywhere, and Across and Down lists under it. At 390 by 844 the
+  clue bar, the grid and the keyboard all fit on screen (the browser test checks). Progress is
+  kept on the device by run id. Leaving the page or opening How to play pauses it.
+- Wired into the home card, the QR picker, the admin game switches and stats, feedback, the dust
+  sign, Comm Center posts (fastest-ever time per crossword), its own music in `public/blip.js`,
+  the Dockerfile, the Playwright page list and a browser test that solves the mini through the
+  page.
+- Not done: no removing a single time from a board (no game has that yet), no adult crossword,
+  and no "reveal the whole puzzle" (a finish after that wouldn't mean much).
+
 ## Criss Cross (2026-11-01)
 
 The crossword tile game from the to-do list ("a crossword"), built for playing on everyone's
@@ -314,8 +365,8 @@ board-name setting and adult PIN are only for copies running without it.
 - **Play-test on the server:** pull the new image on the server and try
   everything from #15 to #37. Fix what turns up.
 - **Start a new game:** a crossword or a cabinet-style game (the list is in the
-  private feedback list). Sudoku, Shuffle Scuffle (the word scramble) and Criss Cross (the
-  crossword tile game) were built on 2026-11-01.
+  private feedback list). Sudoku, Shuffle Scuffle (the word scramble), Criss Cross (the
+  crossword tile game) and Clueless (the daily crossword) were built on 2026-11-01.
 - **Achievements step 1:** waits for the maintainer's markup of the private
   plan. Then build step 1 (age groups, the feats engine, Rambler milestones
   moved over).
