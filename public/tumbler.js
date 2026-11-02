@@ -10,7 +10,10 @@
   const { $, toast, api } = ArcadeKit;
   const E = TumblerEngine;
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const token = () => (typeof ArcadeProfile !== 'undefined' ? ArcadeProfile.token() : null);
+  // On a TV the arcade is signed in as the TV, not as whoever has the
+  // remote, so a run there is a guest's and goes on the board under the
+  // initials picked on the screen.
+  const token = () => (typeof ArcadeProfile !== 'undefined' && !TvPlay.on ? ArcadeProfile.token() : null);
   const css = (name, fallback) => getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
 
   // idle -> starting -> playing (<-> paused -> resuming) -> finishing -> over
@@ -334,7 +337,7 @@
     if (mode !== 'playing') return;
     mode = 'paused';
     pausedAt = now();
-    msg('Paused', 'Tap the lock when you\'re ready. You\'ll get a short countdown before it turns again.');
+    msg('Paused', `${TvPlay.on ? 'Press OK' : 'Tap the lock'} when you're ready. You'll get a short countdown before it turns again.`);
   }
   function resume() {
     if (mode !== 'paused') return;
@@ -425,7 +428,7 @@
     } catch { /* the line is a bonus */ }
   }
 
-  const initials = ArcadeKit.wireInitials([...document.querySelectorAll('#iniRow .ini')], () => saveScore());
+  const initials = ArcadeKit.wireInitials([...document.querySelectorAll('#iniRow .ini')], () => saveScore(), { guest: TvPlay.on });
   async function saveScore() {
     if (!result || !result.finished || result.saved) return;
     const p = profile();
@@ -556,7 +559,8 @@
       html: `<table>
           <tr><td>📱 Phone</td><td>Tap anywhere on the lock, or the big <b>POP!</b> button under it.</td></tr>
           <tr><td>⌨️ Keyboard</td><td><b>Space</b> or <b>Enter</b>.</td></tr>
-          <tr><td>🎮 Controller</td><td>The <b>A</b> button pops. <b>Start</b> pauses, and starts a new run after a game over.</td></tr>
+          <tr><td>🎮 Controller</td><td>The <b>A</b> button pops, and so do <b>X</b>, <b>R1</b> and the right trigger. <b>Start</b> pauses, and starts a new run after a game over.</td></tr>
+          <tr><td>📺 TV</td><td>The remote's <b>OK</b> button pops.</td></tr>
         </table>`
     },
     {
@@ -585,6 +589,20 @@
     if (mode === 'playing') { pausedForHelp = true; pause(); }
     help.open();
   });
+
+  // ---- on the TV ----------------------------------------------------------------------------
+  // The lock on the right, big. OK pops; the Play button starts. A
+  // controller's X, R1 and right trigger pop too (A and Start are above).
+  TvPlay.setup({
+    stage: $('zone'),
+    steering: () => mode !== 'idle' && mode !== 'over',
+    active: () => mode === 'playing' || mode === 'resuming',
+    begin: () => tap('key'),
+    ready: () => mode === 'idle',
+    buttons: { 2: ' ', 5: ' ', 7: ' ' },
+    hint: 'Press OK the moment the light is on the gold pin. On a game controller, A, X, R1 or the right trigger pops it too, and Start pauses.'
+  });
+  if (TvPlay.on) { $('msgTitle').textContent = 'Ready?'; $('msgText').textContent = 'Press OK on Play to start.'; }
 
   // ---- start ---------------------------------------------------------------------------------
   requestAnimationFrame(frame);

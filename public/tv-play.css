@@ -1,0 +1,129 @@
+/* A game played on the TV itself (public/tv-play.js puts .tv-play on <html>
+   next to tv.css's .tv). Everything here is under html.tv.tv-play, so a
+   phone or a computer never sees it.
+
+   The page becomes two parts. The game (.tv-stage) fills the right side of
+   the screen, as big as the screen allows, drawn at the TV's own size so
+   it's sharp. Everything else (the title, the score, the options, the Play
+   button, the game-over panel) is a column on the left, drawn 1.5 times as
+   big by tv.css, about as wide as a phone, which is what those parts were
+   made for. Nothing goes in the outer edge of the picture, which some TVs
+   cut off. */
+
+html.tv.tv-play body {
+  max-width: none;
+  width: 470px;
+  margin: 0 0 0 48px;
+  padding: 36px 0 120px;
+}
+
+/* The game: fixed on the right, below the top bar. tv.css draws the page at
+   1.5x; the stage undoes that so its canvas is drawn pixel for pixel. */
+html.tv.tv-play .tv-stage {
+  position: fixed;
+  zoom: 0.666667;
+  top: 17%;
+  bottom: 4%;
+  left: 44%;
+  right: 4%;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  container-type: size;
+}
+
+/* The bar along the bottom (this TV, adults' night) moves under the left
+   column, out of the game's way. */
+html.tv.tv-play #tvBar {
+  left: 48px;
+  transform: none;
+  max-width: 470px;
+  white-space: normal;
+}
+
+/* The Play button and the line saying what the remote and the controller do. */
+html.tv.tv-play .tv-go { display: block; width: 100%; margin: 4px 0 10px; font-size: 20px; padding: 14px; }
+html.tv.tv-play .tv-go[hidden] { display: none; }
+html.tv.tv-play .tv-keys { margin: 6px 0 12px; font-size: 13px; line-height: 1.5; }
+html.tv .tv-ini-hint { margin: 2px 0 8px; font-size: 13px; }
+html.tv.tv-play .initials input { caret-color: transparent; }
+
+/* The messages on top of the game, big enough to read from the couch. */
+html.tv.tv-play .tv-stage .stage-msg b { font-size: 46px; }
+html.tv.tv-play .tv-stage .stage-msg span { font-size: 24px; max-width: 640px; line-height: 1.45; }
+
+/* While the game has the arrows, nothing on the page wears the highlight. */
+html.tv.tv-steering :focus { outline: none !important; box-shadow: none !important; }
+
+/* ---- the canvas games that fit themselves to their box (Snake, Block Drop,
+   Brick Breaker, Tower Defense) -------------------------------------------- */
+html.tv.tv-play .tv-stage > .stage {
+  width: 100cqw;
+  height: 100cqh;
+  align-items: center;
+  border-width: 3px;
+}
+
+/* ---- Tumbler Rumble and Roll Royale: the stage and its big button ------------ */
+html.tv.tv-play .tv-stage > .tr-zone,
+html.tv.tv-play .tv-stage > .rr-zone {
+  max-width: none; width: 100cqw; height: 100cqh; margin: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+html.tv.tv-play .tr-pop,
+html.tv.tv-play .rr-roll,
+html.tv.tv-play .dd-drop,
+html.tv.tv-play .ms-swing { display: none !important; }
+html.tv.tv-play .tv-stage .tr-stage { width: min(100cqw, 100cqh); height: auto; aspect-ratio: 1; }
+html.tv.tv-play .tv-stage .rr-stage { width: min(100cqw, 100cqh * 5 / 6); height: auto; max-height: none; margin: 0; }
+html.tv.tv-play .tv-stage .tr-stage .stage-msg span,
+html.tv.tv-play .tv-stage .rr-stage .stage-msg span { max-width: 560px; }
+
+/* ---- Disco Drop and Moonshot: a 4 by 5 cabinet ---------------------------------- */
+html.tv.tv-play .tv-stage > .dd-stage,
+html.tv.tv-play .tv-stage > .ms-stage { width: min(100cqw, 100cqh * 4 / 5); max-width: none; height: auto; margin: 0; }
+html.tv.tv-play .dd-cover-box,
+html.tv.tv-play .ms-cover-box { max-width: 520px; font-size: 22px; }
+html.tv.tv-play .dd-cover-box b,
+html.tv.tv-play .ms-cover-box b { font-size: 40px; }
+html.tv.tv-play .dd-cover-box p,
+html.tv.tv-play .ms-cover-box p { font-size: 22px; line-height: 1.45; }
+html.tv.tv-play .dd-cover-box .primary,
+html.tv.tv-play .ms-cover-box .primary { font-size: 26px; padding: 18px 40px; }
+
+/* ---- Dino Dash: one wide canvas --------------------------------------------------- */
+html.tv.tv-play .tv-stage > .dino-stage { width: 100cqw; height: auto; max-width: none; margin: 0; }
+
+/* ---- Sudoku: the grid on the right, the number picker on the left ---------------------- */
+html.tv.tv-play .tv-stage > .sd-wrap { width: min(100cqw, 100cqh); max-width: none; margin: 0; }
+html.tv.tv-play .tv-stage .sd-cell { font-size: 52px; }
+html.tv.tv-play .tv-stage .sd-notes span { font-size: 19px; }
+html.tv.tv-play .tv-stage .sd-cell.wrong::after { font-size: 16px; }
+html.tv.tv-play .tv-stage .sd-cover-box { max-width: 560px; }
+html.tv.tv-play .tv-stage .sd-cover b { font-size: 38px; }
+html.tv.tv-play .tv-stage .sd-cover p { font-size: 22px; }
+html.tv.tv-play .tv-stage .sd-cover .primary { font-size: 26px; padding: 18px 40px; }
+.sd-picker {
+  position: fixed; left: 48px; top: 110px; width: 470px; z-index: 60;
+  padding: 14px 16px 16px; border-radius: 16px; background: var(--card); border: 2px solid var(--accent);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+}
+.sd-picker.hidden { display: none; }
+.sd-picker-title { margin: 0 0 10px; font-weight: 800; color: var(--accent); }
+.sd-picker-nums { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.sd-picker-nums button {
+  height: 64px; border-radius: 12px; font: 800 28px/1 var(--font); color: var(--text);
+  background: var(--card-2, #2c1350); border: 2px solid var(--border); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+}
+.sd-picker-nums small { font-size: 11px; font-weight: 700; color: var(--dim); }
+.sd-picker-tools { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.sd-picker-tools button {
+  padding: 10px 8px; border-radius: 10px; font: 700 14px/1.2 var(--font); color: var(--text);
+  background: var(--card-2, #2c1350); border: 2px solid var(--border);
+}
+
+/* ---- Chess: the board on the right ------------------------------------------------- */
+html.tv.tv-play .tv-stage > .board-wrap { width: 100cqw; height: 100cqh; align-items: center; }
+html.tv.tv-play .tv-stage .board { --size: min(100cqw, 100cqh); min-width: 0; min-height: 0; }
+html.tv.tv-play .tv-stage .sq .coord { font-size: 16px; }

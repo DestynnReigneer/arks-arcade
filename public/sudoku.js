@@ -13,7 +13,10 @@
   const LABEL = Object.fromEntries(LEVELS);
   const store = (k, v) => { try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch { /* private mode */ } };
   const recall = (k, d = null) => { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch { return d; } };
-  const token = () => (typeof ArcadeProfile !== 'undefined' ? ArcadeProfile.token() : null);
+  // On a TV the arcade is signed in as the TV, not as whoever has the
+  // remote, so a run there is a guest's and goes on the board under the
+  // initials picked on the screen.
+  const token = () => (typeof ArcadeProfile !== 'undefined' && !TvPlay.on ? ArcadeProfile.token() : null);
 
   let level = LABEL[recall('sudoku.level')] ? recall('sudoku.level') : 'easy';
   let today = null;               // the server's date, from /levels
@@ -248,7 +251,7 @@
       } catch { store(currentKey(today, lv), null); }
     }
     cover(`Today's ${LABEL[lv]} puzzle`,
-      `Everyone gets the same ${LABEL[lv]} puzzle today. The clock starts when you tap Start, and you can pause it whenever you need to.`, 'Start', begin);
+      `Everyone gets the same ${LABEL[lv]} puzzle today. The clock starts when you ${TvPlay.on ? 'press OK on' : 'tap'} Start, and you can pause it whenever you need to.`, 'Start', begin);
   }
 
   async function begin() {
@@ -271,6 +274,7 @@
   }
 
   function showState() {
+    closePicker();
     paint();
     if (run.finished) { $('cover').classList.add('hidden'); showOver(); return; }
     if (run.paused) {
@@ -396,7 +400,7 @@
 
   // ---- solved ----------------------------------------------------------------------------------
   const iniBoxes = [...document.querySelectorAll('#iniRow .ini')];
-  const initials = ArcadeKit.wireInitials(iniBoxes, () => saveTime());
+  const initials = ArcadeKit.wireInitials(iniBoxes, () => saveTime(), { guest: TvPlay.on });
   function profile() {
     try { return token() ? ArcadeProfile.get() : null; } catch { return null; }
   }
@@ -606,6 +610,85 @@
   $('helpBtn').addEventListener('click', () => {
     if (run && !run.paused && !run.finished) { pausedForHelp = true; setPaused(true); }
     help.open();
+  });
+
+  // ---- on the TV --------------------------------------------------------------------------------------
+  // The grid on the right, big. While the puzzle is being played the arrows
+  // move between the squares, as they do on a keyboard, and OK opens the
+  // number picker next to the board: the numbers, Erase, Notes, Undo, Hint
+  // and Check, picked with the arrows and OK. The pad and tools under the
+  // board on a phone make way for it.
+  const picker = document.createElement('div');
+  picker.className = 'sd-picker hidden';
+  picker.setAttribute('role', 'dialog');
+  picker.setAttribute('aria-label', 'Pick a number');
+  const pickerOpen = () => !picker.classList.contains('hidden');
+  function closePicker() { picker.classList.add('hidden'); }
+  function openPicker() {
+    if (!playing()) return;
+    if (sel < 0) select(40);
+    if (givens[sel]) { toast('That number was there from the start, so it can\'t be changed.'); return; }
+    picker.replaceChildren();
+    const title = document.createElement('p');
+    title.className = 'sd-picker-title';
+    title.textContent = `Row ${row(sel) + 1}, column ${col(sel) + 1}${notesMode ? ': pencil marks' : ''}`;
+    const nums = document.createElement('div');
+    nums.className = 'sd-picker-nums';
+    const counts = new Array(10).fill(0);
+    for (const v of grid) counts[v]++;
+    let first = null;
+    for (let d = 1; d <= 9; d++) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.innerHTML = `${d}<small></small>`;
+      b.querySelector('small').textContent = 9 - counts[d] > 0 ? `${9 - counts[d]} left` : '';
+      b.setAttribute('aria-label', `Number ${d}`);
+      b.addEventListener('click', () => { press(d); if (!notesMode) closePicker(); else openPicker(); });
+      nums.appendChild(b);
+      if (d === (grid[sel] || 5)) first = b;
+    }
+    const tools = document.createElement('div');
+    tools.className = 'sd-picker-tools';
+    const tool = (label, fn) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = label;
+      b.addEventListener('click', fn);
+      tools.appendChild(b);
+      return b;
+    };
+    tool('⌫ Erase', () => { erase(); closePicker(); });
+    tool(notesMode ? '✏️ Notes are on' : '✏️ Notes are off', () => { setNotes(!notesMode); openPicker(); });
+    tool('↶ Undo', () => { stepBack(); closePicker(); });
+    tool('💡 Hint (+30s)', () => { closePicker(); hint(); });
+    tool('✔️ Check (+15s)', () => { closePicker(); checkBoard(); });
+    tool('Back to the board', closePicker);
+    picker.append(title, nums, tools);
+    picker.classList.remove('hidden');
+    if (first) first.focus();
+  }
+  if (TvPlay.on) {
+    document.body.appendChild(picker);
+    for (const c of cells) c.tabIndex = -1;
+    $('pad').classList.add('tv-hide');
+    $('tools').classList.add('tv-hide');
+    // OK on the board opens the picker (window capture: before anything else sees it).
+    window.addEventListener('keydown', e => {
+      if (e.key !== 'Enter' || e.repeat || pickerOpen() || help.isOpen || !playing() || !$('scores').classList.contains('hidden')) return;
+      if (e.target.closest && e.target.closest('input, textarea, select, button, a')) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      openPicker();
+    }, true);
+  }
+  TvPlay.setup({
+    stage: document.querySelector('.sd-wrap'),
+    steering: () => playing() && !pickerOpen(),
+    active: () => playing(),
+    start: () => (!$('cover').classList.contains('hidden') ? $('coverBtn') : null),
+    buttons: { 0: 'Enter', 2: 'Delete', 3: 'n', 9: 'p' },
+    dirs: true,
+    hint: 'The arrows on the remote move around the board, and OK opens the numbers for the square you\'re on, with Erase, Notes, Undo, Hint and Check. On a game controller, X erases, Y turns notes on and off, and Start pauses.'
   });
 
   // ---- start -----------------------------------------------------------------------------------------

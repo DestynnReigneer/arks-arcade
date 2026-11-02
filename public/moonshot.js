@@ -8,7 +8,10 @@
 (() => {
   const { $, toast, api } = ArcadeKit;
   const E = MoonshotEngine;
-  const token = () => (typeof ArcadeProfile !== 'undefined' ? ArcadeProfile.token() : null);
+  // On a TV the arcade is signed in as the TV, not as whoever has the
+  // remote, so a run there is a guest's and goes on the board under the
+  // initials picked on the screen.
+  const token = () => (typeof ArcadeProfile !== 'undefined' && !TvPlay.on ? ArcadeProfile.token() : null);
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const fmt = n => Number(n).toLocaleString('en-US');
 
@@ -663,7 +666,7 @@
   }
 
   const iniBoxes = [...document.querySelectorAll('#iniRow .ini')];
-  const initials = ArcadeKit.wireInitials(iniBoxes, () => saveScore());
+  const initials = ArcadeKit.wireInitials(iniBoxes, () => saveScore(), { guest: TvPlay.on });
   function profile() {
     try { return token() ? ArcadeProfile.get() : null; } catch { return null; }
   }
@@ -841,7 +844,8 @@
         <p>Swing just as the ball reaches the <b>glowing ring over the plate</b>. The closer your timing, the bigger the hit. Swing too early and the ball goes off to the left; too late and it goes off to the right.</p>
         <table>
           <tr><td>⌨️ Keyboard</td><td><b>Space</b> or <b>Enter</b> swings, and <b>P</b> or <b>Esc</b> pauses.</td></tr>
-          <tr><td>🎮 Controller</td><td>The <b>A</b> button swings and <b>Start</b> pauses.</td></tr>
+          <tr><td>🎮 Controller</td><td>The <b>A</b> button swings (so do <b>X</b>, <b>R1</b> and the right trigger), and <b>Start</b> pauses.</td></tr>
+          <tr><td>📺 TV</td><td>The remote's <b>OK</b> button swings.</td></tr>
         </table>`
     },
     {
@@ -882,6 +886,24 @@
   // ---- start ---------------------------------------------------------------------------------
   document.body.dataset.state = 'ready';
   paintHud();
+
+  // ---- on the TV ----------------------------------------------------------------------------
+  // The batting cage on the right, big, with its own Start and Keep playing
+  // buttons. OK swings; a controller's X, R1 and right trigger swing too (A
+  // and Start are above).
+  TvPlay.setup({
+    stage: $('stage'),
+    steering: () => mode === 'playing' || mode === 'resuming' || mode === 'ending',
+    active: () => mode === 'playing' || mode === 'resuming',
+    start: () => [$('resumeBtn'), $('coverBtn')].find(b => !b.closest('.hidden')) || null,
+    buttons: { 2: ' ', 5: ' ', 7: ' ' },
+    hint: 'Press OK to swing just as the ball reaches the glowing ring over the plate. On a game controller, A, X, R1 or the right trigger swings too, and Start pauses.'
+  });
+  if (TvPlay.on) {
+    $('coverText').textContent = 'Twelve pitches are coming. Press OK to swing just as each ball reaches the glowing ring over the plate. Get it exactly right and it\'s a home run.';
+    $('pauseText').textContent = 'The pitching machine is waiting for you. Press OK on Keep playing when you\'re ready, and you\'ll get a short countdown before the next ball.';
+  }
+
   requestAnimationFrame(frame);
   help.autoOpen();
 })();

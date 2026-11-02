@@ -69,7 +69,10 @@ const ArcadeKit = (() => {
   }
 
   // Three boxes that act like an arcade cabinet: type a letter, jump to the next.
-  function wireInitials(boxes, onEnter) {
+  // guest (true, or a function saying so): the score goes under these
+  // initials even when a profile is signed in (a TV is signed in as itself).
+  function wireInitials(boxes, onEnter, { guest = false } = {}) {
+    const asGuest = () => (typeof guest === 'function' ? guest() : guest);
     boxes.forEach((box, i) => {
       box.addEventListener('input', () => {
         box.value = box.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(-1);
@@ -87,7 +90,7 @@ const ArcadeKit = (() => {
         try { last = localStorage.getItem('arcade.initials') || ''; } catch { /* unavailable */ }
         // Playing as a profile: the score is theirs, so the boxes are filled
         // in and hidden. The board shows what the profile chose.
-        const me = typeof ArcadeProfile !== 'undefined' && ArcadeProfile.token() ? ArcadeProfile.initials() : '';
+        const me = !asGuest() && typeof ArcadeProfile !== 'undefined' && ArcadeProfile.token() ? ArcadeProfile.initials() : '';
         if (me) last = me;
         boxes.forEach((b, i) => { b.value = last[i] || ''; });
         const row = boxes[0].parentElement;
@@ -131,9 +134,10 @@ const ArcadeKit = (() => {
     }
   }
 
-  // A signed-in profile gets the credit (the server checks its token).
+  // A signed-in profile gets the credit (the server checks its token),
+  // unless the entry says otherwise (profileToken: null for initials only).
   const saveScore = (game, entry) => api(`/api/scores/${game}`, {
-    ...entry, profileToken: typeof ArcadeProfile !== 'undefined' ? ArcadeProfile.token() : null
+    ...entry, profileToken: 'profileToken' in entry ? entry.profileToken : typeof ArcadeProfile !== 'undefined' ? ArcadeProfile.token() : null
   });
 
   return { $, toast, readMs, joke, api, wireInitials, renderScores, loadScores, saveScore };
