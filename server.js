@@ -136,20 +136,14 @@ async function notifyText(content) {
 }
 
 // ---- Health ----
-// Used by the container healthcheck. It touches the dictionary and the
-// database deliberately: a process that is listening but whose word lists
-// failed to load is not healthy, and reporting it as such would hide the
-// single most likely deployment failure.
+// Used by the container healthcheck (every 30 seconds), so it only looks:
+// it touches the dictionary and the database deliberately, because a process
+// that is listening but whose word lists failed to load is not healthy. The
+// Rambler season rollover and theme-pack refresh it used to run on every call
+// now run once a minute on their own timer (rambler/housekeeping.js).
 app.get('/healthz', (req, res) => {
   try {
     const stats = dictionary.stats;
-  // Open a season if there is not one, and roll over anything already due --
-  // a container that was off over a month boundary should come back current.
-  ramblerSeasons.checkDue();
-  const season = ramblerSeasons.status();
-  // Apply admin word edits and the season's theme pack before anyone plays.
-  ramblerPacks.refresh({ force: true });
-  const theme = ramblerPacks.active();
     const themes = db.listThemes().length;
     if (!stats.kids || !themes) throw new Error('not ready');
     res.json({
@@ -178,6 +172,17 @@ app.use('/api/moonshot', require('./moonshot/routes').router);
 app.use('/api/clueless', require('./clueless/routes')({ requireAdmin }));
 app.use('/api/tumbler', require('./tumbler/routes').router);
 app.use('/api/royale', require('./royale/routes').router);
+// Taking a single score off any game's board, and putting it back (the admin
+// page's Boards tab). "Removed by" is the ARKS ID name when the admin is
+// signed in there too, otherwise where the request came from.
+app.use('/api/admin/scores', requireAdmin, require('./arcade/score-admin').routes({
+  whoOf: async req => {
+    if (arks) {
+      try { const me = await arks.current(req); if (me && me.profile) return me.profile.name; } catch { /* not signed in */ }
+    }
+    return req.get('X-Admin-Token') ? 'an admin script' : 'the admin page';
+  }
+}));
 app.use('/api', require('./arcade/lobby').router);
 app.use('/api/profiles', require('./arcade/profiles')({ requireAdmin, notify: notifyDiscord }));
 app.use('/api/scores', require('./arcade/scores').router);
@@ -482,6 +487,9 @@ app.listen(PORT, err => {
   // plays, so the first board of the day already knows about them.
   ramblerPacks.refresh({ force: true });
   const theme = ramblerPacks.active();
+  // From here on, once a minute: roll the season over when it's due and
+  // re-apply the theme pack if anything changed (rambler/housekeeping.js).
+  require('./rambler/housekeeping').start();
 
   // Know-It-All downloads Open Trivia DB's questions in the background the
   // first time (about 8 minutes), then once a month. Set TRIVIA_ONLINE=off

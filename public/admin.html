@@ -271,6 +271,7 @@
     <button id="tabSpin" aria-pressed="false">🎡 Spin &amp; Solve</button>
     <button id="tabTrivia" aria-pressed="false">🧠 Trivia</button>
     <button id="tabClueless" aria-pressed="false">📰 Clueless</button>
+    <button id="tabBoards" aria-pressed="false">🏆 Boards</button>
     <button id="tabStats" aria-pressed="false">📊 Stats</button>
   </div>
 
@@ -649,6 +650,31 @@
     </div>
   </div>
 
+  <div id="boardsPanel" class="hidden">
+    <div class="admin-section">
+      <h2>🏆 Take a score off a board</h2>
+      <p class="admin-note">If someone puts a rude name on a board, or a score that clearly wasn't earned, you can take just that one score off here. Pick the game and its board, find the row, and tap Remove twice (the first tap asks, the second one does it). The score disappears from the board and from everyone's ranks straight away, but it isn't deleted: it moves to the list under the board, with when it was taken off and by whom, and Put back returns it exactly as it was. Rambler's boards have their own Remove buttons on the Rambler tab.</p>
+      <div class="field-row" style="margin-top:0">
+        <div>
+          <label for="boardsGame">Game</label>
+          <select id="boardsGame"></select>
+        </div>
+        <div>
+          <label for="boardsBoard">Board</label>
+          <select id="boardsBoard"></select>
+        </div>
+        <div id="boardsDayWrap">
+          <label for="boardsDay">Day (leave empty for all time)</label>
+          <input type="date" id="boardsDay">
+        </div>
+      </div>
+      <div id="boardsMsg" class="status-msg"></div>
+      <div id="boardsList" style="margin-top:10px"></div>
+      <h2 style="margin-top:16px">Taken off this board</h2>
+      <div id="boardsRemoved"></div>
+    </div>
+  </div>
+
   <div id="statsPanel" class="hidden">
     <div class="admin-section">
       <h2>📊 Stats</h2>
@@ -737,6 +763,7 @@
 <script src="admin-spinsolve.js"></script>
 <script src="admin-trivia.js"></script>
 <script src="admin-clueless.js"></script>
+<script src="admin-boards.js"></script>
 <script src="admin-profiles.js"></script>
 <script src="admin-stats.js"></script>
 <script src="banner.js" defer></script>

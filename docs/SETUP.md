@@ -64,6 +64,13 @@ admin password.
 After changing `.env`: `docker compose up -d` (it recreates the container
 with the new values; your data stays).
 
+The compose file hands the arcade everything in `.env` (its `env_file: .env`
+line), so when a new version of the arcade adds a setting, you only add that
+line to `.env`. You never need to change the compose file for it. The compose
+file still lists the main settings under `environment:`, with their defaults,
+so you can see them at a glance. Compose needs the `.env` file to be there, so
+keep it next to `docker-compose.yml` even if it's nearly empty.
+
 ## 4. A nice name with Nginx Proxy Manager
 
 This gives you `https://arcade.example.com` instead of an IP and port.
