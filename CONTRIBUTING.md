@@ -39,7 +39,9 @@ ends up in the Docker image (CI checks that too).
   from `rambler/routes.js`
 - `db.js` — every table for both games, plus the Wordless scoring formula
 - `rambler/` — Rambler, self-contained; see the README for what each file does
-- `sudoku/` — Sudoku's puzzle maker and its routes (runs, the clock, the boards)
+- `sudoku/` — Sudoku's puzzle maker and its routes (runs, the clock, a profile's saved progress, the boards)
+- `arcade/score-admin.js` — the admin page's Boards tab: take one score off any game's board and put it back
+- `rambler/housekeeping.js` — once a minute, rolls the Rambler season over when it's due and re-applies the theme pack
 - `scuffle/` — Shuffle Scuffle's letters, points, solo games, daily board and rooms
 - `crisscross/` — Criss Cross: the rules (`engine.js`), the computer player (`bot.js`) and the games kept in the database (`games.js`)
 - `clueless/` — Clueless, the daily crossword: the grid shapes and filler (`grid.js`), the clue checks (`clues.js`), the built-in clues, the day's puzzles and clue packs (`maker.js`, `puzzles.js`) and the routes
@@ -78,6 +80,8 @@ is stored) are in `arcade/security.js`, `arcade/feedback.js` and
   null board id. There is a regression test for this.
 - **The server owns every verdict.** Scores are read back from the round the
   server scored, never from the request body. Keep it that way.
+- **`/healthz` only looks.** The container healthcheck calls it every 30 seconds, so it must stay cheap. Anything that has to happen on a schedule goes on a timer (like `rambler/housekeeping.js`), never in `/healthz`.
+- **A new game's board table is called `<game>_scores`** with `id`, `initials` and a `score` or `time_ms` column (and `day` if it has daily boards), so the admin page's Boards tab finds it without any changes. Removing a score moves its row to `removed_scores`, so the game's own queries need nothing extra.
 - **`node:sqlite` needs Node 22.5+.** It was chosen over `better-sqlite3`
   specifically to keep native build tools out of the Alpine image.
 

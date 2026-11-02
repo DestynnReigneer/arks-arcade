@@ -218,7 +218,7 @@ The classic 9x9 number puzzle: fill every empty square with 1 to 9 so no row, co
 - **Made on the server, with no outside library** (`sudoku/generator.js`): a seeded random full grid, then numbers taken away in mirrored pairs while a solver checks there's still only one answer. A whole day's puzzles take a few milliseconds and are kept in memory.
 - **The server keeps the time.** Start records the moment on the server and hands the page a long random run id and the puzzle, never the answer. When the board is full the page sends the grid; the server checks it against the answer and works the time out itself, leaving out pauses (Pause, or leaving the page, stops the clock and hides the board). A finish quicker than 0.4 seconds per square is turned away.
 - **Help costs time, decided by the server:** a hint fills in (or fixes) one square for 30 seconds, Check marks every wrong number for 15 seconds, and the "Show my mistakes as I go" setting (off to start with) adds 10 seconds for each wrong number it catches.
-- **Fastest-time boards** for today and for all time, per level. Only a player's first finish of the day counts, because a second go at the same puzzle would be easy. Profiles show their name or initials (their own choice, as on every board), and guests type initials. A profile has one clock per puzzle, so opening it again on another device carries on with the same time. A new fastest-ever time posts to the Comm Center.
+- **Fastest-time boards** for today and for all time, per level. Only a player's first finish of the day counts, because a second go at the same puzzle would be easy. Profiles show their name or initials (their own choice, as on every board), and guests type initials. A profile has one clock per puzzle, and its filled-in squares and pencil marks are saved on the arcade too (a moment after you stop tapping, and when you leave the page), so opening the puzzle on another device carries on with the same time and the same board. Guests keep their progress on their own device. Saved progress is only ever handed back to the page: the finish still checks the whole grid it's sent. A new fastest-ever time posts to the Comm Center.
 - **Phones first:** the board fills the width, a row of nine big number buttons sits under it, and the keyboard works too (arrows, 1-9, Delete, N for notes, P to pause).
 
 #### The Sudoku API
@@ -229,8 +229,9 @@ Everything is under `/api/sudoku`. A grid is 81 characters, row by row, with `0`
 |---|---|
 | `GET /levels` | Today's date, when the puzzles turn over, the levels and what help costs. |
 | `POST /start` `{ level, profileToken? }` | Starts (or, for a profile, carries on with) today's puzzle on that level. Returns the run id, the puzzle and the clock so far. |
-| `GET /run/:id` | Where a run stands: the puzzle, time played, penalties, paused, finished, saved. |
-| `POST /run/:id/pause`, `/resume` | Stops and restarts the clock. |
+| `GET /run/:id` | Where a run stands: the puzzle, time played, penalties, paused, finished, saved, and for a profile the saved progress. |
+| `POST /run/:id/progress` `{ grid, notes?, marks?, profileToken }` | Saves a profile's squares and pencil marks so they follow it to another device. Only the profile playing the run can save it; a guest's run is refused. |
+| `POST /run/:id/pause`, `/resume` | Stops and restarts the clock. Resuming hands back the saved progress, in case another device moved on. |
 | `POST /run/:id/check` `{ grid }` | The wrong squares on the board so far. Adds 15 seconds. |
 | `POST /run/:id/cell` `{ index, value }` | Whether one number is right. A wrong one adds 10 seconds. |
 | `POST /run/:id/hint` `{ grid }` | The right number for one square. Adds 30 seconds. |
@@ -493,6 +494,9 @@ Visit `/admin.html` and enter your `ADMIN_PASSWORD`.
 - Set, change or remove the adult PIN, and unblock devices that tried too many wrong PINs
 - Home page games: reorder them, hide them, or turn one off while it's being worked on (it stays on the home page, faded, under a "Pardon our dust" sign)
 - Comm Center: the feedback inbox (with screenshots, the page and device each message came from, and a Copy for chat button), announcements, high-score boards, Spin & Solve and Know-It-All packs and requests
+
+**Boards:**
+- Take a single score off any game's board (Sudoku, Clueless, Tumbler Rumble, Disco Drop, Roll Royale, Moonshot, Shuffle Scuffle, Wordless, and the games that share the older high-score board). Pick the game and board, then tap Remove twice. It leaves the board and everyone's ranks straight away but isn't deleted: it's kept in a list under the board with when it was taken off and by whom, and Put back returns it exactly as it was. A game added later shows up here by itself, as long as its scores live in a table named `<game>_scores`. Rambler's boards keep their own tools on the Rambler tab.
 
 **Rambler:**
 - See the current season, how long is left, and rename it ("Spooky Season")
