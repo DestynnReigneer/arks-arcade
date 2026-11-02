@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Clueless</title>
+<link rel="icon" href="/custom/brand/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/custom/brand/app-icon-180.png">
+<link rel="stylesheet" href="arcade-ui.css">
+<link rel="stylesheet" href="game-shell.css">
+<link rel="stylesheet" href="tutorial.css">
+<link rel="stylesheet" href="clueless.css">
+<link rel="stylesheet" href="look.css">
+<link rel="stylesheet" href="topbar.css">
+</head>
+<body>
+<script src="topbar.js"></script>
+
+<header class="top">
+  <a href="/" class="icon-btn" title="Back to the arcade">←</a>
+  <h1><i class="t-emoji">📰 </i><span>CLUELESS</span></h1>
+  <div class="btns">
+    <button class="icon-btn" id="pauseBtn" title="Pause">⏸</button>
+    <button class="icon-btn" id="muteBtn" title="Sound">🔊</button>
+    <button class="icon-btn music-btn" id="musicBtn" title="Music">🎵</button>
+    <button class="icon-btn" id="scoresBtn" title="Fastest times">🏆</button>
+    <button class="icon-btn" id="helpBtn" title="How to play">?</button>
+  </div>
+</header>
+
+<div class="seg level-seg" id="levelSeg" role="group" aria-label="Which crossword"></div>
+
+<div class="hud">
+  <div><small>Time</small><b id="clock">0:00</b></div>
+  <div><small>Help added</small><b id="penalty">0:00</b></div>
+  <div><small>Puzzle</small><b id="dayLabel">Today</b></div>
+</div>
+
+<div class="cl-bar" id="clueBar">
+  <button class="cl-step" id="prevClue" aria-label="Previous clue">‹</button>
+  <button class="cl-current" id="currentClue" aria-live="polite" title="Tap to switch between across and down"><b id="clueTag"></b><span id="clueText">Tap Start to see the first clue.</span></button>
+  <button class="cl-step" id="nextClue" aria-label="Next clue">›</button>
+</div>
+
+<div class="cl-wrap" id="wrap">
+  <div class="cl-grid" id="grid" role="grid" aria-label="Crossword grid"></div>
+  <div class="cl-cover" id="cover">
+    <div class="cl-cover-box">
+      <b id="coverTitle">Today's crossword</b>
+      <p id="coverText"></p>
+      <button class="primary big" id="coverBtn">Start</button>
+    </div>
+  </div>
+</div>
+
+<div class="cl-tools" id="tools">
+  <div class="cl-menu-wrap">
+    <button class="cl-tool" id="checkBtn" aria-haspopup="true" aria-expanded="false"><span>✔️</span><small>Check</small></button>
+    <div class="cl-menu hidden" id="checkMenu" role="menu">
+      <button role="menuitem" data-check="square">This square <i id="costCheckSquare">+5s</i></button>
+      <button role="menuitem" data-check="word">This word <i id="costCheckWord">+10s</i></button>
+      <button role="menuitem" data-check="puzzle">Whole puzzle <i id="costCheckPuzzle">+20s</i></button>
+    </div>
+  </div>
+  <div class="cl-menu-wrap">
+    <button class="cl-tool" id="revealBtn" aria-haspopup="true" aria-expanded="false"><span>👁️</span><small>Reveal</small></button>
+    <div class="cl-menu hidden" id="revealMenu" role="menu">
+      <button role="menuitem" data-reveal="square">This square <i class="cost-reveal">+15s</i></button>
+      <button role="menuitem" data-reveal="word">This word <i class="cost-reveal">+15s a letter</i></button>
+    </div>
+  </div>
+  <button class="cl-tool" id="pencilBtn" aria-pressed="false" title="Pencil: letters you're not sure of go in gray"><span>✏️</span><small>Pencil off</small></button>
+  <button class="cl-tool" id="dirBtn" title="Switch between across and down"><span>⇄</span><small>Across</small></button>
+</div>
+
+<div class="cl-keys" id="keys" aria-label="Keyboard"></div>
+<p class="hint center keys-hint">Keyboard: type letters, <b>arrows</b> to move, <b>Space</b> to switch across and down, <b>Tab</b> for the next clue, <b>Backspace</b> to erase.</p>
+
+<div class="cl-lists" id="lists">
+  <section><h2>Across</h2><ol id="acrossList"></ol></section>
+  <section><h2>Down</h2><ol id="downList"></ol></section>
+</div>
+
+<div class="panel center hidden over-panel" id="over" role="dialog" aria-live="polite">
+  <div class="over-top"><button class="primary" id="otherLevelBtn">Try the other one</button></div>
+  <h2 class="over-title" id="overTitle">Solved! 🎉</h2>
+  <div class="final-score" id="overTime">0:00</div>
+  <div class="over-detail hint" id="overDetail"></div>
+  <div id="savePart">
+    <p class="hint" id="saveHint">Put your time on today's board and see where you stack up.</p>
+    <div class="initials" id="iniRow">
+      <input maxlength="1" class="ini" autocomplete="off" aria-label="First initial"><input maxlength="1" class="ini" autocomplete="off" aria-label="Second initial"><input maxlength="1" class="ini" autocomplete="off" aria-label="Third initial">
+    </div>
+    <button class="primary big" id="saveBtn">Save my time</button>
+    <div class="msg" id="saveMsg"></div>
+  </div>
+  <p class="hint" id="rankLine"></p>
+  <div class="stack"><button class="ghost" id="overScoresBtn">🏆 Fastest times</button></div>
+</div>
+
+<div class="overlay hidden" id="scores" role="dialog" aria-label="Fastest times">
+  <div class="card-panel">
+    <h2>🏆 Fastest times</h2>
+    <div class="seg board-tabs" id="scoreLevels"></div>
+    <div class="seg board-tabs" id="scoreScope"></div>
+    <ul class="scores" id="scoreList"></ul>
+    <p class="hint center" id="scoreNote"></p>
+    <div class="stack"><button class="ghost" id="scoresClose">Close</button></div>
+  </div>
+</div>
+
+<script src="feedback.js"></script>
+<script src="avatars.js"></script>
+<script src="avatar-photo.js"></script>
+<script src="pin-pad.js"></script>
+<script src="profile.js"></script>
+<script src="custom-media.js"></script>
+<script src="stats.js"></script>
+<script src="dust-sign.js"></script>
+<script src="tutorial.js"></script>
+<script src="blip.js"></script>
+<script src="fx.js"></script>
+<script src="arcade-kit.js"></script>
+<script src="clueless.js"></script>
+</body>
+</html>

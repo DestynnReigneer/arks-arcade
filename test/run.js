@@ -20,7 +20,8 @@ const SUITES = [
   ['api', require('./api.test.js')],
   ['sudoku', require('./sudoku.test.js')],
   ['scuffle', require('./scuffle.test.js')],
-  ['crisscross', require('./crisscross.test.js')]
+  ['crisscross', require('./crisscross.test.js')],
+  ['clueless', require('./clueless.test.js')]
 ];
 
 // A throwaway brand/ and media/ folder, so the tests can check what the
@@ -60,7 +61,9 @@ function startServer(port = PORT, extraEnv = {}) {
         // rule (400) would make the tests wait half a minute per puzzle.
         SUDOKU_MIN_MS_PER_SQUARE: '20',
         // Lets the Shuffle Scuffle tests ask for 2-second rounds.
-        SCUFFLE_TEST_SECONDS: '2'
+        SCUFFLE_TEST_SECONDS: '2',
+        // Clueless turns away a finish faster than this per square.
+        CLUELESS_MIN_MS_PER_SQUARE: '20'
       },
       stdio: ['ignore', 'pipe', 'pipe']
     });

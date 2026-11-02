@@ -1,0 +1,1026 @@
+# Clueless: the built-in clues, so there's a crossword before any clue pack
+# is pasted in from admin. One per line, WORD: clue. Every clue here is fine
+# for kids, never contains its own answer, and every word is an everyday word
+# on the kids list. Written by hand for the arcade.
+
+ABS: Stomach muscles
+ACE: Top card in a deck
+ACT: Do something, or one part of a play
+ADD: Put two numbers together
+ADS: Commercials
+AGE: How old you are
+AGO: In the past, as in "long ___"
+AID: Help
+AIM: Point at a target
+AIR: What we breathe
+ALL: Every single one
+AND: Word that joins two things
+ANT: Tiny insect that lives in a colony
+ANY: Even one
+APE: Gorilla or chimp
+APT: Likely
+ARC: Curved line, like a rainbow
+ARE: "We ___ family"
+ARM: Body part with an elbow
+ART: Paintings and drawings
+ASH: What's left after a campfire
+ASK: Put a question to someone
+ASP: Small snake from Egypt
+ATE: Had dinner
+AWE: Wonder and amazement
+AYE: A sailor's yes
+BAT: Flying mammal, or what you swing at a baseball
+BED: Where you sleep at night
+BEE: Buzzing honey maker
+BET: "I ___ you can't catch me!"
+BIG: Large
+BIN: Container for toys or recycling
+BIT: Small piece
+BOX: Cardboard container
+BOY: A son, for example
+BUS: Big yellow ride to school
+CAN: Container for soup
+CAP: Baseball hat
+CAR: Vehicle with four wheels
+CAT: Pet that purrs
+COW: Farm animal that moos
+CRY: Shed tears
+CUP: Mug for drinking
+CUT: Snip with scissors
+DAY: Twenty-four hours
+DEN: A lion's home
+DEW: Morning drops on the grass
+DIE: One of a pair of dice
+DIG: Use a shovel
+DOE: Female deer
+DOG: Pet that barks
+DOT: Tiny spot
+DRY: Not wet
+DUE: Expected, like homework on Monday
+DYE: Color your hair
+EAR: You hear with it
+EAT: Have a meal
+EEL: Slippery fish shaped like a snake
+EGG: A hen lays one
+ELF: Santa's little helper
+ELK: Large deer with big antlers
+ELM: Shady tree
+EMU: Big bird from Australia that can't fly
+END: The finish
+ERA: Long stretch of history
+ERR: Make a mistake
+EVE: The night before a holiday
+EWE: Female sheep
+EYE: You see with it
+FAN: Cooling machine, or a big supporter
+FAR: A long way off
+FED: Gave food to
+FEE: Price for a service
+FEW: Not many
+FIG: Sweet purple fruit
+FIN: A fish's paddle
+FIT: Healthy and strong
+FIX: Repair
+FLY: Buzzing insect, or soar like a bird
+FOG: Cloud down at ground level
+FOR: "This present is ___ you"
+FOX: Sly animal with a bushy tail
+FUN: A good time
+FUR: An animal's coat
+GAS: Fuel for a car
+GEM: Precious stone
+GET: Receive
+GUM: Something to chew
+GYM: Place to work out or play basketball
+HAM: Holiday meat
+HAS: Owns
+HAT: Something you wear on your head
+HAY: Dried grass for horses
+HEN: Mother chicken
+HER: "Give it to ___, she asked first"
+HID: Stayed out of sight
+HIM: That boy
+HIT: Strike a ball
+HOP: A bunny's move
+HOT: Like the sun in summer
+HUG: Squeeze with love
+ICE: Frozen water
+ICY: Slippery in winter
+ILL: Sick
+INK: What fills a pen
+IRE: Anger
+ITS: Belonging to it
+JAM: Fruit spread for toast
+JAR: Glass container with a lid
+JET: Very fast plane
+JOB: Work you get paid for
+JOY: Great happiness
+KEY: It opens a lock
+KID: Child
+LAP: One trip around a track
+LAY: Put down gently
+LED: Showed the way
+LEG: You stand on it
+LET: Allow
+LID: Top of a pot
+LIE: A fib
+LIP: Part of your mouth
+LIT: Set aglow, like a candle
+LOG: Piece of firewood
+LOT: A great deal
+LOW: Not high
+MAP: Guide for a road trip
+MAR: Scratch or spoil
+MAT: Wipe your feet on it
+MEN: Gentlemen
+MET: Got to know
+MIX: Stir together
+MOM: Mother
+MUD: Wet dirt
+NAP: Short sleep
+NET: A soccer goal has one
+NEW: Not old
+NOD: Say yes with your head
+NOR: Neither's partner
+NOT: "I do ___ like green eggs and ham"
+NOW: At this moment
+NUT: A squirrel's snack
+OAK: Tree that grows acorns
+OAR: Rowboat paddle
+OAT: Grain that horses eat
+ODD: Strange, or like 3 and 5
+ODE: Poem of praise
+OFF: Not on
+OIL: Cooking liquid
+OLD: Not new
+ONE: Single
+OPT: Choose
+ORE: Rock with metal in it
+OUR: Belonging to us
+OUT: Not in
+OWE: Need to pay back
+OWL: Wise bird that hoots at night
+OWN: Have
+PAN: Frying ___
+PAR: Golf score that's just right
+PAT: Gentle tap
+PAW: A dog's foot
+PEA: Little green vegetable in a pod
+PEN: Writing tool
+PER: For each
+PET: Animal friend at home
+PIE: Apple dessert with a crust
+PIG: Oinking farm animal
+PIN: Bowling target
+POT: Cooking pan with tall sides
+RAM: Male sheep
+RAN: Hurried on foot
+RAP: Knock on a door, or rhyme to a beat
+RAT: Rodent bigger than a mouse
+RAW: Not cooked
+RAY: Beam of sunlight
+RED: Color of a stop sign
+RIB: Bone in your chest
+RID: Get ___ of (clear out)
+RIP: Tear
+ROD: Fishing pole
+ROT: Go bad
+ROW: Line of seats
+RUG: Floor covering
+RUN: Go faster than walking
+RYE: Bread grain
+SAD: Unhappy
+SAP: Sticky stuff from a tree
+SAT: Took a seat
+SAW: Tool with sharp teeth
+SEA: Ocean
+SEE: Look at
+SET: Group of matching things
+SEW: Use a needle and thread
+SHE: That girl
+SIR: Polite way to speak to a man
+SIT: Opposite of stand
+SIX: Half a dozen
+SKY: Up above, where clouds float
+SOD: Grass sold in rolls
+SOL: Musical note after fa
+SON: Boy child
+SPA: Place for a relaxing soak
+SPY: Secret agent
+STY: Pig pen
+SUE: Take to court
+SUN: Our closest star
+TAG: Chasing game: "You're it!"
+TAN: Light brown
+TAP: Faucet
+TAR: Sticky black stuff on roads
+TEA: Hot drink made from leaves
+TEE: Golf ball holder
+TEN: Number of toes
+THE: Most common word in English
+TIE: Neckwear, or an even score
+TIN: Metal for cans
+TOE: "This little piggy"
+TON: Two thousand pounds
+TOO: Also
+TOP: Spinning toy
+TOT: Little kid
+TOY: Plaything
+TRY: Give it a go
+TUB: Bath
+TWO: A pair
+USE: Put to work
+VAN: Minivan, for one
+VET: Animal doctor
+WAX: What candles are made of
+WAY: Path
+WEB: Spider's home
+WET: Soaked
+WIG: Fake hair
+WIN: Come in first
+YAK: Hairy ox from the mountains
+YAM: Sweet potato's cousin
+YES: Opposite of no
+YET: So far
+YOU: The person I'm talking to
+ZIP: Close a jacket
+ZOO: Place to see lions and zebras
+
+ABLE: Can do it
+ACHE: Dull pain
+ACRE: Piece of farmland
+ACTS: Parts of a play
+AGES: Years and years
+AIDE: Helper
+ALOE: Plant that soothes a sunburn
+ALSO: Too
+ALTO: Low singing voice
+ANTS: Picnic pests
+ARCH: Curved doorway
+AREA: Space or region
+ARMS: They have elbows
+ARTS: Painting, music and dance, all together
+BAKE: Make cookies in the oven
+BALL: Round toy you throw
+BAND: Group of musicians
+BARN: Farm building for cows
+BATH: Tub time
+BEAR: Big furry animal that loves honey
+BEAT: Win against
+BEST: Better than all the rest
+BIKE: Two-wheeler
+BIRD: Robin or sparrow
+BLUE: Color of the sky
+BOAT: Rowboat or sailboat
+BONE: A dog's treat
+BOOK: Story you read
+BOOT: Rain shoe
+CAKE: Birthday dessert
+CALL: Phone someone
+CAMP: Sleep in tents
+CARD: Birthday greeting
+CARE: Look after
+CARS: Sedans and coupes
+CART: Shopping wagon
+CASE: Box for glasses
+CAST: Actors in a show, or a plaster wrap for a broken arm
+CAVE: A bear's winter home
+CITY: Big town
+COAT: Winter jacket
+CODE: Secret message system
+COIN: Penny or dime
+COLD: Chilly
+COOK: Make dinner
+CORN: Yellow vegetable on the cob
+DALE: Valley
+DARE: Truth or ___
+DART: Little arrow you throw
+DATA: Facts and figures
+DATE: Day on a calendar
+DEAL: Hand out the cards
+DEAR: How a letter starts
+DEER: Bambi, for one
+DESK: School table
+DIAL: Turn the knob
+DICE: Cubes for board games
+DIET: Healthy eating plan
+DIRT: Soil
+DISH: Plate
+DOES: Performs
+DOOR: You knock on it
+DOSE: Amount of medicine
+DOVE: Bird of peace
+DRUM: Instrument you hit
+DUCK: Quacking bird
+EACH: Every one
+EARL: British nobleman
+EARN: Get paid for work
+EARS: A rabbit has long ones
+EASE: Comfort
+EAST: Where the sun rises
+EASY: Not hard
+EDGE: Border
+EDIT: Fix up writing
+ELSE: Other
+ENDS: Finishes
+ERAS: Ages in history
+EVEN: Like 2, 4 and 6
+EVER: At any time
+EXIT: Way out
+EYES: You see with them
+FACE: Eyes, nose and mouth together
+FACT: Something true
+FAIR: Just, or a county event with rides
+FARM: Place with cows and barns
+FAST: Quick
+FIRE: Campfire flame
+FISH: It swims in water
+FLAG: The Stars and Stripes, for one
+FOOD: What you eat
+FROG: Green hopper
+GAME: Something you play
+GATE: Door in a fence
+GIFT: Present
+GOAL: Score in soccer
+GOLD: Yellow treasure
+HAIR: It grows on your head
+HALF: One of two equal parts
+HAND: Five fingers
+HARE: A rabbit's cousin
+HEAR: Listen
+HEAT: Warmth
+HERE: Not there
+HERO: Brave one
+HIDE: Go out of sight
+HILL: Small mountain
+HOME: Where you live
+HOPE: Wish
+HORN: A car's honker
+IDEA: Lightbulb moment
+INTO: Inside of
+IRIS: Colored part of the eye
+IRON: Press clothes
+ISLE: Small piece of land in the sea
+ITEM: Thing on a list
+KING: Royal ruler
+KITE: It flies on a windy day
+LAKE: Body of water
+LAMP: Light on a desk
+LAND: Ground
+LANE: Narrow road
+LAST: Final
+LATE: Not on time
+LEAD: Go first
+LEAF: Green part of a tree
+LEAN: Tilt
+LENS: A camera's glass
+LESS: Not as much
+LETS: Allows
+LIES: Fibs
+LIME: Green citrus fruit
+LION: King of the jungle
+LIST: Things to buy, written down
+LOAD: Washing machine batch
+LOAN: Borrowed money
+LOSE: Opposite of win
+LOSS: A defeat
+LOST: Can't find the way
+LOTS: Many
+LOUD: Noisy
+LOVE: Strong affection
+MAIL: Letters and packages
+MAKE: Build
+MANE: A lion's neck hair
+MASS: Weight, in science class
+MEAL: Breakfast or lunch
+MEET: Say hello for the first time
+MERE: Only
+MESA: Flat-topped hill
+MESS: Untidy room
+MILE: 5,280 feet
+MILK: White drink from cows
+MINT: Fresh flavor in toothpaste
+MOON: It shines at night
+NAIL: A hammer hits it
+NAME: What you're called
+NEAR: Close by
+NEAT: Tidy
+NEED: Must have
+NEST: A bird's home
+NICE: Kind
+NOSE: You smell with it
+NOTE: Short letter
+OATS: Breakfast grain
+ODOR: Smell
+ONES: Dollar bills
+OPEN: Not closed
+ORAL: Spoken, like a report
+OVAL: Egg shape
+OVEN: You bake in it
+OVER: Finished
+PAGE: Part of a book
+PAIR: Two of a kind
+PARK: Place with swings
+PASS: Throw the ball to a teammate
+PEAR: Fruit shaped like a light bulb
+PEAS: Pod vegetables
+PEER: Look closely
+PETS: Dogs and cats at home
+PINE: Kind of Christmas tree
+PLAN: Idea for later
+PLAY: Have fun
+POND: A duck's pool
+POOL: Swim here
+RACE: Who's fastest?
+RAIN: Water from clouds
+RARE: Hard to find
+RATE: Speed
+RATS: Rodents
+READ: Look at a book
+REAL: Not fake
+REAR: Back
+REED: Tall marsh grass
+REEL: Fishing rod part
+RENT: Monthly payment for an apartment
+REST: Take a break
+RICE: Grain in sushi
+RIDE: Go on a bike
+RING: Jewelry for a finger
+RISE: Go up
+ROAD: Street
+ROAR: A lion's sound
+ROLE: Part in a play
+ROOF: Top of a house
+ROOT: Part of a plant underground
+ROPE: Thick cord
+ROSE: Red flower with thorns
+RULE: Law
+SAFE: Out of danger
+SAIL: A boat's cloth
+SALE: Discount event at a store
+SALT: Pepper's partner
+SAME: Identical
+SAND: Beach stuff
+SEAL: Barking ocean animal
+SEAS: Oceans
+SEAT: Chair
+SEED: A plant starts as one
+SEEM: Appear
+SEEN: Spotted
+SEES: Looks at
+SELL: Opposite of buy
+SEND: Mail
+SENT: Mailed
+SETS: Groups of matching things
+SHIP: Big boat
+SHOE: Sneaker
+SIDE: Edge
+SING: Use your voice in tune
+SITE: Location
+SLED: Snow rider
+SLOT: Coin opening
+SNAP: Click your fingers
+SNOW: Winter flakes
+SOAP: Bubbly cleaner
+SOCK: Foot cover
+SOFA: Couch
+SOLE: Bottom of a shoe
+SOLO: Performance by one
+SOME: A few
+SONG: Tune
+SONS: Boys in a family
+SORE: Achy
+SORT: Put in order
+SOUP: Bowl of broth
+SPAS: Relaxing resorts
+SPIN: Turn around and around
+STAR: It twinkles at night
+STEM: Flower stalk
+STEP: Stair
+STEW: Slow-cooked dish
+SURE: Certain
+TAIL: A dog wags it
+TALE: Story
+TALL: High
+TEAM: Group of players
+TEAR: Drop from an eye
+TEEN: Thirteen-year-old, say
+TELL: Say
+TENT: Camping shelter
+TEST: Quiz
+TIDE: The ocean rises and falls with it
+TIER: Layer of a cake
+TIES: Neckwear, or even scores
+TILE: Bathroom floor square
+TIME: What a clock shows
+TIRE: Rubber on a wheel
+TOAD: Bumpy cousin of a frog
+TOES: Ten on your feet
+TONE: Sound quality
+TOSS: Throw gently
+TOTE: Carry bag
+TREE: Oak or maple
+TRIP: Journey
+TRUE: Not false
+TUNA: Fish in a sandwich
+USER: Person at a computer
+USES: Puts to work
+WAVE: Say hi with your hand
+WIND: Blowing air
+WISH: Birthday candle hope
+WOLF: It howls at the moon
+WORD: Letters with a meaning
+YARD: Lawn
+ZERO: Nothing at all
+
+ABOUT: Concerning
+ACORN: An oak's nut
+ACRES: Farmland measures
+ADORE: Love
+ADULT: Grown-up
+AFTER: Later than
+AGAIN: Once more
+AGREE: Say yes to
+ALARM: Wake-up ring
+ALERT: Watchful
+ALIEN: Visitor from outer space
+ALIVE: Living
+ALONE: By yourself
+ALTER: Change
+APPLE: Fruit for the teacher
+APRON: Kitchen cover-up
+AREAS: Regions
+ARENA: Big stadium
+ARISE: Get up
+ARROW: A bow's partner
+ASIDE: Off to one side
+ASSET: Valuable thing
+ATLAS: Book of maps
+BAKER: Bread maker
+BEACH: Sandy shore
+BEARD: Chin whiskers
+BENCH: Park seat
+BERRY: Strawberry, for one
+BLOCK: Toy building cube
+BOARD: Plank, or what chess is played on
+BRAIN: The thinker in your head
+BREAD: Loaf for sandwiches
+BRUSH: Hair tool
+CABIN: Log house
+CANDY: Sweet treat
+CANOE: Paddle boat
+CASES: Boxes
+CHAIR: Seat with four legs
+CHALK: Sidewalk drawing stick
+CHEST: Treasure box
+CLEAN: Not dirty
+CLOCK: It tells time
+CLOUD: Fluffy white thing in the sky
+CLOWN: Circus funny face
+COAST: Shoreline
+CRANE: Tall bird, or a big machine that lifts
+CREST: Top of a wave
+CROWN: A king's hat
+DANCE: Move to music
+DATES: Sweet fruit from a palm tree
+DEALS: Bargains
+DENSE: Thick
+DIARY: Secret journal
+DREAM: What you do asleep
+DRESS: Party outfit
+EAGLE: Bald bird of the USA
+EARTH: Our planet
+EASEL: A painter's stand
+EATEN: Gobbled up
+EIGHT: A spider's leg count
+ELDER: Older person
+ELITE: The best of the best
+ENTER: Come in
+ERASE: Rub out
+ERROR: Mistake
+EXTRA: More than needed
+FAIRY: Tinker Bell, for one
+FEAST: Big meal
+FENCE: Yard border
+FIELD: Meadow
+FLOOR: Ground in a room
+FLUTE: Wind instrument
+FROST: Icy coating
+FRUIT: Apple or banana
+GIANT: Huge
+GLOVE: Hand covering
+GRAPE: It grows in a bunch
+GRASS: Lawn
+HAPPY: Glad
+HEART: It beats in your chest
+HONEY: Bees make it
+HORSE: A pony's big cousin
+HOTEL: Place to stay on vacation
+HOUSE: Home
+IDEAL: Perfect
+IDEAS: Bright thoughts
+IRATE: Angry
+ISSUE: Problem
+LANES: Bowling alley strips
+LASER: Beam of light
+LATER: Not now
+LEADS: Goes first
+LEARN: Study
+LEASE: Rental agreement
+LEAST: Smallest amount
+LEMON: Sour yellow fruit
+LIGHT: Opposite of dark
+LISTS: To-dos written down
+LOOSE: Not tight
+LUNCH: Midday meal
+MAGIC: Rabbit-out-of-a-hat trick
+MANGO: Tropical fruit
+MAPLE: Syrup tree
+MEETS: Track events
+MELON: Big juicy fruit
+METAL: Iron or steel
+METER: Parking ___
+MONEY: Dollars and cents
+MOUSE: Squeaky critter
+MUSIC: Songs and tunes
+NEEDS: Must-haves
+NESTS: Bird homes
+NIGHT: When the stars come out
+NOISE: Loud sound
+NORTH: Up on a map
+NOTES: Musical sounds written on a page
+OASIS: Water spot in a desert
+OCEAN: The Pacific, for one
+OLIVE: Green or black pizza topping
+ONION: It makes you cry when you cut it
+OPERA: Play where everyone sings
+ORBIT: Path around the sun
+ORDER: Ask for food at a restaurant
+OTTER: Playful river animal
+PAINT: Color a wall
+PANDA: Black and white bear
+PAPER: You write on it
+PARTY: Birthday bash
+PASTA: Spaghetti, for one
+PEACE: Calm, with no fighting
+PEACH: Fuzzy fruit
+PEARL: Gem from an oyster
+PEERS: People your age
+PIANO: Instrument with 88 keys
+PILOT: Flies the plane
+PIZZA: Pie with cheese and sauce
+PLANE: It flies in the sky
+PLANT: It grows in a pot
+PLATE: Dish
+PRESS: Push
+QUEEN: Royal lady
+QUIET: Shh!
+RACES: Contests of speed
+RADAR: It finds planes in the sky
+RADIO: Plays music in the car
+RAISE: Lift
+RATED: Given stars, like a movie
+RATES: Prices
+RAVEN: Black bird
+READS: Looks at books
+RESET: Start over
+RESTS: Takes breaks
+RETRO: Old-fashioned, but cool
+RIDER: One on a horse
+RINSE: Wash off
+RIVER: Flowing water
+ROAST: Cook in the oven
+ROBIN: Red-breasted bird
+ROBOT: Machine helper
+ROLES: Parts in plays
+ROOTS: Underground plant parts
+ROSES: Red flowers with thorns
+ROUTE: Way to go
+RULES: Laws
+SALAD: Bowl of greens
+SALES: Discount events
+SALSA: Dip for chips
+SAUCE: Pasta topping
+SCARF: Winter neck wrap
+SCORE: Points in a game
+SEATS: Chairs
+SEEDS: Plants start as these
+SEEMS: Appears
+SELLS: Offers for money
+SENDS: Mails
+SENSE: Smell or taste
+SHARE: Give some to others
+SHARK: Ocean hunter with fins
+SHEEP: Woolly farm animal
+SHEER: See-through
+SHEET: Bed cover
+SHELL: A turtle's home
+SIDES: Edges
+SIREN: Fire truck sound
+SITES: Places
+SKATE: Glide on ice
+SLATE: Gray rock
+SLEEP: Snooze
+SMILE: Happy face
+SNAKE: Slithering reptile
+SNARE: Trap
+SNORE: Noisy sleep sound
+SOLAR: Powered by the sun
+SORTS: Kinds
+SPACE: Where astronauts go
+SPARE: Extra tire
+SPOON: Soup tool
+STAGE: Where actors perform
+STAIR: Step
+STARE: Look hard
+STARS: Twinkling lights in the night sky
+START: Begin
+STATE: Texas or Ohio
+STEAM: Hot water vapor
+STEEL: Strong metal
+STEER: Drive
+STEPS: Stairs
+STONE: Rock
+STORE: Shop
+STORM: Thunder and lightning
+STORY: Tale
+SUGAR: Sweet stuff
+TABLE: Eat at it
+TALES: Stories
+TASTE: Sweet or sour sense
+TEAMS: Groups of players
+TEARS: Drops from crying
+TEASE: Kid around
+TEENS: Kids aged 13 to 19
+TEETH: Brush them twice a day
+TELLS: Says
+TENSE: Nervous
+TERMS: Words with set meanings
+TESTS: Quizzes
+THESE: Not those
+TIDES: Rising and falling seas
+TIGER: Striped big cat
+TILES: Bathroom floor squares
+TIRED: Sleepy
+TIRES: Rubber on wheels
+TOAST: Breakfast bread
+TONES: Sounds
+TOTAL: Sum
+TOWEL: Dry off with it
+TOWER: Tall building
+TRADE: Swap
+TRAIL: Hiking path
+TRAIN: Choo-choo
+TREAT: Snack reward
+TREES: Oaks and maples
+TRIES: Attempts
+TRUCK: Big delivery vehicle
+TRUTH: Not a lie
+UNCLE: Mom's brother
+USERS: People at computers
+WATER: Drink from the tap
+WHALE: Biggest sea animal
+WHEEL: It turns on a bike
+WORLD: Planet Earth
+
+ANSWER: Reply
+BASKET: Picnic carrier
+BUTTER: Spread for toast
+CAMERA: It takes pictures
+CANDLE: Light on a birthday cake
+CARROT: A bunny's favorite vegetable
+CASTLE: Home for a king
+CEREAL: Breakfast in a bowl
+CIRCLE: Round shape
+COOKIE: Chocolate chip treat
+DINNER: Evening meal
+DOCTOR: Checks on you when you're sick
+DRAGON: Fire-breathing beast
+ERRAND: Quick trip to the store
+FAMILY: Your relatives
+FLOWER: Daisy or tulip
+FOREST: Lots and lots of trees
+FRIEND: Pal
+GARDEN: Place to grow vegetables
+GUITAR: Six-string instrument
+INSECT: Bug
+ISLAND: Land with water all around
+JUNGLE: Tropical rain forest
+KITTEN: Baby cat
+LESSON: Something to learn
+MARKET: Place to buy food
+MIRROR: It shows your reflection
+MONKEY: Banana-loving climber
+ORANGE: A color and a fruit
+PENCIL: Writing tool with an eraser
+PEPPER: Salt's partner
+PICNIC: Lunch on a blanket in the park
+POTATO: Spud
+RABBIT: Bunny
+RESCUE: Save from danger
+RESORT: Vacation spot
+RETIRE: Stop working for good
+SAILOR: One who works on a boat
+SALMON: Pink fish that swims upstream
+SCHOOL: Where kids learn
+SILVER: Shiny gray metal
+SISTER: A brother's sibling
+SOCCER: Game where you kick the ball into a goal
+SPIDER: Eight-legged web spinner
+STREET: Road in town
+STRIPE: A zebra has lots of them
+SUMMER: Hottest season
+TALENT: Special skill
+TENNIS: Game with rackets and a net
+TOMATO: Red salad fruit
+TURTLE: Slow reptile with a shell
+WINTER: Coldest season
+
+ACTRESS: Woman who plays a part in a movie
+ADDRESS: Where you live, written on an envelope
+AIRPORT: Where planes take off and land
+ALTERED: Changed
+ANIMALS: Zoo residents
+ANOTHER: One more
+ANTLERS: A moose's headgear
+ARTICLE: Newspaper story
+ARTISTS: Painters and sculptors
+ASSISTS: Helps
+ASSUMES: Supposes
+ASSURED: Confident
+BALLOON: Party decoration you blow up
+BATTERY: It powers a remote
+BEDROOM: Where you sleep
+BETWEEN: In the middle of
+BLANKET: Cozy bed cover
+BROTHER: A sister's sibling
+CAPTAIN: Leader of a ship or a team
+CAREERS: Jobs for life
+CARTOON: Animated show
+CENTERS: Middles
+CERTAIN: Sure
+CHAPTER: Part of a book
+CHICKEN: Bird that clucks
+CLASSES: School periods
+CONCERT: Live music show
+COSTUME: Halloween outfit
+COTTAGE: Small house in the country
+COUNTRY: Nation
+COUSINS: Your aunt's kids
+CRACKER: Salty snack
+CREATES: Makes
+DANCERS: Ballet performers
+DEALERS: Car sellers
+DESSERT: Sweet treat after dinner
+DISEASE: Illness
+DISTANT: Far away
+DOLPHIN: Smart sea mammal that clicks
+DREAMER: Someone with big hopes
+DRESSED: Put clothes on
+DRESSES: Party outfits
+EARLIER: Sooner
+EARRING: Jewelry for a lobe
+EASTERN: Toward the sunrise
+ENDLESS: Going on forever
+ENSURES: Makes certain
+ENTERED: Came in
+ENTRIES: Contest submissions
+ESSENCE: Core
+ESTATES: Large homes with land
+ETERNAL: Lasting forever
+EVENING: Time after sunset
+EXAMPLE: Sample
+FEATHER: A bird's plume
+FREEDOM: Liberty
+GALLERY: Museum room full of paintings
+GIRAFFE: Tallest animal
+GLASSES: Eyewear
+GRANDMA: Mom's mom
+GRANDPA: Dad's dad
+GREATER: Bigger
+HAMSTER: Small furry pet that runs on a wheel
+HARVEST: Gathering the crops
+HISTORY: School subject about the past
+HOLIDAY: Day off for celebrating
+ISLANDS: Hawaii is made of them
+KITCHEN: Room where you cook
+LANTERN: Camping light
+LEADERS: Bosses
+LEARNED: Studied
+LEATHER: Material for a jacket or a baseball glove
+LEISURE: Free time
+LESSONS: Piano classes
+LETTERS: A, B and C
+LIBRARY: Place to borrow books
+LOBSTER: Red sea creature with claws
+MASTERS: Experts
+MATTERS: Is important
+MERMAID: Ocean princess with a tail
+MITTENS: Winter hand warmers
+MONSTER: Scary creature
+MORNING: Time for breakfast
+NEAREST: Closest
+NEATEST: Tidiest
+OATMEAL: Hot breakfast cereal
+OCTOPUS: Eight-armed sea creature
+OPERATE: Run a machine
+ORCHARD: Grove of fruit trees
+OUTSIDE: Not indoors
+PAINTED: Colored with a brush
+PAINTER: Artist with a brush
+PARENTS: Mom and dad
+PARTNER: Teammate
+PENGUIN: Tuxedoed bird that can't fly
+PICTURE: Photo
+PILLOWS: Bed cushions
+PIRATES: Treasure hunters at sea
+PLANETS: Mars and Venus
+PLANTED: Put seeds in the ground
+POSTERS: Wall pictures
+PRAIRIE: Grassy plain
+PRESENT: Gift
+PROJECT: School assignment
+PUMPKIN: Orange squash for jack-o'-lanterns
+RACCOON: Masked animal that comes out at night
+RAINBOW: Colorful arc after a storm
+RAINING: Pouring outside
+REACHED: Got to
+READERS: Bookworms
+READING: Looking at a book
+REASONS: Whys
+RELATED: In the same family
+RELATES: Connects
+RELEASE: Let go
+RENTALS: Things you borrow for a fee
+REPORTS: School papers
+RESORTS: Vacation spots
+RESTART: Begin again
+RESTING: Taking a break
+RESTORE: Bring back
+RESULTS: Outcomes
+RETAINS: Keeps
+RETIRED: Stopped working for good
+RETREAT: Back away
+RIDDLES: Brain teasers
+ROASTED: Cooked in the oven
+ROCKETS: Spaceships blasting off
+ROOSTER: Farm bird that crows at dawn
+ROTATES: Spins
+SAILING: Boating with the wind
+SARDINE: Tiny fish in a can
+SCOOTER: Kick ride
+SCREENS: TVs and monitors
+SEASIDE: By the beach
+SEASONS: Spring, summer, fall and winter
+SECRETS: Things you keep to yourself
+SEEKERS: Searchers
+SELLERS: Vendors
+SENATOR: Lawmaker in Congress
+SENIORS: Older folks, or last-year students
+SENSORS: Motion detectors
+SERIOUS: Not joking
+SESSION: Meeting
+SETTING: Where a story happens
+SETTLED: Made a home
+SHELTER: Safe place
+SINGERS: Choir members
+SISTERS: Siblings who are girls
+SITTING: Not standing
+SKATING: Gliding on ice
+SLIPPER: Cinderella lost one
+SNOWMAN: Frosty, for one
+SPARROW: Small brown songbird
+SPECIAL: One of a kind
+SPINACH: Leafy green
+STAINED: Spotted
+STAPLER: Office tool that clips paper together
+STARTED: Began
+STARTER: First course
+STATION: Train stop
+STEERED: Drove
+STORIES: Tales
+STRANGE: Odd
+STREAMS: Brooks
+STREETS: Roads in town
+STUDENT: Pupil
+SUNRISE: Dawn
+SWEATER: Cozy knit top
+TEACHER: Classroom leader
+TEASERS: Brain puzzles
+TEASING: Joking around with someone
+TERRACE: Patio
+THEATER: Place to see a play
+TOASTED: Browned, like bread
+TOASTER: Machine that makes bread crispy
+TONIGHT: This evening
+TORNADO: Twister
+TRAILER: Movie preview
+TRAINED: Taught a puppy, say
+TREATED: Paid for someone else's lunch
+UNICORN: Magical horse with one horn
+VILLAGE: Small town
+VOLCANO: Mountain that erupts
+WEATHER: Rain or shine
+WEEKEND: Saturday and Sunday
+WESTERN: Cowboy movie
+WITHOUT: Lacking

@@ -20,7 +20,8 @@
     towers: { label: 'Tower Defense', href: 'towers.html' },
     sudoku: { label: 'Sudoku', href: 'sudoku.html' },
     scuffle: { label: 'Shuffle Scuffle', href: 'scuffle.html' },
-    crisscross: { label: 'Criss Cross', href: 'crisscross.html' }
+    crisscross: { label: 'Criss Cross', href: 'crisscross.html' },
+    clueless: { label: 'Clueless', href: 'clueless.html' }
   };
 
   // ---- who's playing ---------------------------------------------------------
