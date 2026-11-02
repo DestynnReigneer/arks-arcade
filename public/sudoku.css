@@ -1,0 +1,91 @@
+/* Sudoku: the board, the tools and the number pad. The shared look comes
+   from arcade-ui.css, game-shell.css and look.css. */
+:root { --accent: #4dd0ff; --on-accent: #04141c; --given: #f5eaff; --mine: #4dd0ff; --wrong: #ff5e5e; --hinted: #ffd23f; }
+
+.level-seg { margin: 0 0 10px; }
+.level-seg button { min-width: 0; }
+.hud b#dayLabel { font-size: 15px; }
+
+/* The board: a 3x3 of boxes, each a 3x3 of squares, with thick lines
+   between boxes. Square on every screen, never wider than the page. */
+.sd-wrap { position: relative; width: 100%; max-width: 480px; margin: 0 auto; }
+.sd-board {
+  display: grid; grid-template-columns: repeat(9, 1fr); aspect-ratio: 1; width: 100%;
+  background: var(--plate, #0a0416); border: 3px solid var(--accent); border-radius: 10px; overflow: hidden;
+  user-select: none; -webkit-user-select: none; touch-action: manipulation;
+}
+.sd-cell {
+  position: relative; display: flex; align-items: center; justify-content: center; min-width: 0; min-height: 0;
+  padding: 0; margin: 0; border: 0; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border);
+  background: var(--card); color: var(--mine); font: 700 clamp(18px, 6vw, 28px)/1 var(--font); cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.sd-cell:nth-child(9n) { border-right: 0; }
+.sd-cell:nth-child(9n + 3), .sd-cell:nth-child(9n + 6) { border-right: 2px solid color-mix(in srgb, var(--accent) 70%, var(--card)); }
+.sd-cell:nth-child(n + 19):nth-child(-n + 27), .sd-cell:nth-child(n + 46):nth-child(-n + 54) { border-bottom: 2px solid color-mix(in srgb, var(--accent) 70%, var(--card)); }
+.sd-cell:nth-child(n + 73) { border-bottom: 0; }
+.sd-cell.given { color: var(--given); font-weight: 800; }
+.sd-cell.peer { background: color-mix(in srgb, var(--accent) 15%, var(--card)); }
+.sd-cell.same { background: color-mix(in srgb, var(--accent) 26%, var(--card)); }
+.sd-cell.sel { background: color-mix(in srgb, var(--accent) 42%, var(--card)); box-shadow: inset 0 0 0 2px var(--accent); }
+.sd-cell.hinted { color: var(--hinted); }
+/* A wrong number is red, underlined and marked with a small cross, so it
+   doesn't rely on color alone. */
+.sd-cell.wrong { color: var(--wrong); text-decoration: underline wavy; text-underline-offset: 4px; }
+.sd-cell.wrong::after { content: '✕'; position: absolute; top: 1px; right: 3px; font-size: 9px; color: var(--wrong); }
+.sd-notes { display: grid; grid-template-columns: repeat(3, 1fr); width: 100%; height: 100%; padding: 1px; }
+.sd-notes span { display: flex; align-items: center; justify-content: center; font: 600 clamp(8px, 2.4vw, 11px)/1 var(--font); color: var(--muted); }
+.sd-notes span.hit { color: var(--accent); font-weight: 800; }
+
+/* Covers the board before the start and while paused, so the clock can
+   stop without the puzzle staying in view. */
+.sd-cover {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 18px;
+  background: color-mix(in srgb, var(--plate, #0a0416) 92%, transparent); border-radius: 10px; text-align: center;
+  backdrop-filter: blur(6px);
+}
+.sd-cover-box { max-width: 300px; }
+.sd-cover b { font-size: 20px; letter-spacing: 0.5px; }
+.sd-cover p { color: var(--muted); font-size: 14px; line-height: 1.5; margin: 8px 0 4px; }
+
+/* Undo, Erase, Notes, Hint and Check. */
+.sd-tools { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; max-width: 480px; margin: 12px auto 0; }
+.sd-tool {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-width: 0; height: 54px;
+  border-radius: 12px; border: 1px solid var(--border); background: var(--card); color: var(--text); cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.sd-tool span { font-size: 20px; line-height: 1; }
+.sd-tool small { font-size: 10.5px; font-weight: 700; color: var(--muted); white-space: nowrap; }
+.sd-tool[aria-pressed="true"] { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 22%, var(--card)); }
+.sd-tool[aria-pressed="true"] small { color: var(--accent); }
+
+/* The number pad: one row of nine big buttons under the board. */
+.sd-pad { display: grid; grid-template-columns: repeat(9, 1fr); gap: 5px; max-width: 480px; margin: 10px auto 0; }
+.sd-num {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 0; height: 62px; padding: 0;
+  border-radius: 12px; border: 2px solid var(--border); background: var(--card); color: var(--accent); cursor: pointer;
+  font: 800 26px/1 var(--font); -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+}
+.sd-num small { font-size: 10px; font-weight: 700; color: var(--dim); margin-top: 3px; }
+.sd-num:active { background: color-mix(in srgb, var(--accent) 25%, var(--card)); border-color: var(--accent); }
+.sd-num.done { opacity: 0.35; }
+body.notes .sd-num { color: var(--muted); font-weight: 600; border-style: dashed; }
+
+.sd-settings { max-width: 480px; margin: 14px auto 0; }
+.sd-switch { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 13.5px; color: var(--text); margin: 8px 0; cursor: pointer; }
+.sd-switch input { display: inline-block; width: 20px; height: 20px; margin: 0; flex: none; accent-color: var(--accent); }
+.sd-switch .hint { margin: 0; }
+
+.scores li .pts { font-variant-numeric: tabular-nums; }
+#scoreScope { margin-top: -2px; }
+.board-tabs button { min-width: 0; }
+#fxCanvas { position: fixed; inset: 0; pointer-events: none; z-index: 90; }
+body[data-state="over"] .sd-tools, body[data-state="over"] .sd-pad { display: none; }
+
+@media (max-width: 420px) {
+  .sd-pad { gap: 4px; }
+  .sd-num { height: 58px; font-size: 24px; border-radius: 10px; }
+  .sd-tools { gap: 5px; }
+  .sd-tool small { font-size: 9.5px; }
+}
