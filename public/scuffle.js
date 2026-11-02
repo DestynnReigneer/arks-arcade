@@ -1,0 +1,746 @@
+'use strict';
+
+// Shuffle Scuffle: the page. The server (scuffle/) picks the letters, keeps
+// the clock, checks every word and adds up the points. This page draws the
+// tiles, takes taps and typing, and shows what the server says.
+
+(() => {
+  const { $, toast, api } = ArcadeKit;
+  const store = (k, v) => { try { localStorage.setItem(k, v); } catch { /* private mode */ } };
+  const recall = (k, d = null) => { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch { return d; } };
+  const token = () => (typeof ArcadeProfile !== 'undefined' ? ArcadeProfile.token() : null);
+  const myName = () => { try { return typeof ArcadeProfile !== 'undefined' ? ArcadeProfile.name() || '' : ''; } catch { return ''; } };
+
+  const S = {
+    config: null,
+    mode: ['daily', 'free', 'host', 'join'].includes(recall('scuffle.mode')) ? recall('scuffle.mode') : 'daily',
+    dict: 'kids',
+    rounds: Number(recall('scuffle.rounds')) || 5,
+    seconds: Number(recall('scuffle.seconds')) || 75,
+    pin: (() => { try { return sessionStorage.getItem('scuffle.adultPin') || ''; } catch { return ''; } })(),
+    adultOk: (() => { try { return sessionStorage.getItem('scuffle.adultOk') === 'yes'; } catch { return false; } })(),
+    solo: null,          // what the server said about a solo game
+    room: null,          // { code, playerId, token } in a room
+    snap: null,          // the room's latest state
+    es: null,
+    skew: 0,             // server clock minus this phone's clock
+    letters: '',         // this round's letters, as the server sent them
+    order: [],           // the order the tiles are shown in (shuffling only changes this)
+    guess: [],           // the tiles picked so far, by their place in `letters`
+    roundKey: null,      // which round the tiles are drawn for
+    found: [],           // [{ word, points }] this round
+    busy: false,
+    shownReveal: null,
+    shownFirst: null
+  };
+  const pinHeaders = () => (S.pin ? { 'X-Adult-Pin': S.pin } : {});
+  const unlocked = () => (S.config && S.config.adultRequiresPin ? !!S.pin : S.adultOk);
+  const show = id => { for (const s of ['setup', 'lobby', 'play', 'reveal']) $(s).classList.toggle('hidden', s !== id); };
+  const now = () => Date.now() + S.skew;
+  const playing = () => (S.room ? S.snap && S.snap.phase === 'playing' : S.solo && S.solo.phase === 'playing');
+  const adultMode = on => document.documentElement.classList.toggle('adult-mode', !!on);
+
+  // ---- setup ---------------------------------------------------------------------------
+  const HINTS = {
+    daily: 'Today\'s letters are the same for everyone: four rounds of 75 seconds. Your first go of the day can go on the 🏆 board.',
+    free: 'New letters every time, as many games as you like. Free play scores don\'t go on the board.',
+    host: 'Everyone plays on their own phone at the same time. You\'ll get a four-letter code for the others to type in.',
+    join: 'Type the four-letter code from whoever is hosting. If a game is already going, you can jump in on the next word.'
+  };
+
+  function seg(box, items, current, onPick) {
+    box.innerHTML = '';
+    for (const [v, label] of items) {
+      const b = document.createElement('button');
+      b.textContent = label;
+      b.setAttribute('aria-pressed', String(String(v) === String(current)));
+      b.onclick = () => onPick(v);
+      box.appendChild(b);
+    }
+  }
+
+  function paintSetup() {
+    for (const b of $('modeSeg').children) b.setAttribute('aria-pressed', String(b.dataset.mode === S.mode));
+    $('modeHint').textContent = HINTS[S.mode];
+    $('hostSetup').classList.toggle('hidden', S.mode !== 'host');
+    $('joinSetup').classList.toggle('hidden', S.mode !== 'join');
+    $('wordsPanel').classList.toggle('hidden', S.mode === 'join');
+    $('optionsPanel').classList.toggle('hidden', S.mode === 'daily' || S.mode === 'join');
+    for (const b of $('dictSeg').children) b.setAttribute('aria-pressed', String(b.dataset.v === S.dict));
+    $('dictHint').textContent = S.dict === 'adult'
+      ? 'Every word in the big list counts, rude ones included. Rooms on this list get a lobby password so kids can\'t wander in.'
+      : 'Rude words are left out, so it\'s good for kids. The full word is always an everyday word.';
+    adultMode(S.dict === 'adult');
+    if (S.config) {
+      seg($('roundsSeg'), S.config.rounds.map(n => [n, String(n)]), S.rounds, v => { S.rounds = v; store('scuffle.rounds', v); paintSetup(); });
+      seg($('secondsSeg'), S.config.seconds.map(n => [n, `${n}s`]), S.seconds, v => { S.seconds = v; store('scuffle.seconds', v); paintSetup(); });
+    }
+    $('goBtn').textContent = S.mode === 'host' ? 'Get a game code' : S.mode === 'join' ? 'Join the game' : S.mode === 'daily' ? 'Play today\'s letters' : 'Let\'s play';
+  }
+
+  async function pickDict(v) {
+    if (v === 'adult' && !unlocked() && !(await unlockAdult())) return;
+    S.dict = v;
+    paintSetup();
+  }
+
+  function unlockAdult() {
+    if (!S.config || !S.config.adultRequiresPin) {
+      const ok = confirm('The unfiltered list is for adults only (18+). Continue?');
+      if (ok) { S.adultOk = true; try { sessionStorage.setItem('scuffle.adultOk', 'yes'); } catch { /* unavailable */ } }
+      return Promise.resolve(ok);
+    }
+    return new Promise(resolve => {
+      $('pinInput').value = '';
+      $('pinMsg').textContent = '';
+      $('pinView').classList.remove('hidden');
+      $('pinInput').focus();
+      const done = ok => { $('pinView').classList.add('hidden'); $('pinCancel').onclick = null; resolve(ok); };
+      PinPad.attach($('pinInput'), async pin => {
+        const r = await api('/api/scuffle/unlock', { pin }).catch(() => ({ ok: false }));
+        if (!r.ok) { $('pinMsg').textContent = 'That PIN is not right.'; PinPad.clear($('pinInput')); return; }
+        S.pin = pin;
+        try { sessionStorage.setItem('scuffle.adultPin', pin); } catch { /* unavailable */ }
+        done(true);
+      });
+      $('pinCancel').onclick = () => done(false);
+    });
+  }
+
+  async function go() {
+    Blip.unlock();
+    $('setupMsg').textContent = '';
+    try {
+      if (S.mode === 'daily' || S.mode === 'free') {
+        const state = await api('/api/scuffle/solo', {
+          mode: S.mode, dictionary: S.dict, rounds: S.rounds, seconds: S.seconds, profileToken: token()
+        }, pinHeaders());
+        S.solo = state;
+        S.room = null;
+        if (window.ArcadeStats) ArcadeStats.play();
+        if (state.phase === 'ready') await soloNext(); else applySolo(state);
+        return;
+      }
+      if (S.mode === 'host') {
+        const r = await RoomPassword.withPassword(password => api('/api/scuffle/rooms', {
+          name: $('hostName').value || myName(), password,
+          settings: { rounds: S.rounds, seconds: S.seconds, dictionary: S.dict }
+        }, pinHeaders()));
+        if (r) enterRoom(r);
+        return;
+      }
+      const code = $('joinCode').value.trim().toUpperCase();
+      if (code.length !== 4) { $('setupMsg').textContent = 'Type the four-letter code first.'; return; }
+      // A grown-ups game asks for its lobby password (not the adult PIN).
+      const r = await RoomPassword.withPassword(password =>
+        api(`/api/scuffle/rooms/${code}/join`, { name: $('joinName').value || myName(), password }));
+      if (r) enterRoom(r);
+    } catch (e) { $('setupMsg').textContent = e.message; }
+  }
+
+  // ---- solo --------------------------------------------------------------------------------
+  const soloApi = (path, body = {}) => api(`/api/scuffle/solo/${S.solo.gameId}${path}`, body);
+
+  async function soloNext() {
+    if (S.busy) return;
+    S.busy = true;
+    try { applySolo(await soloApi('/next')); } catch (e) { toast(e.message, 4000); }
+    S.busy = false;
+  }
+
+  function applySolo(state) {
+    S.solo = state;
+    S.skew = state.serverNow - Date.now();
+    adultMode(state.dictionary === 'adult');
+    if (state.phase === 'playing') {
+      startRound(`solo:${state.gameId}:${state.index}`, state.round.letters);
+      S.found = state.round.found;
+      paintPlay();
+      return;
+    }
+    if (state.phase === 'reveal' || state.phase === 'over') showSoloReveal(state);
+  }
+
+  // When the clock runs out, ask the server how the round ended.
+  let endCheck = null;
+  function soloTimeUp() {
+    if (endCheck) return;
+    endCheck = setTimeout(async () => {
+      endCheck = null;
+      try {
+        const st = await api(`/api/scuffle/solo/${S.solo.gameId}`);
+        if (st.phase === 'playing') { soloTimeUp(); return; }
+        applySolo(st);
+      } catch (e) { toast(e.message); }
+    }, 1700);
+  }
+
+  function showSoloReveal(st) {
+    const key = `solo:${st.gameId}:${st.index}`;
+    if (S.shownReveal === key && !$('reveal').classList.contains('hidden')) return;
+    S.shownReveal = key;
+    Blip.musicPlaying(false);
+    const mine = st.round.found.map(f => f.word);
+    paintReveal({
+      roundText: `Round ${st.index + 1} of ${st.totalRounds}`,
+      word: st.reveal.word, full: st.reveal.full, words: st.reveal.words, mine, found: st.round.found,
+      scoreText: `You scored ${st.round.score.toLocaleString('en-US')} this round, and ${st.total.toLocaleString('en-US')} so far.`
+    });
+    $('standingsPanel').classList.add('hidden');
+    const over = st.phase === 'over';
+    $('nextBtn').classList.toggle('hidden', over);
+    $('nextBtn').textContent = st.index + 2 === st.totalRounds ? 'Last round' : 'Next round';
+    $('waitNext').classList.add('hidden');
+    $('againBtn').classList.toggle('hidden', !over || st.mode === 'daily');
+    $('overPanel').classList.toggle('hidden', !over);
+    if (over) showSoloOver(st);
+    show('reveal');
+    window.scrollTo({ top: 0 });
+  }
+
+  function showSoloOver(st) {
+    $('overTitle').textContent = `Game over: ${st.total.toLocaleString('en-US')} points`;
+    const rounds = st.past.map((p, i) => [p.word, `${p.found} of ${p.words} words`, p.score, i]);
+    roundList(rounds);
+    const daily = st.mode === 'daily';
+    const p = profile();
+    $('savePart').classList.toggle('hidden', !daily || st.saved);
+    $('iniRow').classList.toggle('hidden', !!p);
+    $('saveHint').textContent = p ? `Saving as ${p.name}.` : 'Type your initials to put your score on today\'s board.';
+    $('saveMsg').textContent = '';
+    $('saveBtn').disabled = false;
+    $('rankLine').textContent = daily ? (st.saved ? 'Your score is on today\'s board.' : '')
+      : 'Free play scores don\'t go on the board. Try the daily letters for that.';
+    if (daily && !p && !st.saved) initials.reset();
+    Blip.tune([[523, 0.12], [659, 0.12], [784, 0.12], [1047, 0.3]], { type: 'triangle', volume: 0.06 });
+    if (window.Fx && st.total > 0) Fx.burst({ count: 120, coins: 12 });
+  }
+
+  function roundList(rows) {
+    const ol = $('roundList');
+    ol.innerHTML = '';
+    for (const [word, detail, score] of rows) {
+      const li = document.createElement('li');
+      li.innerHTML = '<span></span><small></small><b></b>';
+      li.firstChild.textContent = word;
+      li.children[1].textContent = ` · ${detail}`;
+      li.lastChild.textContent = score.toLocaleString('en-US');
+      ol.appendChild(li);
+    }
+  }
+
+  // ---- the daily board -------------------------------------------------------------------
+  const initials = ArcadeKit.wireInitials([...document.querySelectorAll('#iniRow .ini')], () => saveScore());
+  function profile() {
+    try { return token() ? ArcadeProfile.get() : null; } catch { return null; }
+  }
+  async function saveScore() {
+    const st = S.solo;
+    if (!st || st.mode !== 'daily' || st.saved) return;
+    const p = profile();
+    const ini = p ? ArcadeProfile.initials() : initials.value();
+    if (!p && !ini) { $('saveMsg').textContent = 'Type your initials first.'; return; }
+    $('saveBtn').disabled = true;
+    try {
+      const r = await api(`/api/scuffle/solo/${st.gameId}/save`, { initials: ini, profileToken: token() });
+      if (!p) initials.remember(ini);
+      st.saved = true;
+      $('savePart').classList.add('hidden');
+      $('rankLine').textContent = r.allRank === 1 ? 'That\'s the best daily score ever! 🏆'
+        : `You're #${r.dayRank} on today's board, and #${r.allRank} of all time.`;
+      // Celebrations are real: the banner only says #1 when the board says so.
+      if (r.dayRank === 1 && window.Fx) { Fx.banner(r.allRank === 1 ? 'BEST EVER!' : 'TOP OF TODAY!', 'You\'re #1', { ms: 2200 }); Fx.burst({ count: 200, coins: 30 }); }
+      openScores('day', r.id);
+    } catch (e) {
+      $('saveMsg').textContent = e.message;
+      $('saveBtn').disabled = false;
+    }
+  }
+
+  let scoreScope = 'day';
+  async function openScores(scope = scoreScope, highlightId) {
+    scoreScope = scope;
+    for (const b of $('scoreScope').children) b.setAttribute('aria-pressed', String(b.dataset.scope === scope));
+    $('scoreNote').textContent = scope === 'day'
+      ? 'Everyone gets the same letters today. Only your first go counts, and new letters arrive at midnight. 🔞 marks a score played with the unfiltered list, which has more words to find.'
+      : 'The best daily scores from every day so far. 🔞 marks a score played with the unfiltered list.';
+    $('scores').classList.remove('hidden');
+    const list = $('scoreList');
+    list.innerHTML = '<li class="empty">Loading…</li>';
+    try {
+      const rows = await api(`/api/scuffle/board?scope=${scope}&limit=20`);
+      ArcadeKit.renderScores(list, rows.map(r => ({
+        ...r,
+        detail: [r.dictionary === 'adult' ? '🔞' : '', `${r.words} words`, r.bestWord || '', scope === 'all' ? niceDay(r.day) : '']
+          .filter(Boolean).join(' · ')
+      })), highlightId);
+      if (!rows.length) list.firstChild.textContent = scope === 'day' ? 'Nobody has played today\'s letters yet. Be the first!' : 'No scores yet. Be the first!';
+    } catch (e) {
+      list.innerHTML = '<li class="empty"></li>';
+      list.firstChild.textContent = e.message;
+    }
+  }
+  const niceDay = d => new Date(`${d}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+  // ---- rooms --------------------------------------------------------------------------------
+  function enterRoom(r) {
+    S.room = { code: r.code, playerId: r.playerId, token: r.token };
+    S.solo = null;
+    S.shownReveal = null;
+    try { sessionStorage.setItem('scuffle.room', JSON.stringify(S.room)); } catch { /* unavailable */ }
+    $('lobbyCode').textContent = r.code;
+    show('lobby');
+    connect();
+  }
+
+  function connect() {
+    if (S.es) S.es.close();
+    const { code, playerId, token: tk } = S.room;
+    const q = `playerId=${encodeURIComponent(playerId)}&token=${encodeURIComponent(tk)}`;
+    S.es = new EventSource(`/api/scuffle/rooms/${code}/events?${q}`);
+    S.es.addEventListener('state', e => applySnap(JSON.parse(e.data)));
+    S.es.onerror = () => {
+      fetch(`/api/scuffle/rooms/${code}?${q}`).then(r => {
+        if (r.status === 404 || r.status === 403) { leaveRoom(); show('setup'); toast('That game has ended.'); }
+      }).catch(() => {});
+    };
+  }
+
+  function leaveRoom() {
+    if (S.es) { S.es.close(); S.es = null; }
+    S.room = null;
+    S.snap = null;
+    try { sessionStorage.removeItem('scuffle.room'); } catch { /* unavailable */ }
+  }
+
+  async function roomPost(path, body = {}) {
+    const { code, playerId, token: tk } = S.room;
+    return api(`/api/scuffle/rooms/${code}/${path}`, { playerId, token: tk, ...body });
+  }
+
+  function applySnap(snap) {
+    S.snap = snap;
+    S.skew = snap.serverNow - Date.now();
+    adultMode(snap.settings.dictionary === 'adult');
+    if (snap.phase === 'lobby') { Blip.musicPlaying(false); return renderLobby(snap); }
+    if (snap.phase === 'playing') {
+      startRound(`room:${snap.code}:${snap.index}:${snap.endsAt}`, snap.round.letters);
+      S.found = snap.mine ? snap.mine.found : [];
+      if (snap.round.firstFull && S.shownFirst !== S.roundKey) {
+        S.shownFirst = S.roundKey;
+        const me = snap.players.find(p => p.id === snap.you);
+        if (!me || me.name !== snap.round.firstFull) {
+          news(`⚡ ${snap.round.firstFull} found the full word first! You can still find it too.`);
+          Blip.tone([880, 660], 0.15, { type: 'triangle', volume: 0.05 });
+        }
+      }
+      paintPlay();
+      return;
+    }
+    renderRoomReveal(snap);
+  }
+
+  function renderLobby(snap) {
+    show('lobby');
+    $('lobbyCode').textContent = snap.code;
+    if ($('joinQr').dataset.code !== snap.code) { $('joinQr').dataset.code = snap.code; ArcadeQR.forGame($('joinQr'), 'scuffle.html', snap.code, $('joinLink')); }
+    const s = snap.settings;
+    $('lobbySettings').textContent = `${s.rounds} rounds of ${s.seconds} seconds, ${s.dictionary === 'adult' ? 'unfiltered words' : 'family words'}` +
+      (snap.lobbyPassword ? `. Lobby password: ${snap.lobbyPassword}` : snap.locked ? '. Locked with a password' : '') + '.';
+    $('lobbyCount').textContent = `(${snap.players.length} of ${snap.maxPlayers})`;
+    const list = $('lobbyPlayers');
+    list.innerHTML = '';
+    for (const p of snap.players) {
+      const li = document.createElement('li');
+      li.className = p.online ? '' : 'offline';
+      li.textContent = p.name;
+      if (p.id === snap.you) li.insertAdjacentHTML('beforeend', '<span class="tag">you</span>');
+      if (p.name === snap.hostName) li.insertAdjacentHTML('beforeend', '<span class="tag">host</span>');
+      list.appendChild(li);
+    }
+    $('startBtn').classList.toggle('hidden', !snap.host);
+    $('waitHost').classList.toggle('hidden', snap.host);
+  }
+
+  function renderRoomReveal(snap) {
+    const rv = snap.reveal;
+    if (!rv) return;
+    const key = `room:${snap.code}:${snap.index}:${snap.phase}`;
+    const me = rv.players.find(p => p.id === snap.you);
+    const mine = me ? me.words : [];
+    paintReveal({
+      roundText: `Round ${snap.index + 1} of ${snap.totalRounds}`,
+      word: rv.word, full: rv.full, words: rv.words, mine,
+      found: mine.map(w => ({ word: w })),
+      first: rv.firstFull ? `${rv.firstFull.name} found it first and got ${S.config ? S.config.firstBonus : 50} extra points.` : 'Nobody found the full word this round.',
+      scoreText: me ? `You scored ${me.roundScore.toLocaleString('en-US')} this round.` : ''
+    });
+    const over = snap.phase === 'over';
+    $('standingsPanel').classList.remove('hidden');
+    $('standingsTitle').textContent = over ? 'Final scores' : 'Scores so far';
+    const ol = $('standings');
+    ol.innerHTML = '';
+    for (const p of snap.players.slice().sort((a, b) => b.score - a.score)) {
+      const li = document.createElement('li');
+      li.innerHTML = '<span></span><small></small><b></b>';
+      li.firstChild.textContent = p.name + (p.id === snap.you ? ' (you)' : '');
+      li.children[1].textContent = `+${p.roundScore} this round`;
+      li.lastChild.textContent = p.score.toLocaleString('en-US');
+      ol.appendChild(li);
+    }
+    $('overPanel').classList.toggle('hidden', !over);
+    if (over) {
+      const top = snap.players.slice().sort((a, b) => b.score - a.score)[0];
+      $('overTitle').textContent = top ? `${top.name} wins the scuffle! 🏆` : 'Game over';
+      $('roundList').innerHTML = '';
+      $('savePart').classList.add('hidden');
+      $('rankLine').textContent = '';
+    }
+    $('nextBtn').classList.toggle('hidden', over || !snap.host);
+    $('nextBtn').textContent = snap.index + 2 === snap.totalRounds ? 'Last round' : 'Next round';
+    $('waitNext').classList.toggle('hidden', over || snap.host);
+    $('againBtn').classList.toggle('hidden', !over || !snap.host);
+    if (S.shownReveal !== key) {
+      S.shownReveal = key;
+      Blip.musicPlaying(false);
+      if (over && top1(snap) === snap.you && window.Fx) { Fx.banner('YOU WIN!', 'Top of the room', { ms: 2200 }); Fx.burst({ count: 200, coins: 30 }); }
+      show('reveal');
+      window.scrollTo({ top: 0 });
+    }
+  }
+  const top1 = snap => { const t = snap.players.slice().sort((a, b) => b.score - a.score); return t.length > 1 && t[0].score > t[1].score ? t[0].id : null; };
+
+  // ---- a round: the tiles ------------------------------------------------------------------
+  function startRound(key, letters) {
+    if (S.roundKey === key) return;
+    S.roundKey = key;
+    S.letters = letters;
+    S.order = [...letters].map((_, i) => i);
+    S.guess = [];
+    S.found = [];
+    $('news').textContent = '';
+    show('play');
+    window.scrollTo({ top: 0 });
+    Blip.musicPlaying(true);
+    lastSec = null;
+  }
+
+  function paintPlay() {
+    const tiles = $('tiles');
+    tiles.innerHTML = '';
+    for (const i of S.order) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'sc-tile' + (S.guess.includes(i) ? ' used' : '');
+      b.textContent = S.letters[i];
+      b.setAttribute('aria-label', `Letter ${S.letters[i]}`);
+      b.onclick = () => tap(i);
+      tiles.appendChild(b);
+    }
+    const guess = $('guess');
+    guess.innerHTML = '';
+    for (let k = 0; k < S.letters.length; k++) {
+      const s = document.createElement('div');
+      const i = S.guess[k];
+      s.className = 'sc-slot' + (i !== undefined ? ' on' : '');
+      s.textContent = i !== undefined ? S.letters[i] : '';
+      guess.appendChild(s);
+    }
+    const list = $('found');
+    list.innerHTML = '';
+    const sorted = S.found.slice().sort((a, b) => b.word.length - a.word.length || a.word.localeCompare(b.word));
+    for (const f of sorted) {
+      const li = document.createElement('li');
+      li.className = f.word.length === S.letters.length ? 'full' : '';
+      li.textContent = f.word;
+      if (f.points) li.insertAdjacentHTML('beforeend', `<small>+${f.points}</small>`);
+      list.appendChild(li);
+    }
+    if (!sorted.length) list.innerHTML = '<li class="empty">Words you find show up here.</li>';
+    const gotFull = S.found.some(f => f.word.length === S.letters.length);
+    const count = S.room ? S.snap.round.wordCount : S.solo.round.wordCount;
+    $('goal').innerHTML = `There are <b>${count}</b> words of 3 or more letters hiding in here. You've found <b>${S.found.length}</b>. ` +
+      (gotFull ? '<span class="got">★ You found the full word!</span>' : `The full word uses all <b>${S.letters.length}</b> letters.`);
+    if (S.room) {
+      const s = S.snap;
+      $('roundLabel').textContent = `${s.index + 1}/${s.totalRounds}`;
+      const me = s.players.find(p => p.id === s.you);
+      $('scoreLabel').textContent = me ? me.score.toLocaleString('en-US') : '0';
+      const strip = $('strip');
+      strip.classList.remove('hidden');
+      strip.innerHTML = '';
+      for (const p of s.players.slice().sort((a, b) => b.score - a.score)) {
+        const li = document.createElement('li');
+        li.className = [p.id === s.you ? 'me' : '', p.gotFull ? 'star' : '', p.done ? 'done' : ''].join(' ').trim();
+        li.innerHTML = '<span></span><b></b>';
+        li.firstChild.textContent = `${p.name} (${p.count})`;
+        li.lastChild.textContent = p.score.toLocaleString('en-US');
+        li.title = `${p.name} has found ${p.count} word${p.count === 1 ? '' : 's'}${p.gotFull ? ', including the full word' : ''}.`;
+        strip.appendChild(li);
+      }
+      $('doneBtn').disabled = !!(s.mine && s.mine.done);
+      $('doneBtn').textContent = s.mine && s.mine.done ? 'Waiting for the others to finish…' : 'I\'m done with this round';
+    } else {
+      $('strip').classList.add('hidden');
+      $('roundLabel').textContent = `${S.solo.index + 1}/${S.solo.totalRounds}`;
+      $('scoreLabel').textContent = (S.solo.total + S.solo.round.score).toLocaleString('en-US');
+      $('doneBtn').disabled = false;
+      $('doneBtn').textContent = 'End this round now';
+    }
+    tick();
+  }
+
+  function tap(i) {
+    if (!playing() || S.guess.includes(i) || S.busy) return;
+    Blip.unlock();
+    S.guess.push(i);
+    Blip.tone(520 + S.guess.length * 60, 0.04, { type: 'triangle', volume: 0.04 });
+    paintPlay();
+  }
+  function typeLetter(ch) {
+    const i = S.order.find(k => S.letters[k] === ch && !S.guess.includes(k));
+    if (i === undefined) { nudge(); return; }
+    tap(i);
+  }
+  function back() { if (S.guess.length) { S.guess.pop(); paintPlay(); } }
+  function clear() { if (S.guess.length) { S.guess = []; paintPlay(); } }
+  function shuffle() {
+    if (!playing()) return;
+    for (let i = S.order.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [S.order[i], S.order[j]] = [S.order[j], S.order[i]];
+    }
+    Blip.tone([300, 600], 0.1, { type: 'sine', volume: 0.04 });
+    paintPlay();
+  }
+  function nudge() {
+    const g = $('guess');
+    g.classList.remove('bad');
+    void g.offsetWidth;
+    g.classList.add('bad');
+  }
+
+  const REASONS = {
+    short: 'Words need at least 3 letters.',
+    letters: 'That uses a letter that isn\'t here (or one too many times).',
+    again: 'You already found that one.',
+    unknown: 'That one isn\'t in the word list.'
+  };
+
+  async function enter() {
+    if (!playing() || S.busy) return;
+    const word = S.guess.map(i => S.letters[i]).join('');
+    if (word.length < 3) { toast(REASONS.short); nudge(); return; }
+    S.busy = true;
+    try {
+      let verdict;
+      if (S.room) verdict = await roomPost('word', { word });
+      else {
+        const r = await api(`/api/scuffle/solo/${S.solo.gameId}/word`, { word });
+        verdict = r;
+        S.solo = r.state;
+      }
+      S.busy = false;
+      if (verdict.ok) {
+        S.found = S.found.filter(f => f.word !== verdict.word).concat([{ word: verdict.word, points: verdict.points }]);
+        S.guess = [];
+        const g = $('guess');
+        g.classList.add('good');
+        setTimeout(() => g.classList.remove('good'), 300);
+        if (window.Fx) Fx.flyTo(`+${verdict.points}`, g, $('scoreLabel'), { tone: verdict.full ? 'gold' : 'teal' });
+        if (verdict.full) {
+          Blip.tune([[523, 0.08], [659, 0.08], [784, 0.08], [1047, 0.2]], { type: 'triangle', volume: 0.07 });
+          if (window.Fx) {
+            Fx.banner(verdict.first ? 'FIRST!' : 'FULL WORD!', verdict.first ? `${verdict.word} · +${verdict.points} with the bonus` : `${verdict.word} · +${verdict.points}`, { ms: 1800 });
+            Fx.burst({ count: 160, coins: 20 });
+          }
+        } else {
+          Blip.tune([[660, 0.06], [880, 0.1]], { type: 'triangle', volume: 0.05 });
+        }
+      } else {
+        toast(REASONS[verdict.reason] || 'That one doesn\'t count.');
+        Blip.tone([220, 140], 0.18, { type: 'sawtooth', volume: 0.04 });
+        nudge();
+        if (verdict.reason === 'again') S.guess = [];
+      }
+      if (!S.room) applySolo(S.solo); else paintPlay();
+    } catch (e) {
+      S.busy = false;
+      toast(e.message);
+      if (!S.room && S.solo) soloTimeUp();
+    }
+  }
+
+  async function doneEarly() {
+    if (!playing()) return;
+    if (S.room) { try { await roomPost('done'); } catch (e) { toast(e.message); } return; }
+    if (!confirm('End this round now? Any words you haven\'t found yet will be shown.')) return;
+    try { applySolo(await api(`/api/scuffle/solo/${S.solo.gameId}/stop`, {})); } catch (e) { toast(e.message); }
+  }
+
+  // ---- the clock ---------------------------------------------------------------------------
+  let lastSec = null;
+  function tick() {
+    if (!playing()) return;
+    const endsAt = S.room ? S.snap.endsAt : S.solo.round.endsAt;
+    const left = Math.max(0, endsAt - now());
+    const sec = Math.ceil(left / 1000);
+    $('clock').textContent = `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
+    $('clock').parentElement.classList.toggle('low', sec <= 10);
+    if (sec !== lastSec && sec <= 5 && sec > 0) Blip.tone(sec <= 2 ? 1320 : 990, 0.04, { type: 'square', volume: 0.04 });
+    lastSec = sec;
+    if (left <= 0 && !S.room) soloTimeUp();
+  }
+  setInterval(tick, 200);
+
+  // ---- end of a round --------------------------------------------------------------------
+  function chips(box, words, cls = () => '', points = {}) {
+    box.innerHTML = '';
+    for (const w of words) {
+      const li = document.createElement('li');
+      li.className = cls(w);
+      li.textContent = w;
+      if (points[w]) li.insertAdjacentHTML('beforeend', `<small>+${points[w]}</small>`);
+      box.appendChild(li);
+    }
+  }
+
+  function paintReveal({ roundText, word, full, words, mine, found, first = '', scoreText }) {
+    $('revealRound').textContent = roundText;
+    $('revealFull').textContent = word;
+    // Other words that use every letter counted as the full word too.
+    const others = full.filter(w => w !== word);
+    $('revealFirst').textContent = [others.length ? `${others.join(', ')} used every letter too, so ${others.length === 1 ? 'it' : 'they'} counted as the full word.` : '', first].filter(Boolean).join(' ');
+    $('revealScore').textContent = scoreText;
+    const length = full[0].length;
+    const points = Object.fromEntries(found.filter(f => f.points).map(f => [f.word, f.points]));
+    const have = new Set(mine);
+    const sortW = list => list.slice().sort((a, b) => b.length - a.length || a.localeCompare(b));
+    chips($('revealFound'), sortW(mine), w => (w.length === length ? 'full' : ''), points);
+    if (!mine.length) $('revealFound').innerHTML = '<li class="empty">None this time. Next round!</li>';
+    const missed = sortW(words.filter(w => !have.has(w)));
+    chips($('revealMissed'), missed, w => (w.length === length ? 'full' : ''));
+    $('missedTitle').textContent = missed.length ? `Words you missed (${missed.length})` : 'You found every word! 🎉';
+  }
+
+  function news(text) {
+    $('news').textContent = text;
+    clearTimeout(news.t);
+    news.t = setTimeout(() => { $('news').textContent = ''; }, 5000);
+  }
+
+  function backToMenu() {
+    if (S.room) { roomPost('leave').catch(() => {}); leaveRoom(); }
+    S.solo = null;
+    S.roundKey = null;
+    Blip.musicPlaying(false);
+    show('setup');
+    paintSetup();
+  }
+
+  // ---- how to play --------------------------------------------------------------------------
+  const help = Tutorial.create('scuffle', [
+    {
+      emoji: '🔀', title: 'Find the hidden word',
+      html: `<p>Every round you get the same 6 or 7 letters as everyone else, all mixed up. They spell a word when they're put back in the right order. That's the <b>full word</b>, and finding it is the big prize.</p>
+        <p>While you hunt for it, every smaller word you can make from the letters (3 letters or more) scores too. Each letter can only be used as many times as it shows up.</p>`
+    },
+    {
+      emoji: '👆', title: 'Spelling a word',
+      html: `<p>Tap the letter tiles in order to spell a word, then tap <b>Enter</b>. <b>Back</b> takes off the last letter, <b>Clear</b> starts over, and <b>Shuffle</b> mixes the tiles up again, which often helps you see a new word.</p>
+        <table><tr><td>⌨️ Keyboard</td><td>Type the letters, <b>Enter</b> to try the word, <b>Backspace</b> to take one back, <b>Space</b> to shuffle, <b>Esc</b> to clear.</td></tr></table>`
+    },
+    {
+      emoji: '⭐', title: 'Points',
+      html: `<table>
+          <tr><td>3 letters</td><td>10 points</td></tr>
+          <tr><td>4 letters</td><td>20 points</td></tr>
+          <tr><td>5 letters</td><td>35 points</td></tr>
+          <tr><td>6 letters</td><td>60 points</td></tr>
+          <tr><td>7 letters</td><td>90 points</td></tr>
+          <tr><td>★ The full word</td><td>100 extra points</td></tr>
+        </table>
+        <p>In a room, whoever finds the full word <b>first</b> gets another 50 on top. The arcade checks every word and keeps the score, so nobody's phone can fudge it.</p>`
+    },
+    {
+      emoji: '⏱️', title: 'Rounds and the clock',
+      html: `<p>Each round has a clock (60, 75 or 90 seconds). When it runs out you see the full word and every word you missed, then the next round starts with new letters. Done early? Tap the button under your words to end the round.</p>`
+    },
+    {
+      emoji: '📅', title: 'Daily or free play',
+      html: `<table>
+          <tr><td>📅 Daily</td><td>Four rounds of 75 seconds, with letters that are the same for everybody today. Your first go can go on the 🏆 board. New letters arrive at midnight.</td></tr>
+          <tr><td>🎲 Free play</td><td>New letters every game. Pick how many rounds and how long. These scores don't go on the board.</td></tr>
+        </table>`
+    },
+    {
+      emoji: '📡', title: 'Playing together',
+      html: `<p><b>Host</b> a game to get a four-letter code, and everyone else taps <b>Join</b> on their own phone and types it in (or scans the QR code). The host picks the rounds, the time and which words count, and everyone races on the same letters at the same time.</p>
+        <p>You'll see how many words each player has found and a ★ when someone gets the full word, but not their words until the round is over.</p>`
+    },
+    {
+      emoji: '🔞', title: 'Family words or unfiltered',
+      html: `<p><b>Family words</b> leaves rude words out, so it's good for kids. <b>Unfiltered</b> counts every word in the big list, rude ones included, and needs the adult PIN. A room on the unfiltered list gets a lobby password so kids can't wander in.</p>
+        <div class="tut-tip">Tap <b>?</b> at the top any time to see this again.</div>`
+    }
+  ]);
+
+  // ---- wiring -------------------------------------------------------------------------------
+  for (const b of $('modeSeg').children) b.onclick = () => { S.mode = b.dataset.mode; store('scuffle.mode', S.mode); paintSetup(); };
+  for (const b of $('dictSeg').children) b.onclick = () => pickDict(b.dataset.v);
+  $('goBtn').onclick = go;
+  $('joinCode').onkeydown = e => { if (e.key === 'Enter') go(); };
+  $('startBtn').onclick = async () => { if (window.ArcadeStats) ArcadeStats.play(); try { await roomPost('start'); } catch (e) { toast(e.message); } };
+  $('lobbyLeave').onclick = backToMenu;
+  $('menuBtn').onclick = backToMenu;
+  $('tiles').addEventListener('contextmenu', e => e.preventDefault());
+  $('shuffleBtn').onclick = shuffle;
+  $('clearBtn').onclick = clear;
+  $('backBtn').onclick = back;
+  $('enterBtn').onclick = enter;
+  $('doneBtn').onclick = doneEarly;
+  $('nextBtn').onclick = async () => {
+    if (S.room) { try { await roomPost('next'); } catch (e) { toast(e.message); } } else soloNext();
+  };
+  $('againBtn').onclick = async () => {
+    if (S.room) { try { await roomPost('start'); } catch (e) { toast(e.message); } return; }
+    S.mode = S.solo ? S.solo.mode : 'free';
+    go();
+  };
+  $('saveBtn').onclick = saveScore;
+  $('scoresBtn').onclick = () => openScores('day');
+  $('scoresClose').onclick = () => $('scores').classList.add('hidden');
+  $('scores').addEventListener('click', e => { if (e.target === $('scores')) $('scores').classList.add('hidden'); });
+  for (const b of $('scoreScope').children) b.onclick = () => openScores(b.dataset.scope);
+  $('helpBtn').onclick = () => help.open();
+  window.addEventListener('keydown', e => {
+    if ((e.target.closest && e.target.closest('input, textarea, select')) || help.isOpen) return;
+    if (!$('scores').classList.contains('hidden')) { if (e.key === 'Escape') $('scores').classList.add('hidden'); return; }
+    if (!playing()) return;
+    const k = e.key;
+    if (/^[a-zA-Z]$/.test(k) && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); typeLetter(k.toUpperCase()); return; }
+    if (k === 'Enter') { e.preventDefault(); enter(); return; }
+    if (k === 'Backspace') { e.preventDefault(); back(); return; }
+    if (k === 'Escape') { e.preventDefault(); clear(); return; }
+    if (k === ' ') { e.preventDefault(); shuffle(); }
+  });
+  Blip.muteButton($('muteBtn'));
+  Blip.musicButton($('musicBtn'));
+  Blip.music('scuffle');
+
+  // ---- start ---------------------------------------------------------------------------------
+  paintSetup();
+  api('/api/scuffle/config').then(c => {
+    S.config = c;
+    if (!c.rounds.includes(S.rounds)) S.rounds = c.defaultRounds;
+    if (!c.seconds.includes(S.seconds)) S.seconds = c.defaultSeconds;
+    paintSetup();
+  }).catch(e => toast(e.message));
+  const joinParam = new URLSearchParams(location.search).get('join');
+  if (joinParam) { S.mode = 'join'; $('joinCode').value = joinParam.toUpperCase().slice(0, 4); paintSetup(); }
+  try {
+    const saved = JSON.parse(sessionStorage.getItem('scuffle.room') || 'null');
+    if (saved && saved.code) { S.room = saved; connect(); }
+  } catch { /* nothing saved */ }
+  help.autoOpen();
+})();

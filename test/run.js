@@ -18,7 +18,8 @@ const ROOT = path.join(__dirname, '..');
 const SUITES = [
   ['unit', require('./unit.test.js')],
   ['api', require('./api.test.js')],
-  ['sudoku', require('./sudoku.test.js')]
+  ['sudoku', require('./sudoku.test.js')],
+  ['scuffle', require('./scuffle.test.js')]
 ];
 
 // A throwaway brand/ and media/ folder, so the tests can check what the
@@ -56,7 +57,9 @@ function startServer(port = PORT, extraEnv = {}) {
         CLIP_SURPRISE: '0',
         // Sudoku turns away a finish faster than this per square; the real
         // rule (400) would make the tests wait half a minute per puzzle.
-        SUDOKU_MIN_MS_PER_SQUARE: '20'
+        SUDOKU_MIN_MS_PER_SQUARE: '20',
+        // Lets the Shuffle Scuffle tests ask for 2-second rounds.
+        SCUFFLE_TEST_SECONDS: '2'
       },
       stdio: ['ignore', 'pipe', 'pipe']
     });

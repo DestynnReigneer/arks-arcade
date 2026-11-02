@@ -189,6 +189,37 @@ Everything is under `/api/sudoku`. A grid is 81 characters, row by row, with `0`
 | `POST /run/:id/save` `{ initials?, profileToken? }` | Puts a finished time on the boards. Returns today's and all-time rank. |
 | `GET /board?level=&scope=day\|all&day=` | The fastest times, quickest first. |
 
+### Shuffle Scuffle (`/scuffle.html`)
+
+A word race. Everyone gets the same 6 or 7 letters, mixed up, and races to find the word they spell (the **full word**). Every smaller word you can make from the letters, 3 letters or more, scores too, so there's always something to find while you hunt for the big one. A round lasts 60, 75 or 90 seconds, and a game is several rounds, starting with six letters and moving up to seven.
+
+- **Points by length:** 10 for 3 letters, 20 for 4, 35 for 5, 60 for 6 and 90 for 7, plus 100 for the full word. Any word that uses every letter counts as the full word (LISTEN and SILENT both do). In a room, the first person to find it gets 50 more.
+- **Daily:** four rounds of 75 seconds, with letters made from the date alone, so everyone gets the same ones that day. The first go of the day can go on the daily high-score board (today and all time). The full words are always everyday words on the kids list; the word list you pick only decides which smaller words count, and each row on the board says which list it was played with. A profile gets one daily a day.
+- **Free play:** new letters every game, 3, 5 or 7 rounds, any round length. These scores don't go on a board.
+- **Rooms, a phone each:** the host gets a four-letter code (and a QR code), picks the rounds, the time and the word list, and everyone races on the same letters at once. Each phone sees how many words the others have found and a star when someone gets the full word, but not their words until the round ends. Latecomers can join mid-game, and rooms show on the Join a game board.
+- **Family words or unfiltered:** the family list is the kids dictionary (`words/blocklist-kids.txt` keeps rude words out). Unfiltered is the full list and follows the arcade's adult rules: the adult PIN (or an ARKS ID adult pass) to play it, and a lobby password the host makes up for a room. Guests get in with the password, never the PIN. Unfiltered rounds sometimes hide a cheeky word from `words/spice-adult.txt`.
+- **The server decides everything** (`scuffle/`): it picks and mixes the letters, starts each round's clock, checks every word (in the letters, on the chosen list, not already found) and adds up every score. The page sends only the words people spell; a score or time in the request is ignored, words after the clock (plus a second and a half for the network) are refused, and a round's words are only sent once it's over.
+- **Phones first:** big letter tiles to tap, Shuffle, Back, Clear and Enter, the words you've found, and a countdown. On a keyboard you can just type. After each round you see the full word and every word you missed.
+
+#### The Shuffle Scuffle API
+
+Everything is under `/api/scuffle`. `dictionary` is `kids` or `adult` (the adult one needs the `X-Adult-Pin` header).
+
+| Call | What it does |
+|---|---|
+| `GET /config` | Today's date, the choices for rounds and seconds, the daily's shape and the points. |
+| `POST /solo` `{ mode: daily\|free, dictionary, rounds?, seconds?, profileToken? }` | Starts a game on your own. Returns a 32-hex game id. |
+| `POST /solo/:id/next` | Starts the next round; its clock starts on the server. Returns the letters. |
+| `POST /solo/:id/word` `{ word }` | Checks one word. Returns `ok`, the reason if not (`short`, `letters`, `again`, `unknown`), the points and the game. |
+| `POST /solo/:id/stop` | Ends the round early. |
+| `GET /solo/:id` | Where the game stands; after a round, its full word and every word. |
+| `POST /solo/:id/save` `{ initials?, profileToken? }` | Puts a finished daily on the board. Only the first per player per day. |
+| `GET /board?scope=day\|all&day=` | The daily high scores. |
+| `POST /rooms` `{ name, settings: { rounds, seconds, dictionary }, password? }` | Hosts a room. |
+| `POST /rooms/:code/join` `{ name, password? }` | Joins one. |
+| `POST /rooms/:code/start`, `/word`, `/done`, `/next`, `/leave`, `/settings` | Playing in a room (each with `playerId` and `token`). |
+| `GET /rooms/:code/events` | The room's live updates (server-sent events). |
+
 ### Know-It-All (`/trivia.html`)
 
 Multiple-choice trivia. Solo (high-score board), take turns on one phone, or a room where everyone answers on their own phone at the same time and faster right answers score more. Pick genres, difficulty, how many questions and how long to answer.
@@ -342,6 +373,7 @@ rambler/                   Rambler, self-contained
 
 chess/                    Two-phone chess rooms (/api/chess)
 sudoku/                   Sudoku's puzzle maker (generator.js) and its runs and boards (/api/sudoku)
+scuffle/                  Shuffle Scuffle: letters and points (game.js), solo games and the daily board (solo.js), rooms (rooms.js), /api/scuffle
 spinsolve/                Spin & Solve levels, adult banks, packs and requests (/api/spinsolve)
 trivia/                   Know-It-All questions, packs, Open Trivia DB download, rooms (/api/trivia)
 arcade/                   Arcade-wide pieces: Comm Center, adult PIN, high scores, profiles, stats and the error log, Wordless hints
@@ -356,6 +388,7 @@ public/chess.*            Chess (chess-engine.js, chess-worker.js)
 public/dino.*             Dino Dash
 public/snake*, bricks*, blocks*, towers*   Snake, Brick Breaker, Block Drop, Tower Defense (each with an -engine.js for its rules)
 public/sudoku.*           Sudoku
+public/scuffle.*          Shuffle Scuffle
 public/game-shell.*       Shared game-over panel and high scores for those four
 public/arcade-ui.css      Shared look for the newer games, with arcade-kit.js and blip.js
 public/admin.html/.js     Admin panel

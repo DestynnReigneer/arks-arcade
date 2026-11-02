@@ -1,0 +1,117 @@
+/* Shuffle Scuffle: the letter tiles, the word being spelled, the found
+   words and the end-of-round reveal. The shared look comes from
+   arcade-ui.css and look.css. */
+:root { --accent: #b6ff3b; --on-accent: #0d1a00; --gold: #ffc72c; }
+
+.mode-seg { flex-wrap: wrap; }
+.seg button { min-width: 0; }
+.join-qr { width: 150px; height: 150px; background: #fff; padding: 6px; border-radius: 10px; margin: 10px auto 2px; display: block; }
+.join-link { font-size: 11px; opacity: 0.65; word-break: break-all; }
+.people { list-style: none; padding: 0; margin: 0 0 10px; }
+.people li { padding: 9px 4px; border-bottom: 1px solid var(--border); font-size: 15px; }
+.people li .tag { font-size: 11px; color: var(--accent); margin-left: 6px; }
+.people li.offline { opacity: 0.5; }
+
+.hud { display: flex; gap: 8px; margin: 0 0 8px; }
+.hud div { flex: 1; min-width: 0; background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 6px 10px; text-align: center; }
+.hud small { display: block; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--dim); }
+.hud b { font-size: 20px; font-variant-numeric: tabular-nums; color: var(--accent); white-space: nowrap; }
+/* The last ten seconds: the clock turns orange and says so, not color alone. */
+.clock-box.low b { color: var(--danger); }
+.clock-box.low small::after { content: ' · hurry!'; color: var(--danger); }
+
+.sc-news { min-height: 22px; text-align: center; font-size: 14px; font-weight: 700; color: var(--gold); margin: 2px 0 6px; }
+
+/* The word being spelled: one box per letter. */
+.sc-guess { display: flex; justify-content: center; gap: 6px; min-height: 52px; margin: 6px 0 10px; }
+.sc-slot {
+  flex: 0 1 46px; min-width: 0; height: 52px; border-radius: 10px; border: 2px dashed var(--border);
+  display: flex; align-items: center; justify-content: center; font: 800 26px/1 var(--font); color: var(--text);
+}
+.sc-slot.on { border-style: solid; border-color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, var(--card)); }
+.sc-guess.good .sc-slot.on { border-color: var(--ok); background: color-mix(in srgb, var(--ok) 30%, var(--card)); }
+.sc-guess.bad { animation: sc-shake 0.35s; }
+.sc-guess.bad .sc-slot.on { border-color: var(--danger); }
+@keyframes sc-shake { 20%, 60% { transform: translateX(-7px); } 40%, 80% { transform: translateX(7px); } }
+
+/* The letter tiles: big, square and easy to hit with a thumb. */
+.sc-tiles { display: flex; justify-content: center; gap: 7px; margin: 0 0 12px; }
+.sc-tile {
+  flex: 0 1 58px; min-width: 0; aspect-ratio: 1; max-height: 64px; padding: 0; border-radius: 12px;
+  border: 0; background: linear-gradient(180deg, #fff6d8, #f0d98c); color: #2a1a00;
+  box-shadow: 0 4px 0 #a88a2a, 0 6px 12px rgba(0,0,0,.35);
+  font: 900 clamp(24px, 8vw, 32px)/1 var(--font); cursor: pointer; touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent; transition: transform .08s, opacity .12s;
+}
+.sc-tile:active { transform: translateY(3px); box-shadow: 0 1px 0 #a88a2a; }
+.sc-tile.used { opacity: 0.25; transform: translateY(3px); box-shadow: none; cursor: default; }
+
+.sc-keys { display: grid; grid-template-columns: 1fr 1fr 1fr 1.4fr; gap: 7px; }
+.sc-key {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-width: 0; height: 56px;
+  border-radius: 12px; border: 1px solid var(--border); background: var(--card); color: var(--text); cursor: pointer;
+  -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+}
+.sc-key span { font-size: 20px; line-height: 1; }
+.sc-key small { font-size: 11px; font-weight: 700; color: var(--muted); }
+.sc-enter { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.sc-enter small { color: var(--on-accent); }
+.keys-hint { margin-top: 10px; }
+@media (pointer: coarse) { .keys-hint { display: none; } }
+
+.sc-goal { text-align: center; font-size: 13.5px; color: var(--muted); margin: 10px 0 8px; line-height: 1.5; }
+.sc-goal b { color: var(--text); }
+.sc-goal .got { color: var(--ok); font-weight: 800; }
+
+.sc-found { list-style: none; padding: 0; margin: 0 0 12px; display: flex; flex-wrap: wrap; gap: 6px; }
+.sc-found li {
+  padding: 5px 10px; border-radius: 999px; background: var(--card); border: 1px solid var(--border);
+  font-size: 13px; font-weight: 700; letter-spacing: 1px;
+}
+.sc-found li small { color: var(--gold); font-weight: 800; margin-left: 5px; letter-spacing: 0; }
+.sc-found li.full { border-color: var(--gold); background: color-mix(in srgb, var(--gold) 18%, var(--card)); }
+.sc-found li.full::before { content: '★ '; color: var(--gold); }
+.sc-found.missed li { color: var(--muted); font-weight: 600; border-style: dashed; }
+.sc-found .empty { border: 0; background: none; color: var(--dim); font-weight: 400; letter-spacing: 0; }
+.sc-missed-title { margin-top: 6px !important; }
+
+.score-strip { list-style: none; margin: 6px 0 12px; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.score-strip li { padding: 5px 10px; border-radius: 999px; background: var(--card); border: 1px solid var(--border); font-size: 12.5px; }
+.score-strip li b { color: var(--gold); margin-left: 4px; }
+.score-strip li.me { border-color: var(--accent); }
+.score-strip li.star::before { content: '★ '; color: var(--gold); }
+.score-strip li.done::after { content: ' ✓ done'; color: var(--accent); }
+#doneBtn { width: 100%; }
+
+.sc-full { font: 900 clamp(30px, 10vw, 44px)/1.1 var(--font); letter-spacing: 4px; color: var(--gold); margin: 4px 0; word-break: break-word; }
+.final-line { font-size: 18px; font-weight: 800; color: var(--accent); margin-top: 6px; }
+.sc-standings, .sc-rounds { margin: 0; padding-left: 22px; text-align: left; }
+.sc-standings li, .sc-rounds li { padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 14.5px; }
+.sc-standings li b, .sc-rounds li b { float: right; color: var(--gold); }
+.sc-standings li small { color: var(--dim); margin-left: 6px; }
+
+#fxCanvas { position: fixed; inset: 0; pointer-events: none; z-index: 90; }
+
+@media (max-width: 380px) {
+  .sc-tiles { gap: 5px; }
+  .sc-guess { gap: 4px; }
+}
+
+/* Celebrations (fx.js): the big banner and the points that fly to the score.
+   Rambler has the same rules; these are the parts this page uses. */
+.fx-banner { position: fixed; inset: 0; z-index: 95; display: flex; align-items: center; justify-content: center; pointer-events: none; opacity: 0; transition: opacity .25s ease; padding: 20px; }
+.fx-banner.on { opacity: 1; }
+.fx-banner-inner { text-align: center; transform: scale(.7); transition: transform .4s cubic-bezier(.2, .9, .25, 1.4); }
+.fx-banner.on .fx-banner-inner { transform: scale(1); }
+.fx-title { font-family: "Orbitron", system-ui, sans-serif; font-weight: 800; font-size: clamp(30px, 11vw, 74px); line-height: 1; text-wrap: balance; }
+.fx-sub { font-weight: 700; font-size: clamp(13px, 4vw, 19px); letter-spacing: .2em; text-transform: uppercase; margin-top: 12px; color: #f5eaff; }
+.fx-banner.tone-gold .fx-title { color: #ffd23f; text-shadow: 0 0 26px rgba(255, 210, 63, .9), 0 0 70px rgba(255, 46, 196, .6), 0 4px 0 #7a4e08; animation: scStrobe .34s steps(2) infinite; }
+.fx-banner.tone-teal .fx-title { color: #00ffc2; text-shadow: 0 0 26px rgba(0, 255, 194, .85), 0 0 60px rgba(255, 46, 196, .35); }
+@keyframes scStrobe { 50% { filter: brightness(1.45); } }
+.fx-fly { position: fixed; z-index: 92; pointer-events: none; font-weight: 800; font-size: 22px; transform: translate(-50%, -50%); transition: transform .75s cubic-bezier(.3, .8, .3, 1), opacity .75s ease; }
+.fx-fly.tone-gold { color: #ffd23f; text-shadow: 0 0 16px rgba(255, 210, 63, .8); }
+.fx-fly.tone-teal { color: #00ffc2; text-shadow: 0 0 16px rgba(0, 255, 194, .8); }
+@media (prefers-reduced-motion: reduce) {
+  .fx-banner-inner { transition: none !important; }
+  .fx-title, .sc-guess.bad { animation: none !important; }
+}

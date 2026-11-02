@@ -7,6 +7,42 @@ to-do list as checkboxes (the rule is in the maintainer's global CLAUDE.md
 and `arks-internal/conventions/sessions.md`): do the checked items in the
 order they were clicked, and keep the rest pinned here.
 
+## Shuffle Scuffle (2026-11-01)
+
+The word scramble from the to-do list, built as a timed race: everyone gets the same 6 or 7
+mixed-up letters, races to find the word they spell (the full word), and scores for every
+smaller word inside it too. Several rounds a game. Its id is `scuffle` (page
+`public/scuffle.*`, server `scuffle/`, accent lime `#b6ff3b`, emoji 🔀).
+
+- **Letters** (`scuffle/game.js`): the full word comes from `words/common-10k.txt` (6 and 7
+  letters, read in file order), and must be on the kids list and have at least 8 words
+  inside it. Unfiltered rounds hide a word from `words/spice-adult.txt` about 3 times in 10.
+  Words inside the letters are found by walking Rambler's dictionary tree with letter
+  counts, so the kids list (and `blocklist-kids.txt`) decides what kids can score. Any word
+  using every letter counts as the full word. `game.js` has its own copy of the mulberry32 and
+  FNV seed code so it can be loaded without opening the database (the browser test loads it).
+- **Daily:** 4 rounds of 75 seconds (6, 6, 7, 7 letters), seeded with `scuffle|<date>` and
+  always picked from the kids list, so the letters are the same whichever list is chosen; the
+  list only changes which smaller words count, and board rows carry `dictionary`. Saved in
+  `scuffle_scores` (`UNIQUE (day, who)`); a profile gets one daily per day
+  (`scuffle_daily_plays`; reopening carries on while the game is still in memory).
+- **Scoring** is all on the server: solo games live in memory (`scuffle/solo.js`, 3 hours),
+  rooms in `scuffle/rooms.js`. Each round's clock starts on the server; words are checked
+  there (letters, list, not already found) with 1.5 seconds of grace after the clock, and
+  the round's words are only sent once it ends. Points: 10/20/35/60/90 by length, +100 for
+  the full word, +50 for the first in a room. `SCUFFLE_TEST_SECONDS` allows 2-second rounds
+  for the test suite only.
+- **Rooms:** the same four-letter codes and Join a game board as the others, up to 12
+  phones, host picks rounds, seconds and list. Latecomers can join mid-game. "I'm done" ends
+  the round early once everyone connected is done. The unfiltered list needs the adult PIN
+  or pass to host, and a lobby password to join.
+- Wired into the home card, the QR picker, admin switches and stats, feedback, Comm Center
+  posts (a new best daily score ever), its own music in `public/blip.js`, and the
+  Playwright page list plus a browser test that finds a word.
+- Not done: no "share a phone" (local) mode, since a race on one phone doesn't work well;
+  free play has no board (the letters differ every game); the host can't change settings
+  from the lobby screen yet (the API has `/rooms/:code/settings`).
+
 ## Sudoku (2026-11-01)
 
 The maintainer picked Sudoku as the next game: the classic 9x9, a daily puzzle everyone
@@ -201,8 +237,9 @@ board-name setting and adult PIN are only for copies running without it.
 
 - **Play-test on the server:** pull the new image on the server and try
   everything from #15 to #37. Fix what turns up.
-- **Start a new game:** a crossword, a word scramble, or a cabinet-style game
-  (the list is in the private feedback list). Sudoku was built on 2026-11-01.
+- **Start a new game:** a crossword or a cabinet-style game (the list is in the
+  private feedback list). Sudoku and Shuffle Scuffle (the word scramble) were built on
+  2026-11-01.
 - **Achievements step 1:** waits for the maintainer's markup of the private
   plan. Then build step 1 (age groups, the feats engine, Rambler milestones
   moved over).
