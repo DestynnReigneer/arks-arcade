@@ -7,8 +7,13 @@ Notes to self, mostly.
 ```bash
 npm install
 npm start          # http://localhost:3000
-npm test           # boots a server on 3222 and runs everything
+npm test           # boots a server on a free port and runs everything
 ```
+
+Each run picks its own free ports, so two copies of the repo can run their
+tests at the same time (set `TEST_PORT` to pin one). The checks that run inside
+the test runner itself use a seeded `Math.random`, so they roll the same dice
+every time; set `TEST_SEED` to a number to try a different roll.
 
 `npm test` is the gate. CI runs exactly that, plus a Docker build whose
 healthcheck has to go green.
