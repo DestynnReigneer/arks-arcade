@@ -59,7 +59,8 @@ const SUITES = [
   ['royale', require('./royale.test.js')],
   ['moonshot', require('./moonshot.test.js')],
   ['housekeeping', require('./housekeeping.test.js')],
-  ['boards', require('./boards.test.js')]
+  ['boards', require('./boards.test.js')],
+  ['tv', require('./tv.test.js')]
 ];
 
 // A throwaway brand/ and media/ folder, so the tests can check what the
@@ -183,6 +184,11 @@ function resetTestDb() {
     const result = await require('./arksid.test.js').run({ base: ID_BASE, root: ROOT, fake, admin: 'test-admin-token' });
     total += result.pass + result.fail;
     failed += result.fail;
+    // The arcade on a TV with ARKS ID: pairing, adults' night, Back to family.
+    console.log(`\n${'='.repeat(60)}\n  tv-arksid\n${'='.repeat(60)}`);
+    const tvResult = await require('./tv-arksid.test.js').run({ base: ID_BASE, root: ROOT, fake });
+    total += tvResult.pass + tvResult.fail;
+    failed += tvResult.fail;
   } catch (e) {
     console.error('\nRUNNER FAILED:', e.message);
     failed++;

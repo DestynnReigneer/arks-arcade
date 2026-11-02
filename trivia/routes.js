@@ -23,7 +23,8 @@ function requireLevel(level, req) {
 const extrasFor = level => bank.LEVELS[level].adult ? { drinks: bank.DRINKS[level], dares: bank.DARES[level] } : { drinks: null, dares: null };
 const CREDIT = 'Some questions from Open Trivia DB (opentdb.com), licensed CC BY-SA 4.0.';
 
-module.exports = function triviaRoutes({ requireAdmin, notify }) {
+// whoIs (with ARKS ID on): who's asking -> { account, tv } or null.
+module.exports = function triviaRoutes({ requireAdmin, notify, whoIs = null }) {
   const router = express.Router();
 
   // Levels, genres per level (adult ones only once unlocked), and packs.
@@ -76,15 +77,31 @@ module.exports = function triviaRoutes({ requireAdmin, notify }) {
       const body = req.body || {};
       const settings = rooms.cleanSettings(body.settings || {});
       requireLevel(settings.level, req);
-      res.status(201).json(rooms.create({ name: body.name, settings, password: body.password }));
+      // screen: this device (a TV) shows the game and doesn't play.
+      res.status(201).json(rooms.create({ name: body.name, settings, password: body.password, screen: body.screen === true }));
     } catch (e) { next(e); }
   });
-  // Guests don't need the adult PIN: an adult game's own lobby password lets them in.
-  router.post('/rooms/:code/join', createLimiter, (req, res, next) => {
-    try { res.json(rooms.join(req.params.code, (req.body || {}).name, (req.body || {}).password)); } catch (e) { next(e); }
+  // Guests don't need the adult PIN: an adult game's own lobby password lets
+  // them in. With ARKS ID on, a phone signed in as a kid or a teen (or a TV)
+  // is turned away from an adult game whatever it types: joining a game on the
+  // TV plays as the phone's own owner, it never unlocks anything.
+  router.post('/rooms/:code/join', createLimiter, async (req, res, next) => {
+    try {
+      const r = rooms.room(req.params.code);
+      if (bank.LEVELS[r.settings.level].adult && whoIs) {
+        let me = null;
+        try { me = await whoIs(req); } catch { me = null; }
+        if (me && (me.tv || !['admin', 'adult'].includes(me.account.role))) throw fail('This is a grown-ups game, so it\'s only for grown-ups\' accounts.', 403);
+      }
+      res.json(rooms.join(req.params.code, (req.body || {}).name, (req.body || {}).password));
+    } catch (e) { next(e); }
   });
+  // Taking turns: another player on this device, or taking one off again.
+  router.post('/rooms/:code/seats', (req, res, next) => { try { res.status(201).json(rooms.addSeat(...creds(req), (req.body || {}).name)); } catch (e) { next(e); } });
+  router.post('/rooms/:code/seats/remove', (req, res, next) => { try { rooms.removeSeat(...creds(req), (req.body || {}).seat); res.json({ ok: true }); } catch (e) { next(e); } });
+  router.post('/rooms/:code/ready', (req, res, next) => { try { rooms.ready(...creds(req)); res.json({ ok: true }); } catch (e) { next(e); } });
   router.post('/rooms/:code/start', (req, res, next) => { try { rooms.start(...creds(req)); res.json({ ok: true }); } catch (e) { next(e); } });
-  router.post('/rooms/:code/answer', (req, res, next) => { try { rooms.answer(...creds(req), (req.body || {}).choice); res.json({ ok: true }); } catch (e) { next(e); } });
+  router.post('/rooms/:code/answer', (req, res, next) => { try { rooms.answer(...creds(req), (req.body || {}).choice, (req.body || {}).seat); res.json({ ok: true }); } catch (e) { next(e); } });
   router.post('/rooms/:code/next', (req, res, next) => { try { rooms.next(...creds(req)); res.json({ ok: true }); } catch (e) { next(e); } });
   router.post('/rooms/:code/leave', (req, res, next) => { try { rooms.leave(...creds(req)); res.json({ ok: true }); } catch (e) { next(e); } });
   router.get('/rooms/:code', (req, res, next) => {

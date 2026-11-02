@@ -22,6 +22,9 @@
 //     whichever app the person opens next.
 //   - Feedback goes to ARKS ID's one inbox instead of the Comm Center's, and
 //     "My feedback" comes from there (see comm.js).
+//   - A TV signs in with a pairing code a grown-up approves on their phone
+//     (contract v14, arcade/tv.js). Its account has the kid role, and it counts
+//     as a grown-up only while its adults' night is on.
 //   - A photo or team picture someone picked on ARKS ID shows here too. The
 //     arcade's server fetches it from ARKS ID and serves it from the arcade
 //     itself (/api/arksid/photo/<profile>), so the browser only ever talks to
@@ -142,6 +145,24 @@ function createClient(s = settings(), fetchImpl = fetch) {
       const res = await call('/api/app' + path, init);
       return { status: res.status, data: await res.json().catch(() => ({})) };
     },
+    // TVs (its contract v14): the pairing code sign-in and adults' night.
+    // The pollToken only ever lives on this server.
+    async tvPair() {
+      const res = await post('/api/tv/pair', {});
+      if (!res.ok) throw new Error(`ARKS ID answered ${res.status}`);
+      return res.json();
+    },
+    async tvPoll(pollToken) {
+      const res = await post('/api/tv/pair/poll', { pollToken });
+      if (!res.ok) throw new Error(`ARKS ID answered ${res.status}`);
+      return res.json();
+    },
+    // /api/tv/unlock, /api/app/tv/activity and /api/app/tv/lock, all with the
+    // TV's session -> { status, data }. Throws when ARKS ID can't be reached.
+    async tvCall(path, session) {
+      const res = await post(path, { session });
+      return { status: res.status, data: await res.json().catch(() => ({})) };
+    },
     // A photo or team picture, fetched by the arcade's server. Only ARKS ID's
     // own /avatars/ addresses, and only real pictures -> { type, body } or null.
     async photo(image) {
@@ -163,7 +184,7 @@ function cleanUser(u) {
   if (!name || !ROLES.includes(u.role)) return null;
   const board = String(u.boardName || '').trim();
   return {
-    id: u.id, name, role: u.role, initials: /^[A-Z]{1,3}$/.test(board) && board !== name.toUpperCase() ? board : null,
+    id: u.id, name, role: u.role, kind: u.kind === 'tv' ? 'tv' : 'person', initials: /^[A-Z]{1,3}$/.test(board) && board !== name.toUpperCase() ? board : null,
     // The avatar comes from the account too (contract v7): the character they
     // picked there, or their icon in their color. null: leave the profile's own.
     avatar: u.avatar && typeof u.avatar === 'object' ? Avatars.fromAccount(u.avatar) : null,
@@ -205,6 +226,8 @@ db.db.exec(`
   if (!cols.includes('arksid_user')) db.db.exec('ALTER TABLE arcade_profiles ADD COLUMN arksid_user TEXT');
   const acols = db.db.prepare('PRAGMA table_info(arcade_id_accounts)').all().map(c => c.name);
   if (!acols.includes('image')) db.db.exec('ALTER TABLE arcade_id_accounts ADD COLUMN image TEXT');
+  // 'tv' for a TV's own account (contract v14), 'person' for everyone else.
+  if (!acols.includes('kind')) db.db.exec("ALTER TABLE arcade_id_accounts ADD COLUMN kind TEXT NOT NULL DEFAULT 'person'");
 }
 
 function createArksId({ client, now = Date.now, profiles }) {
@@ -223,9 +246,9 @@ function createArksId({ client, now = Date.now, profiles }) {
     const t = now();
     // A picture the arcade would never fetch (another site, an odd path) counts as none.
     const image = user.avatar && user.image && client && photoPath(user.image, client.url) ? user.image : null;
-    db.db.prepare(`INSERT INTO arcade_id_accounts (user_id, name, role, seen_at, image) VALUES (?, ?, ?, ?, ?)
-      ON CONFLICT (user_id) DO UPDATE SET name = excluded.name, role = excluded.role, seen_at = excluded.seen_at, image = excluded.image`)
-      .run(user.id, user.name, user.role, t, image);
+    db.db.prepare(`INSERT INTO arcade_id_accounts (user_id, name, role, seen_at, image, kind) VALUES (?, ?, ?, ?, ?, ?)
+      ON CONFLICT (user_id) DO UPDATE SET name = excluded.name, role = excluded.role, seen_at = excluded.seen_at, image = excluded.image, kind = excluded.kind`)
+      .run(user.id, user.name, user.role, t, image, user.kind || 'person');
     let p = db.db.prepare('SELECT * FROM arcade_profiles WHERE arksid_user = ?').get(user.id);
     if (!p) {
       // First sign-in: the approved profile with the same name that isn't
@@ -250,10 +273,35 @@ function createArksId({ client, now = Date.now, profiles }) {
     return p;
   }
 
+  // ---- Adults' night on a TV (contract v14) ----
+  // A TV's account always has the kid role. While ARKS ID says its session
+  // has adultMode set, the TV counts as a grown-up for adult levels. It's
+  // kept in memory only, from the latest session check, so restarting the
+  // arcade or losing touch with ARKS ID means family mode, the safe direction.
+  const tvAdult = new Map();   // TV account id -> { until, since, by }
+  function cleanAdultMode(m) {
+    if (!m || typeof m !== 'object' || !(Number(m.until) > now())) return null;
+    const by = m.by && typeof m.by === 'object' ? String(m.by.name || '').replace(/[\u0000-\u001f\u007f]+/g, ' ').trim().slice(0, 20) : '';
+    return { until: Number(m.until), since: Number(m.since) || now(), by: by ? { name: by } : null };
+  }
+  function noteAdultMode(userId, m) {
+    const clean = cleanAdultMode(m);
+    if (clean) tvAdult.set(userId, clean); else tvAdult.delete(userId);
+    return clean;
+  }
+  function adultModeOf(userId) {
+    const m = tvAdult.get(userId);
+    if (m && m.until > now()) return m;
+    tvAdult.delete(userId);
+    return null;
+  }
+
   function start(traded) {
     const user = cleanUser(traded && traded.user);
     if (!user || typeof traded.sessionId !== 'string' || !/^s_[A-Za-z0-9]{1,64}$/.test(traded.sessionId)) return null;
     remember(user);
+    // A TV starts in family mode unless ARKS ID says otherwise.
+    if (user.kind === 'tv') noteAdultMode(user.id, traded.adultMode);
     const token = crypto.randomBytes(32).toString('base64url');
     db.db.prepare('DELETE FROM arcade_signins WHERE expires_at < ?').run(now() - DEVICE_MS);
     db.db.prepare('INSERT INTO arcade_signins (token_hash, session_id, user_id, expires_at, checked_at, used_at) VALUES (?, ?, ?, ?, ?, ?)')
@@ -265,7 +313,9 @@ function createArksId({ client, now = Date.now, profiles }) {
   // Checks with ARKS ID every few minutes, so a sign-out, rename or role
   // change there reaches the arcade quickly. If ARKS ID can't be reached, a
   // sign-in keeps working until it would have ended anyway.
-  async function current(req, { fresh = false } = {}) {
+  // within: how old the last check may be, in milliseconds (a TV showing an
+  // unlock code asks every couple of seconds).
+  async function current(req, { fresh = false, within = CHECK_MS } = {}) {
     const token = readCookie(req, COOKIE);
     if (!token || token.length > 100) return null;
     const row = db.db.prepare('SELECT * FROM arcade_signins WHERE token_hash = ?').get(hash(token));
@@ -273,14 +323,17 @@ function createArksId({ client, now = Date.now, profiles }) {
     db.db.prepare('UPDATE arcade_signins SET used_at = ? WHERE token_hash = ?').run(now(), row.token_hash);
     // fresh: the person just changed something on their ARKS ID account page,
     // so ask now instead of waiting for the next check (at most every 5 seconds).
-    const due = now() - row.checked_at > CHECK_MS || (fresh && now() - row.checked_at > 5000);
+    const due = now() - row.checked_at > Math.min(within, CHECK_MS) || (fresh && now() - row.checked_at > 5000);
     if (client && (due || now() >= row.expires_at)) {
       let s = null;
       try { s = await client.session(row.session_id, true); } catch { /* unreachable */ }
       const user = s && s.valid ? cleanUser(s.user) : null;
-      if (s && (!s.valid || !user || user.id !== row.user_id)) { end(token); return null; }
+      if (s && (!s.valid || !user || user.id !== row.user_id)) { tvAdult.delete(row.user_id); end(token); return null; }
+      // Losing touch with ARKS ID puts a TV back in family mode.
+      if (!s) tvAdult.delete(row.user_id);
       if (user) {
         remember(user);
+        if (user.kind === 'tv') noteAdultMode(user.id, s.adultMode);
         row.expires_at = Number(s.expiresAt) || row.expires_at;
         db.db.prepare('UPDATE arcade_signins SET expires_at = ?, checked_at = ? WHERE token_hash = ?').run(row.expires_at, now(), row.token_hash);
       }
@@ -289,7 +342,8 @@ function createArksId({ client, now = Date.now, profiles }) {
     const account = db.db.prepare('SELECT * FROM arcade_id_accounts WHERE user_id = ?').get(row.user_id);
     const profile = db.db.prepare("SELECT * FROM arcade_profiles WHERE arksid_user = ? AND status = 'approved'").get(row.user_id);
     if (!account || !profile) { end(token); return null; }
-    return { account, profile, sessionId: row.session_id };
+    const tv = account.kind === 'tv';
+    return { account, profile, sessionId: row.session_id, tv, adultMode: tv ? adultModeOf(account.user_id) : null };
   }
   function end(token) {
     if (token) db.db.prepare('DELETE FROM arcade_signins WHERE token_hash = ?').run(hash(token));
@@ -306,9 +360,12 @@ function createArksId({ client, now = Date.now, profiles }) {
   function passOk(pass) {
     const m = /^(ap\.([0-9a-f]{16})\.(\d{10,16}))\.([A-Za-z0-9_-]{43})$/.exec(String(pass || ''));
     if (!m || Number(m[3]) < now() || !sameSig(m[4], sign(m[1]))) return false;
-    const row = db.db.prepare(`SELECT a.role FROM arcade_profiles p JOIN arcade_id_accounts a ON a.user_id = p.arksid_user
+    const row = db.db.prepare(`SELECT a.role, a.kind, a.user_id FROM arcade_profiles p JOIN arcade_id_accounts a ON a.user_id = p.arksid_user
       WHERE p.id = ? AND p.status = 'approved'`).get(m[2]);
-    return !!row && GROWN_UP.includes(row.role);
+    if (!row) return false;
+    // A TV's pass works only while its adults' night is on.
+    if (row.kind === 'tv') return !!adultModeOf(row.user_id);
+    return GROWN_UP.includes(row.role);
   }
 
   // ---- Whose device is this? (for guest play) ----
@@ -325,6 +382,8 @@ function createArksId({ client, now = Date.now, profiles }) {
 
   // ---- Routes ----
   const cookieOpts = (req, extra) => ({ httpOnly: true, sameSite: 'lax', secure: req.secure, path: '/', ...extra });
+  // The sign-in cookie's name and options, for the TV's pairing (arcade/tv.js).
+  const signinCookie = req => [COOKIE, cookieOpts(req, { maxAge: COOKIE_MS })];
   // A path on this site to come back to; anything else becomes the home page.
   const cleanReturn = v => {
     const s = String(v || '/');
@@ -411,6 +470,8 @@ function createArksId({ client, now = Date.now, profiles }) {
       if (me) {
         const p = profiles.pub(me.profile);
         Object.assign(out, { profile: p, token: profiles.tokenFor(me.profile), role: me.account.role, adult: GROWN_UP.includes(me.account.role) });
+        // A TV (contract v14) counts as a grown-up only during adults' night.
+        if (me.tv) Object.assign(out, { tv: true, adult: !!me.adultMode, adultMode: me.adultMode });
       }
       res.json(out);
     });
@@ -446,13 +507,14 @@ function createArksId({ client, now = Date.now, profiles }) {
       res.set('Cache-Control', 'no-store');
       const me = client ? await current(req) : null;
       if (!me) return res.status(401).json({ error: 'Sign in with ARKS ID first.' });
-      if (!GROWN_UP.includes(me.account.role)) return res.status(403).json({ error: 'Adult levels are for grown-ups\' ARKS ID accounts.' });
+      if (me.tv && !me.adultMode) return res.status(403).json({ error: 'Adult levels on the TV need an adults\' night, unlocked from a grown-up\'s phone.' });
+      if (!me.tv && !GROWN_UP.includes(me.account.role)) return res.status(403).json({ error: 'Adult levels are for grown-ups\' ARKS ID accounts.' });
       res.json({ pass: passFor(me.profile) });
     });
     return router;
   }
 
-  return { routes, current, remember, start, end, passOk, passFor, deviceFrom, client };
+  return { routes, current, remember, start, end, passOk, passFor, deviceFrom, client, noteAdultMode, adultModeOf, signinCookie };
 }
 
 module.exports = { settings, problem, createClient, createArksId, cleanUser, photoPath, photoAvatar, isPhotoAvatar, COOKIE, DEVICE_COOKIE, GROWN_UP };

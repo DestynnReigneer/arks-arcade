@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-tv-nav>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -347,6 +347,10 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@800&family=Rajdhani:wght@700&display=swap">
 <link rel="stylesheet" href="look.css">
 <link rel="stylesheet" href="topbar.css">
+<link rel="stylesheet" href="tv.css">
+<!-- On a TV: the TV layout, the remote's arrows, and setting the TV up (tv.js). -->
+<script src="tv-core.js"></script>
+<script src="tv.js"></script>
 </head>
 <body>
 
@@ -418,6 +422,7 @@
   <div class="sprite-row" id="spriteRow"></div>
 </section>
 
+<h2 class="tv-only tv-title">Pick a game with the arrows, then press OK</h2>
 <div class="games">
   <a class="game wordless" href="wordless.html">
     <div class="emoji">🔤</div>
@@ -538,11 +543,12 @@
     <div class="meta">2-4 players · Word tiles · Take your time</div>
   </a>
 
-  <a class="game trivia" href="trivia.html">
+  <a class="game trivia" href="trivia.html" data-tv-start>
     <div class="emoji">🧠</div>
     <h2>Know-It-All</h2>
     <p>Trivia on everything: movies, science, sports, games. Play solo, take turns on one phone, or race on everyone's phones. Grown-ups can turn up the heat.</p>
     <div class="meta">1–12 players · Quiz · Family to 🌶️🌶️🌶️</div>
+    <span class="tv-only tv-badge">📺 Made for the TV: play on your phones, pass one around, or use the remote</span>
   </a>
 
   <a class="game partdeux" href="partdeux.html">

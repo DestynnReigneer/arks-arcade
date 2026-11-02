@@ -117,7 +117,9 @@ function nameTaken(name, exceptId = null) {
 
 module.exports = function profileRoutes({ requireAdmin, notify }) {
   const router = express.Router();
-  const askLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 6, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many profile requests. Try again later.' } });
+  // Six new profiles an hour from one address. The test suites make more than
+  // that, so only under NODE_ENV=test (never in production) the limit is higher.
+  const askLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: process.env.NODE_ENV === 'test' ? 60 : 6, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many profile requests. Try again later.' } });
   // The device lock: only wrong PINs (401) count, so switching profiles a lot
   // at a party never blocks anyone.
   const pinLimiter = rateLimit({

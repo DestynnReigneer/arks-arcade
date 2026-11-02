@@ -1,0 +1,140 @@
+/* The arcade on a TV (public/tv.js puts .tv on <html>). Everything here is
+   under html.tv, so a phone or a computer never sees it.
+
+   Made for a 1920 by 1080 TV seen from the couch: the whole page is drawn
+   half as big again, it stays inside the "safe area" (some TVs cut off the
+   outer edge of the picture, so nothing important sits in the outer 5%),
+   nothing needs a mouse to hover over it, and the button the remote is on
+   always wears a thick turquoise ring. */
+
+html.tv {
+  --tv-ring: #00ffc2;
+  --tv-hot: #ff2ec4;
+  --tv-gold: #ffc72c;
+}
+html.tv body {
+  zoom: 1.5;
+  max-width: 1140px;
+  padding: 36px 64px 96px;
+  margin-inline: auto;
+}
+
+/* The highlight: impossible to miss from across the room. */
+html.tv :focus,
+html.tv :focus-visible {
+  outline: 4px solid var(--tv-ring) !important;
+  outline-offset: 3px !important;
+  box-shadow: 0 0 0 7px rgba(0, 255, 194, 0.25), 0 0 26px rgba(0, 255, 194, 0.55) !important;
+  border-radius: 12px;
+  position: relative;
+  z-index: 2;
+}
+
+/* Nothing that only works with a mouse, and no corners that need one. */
+html.tv .fb-root,
+html.tv .ah-lock,
+html.tv .tv-hide,
+html.tv .no-tv { display: none !important; }
+html.tv .tv-only { display: revert; }
+.tv-only { display: none; }
+
+/* The top bar sits inside the safe area too. */
+html.tv .ah.ah-fixed { top: 24px; width: min(1100px, calc(100vw - 128px)); }
+
+/* ---- the home page ------------------------------------------------------------------- */
+html.tv .marquee,
+html.tv .lobby,
+html.tv .comm,
+html.tv #chin,
+html.tv .wall,
+html.tv .sprite-row,
+html.tv #playerChip { display: none !important; }
+html.tv .tv-title { margin: 8px 0 0; font-size: 26px; letter-spacing: 2px; text-align: center; color: var(--muted); }
+html.tv .games {
+  max-width: none;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  margin-top: 18px;
+}
+html.tv .game { padding: 22px 22px 20px; }
+html.tv .game h2 { font-size: 24px; }
+html.tv .game p { font-size: 15px; }
+html.tv .game:hover { transform: none; }
+html.tv .game.trivia { order: -1; grid-column: span 2; border-color: color-mix(in srgb, #2de2e6 55%, var(--border)); }
+html.tv .game.trivia h2 { font-size: 30px; }
+html.tv .tv-badge {
+  display: inline-block; margin-top: 10px; padding: 4px 12px; border-radius: 999px; font-size: 13px; font-weight: 800;
+  background: #2de2e6; color: #06171a;
+}
+
+/* ---- the bar along the bottom: this TV, and adults' night --------------------------------- */
+#tvBar {
+  position: fixed; left: 50%; bottom: 30px; transform: translateX(-50%); z-index: 2147483200;
+  display: flex; align-items: center; gap: 14px; padding: 8px 10px 8px 18px; border-radius: 999px;
+  background: rgba(10, 4, 22, 0.88); border: 1px solid rgba(245, 234, 255, 0.18); color: #f5eaff;
+  font: 700 15px/1.2 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; white-space: nowrap;
+}
+#tvBar[hidden] { display: none; }
+#tvBar.adult { border: 2px solid var(--tv-hot); box-shadow: 0 0 22px rgba(255, 46, 196, 0.45); }
+#tvBar .tv-sign { color: #ffd1f2; }
+
+/* ---- the full-screen cards: setting the TV up, and adults' night -------------------------- */
+.tv-overlay {
+  position: fixed; inset: 0; z-index: 2147483300; display: flex; align-items: center; justify-content: center;
+  padding: 40px 64px; background: rgba(10, 4, 22, 0.94); overflow-y: auto;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #f5eaff;
+}
+.tv-card {
+  width: 100%; max-width: 900px; padding: 30px 36px; border-radius: 22px; text-align: center;
+  background: #22103f; border: 2px solid #8a3ffc; box-shadow: 0 0 40px rgba(138, 63, 252, 0.35);
+}
+.tv-unlock .tv-card { border-color: var(--tv-hot, #ff2ec4); box-shadow: 0 0 40px rgba(255, 46, 196, 0.35); }
+.tv-card h2 { margin: 0 0 8px; font-size: 34px; letter-spacing: 1px; }
+.tv-line { margin: 0 auto 18px; max-width: 680px; font-size: 18px; line-height: 1.5; color: #c9a8dd; }
+.tv-code-row { display: flex; align-items: center; justify-content: center; gap: 36px; flex-wrap: wrap; }
+.tv-qr { width: 260px; height: 260px; background: #fff; padding: 10px; border-radius: 16px; }
+.tv-code-side { max-width: 380px; text-align: left; }
+.tv-code { font: 900 64px/1 'Orbitron', ui-monospace, Consolas, monospace; letter-spacing: 8px; color: #00ffc2; white-space: nowrap; }
+.tv-type { font-size: 16px; line-height: 1.5; color: #c9a8dd; }
+.tv-status { margin: 18px 0 6px; font-size: 17px; color: #ffc72c; min-height: 22px; }
+.tv-btns { display: flex; gap: 12px; justify-content: center; }
+.tv-btn {
+  padding: 12px 22px; border-radius: 12px; border: 2px solid rgba(245, 234, 255, 0.25); background: #2c1350; color: #f5eaff;
+  font: 800 17px/1 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; cursor: pointer;
+}
+.tv-btn.small { padding: 9px 16px; font-size: 15px; border-radius: 999px; }
+#tvBar.adult .tv-btn { background: var(--tv-hot); border-color: var(--tv-hot); color: #1a0626; }
+.tv-toast {
+  position: fixed; left: 50%; top: 40px; transform: translateX(-50%); z-index: 2147483400; padding: 14px 24px; border-radius: 14px;
+  background: #2c1350; border: 2px solid #00ffc2; color: #f5eaff; font: 800 20px/1.3 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* ---- Know-It-All on the TV -------------------------------------------------------------------- */
+html.tv .levels { grid-template-columns: repeat(4, 1fr); }
+html.tv .level .l-name { font-size: 16px; }
+html.tv .level .l-blurb { font-size: 12.5px; }
+html.tv .chips button { font-size: 14px; padding: 8px 13px; }
+html.tv .hint, html.tv label { font-size: 14px; }
+html.tv #modeSeg { flex-wrap: wrap; }
+html.tv #modeSeg button { font-size: 15px; padding: 12px 10px; }
+html.tv #lobby:not(.hidden) { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
+html.tv #lobby .code { font-size: 72px; letter-spacing: 12px; }
+html.tv #joinQr { width: 240px !important; height: 240px !important; }
+html.tv #joinLink { font-size: 14px !important; }
+html.tv .people li { font-size: 19px; }
+html.tv .q-top { font-size: 15px; }
+html.tv .tag { font-size: 13px; }
+html.tv .turn-banner { font-size: 30px; margin-top: 14px; }
+html.tv .q-card { min-height: 170px; padding: 28px 30px; }
+html.tv .q-text { font-size: 32px; }
+html.tv .answers { grid-template-columns: 1fr 1fr; gap: 12px; }
+html.tv .answers button { font-size: 22px; padding: 18px; }
+html.tv .answers button .k { width: 38px; height: 38px; font-size: 17px; }
+html.tv .answers button .who { font-size: 14px; }
+html.tv .status-line { font-size: 20px; }
+html.tv .score-strip li { font-size: 17px; padding: 7px 14px; }
+html.tv .ready-box { text-align: center; padding: 26px 0 10px; }
+html.tv .ready-box h2 { font-size: 30px; }
+html.tv .final li { font-size: 22px; }
+html.tv .callout-card h2 { font-size: 30px; }
+html.tv .overlay .card-panel { max-width: 640px; }

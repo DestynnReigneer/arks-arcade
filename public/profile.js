@@ -36,6 +36,17 @@ const ArcadeProfile = (() => {
   // a signed-in person gets their linked profile and its token, and guest
   // play is only offered on a device no family member owns.
   const Id = { on: false, me: null };
+  // On a TV (the ARKS TV app, or ?tv=1 to try it), nobody signs in as a
+  // person: the TV sets itself up with a pairing code instead (tv.js). So no
+  // quick stops at ARKS ID, and no "Who's playing?" picker.
+  const onTv = (() => {
+    if (/(^|\s)ARKS-TV\//.test(navigator.userAgent)) return true;
+    try {
+      const q = new URLSearchParams(location.search).get('tv');
+      return q === '1' || (q !== '0' && sessionStorage.getItem('arcade.tv') === '1');
+    } catch { return false; }
+  })();
+  Id.tv = onTv;
   Id.ready = fetch('/api/arksid/me', { cache: 'no-store' }).then(r => (r.ok ? r.json() : { on: false })).catch(() => ({ on: false })).then(me => {
     Id.on = !!me.on; Id.me = me;
     if (!Id.on) return Id;
@@ -45,6 +56,7 @@ const ArcadeProfile = (() => {
         boardShow: me.profile.boardShow, initials: me.profile.initials, arksid: true, role: me.role, adult: me.adult });
     } else {
       if (cur && (!cur.guest || (me.deviceChecked && !me.guestAllowed))) set(null);
+      if (onTv) return Id;
       // At most once an hour: a quiet stop at ARKS ID (silent sign-in). If this
       // device is signed in there, say from the family's other app, it comes
       // back signed in here too, with no tap. If not, it comes straight back.
@@ -239,7 +251,7 @@ const ArcadeProfile = (() => {
   // signing in isn't asked again.
   function askIfNobody({ always = false, delay = 0 } = {}) {
     return Id.ready.then(() => {
-      if (Id.leaving || get() || (!always && !Id.on)) return;
+      if (Id.leaving || Id.tv || get() || (!always && !Id.on)) return;
       setTimeout(() => { if (!get() && !Id.leaving) open(); }, delay);
     });
   }
