@@ -4,6 +4,9 @@
 // memory like the other games' rooms:
 //   - local: one phone passed around; one token speaks for every seat.
 //   - room: everyone on their own phone, a four-letter code, live updates.
+//     A phone in a room can hold more players (seats) and be passed around
+//     between them, and a room can be hosted by a screen (a TV): it shows the
+//     table to everyone and starts the game, but it isn't a player itself.
 // Adult levels get a lobby password the host makes up. Each game supplies
 // its own engine; this handles the seats, codes, passwords and sockets.
 //
@@ -98,34 +101,67 @@ function makeTables({ engine, act, levels, minPlayers = 2, maxPlayers = 8, clean
     return t;
   }
 
+  // A device in the room: a player with a phone of their own, or the screen.
+  // Seats (more players on one phone) have no token, so they never sign in.
+  const member = (t, id) => t.players.get(id) || (t.screen && t.screen.id === id ? t.screen : null);
   function authenticate(t, playerId, token) {
-    const p = t.players.get(String(playerId || ''));
-    if (!p || p.token !== token) throw fail('You are not in this game.', 403);
+    const p = member(t, String(playerId || ''));
+    if (!p || !p.token || p.token !== token) throw fail('You are not in this game.', 403);
     return p;
   }
+  // The players a device plays for: itself (unless it's the screen) and its seats.
+  const controlled = (t, device) => [...t.players.values()].filter(p => p.id === device.id || p.owner === device.id).map(p => p.id);
 
-  function addPlayer(t, name) {
+  function addPlayer(t, name, owner = null) {
     const used = new Set([...t.players.values()].map(p => p.name.toLowerCase()));
     const base = cleanName(name, `Player ${t.players.size + 1}`);
     let n = base;
     for (let i = 2; used.has(n.toLowerCase()); i++) n = `${base} ${i}`;
-    const p = { id: makeId(), token: makeToken(), name: n, clients: 0 };
+    const p = { id: makeId(), token: owner ? null : makeToken(), name: n, clients: 0, owner };
     t.players.set(p.id, p);
     return p;
   }
 
-  function createRoom({ name, level, drinking, password, options }) {
+  // screen: this device (a TV) hosts and shows the game, and doesn't play.
+  function createRoom({ name, level, drinking, password, options, screen = false }) {
     roomForMore();
     const lv = levelOf(level);
     const t = {
       id: makeCode(), kind: 'room', level: lv, drinking: !!drinking && isAdult(lv), options: cleanOptions(options || {}),
       password: isAdult(lv) ? roomPassword.requireNew(password) : null,
-      players: new Map(), hostId: null, game: null, clients: new Set(), lastActivity: Date.now()
+      players: new Map(), hostId: null, screen: null, game: null, clients: new Set(), lastActivity: Date.now()
     };
     tables.set(t.id, t);
+    if (screen) {
+      t.screen = { id: makeId(), token: makeToken(), name: cleanName(name, 'TV'), clients: 0, screen: true };
+      t.hostId = t.screen.id;
+      return { table: t, player: t.screen };
+    }
     const host = addPlayer(t, name || 'Host');
     t.hostId = host.id;
     return { table: t, player: host };
+  }
+
+  // Another player on this phone, to pass it around; or taking one off again.
+  function addSeat(code, playerId, token, name) {
+    const t = room(code);
+    const device = authenticate(t, playerId, token);
+    if (device.screen) throw fail('Players join from their phones.', 400);
+    if (t.game && t.game.phase !== 'over') throw fail('That game has already started. Wait for the next one.', 409);
+    if (t.players.size >= maxPlayers) throw fail(`That game is full (${maxPlayers} players).`, 409);
+    const seat = addPlayer(t, name, device.id);
+    touch(t);
+    return { seatId: seat.id, name: seat.name };
+  }
+
+  function removeSeat(code, playerId, token, seatId) {
+    const t = room(code);
+    const device = authenticate(t, playerId, token);
+    const seat = t.players.get(String(seatId || ''));
+    if (!seat || seat.owner !== device.id) throw fail('That player isn\'t on this phone.', 403);
+    if (t.game && t.game.phase !== 'over') throw fail('That game has already started.', 409);
+    t.players.delete(seat.id);
+    touch(t);
   }
 
   function joinRoom(code, name, password) {
@@ -159,37 +195,66 @@ function makeTables({ engine, act, levels, minPlayers = 2, maxPlayers = 8, clean
     const p = authenticate(t, playerId, token);
     if (p.id !== t.hostId) throw fail('Only the host can start.', 403);
     if (t.game && t.game.phase !== 'over') throw fail('Already playing.', 409);
-    if (t.players.size < minPlayers) throw fail('Wait for at least one more player.', 409);
+    if (t.players.size < minPlayers) throw fail(t.players.size ? 'Wait for at least one more player.' : 'Nobody has joined yet.', 409);
     t.game = newGame([...t.players.values()].map(x => ({ id: x.id, name: x.name })), t);
     touch(t);
   }
 
+  // body.as: which of this phone's players makes the move (its own by default).
   function actRoom(code, playerId, token, body) {
     const t = room(code);
-    const p = authenticate(t, playerId, token);
+    const device = authenticate(t, playerId, token);
     if (!t.game) throw fail('The game hasn\'t started.', 409);
-    act(t.game, p.id, body);
+    const actor = body.as ? String(body.as) : device.screen ? null : device.id;
+    if (!actor || !controlled(t, device).includes(actor)) throw fail('You can only play for the players on your phone.', 403);
+    act(t.game, actor, body);
     touch(t);
-    return roomSnapshot(t, p.id);
+    return roomSnapshot(t, device.id);
   }
 
   function leaveRoom(code, playerId, token) {
     const t = room(code);
     const p = authenticate(t, playerId, token);
-    t.players.delete(p.id);
-    if (t.game && t.game.phase !== 'over') engine.removePlayer(t.game, p.id);
-    if (!t.players.size) return close(t);
-    if (t.hostId === p.id) t.hostId = t.players.keys().next().value;
+    // The screen going away ends the game: there's nothing left to look at.
+    if (p.screen) return close(t);
+    // A phone leaving takes the players it held with it.
+    for (const id of controlled(t, p)) {
+      t.players.delete(id);
+      if (t.game && t.game.phase !== 'over') engine.removePlayer(t.game, id);
+    }
+    if (!t.players.size && !t.screen) return close(t);
+    if (t.hostId === p.id) t.hostId = ([...t.players.values()].find(x => x.token) || {}).id || null;
     touch(t);
   }
 
+  // Whose cards a device sees: on a phone of one player, theirs; on a phone
+  // passed around, only the hand of whoever's turn it is (so nobody peeks at
+  // someone else's); on the screen, nobody's.
+  function viewerOf(t, device, mine) {
+    if (!device || device.screen || !mine.length) return null;
+    if (mine.length === 1) return mine[0];
+    const turn = t.game && t.game.phase !== 'over' ? engine.snapshot(t.game, null).turn : null;
+    return mine.includes(turn) ? turn : null;
+  }
+
   function roomSnapshot(t, viewerId) {
+    const device = member(t, viewerId);
+    const mine = device ? controlled(t, device) : [];
+    const as = viewerOf(t, device, mine);
+    const owner = p => (p.owner ? member(t, p.owner) : null);
+    const host = member(t, t.hostId);
     return {
       code: t.id, kind: 'room', level: t.level, drinking: t.drinking, options: t.options,
       you: viewerId, youAreHost: t.hostId === viewerId,
+      // screen: a TV hosts this room; isScreen: you're that TV. mine: the
+      // players this phone plays for; as: whose hand this snapshot shows.
+      screen: !!t.screen, isScreen: !!(device && device.screen), hostName: host ? host.name : '', mine, as,
       locked: !!t.password, lobbyPassword: t.hostId === viewerId ? t.password : null,
-      players: [...t.players.values()].map(p => ({ id: p.id, name: p.name, online: p.clients > 0, host: p.id === t.hostId })),
-      game: t.game ? engine.snapshot(t.game, viewerId) : null
+      players: [...t.players.values()].map(p => ({
+        id: p.id, name: p.name, online: (owner(p) || p).clients > 0, host: p.id === t.hostId,
+        on: owner(p) ? owner(p).name : null
+      })),
+      game: t.game ? engine.snapshot(t.game, as) : null
     };
   }
 
@@ -234,7 +299,7 @@ function makeTables({ engine, act, levels, minPlayers = 2, maxPlayers = 8, clean
   return {
     MAX_PLAYERS: maxPlayers, isAdult, levelOf,
     createLocal, local, localSnapshot, actLocal, rematchLocal,
-    createRoom, joinRoom, settings, startRoom, actRoom, leaveRoom, roomSnapshot, room, authenticate, subscribe,
+    createRoom, joinRoom, addSeat, removeSeat, settings, startRoom, actRoom, leaveRoom, roomSnapshot, room, authenticate, subscribe,
     _tables: tables
   };
 }

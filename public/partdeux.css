@@ -165,3 +165,35 @@
 @media (prefers-reduced-motion: reduce) {
   .pile.nudge, .my-area.myturn .turn-banner, .discard.fresh .card { animation: none; }
 }
+
+/* ---- on a TV (tv.js puts .tv on <html>) ----
+   The TV hosting a game is the table everyone looks at: the pile big, the
+   players around it, whose turn it is. The hands stay on the phones. */
+html.tv .levels { grid-template-columns: repeat(4, 1fr); }
+html.tv #modeSeg { flex-wrap: wrap; }
+html.tv #lobby:not(.hidden) { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
+html.tv #lobby .code { font-size: 64px; letter-spacing: 12px; }
+html.tv #joinQr { width: 220px !important; height: 220px !important; }
+html.tv .people li { font-size: 18px; }
+body.tv-screen #myArea .hand,
+body.tv-screen #myArea .game-btns,
+body.tv-screen .log-box { display: none; }
+body.tv-screen .opponents li { font-size: 17px; padding: 8px 16px 8px 8px; }
+body.tv-screen .opponents .av { width: 36px; height: 36px; font-size: 16px; }
+body.tv-screen .table { padding: 18px 30px 12px; }
+body.tv-screen .pile { width: 92px; height: 134px; }
+body.tv-screen .discard .card { width: 100px; height: 146px; }
+body.tv-screen .discard .card .sym { font-size: 44px; }
+body.tv-screen .spot-label { font-size: 14px; max-width: 220px; }
+body.tv-screen .latest { font-size: 17px; }
+body.tv-screen .turn-banner { font-family: "Orbitron", var(--font); font-size: 26px; color: var(--accent); }
+body.tv-screen .turn-hint { font-size: 15px; }
+/* The one button on the TV's table (Leave game) sits at the top, so the
+   highlight on it doesn't scroll the table out of sight. */
+body.tv-screen #game:not(.hidden) { display: flex; flex-direction: column; }
+body.tv-screen #quitBtn { order: -1; align-self: flex-end; width: auto; margin: 0 0 8px; padding: 8px 18px; font-size: 14px; }
+/* Whose turn it is goes right under the players, above the table. */
+body.tv-screen #opponents { order: 1; }
+body.tv-screen #myArea { order: 2; margin: 0 0 12px; padding: 8px 10px; }
+body.tv-screen .table { order: 3; }
+body.tv-screen #latest, body.tv-screen #pendingBanner { order: 4; }

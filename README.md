@@ -265,7 +265,7 @@ Everything is under `/api/scuffle`. `dictionary` is `kids` or `adult` (the adult
 | `GET /solo/:id` | Where the game stands; after a round, its full word and every word. |
 | `POST /solo/:id/save` `{ initials?, profileToken? }` | Puts a finished daily on the board. Only the first per player per day. |
 | `GET /board?scope=day\|all&day=` | The daily high scores. |
-| `POST /rooms` `{ name, settings: { rounds, seconds, dictionary }, password? }` | Hosts a room. |
+| `POST /rooms` `{ name, settings: { rounds, seconds, dictionary }, password?, screen? }` | Hosts a room (`screen: true`: a TV that shows it and doesn't play). |
 | `POST /rooms/:code/join` `{ name, password? }` | Joins one. |
 | `POST /rooms/:code/start`, `/word`, `/done`, `/next`, `/leave`, `/settings` | Playing in a room (each with `playerId` and `token`). |
 | `GET /rooms/:code/events` | The room's live updates (server-sent events). |
@@ -402,6 +402,19 @@ A shedding card game for 2-8: match the top card by color or number and be first
 A party deck for 2-12: draw a card and do the dare, answer the truth, follow the new rule, or chicken out (lose a point, or drink). Family, Cheeky, Spicy and Filthy decks (`daredevil/cards.js`), quick/standard/long games, one phone or a phone each.
 
 Both card games share their one-phone and room plumbing (`arcade/party-tables.js`, `arcade/party-routes.js`).
+
+#### The party and word games on a TV
+
+These games work on a TV the same way as Know-It-All (see "Know-It-All on a TV" above): the TV layout, the remote's arrows and OK, and adult levels only during an adults' night. In each, the TV can host a room as its **screen**: it shows the game big, with the code and a QR code to join, and it starts the game but isn't a player. The server still decides every move and every score.
+
+| Game | On a TV |
+|---|---|
+| Uh-Oh: Part Deux | **Everyone on their own phone:** the TV shows the table (the pile, everyone's card count, whose turn it is) and each hand stays on its phone. **Pass one phone around:** one phone holds several players and hides the cards between turns. The TV never shows a hand, so there's no remote-only way. |
+| Dare Devil | **Everyone on their own phone** or **one phone passed around:** the card shows up big on the TV, and whoever's turn it is draws and says whether they did it on the phone. **Play with the remote:** the players take turns with the remote right on the TV. |
+| Shuffle Scuffle | **Everyone on their own phone:** the TV shows the letters, the clock and everyone's count, and after each round the full word and every word in the letters. The daily letters and free play also work with the remote alone: the arrows move along the tiles and OK picks one. |
+| Rambler | **Everyone on their own phone:** the TV shows the board big with the clock and everyone's count, and the results after. Tracing words needs a finger, so the TV doesn't play itself. |
+
+The rooms gained `screen: true` when making one (`POST /api/partdeux/rooms`, `/api/daredevil/rooms`, `/api/scuffle/rooms`, `/api/rambler/rooms`), and `screen` and `isScreen` in what the room sends. The card games also gained `POST /rooms/:code/seats` `{ name }` and `/seats/remove` `{ seat }` (more players on one phone, before the game starts), `as` on `/act` (which of the phone's players is moving), and `mine` (the players this phone holds) and `as` (whose hand the snapshot shows) in the room's state. With ARKS ID on, a phone signed in as a kid, a teen or a TV is turned away from a grown-ups room in all four games, password or not (`arcade/adult-join.js`); guests still get in with the lobby password.
 
 ### Shared
 

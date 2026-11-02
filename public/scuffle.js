@@ -3,9 +3,16 @@
 // Shuffle Scuffle: the page. The server (scuffle/) picks the letters, keeps
 // the clock, checks every word and adds up the points. This page draws the
 // tiles, takes taps and typing, and shows what the server says.
+//
+// On a TV (tv.js): the daily letters and free play work with the remote (the
+// arrows move along the tiles and OK picks one), or the TV hosts a room as
+// its screen and shows the letters, the clock and everyone's counts big while
+// everyone races on their own phone. The unfiltered list needs an adults'
+// night, never a PIN on the TV.
 
 (() => {
   const { $, toast, api } = ArcadeKit;
+  const TV = !!(window.ArcadeTV && ArcadeTV.on);
   const store = (k, v) => { try { localStorage.setItem(k, v); } catch { /* private mode */ } };
   const recall = (k, d = null) => { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch { return d; } };
   const token = () => (typeof ArcadeProfile !== 'undefined' ? ArcadeProfile.token() : null);
@@ -13,12 +20,12 @@
 
   const S = {
     config: null,
-    mode: ['daily', 'free', 'host', 'join'].includes(recall('scuffle.mode')) ? recall('scuffle.mode') : 'daily',
+    mode: TV ? 'tvphones' : ['daily', 'free', 'host', 'join'].includes(recall('scuffle.mode')) ? recall('scuffle.mode') : 'daily',
     dict: 'kids',
     rounds: Number(recall('scuffle.rounds')) || 5,
     seconds: Number(recall('scuffle.seconds')) || 75,
-    pin: (() => { try { return sessionStorage.getItem('scuffle.adultPin') || ''; } catch { return ''; } })(),
-    adultOk: (() => { try { return sessionStorage.getItem('scuffle.adultOk') === 'yes'; } catch { return false; } })(),
+    pin: TV ? '' : (() => { try { return sessionStorage.getItem('scuffle.adultPin') || ''; } catch { return ''; } })(),
+    adultOk: !TV && (() => { try { return sessionStorage.getItem('scuffle.adultOk') === 'yes'; } catch { return false; } })(),
     solo: null,          // what the server said about a solo game
     room: null,          // { code, playerId, token } in a room
     snap: null,          // the room's latest state
@@ -34,8 +41,11 @@
     shownFirst: null
   };
   const pinHeaders = () => (S.pin ? { 'X-Adult-Pin': S.pin } : {});
-  const unlocked = () => (S.config && S.config.adultRequiresPin ? !!S.pin : S.adultOk);
+  // On a TV, the unfiltered list follows adults' night, with the TV's adult pass.
+  const unlocked = () => (TV ? ArcadeTV.adult() && !!S.pin : S.config && S.config.adultRequiresPin ? !!S.pin : S.adultOk);
   const show = id => { for (const s of ['setup', 'lobby', 'play', 'reveal']) $(s).classList.toggle('hidden', s !== id); };
+  // The TV showing a room: it shows the game and doesn't play.
+  const onScreen = () => !!(S.room && S.snap && S.snap.isScreen);
   const now = () => Date.now() + S.skew;
   const playing = () => (S.room ? S.snap && S.snap.phase === 'playing' : S.solo && S.solo.phase === 'playing');
   const adultMode = on => document.documentElement.classList.toggle('adult-mode', !!on);
@@ -45,8 +55,13 @@
     daily: 'Today\'s letters are the same for everyone: four rounds of 75 seconds. Your first go of the day can go on the 🏆 board.',
     free: 'New letters every time, as many games as you like. Free play scores don\'t go on the board.',
     host: 'Everyone plays on their own phone at the same time. You\'ll get a four-letter code for the others to type in.',
-    join: 'Type the four-letter code from whoever is hosting. If a game is already going, you can jump in on the next word.'
+    join: 'Type the four-letter code from whoever is hosting. If a game is already going, you can jump in on the next word.',
+    tvphones: 'The TV shows the letters, the clock and how many words everyone has found. Everyone scans the code on the TV with their own phone and races on the same letters at the same time.'
   };
+  if (TV) {
+    HINTS.daily = 'Today\'s letters, the same for everyone: four rounds of 75 seconds. Use the arrows to move along the tiles and OK to pick a letter. Your first go of the day can go on the 🏆 board.';
+    HINTS.free = 'New letters every time, played with the remote: the arrows move along the tiles and OK picks a letter. Free play scores don\'t go on the board.';
+  }
 
   function seg(box, items, current, onPick) {
     box.innerHTML = '';
@@ -66,6 +81,7 @@
     $('joinSetup').classList.toggle('hidden', S.mode !== 'join');
     $('wordsPanel').classList.toggle('hidden', S.mode === 'join');
     $('optionsPanel').classList.toggle('hidden', S.mode === 'daily' || S.mode === 'join');
+    $('hostSetup').classList.toggle('hidden', S.mode !== 'host');
     for (const b of $('dictSeg').children) b.setAttribute('aria-pressed', String(b.dataset.v === S.dict));
     $('dictHint').textContent = S.dict === 'adult'
       ? 'Every word in the big list counts, rude ones included. Rooms on this list get a lobby password so kids can\'t wander in.'
@@ -75,7 +91,8 @@
       seg($('roundsSeg'), S.config.rounds.map(n => [n, String(n)]), S.rounds, v => { S.rounds = v; store('scuffle.rounds', v); paintSetup(); });
       seg($('secondsSeg'), S.config.seconds.map(n => [n, `${n}s`]), S.seconds, v => { S.seconds = v; store('scuffle.seconds', v); paintSetup(); });
     }
-    $('goBtn').textContent = S.mode === 'host' ? 'Get a game code' : S.mode === 'join' ? 'Join the game' : S.mode === 'daily' ? 'Play today\'s letters' : 'Let\'s play';
+    $('goBtn').textContent = S.mode === 'host' ? 'Get a game code' : S.mode === 'join' ? 'Join the game'
+      : S.mode === 'tvphones' ? 'Show the code on the TV' : S.mode === 'daily' ? 'Play today\'s letters' : 'Let\'s play';
   }
 
   async function pickDict(v) {
@@ -84,7 +101,13 @@
     paintSetup();
   }
 
+  async function unlockOnTv() {
+    S.pin = await ArcadeTV.adultPass();
+    return !!S.pin;
+  }
+
   function unlockAdult() {
+    if (TV) return unlockOnTv();
     if (!S.config || !S.config.adultRequiresPin) {
       const ok = confirm('The unfiltered list is for adults only (18+). Continue?');
       if (ok) { S.adultOk = true; try { sessionStorage.setItem('scuffle.adultOk', 'yes'); } catch { /* unavailable */ } }
@@ -119,6 +142,18 @@
         S.room = null;
         if (window.ArcadeStats) ArcadeStats.play();
         if (state.phase === 'ready') await soloNext(); else applySolo(state);
+        return;
+      }
+      if (S.mode === 'tvphones') {
+        // The TV hosts as its screen. The unfiltered list needs a lobby
+        // password for the guests' phones; the TV makes one up and shows it.
+        const PASSWORDS = ['tacos', 'disco', 'pickle', 'waffle', 'banjo', 'noodle', 'meteor', 'cactus', 'walrus', 'jelly'];
+        const password = S.dict === 'adult' ? PASSWORDS[Math.floor(Math.random() * PASSWORDS.length)] + (10 + Math.floor(Math.random() * 90)) : undefined;
+        if (window.ArcadeStats) ArcadeStats.play();
+        enterRoom(await api('/api/scuffle/rooms', {
+          name: (ArcadeTV.state.tv && ArcadeTV.state.tv.name) || 'TV', screen: true, password,
+          settings: { rounds: S.rounds, seconds: S.seconds, dictionary: S.dict }
+        }, pinHeaders()));
         return;
       }
       if (S.mode === 'host') {
@@ -319,9 +354,12 @@
   }
 
   function applySnap(snap) {
+    // A new round on the TV counts as a game being played (adults' night keeps going).
+    if (TV && snap.phase === 'playing' && (!S.snap || S.snap.index !== snap.index || S.snap.phase !== 'playing')) ArcadeTV.played();
     S.snap = snap;
     S.skew = snap.serverNow - Date.now();
     adultMode(snap.settings.dictionary === 'adult');
+    document.body.classList.toggle('tv-screen', !!snap.isScreen);
     if (snap.phase === 'lobby') { Blip.musicPlaying(false); return renderLobby(snap); }
     if (snap.phase === 'playing') {
       startRound(`room:${snap.code}:${snap.index}:${snap.endsAt}`, snap.round.letters);
@@ -329,7 +367,8 @@
       if (snap.round.firstFull && S.shownFirst !== S.roundKey) {
         S.shownFirst = S.roundKey;
         const me = snap.players.find(p => p.id === snap.you);
-        if (!me || me.name !== snap.round.firstFull) {
+        if (snap.isScreen) news(`⚡ ${snap.round.firstFull} found the full word first!`);
+        else if (!me || me.name !== snap.round.firstFull) {
           news(`⚡ ${snap.round.firstFull} found the full word first! You can still find it too.`);
           Blip.tone([880, 660], 0.15, { type: 'triangle', volume: 0.05 });
         }
@@ -347,6 +386,9 @@
     const s = snap.settings;
     $('lobbySettings').textContent = `${s.rounds} rounds of ${s.seconds} seconds, ${s.dictionary === 'adult' ? 'unfiltered words' : 'family words'}` +
       (snap.lobbyPassword ? `. Lobby password: ${snap.lobbyPassword}` : snap.locked ? '. Locked with a password' : '') + '.';
+    $('lobbyHow').textContent = snap.isScreen
+      ? 'Everyone scans the code with their own phone and types their name. You all race on the same letters at the same time, and the letters, the clock and the scores show up here on the TV.'
+      : 'Scan the code with another phone, or open Shuffle Scuffle there, tap Join and type the code in.';
     $('lobbyCount').textContent = `(${snap.players.length} of ${snap.maxPlayers})`;
     const list = $('lobbyPlayers');
     list.innerHTML = '';
@@ -355,11 +397,15 @@
       li.className = p.online ? '' : 'offline';
       li.textContent = p.name;
       if (p.id === snap.you) li.insertAdjacentHTML('beforeend', '<span class="tag">you</span>');
-      if (p.name === snap.hostName) li.insertAdjacentHTML('beforeend', '<span class="tag">host</span>');
+      if (p.name === snap.hostName && !snap.screen) li.insertAdjacentHTML('beforeend', '<span class="tag">host</span>');
       list.appendChild(li);
     }
+    if (!snap.players.length) list.innerHTML = '<li class="offline">Nobody yet. Scan the code to join.</li>';
     $('startBtn').classList.toggle('hidden', !snap.host);
-    $('waitHost').classList.toggle('hidden', snap.host);
+    $('startBtn').disabled = !snap.players.length;
+    $('startBtn').toggleAttribute('data-tv-start', !!snap.players.length);
+    $('waitHost').classList.toggle('hidden', snap.host && !!snap.players.length);
+    $('waitHost').textContent = snap.host ? 'Waiting for someone to join…' : snap.screen ? 'Waiting for the TV to start the game…' : 'Waiting for the host to start…';
   }
 
   function renderRoomReveal(snap) {
@@ -375,6 +421,12 @@
       first: rv.firstFull ? `${rv.firstFull.name} found it first and got ${S.config ? S.config.firstBonus : 50} extra points.` : 'Nobody found the full word this round.',
       scoreText: me ? `You scored ${me.roundScore.toLocaleString('en-US')} this round.` : ''
     });
+    // The TV didn't play: it shows every word in the letters instead of "yours".
+    if (snap.isScreen) {
+      $('revealFound').closest('.panel').querySelector('h2').textContent = 'Every word in these letters';
+      $('revealFound').innerHTML = '';
+      $('missedTitle').textContent = '';
+    } else $('revealFound').closest('.panel').querySelector('h2').textContent = 'Words you found';
     const over = snap.phase === 'over';
     $('standingsPanel').classList.remove('hidden');
     $('standingsTitle').textContent = over ? 'Final scores' : 'Scores so far';
@@ -435,6 +487,8 @@
       b.textContent = S.letters[i];
       b.setAttribute('aria-label', `Letter ${S.letters[i]}`);
       b.onclick = () => tap(i);
+      // The TV showing a room only shows the letters.
+      if (onScreen()) { b.disabled = true; b.tabIndex = -1; }
       tiles.appendChild(b);
     }
     const guess = $('guess');
@@ -459,7 +513,9 @@
     if (!sorted.length) list.innerHTML = '<li class="empty">Words you find show up here.</li>';
     const gotFull = S.found.some(f => f.word.length === S.letters.length);
     const count = S.room ? S.snap.round.wordCount : S.solo.round.wordCount;
-    $('goal').innerHTML = `There are <b>${count}</b> words of 3 or more letters hiding in here. You've found <b>${S.found.length}</b>. ` +
+    $('goal').innerHTML = onScreen()
+      ? `There are <b>${count}</b> words of 3 or more letters hiding in here, and the full word uses all <b>${S.letters.length}</b> letters. Find them on your phones!`
+      : `There are <b>${count}</b> words of 3 or more letters hiding in here. You've found <b>${S.found.length}</b>. ` +
       (gotFull ? '<span class="got">★ You found the full word!</span>' : `The full word uses all <b>${S.letters.length}</b> letters.`);
     if (S.room) {
       const s = S.snap;
@@ -479,7 +535,7 @@
         strip.appendChild(li);
       }
       $('doneBtn').disabled = !!(s.mine && s.mine.done);
-      $('doneBtn').textContent = s.mine && s.mine.done ? 'Waiting for the others to finish…' : 'I\'m done with this round';
+      $('doneBtn').textContent = s.isScreen ? 'End this round now' : s.mine && s.mine.done ? 'Waiting for the others to finish…' : 'I\'m done with this round';
     } else {
       $('strip').classList.add('hidden');
       $('roundLabel').textContent = `${S.solo.index + 1}/${S.solo.totalRounds}`;
@@ -573,8 +629,8 @@
 
   async function doneEarly() {
     if (!playing()) return;
-    if (S.room) { try { await roomPost('done'); } catch (e) { toast(e.message); } return; }
-    if (!confirm('End this round now? Any words you haven\'t found yet will be shown.')) return;
+    if (S.room) { try { await roomPost(onScreen() ? 'next' : 'done'); } catch (e) { toast(e.message); } return; }
+    if (!(await (TV ? ArcadeTV.confirm('End this round now? Any words you haven\'t found yet will be shown.') : confirm('End this round now? Any words you haven\'t found yet will be shown.')))) return;
     try { applySolo(await api(`/api/scuffle/solo/${S.solo.gameId}/stop`, {})); } catch (e) { toast(e.message); }
   }
 
@@ -716,9 +772,11 @@
   window.addEventListener('keydown', e => {
     if ((e.target.closest && e.target.closest('input, textarea, select')) || help.isOpen) return;
     if (!$('scores').classList.contains('hidden')) { if (e.key === 'Escape') $('scores').classList.add('hidden'); return; }
-    if (!playing()) return;
+    if (!playing() || onScreen()) return;
     const k = e.key;
     if (/^[a-zA-Z]$/.test(k) && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); typeLetter(k.toUpperCase()); return; }
+    // On a TV, OK (Enter) presses whatever the highlight is on: a tile, or the Enter key on the screen.
+    if (k === 'Enter' && TV && e.target.closest && e.target.closest('button, a')) return;
     if (k === 'Enter') { e.preventDefault(); enter(); return; }
     if (k === 'Backspace') { e.preventDefault(); back(); return; }
     if (k === 'Escape') { e.preventDefault(); clear(); return; }
@@ -729,6 +787,17 @@
   Blip.music('scuffle');
 
   // ---- start ---------------------------------------------------------------------------------
+  if (TV) {
+    // Adults' night ended (Back to family, or it ran out): family words at once.
+    document.addEventListener('arcadetv:mode', e => {
+      if (e.detail.adult) return;
+      S.pin = '';
+      if (S.room && S.snap && S.snap.settings.dictionary === 'adult') { backToMenu(); toast('Back to family mode.'); }
+      if (S.solo && S.solo.dictionary === 'adult') { backToMenu(); toast('Back to family mode.'); }
+      S.dict = 'kids';
+      paintSetup();
+    });
+  }
   paintSetup();
   api('/api/scuffle/config').then(c => {
     S.config = c;
@@ -737,10 +806,11 @@
     paintSetup();
   }).catch(e => toast(e.message));
   const joinParam = new URLSearchParams(location.search).get('join');
-  if (joinParam) { S.mode = 'join'; $('joinCode').value = joinParam.toUpperCase().slice(0, 4); paintSetup(); }
+  if (joinParam && !TV) { S.mode = 'join'; $('joinCode').value = joinParam.toUpperCase().slice(0, 4); paintSetup(); }
   try {
     const saved = JSON.parse(sessionStorage.getItem('scuffle.room') || 'null');
     if (saved && saved.code) { S.room = saved; connect(); }
   } catch { /* nothing saved */ }
-  help.autoOpen();
+  // On a TV, How to play waits for the ? button instead of opening by itself.
+  if (!TV) help.autoOpen();
 })();
