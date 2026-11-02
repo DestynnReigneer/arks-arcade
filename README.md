@@ -254,6 +254,34 @@ Everything is under `/api/crisscross`. Who's asking goes in headers, never the a
 | `POST /games/:id/start` | The host starts a waiting game with whoever has joined. |
 | `POST /games/:id/hide` | Clears a finished game from your list. |
 
+### Clueless (`/clueless.html`)
+
+A small crossword every day, the same one for everybody (it's made from the date alone), so the family can race each other for the fastest time. The **Family mini** is a 5 by 5 grid with clues written for kids, and the **Grown-ups** crossword is a 7 by 7 grid with longer words and trickier clues. Both use words from the family word list. There's no unfiltered crossword, because there are no grown-up-only clue packs to build one from.
+
+- **Playing:** tap a square and type; the word you're on lights up and its clue shows in the bar above the grid. Tap the same square again (or the clue bar) to switch between across and down, and tap any clue in the lists to jump to it. Phones get a keyboard on the page; a laptop's own keyboard works too (arrows, Space to switch direction, Tab for the next clue). **Pencil** puts letters in gray for the ones you're not sure of.
+- **Where the clues come from:** every clue is written by a person or pasted in from a chatbot by the admin; the server never asks an AI for anything. The game ships with about a thousand family clues written for it (`clueless/starter-clues.txt`), and admin can add **crossword clue packs**: copy a prompt with a batch of words from the arcade's everyday list, paste it into any chatbot, and paste the `WORD: clue` lines back. Each clue is checked on the way in: the word must be on the family list (3 to 7 letters, no British spellings), the clue must be 80 characters or fewer, it can't contain its own answer (or a word that starts with it), and it can't use a word the kids blocklist removes. Family clues go in both crosswords; grown-up clues only in the bigger one.
+- **Making the grid, in our own code** (`clueless/grid.js`): a few hand-made shapes of black squares per size, the same upside down, with every word 3 letters or more. The filler tries clued words in an order seeded by the date, always filling the spot with the fewest words that still fit next, and backs up when it gets stuck; no word appears twice. If the words can't fill one shape it tries the next, and if none work it falls back to the built-in clues alone, which fill every shape (the tests try a few years of dates). A day's puzzles are saved the first time anyone opens them, so they stay the same all day even if a clue pack is added or the server restarts.
+- **The server keeps the answers and the time.** Start records the moment on the server and hands the page a long random run id, the shape and the clues, never a letter. **Check** (a square for 5 seconds, a word for 10, the whole puzzle for 20) says which letters are wrong without saying what's right, and **Reveal** (a square or a word, 15 seconds a letter) hands over only the letters asked for, and the server writes down every one. When the grid is full the page sends it, and the server checks it against the answer and works the time out itself, leaving out pauses. A finish quicker than 0.3 seconds for each square you typed is turned away.
+- **Fastest-time boards** for today and for all time, for each crossword. Only a player's first finish of the day counts, and a profile has one clock per puzzle, so opening it again on another device carries on with the same time. A new fastest-ever time posts to the Comm Center.
+
+#### The Clueless API
+
+Everything is under `/api/clueless`. A grid is one character per square, row by row: a letter, or anything else for an empty or black square.
+
+| Call | What it does |
+|---|---|
+| `GET /levels` | Today's date, when the puzzles turn over, the two crosswords and what help costs. |
+| `POST /start` `{ level, profileToken? }` | Starts (or, for a profile, carries on with) today's `mini` or `big` crossword. Returns the run id, the shape, the numbers and the clues, and the clock so far. |
+| `GET /run/:id` | Where a run stands, including any letters already revealed. |
+| `POST /run/:id/pause`, `/resume` | Stops and restarts the clock. |
+| `POST /run/:id/check` `{ scope, index, dir, grid }` | Which letters are wrong in one square, one word or (`scope: puzzle`) the whole grid. Adds 5, 10 or 20 seconds. |
+| `POST /run/:id/reveal` `{ scope, index, dir }` | The right letters for one square or one word. Adds 15 seconds for each letter not revealed before. |
+| `POST /run/:id/finish` `{ grid }` | Checks the full grid and fixes the time. A wrong grid is refused. Only now does the answer come back. |
+| `POST /run/:id/save` `{ initials?, profileToken? }` | Puts a finished time on the boards. Returns today's and all-time rank. |
+| `GET /board?level=&scope=day\|all&day=` | The fastest times, quickest first. |
+| `GET /admin/summary`, `/admin/batch?kind=kids\|grownup&count=`, `/admin/packs` | Admin only: how many words have clues, words for the next prompt, and the clue packs. |
+| `POST /admin/packs` `{ label, kind, text }`, `DELETE /admin/packs/:id` | Admin only: checks and saves a pasted clue pack (it lists what it skipped and why), or deletes one. |
+
 ### Know-It-All (`/trivia.html`)
 
 Multiple-choice trivia. Solo (high-score board), take turns on one phone, or a room where everyone answers on their own phone at the same time and faster right answers score more. Pick genres, difficulty, how many questions and how long to answer.
@@ -384,6 +412,10 @@ Visit `/admin.html` and enter your `ADMIN_PASSWORD`.
 - Theme packs: copy a prompt, paste the answer back, and dress the season in it. The ingest tells you what percentage of boards the pack's words will actually appear on, so you find out immediately if it is all nine-letter names
 - Dictionary: add or remove words from the browser. Edits live in the database, not the word files, so they survive a `docker compose pull`
 
+**Clueless:**
+- Make crossword clue packs: pick Family or Grown-up clues, copy the prompt (it carries a batch of words that don't have a clue yet), paste the chatbot's `WORD: clue` lines back, and see which ones were kept and which were skipped and why
+- See how many words have clues, and delete a pack
+
 **Wordless:**
 - See pending theme requests, with a one-click "Copy Prompt" to paste into an AI chatbot (or use however you like) to generate the theme's word list
 - Paste the resulting JSON back in to create the theme and mark the request fulfilled
@@ -409,6 +441,7 @@ chess/                    Two-phone chess rooms (/api/chess)
 sudoku/                   Sudoku's puzzle maker (generator.js) and its runs and boards (/api/sudoku)
 scuffle/                  Shuffle Scuffle: letters and points (game.js), solo games and the daily board (solo.js), rooms (rooms.js), /api/scuffle
 crisscross/               Criss Cross: the rules (engine.js), the computer player (bot.js), games in the database (games.js), /api/crisscross
+clueless/                 Clueless: shapes and the filler (grid.js), clue checks (clues.js), the day's puzzles (maker.js, puzzles.js), the built-in clues, /api/clueless
 spinsolve/                Spin & Solve levels, adult banks, packs and requests (/api/spinsolve)
 trivia/                   Know-It-All questions, packs, Open Trivia DB download, rooms (/api/trivia)
 arcade/                   Arcade-wide pieces: Comm Center, adult PIN, high scores, profiles, stats and the error log, Wordless hints
@@ -425,6 +458,7 @@ public/snake*, bricks*, blocks*, towers*   Snake, Brick Breaker, Block Drop, Tow
 public/sudoku.*           Sudoku
 public/scuffle.*          Shuffle Scuffle
 public/crisscross.*       Criss Cross
+public/clueless.*         Clueless (admin side in admin-clueless.js)
 public/game-shell.*       Shared game-over panel and high scores for those four
 public/arcade-ui.css      Shared look for the newer games, with arcade-kit.js and blip.js
 public/admin.html/.js     Admin panel
