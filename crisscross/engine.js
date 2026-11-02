@@ -96,6 +96,25 @@ function shuffle(list, rand = Math.random) {
 // Real randomness for the bag: nobody can work out what's coming next.
 const cryptoRand = () => crypto.randomInt(0, 2 ** 32) / 2 ** 32;
 
+// For the browser tests only: when the server runs with NODE_ENV=test and
+// CRISSCROSS_DEAL_SEED is set, every new game is dealt the same way, so a
+// test knows which tiles it will get. Anywhere else (a real server never runs
+// with NODE_ENV=test) the bag is shuffled with real randomness as above.
+function seededRand(seed) {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6D2B79F5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 2 ** 32;
+  };
+}
+function dealRand() {
+  const seed = process.env.NODE_ENV === 'test' ? process.env.CRISSCROSS_DEAL_SEED : '';
+  return seed && /^\d+$/.test(seed) ? seededRand(Number(seed)) : cryptoRand;
+}
+
 function newBag(rand = cryptoRand) {
   const bag = [];
   for (const [letter, [count]] of Object.entries(TILES)) for (let k = 0; k < count; k++) bag.push(letter);
@@ -108,7 +127,7 @@ function draw(state, seat) {
 }
 
 // players: [{ name, profileId?, avatar?, bot? }], in turn order.
-function newGame({ players, dictionary: dict = 'kids', rand = cryptoRand }) {
+function newGame({ players, dictionary: dict = 'kids', rand = dealRand() }) {
   if (!Array.isArray(players) || players.length < 2 || players.length > MAX_PLAYERS) throw fail('A game needs 2 to 4 players.');
   const state = {
     board: new Array(SIZE * SIZE).fill(''),   // '' empty, A-Z a tile, a-z a blank standing for that letter

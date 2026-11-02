@@ -46,6 +46,20 @@ async function run({ base, root }) {
   ok('the kids list leaves out blocked words; the unfiltered list keeps them', !E.isWord('SHIT', 'kids') && E.isWord('SHIT', 'adult'));
   const fresh = E.newGame({ players: [{ name: 'A' }, { name: 'B' }, { name: 'C' }] });
   ok('everyone starts with seven tiles, drawn from the bag', fresh.racks.every(r => r.length === 7) && fresh.bag.length === 66 - 21);
+  {
+    // The browser tests' fixed deal: on with NODE_ENV=test, ignored otherwise.
+    const was = { env: process.env.NODE_ENV, seed: process.env.CRISSCROSS_DEAL_SEED };
+    const deal = () => E.newGame({ players: [{ name: 'A' }, { name: 'B' }] }).bag.join('');
+    process.env.CRISSCROSS_DEAL_SEED = '1';
+    process.env.NODE_ENV = 'test';
+    const fixed = deal() === deal();
+    process.env.NODE_ENV = 'production';
+    const random = deal() !== deal();
+    for (const [k, v] of [['NODE_ENV', was.env], ['CRISSCROSS_DEAL_SEED', was.seed]]) {
+      if (v === undefined) delete process.env[k]; else process.env[k] = v;
+    }
+    ok('a test server can deal every game the same way, and a real one never does', fixed && random);
+  }
 
   console.log('\n-- criss cross: checking a move --');
   let s = game(['CATSXYZ', 'DOGEARS']);
