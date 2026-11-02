@@ -2,9 +2,17 @@
 
 // Uh-Oh: Part Deux. The rules run on the server (partdeux/engine.js); this
 // draws the table, the hand, and the overlays around them.
+//
+// On a TV (tv.js), the TV hosts a room as its screen and shows the table big:
+// the pile, everyone's card counts and whose turn it is. Everyone plays their
+// hand on their own phone, or one phone holds several players and is passed
+// around (it hides the cards between turns). Hands stay on the phones, so
+// the TV never plays a hand itself. Adult decks need an adults' night.
 
 (() => {
   const { $, toast } = ArcadeKit;
+  const TV = !!(window.ArcadeTV && ArcadeTV.on);
+  const ask = text => (TV ? ArcadeTV.confirm(text) : Promise.resolve(confirm(text)));
   const API = '/api/partdeux';
   // The one symbol each card shows; the funny names are for the pile and the log.
   const SYMBOLS = { skip: '⊘', draw2: '+2', reverse: '⇄', nope: '✋', gift: '🎁', wild: '★', wild4: '+4' };
@@ -12,16 +20,17 @@
   const COLOR_HEX = { red: '#e5383b', yellow: '#f6c90e', green: '#2fbf71', blue: '#2e86de' };
 
   const S = {
-    config: null, level: 'kids', mode: 'local', names: [typeof ArcadeProfile !== 'undefined' ? ArcadeProfile.name() : '', ''],
-    pin: (() => { try { return sessionStorage.getItem('pd.pin') || ''; } catch { return ''; } })(),
-    adultOk: (() => { try { return sessionStorage.getItem('pd.adultOk') === 'yes'; } catch { return false; } })(),
+    config: null, level: 'kids', mode: TV ? 'tvphones' : 'local', names: [typeof ArcadeProfile !== 'undefined' && !TV ? ArcadeProfile.name() : '', ''],
+    pin: TV ? '' : (() => { try { return sessionStorage.getItem('pd.pin') || ''; } catch { return ''; } })(),
+    adultOk: !TV && (() => { try { return sessionStorage.getItem('pd.adultOk') === 'yes'; } catch { return false; } })(),
     table: null,       // { kind: 'local', id, token } or { kind: 'room', code, playerId, token }
     snap: null, viewer: null, es: null, seenCallout: 0, overShown: false,
     fxSeen: null, jokeSeen: null, lastWomp: 0, lastTop: null
   };
   const pinHeaders = () => (S.pin ? { 'X-Adult-Pin': S.pin } : {});
   const levelInfo = id => (S.config ? S.config.levels.find(l => l.id === id) : null) || { id: 'kids', label: 'Kids', adult: false };
-  const unlocked = () => (S.config && S.config.adultRequiresPin ? !!S.pin : S.adultOk);
+  // On a TV, adult decks follow adults' night, with the TV's adult pass.
+  const unlocked = () => (TV ? ArcadeTV.adult() && !!S.pin : S.config && S.config.adultRequiresPin ? !!S.pin : S.adultOk);
   const G = () => S.snap && S.snap.game;
   const show = id => { for (const s of ['setup', 'lobby', 'game']) $(s).classList.toggle('hidden', s !== id); };
 
@@ -46,7 +55,7 @@
       b.innerHTML = '<div class="l-name"></div><div class="l-blurb"></div>';
       b.querySelector('.l-name').textContent = `${l.emoji} ${l.label}`;
       b.querySelector('.l-blurb').textContent = l.blurb;
-      if (l.adult && !unlocked()) b.insertAdjacentHTML('beforeend', '<div class="l-lock">🔞 Adults only</div>');
+      if (l.adult && !unlocked()) b.insertAdjacentHTML('beforeend', TV && !ArcadeTV.adult() ? '<div class="l-lock">🔞 Needs an adults\' night</div>' : '<div class="l-lock">🔞 Adults only</div>');
       b.onclick = () => onPick(l.id);
       box.appendChild(b);
     }
@@ -65,7 +74,13 @@
     paintLevel(id);
   }
 
+  async function unlockOnTv() {
+    S.pin = await ArcadeTV.adultPass();
+    return !!S.pin;
+  }
+
   function unlockAdult() {
+    if (TV) return unlockOnTv();
     if (!S.config.adultRequiresPin) {
       const ok = confirm('This deck is for adults only (18+). Continue?');
       if (ok) { S.adultOk = true; try { sessionStorage.setItem('pd.adultOk', 'yes'); } catch { /* unavailable */ } }
@@ -91,8 +106,9 @@
   function setMode(mode) {
     S.mode = mode;
     for (const b of $('modeSeg').children) b.setAttribute('aria-pressed', String(b.dataset.mode === mode));
-    for (const m of ['local', 'host', 'join']) $(`${m}Setup`).classList.toggle('hidden', m !== mode);
-    $('goBtn').textContent = mode === 'host' ? 'Get a game code' : mode === 'join' ? 'Join the game' : 'Deal \'em';
+    for (const m of ['local', 'host', 'join', 'tvphones', 'tvpass']) $(`${m}Setup`).classList.toggle('hidden', m !== mode);
+    $('goBtn').textContent = mode === 'host' ? 'Get a game code' : mode === 'join' ? 'Join the game'
+      : mode.startsWith('tv') ? 'Show the code on the TV' : 'Deal \'em';
     $('levelList').closest('.panel').classList.toggle('hidden', mode === 'join');
   }
 
@@ -117,6 +133,7 @@
     $('setupMsg').textContent = '';
     const drinking = levelInfo(S.level).adult && $('drinkingOpt').checked;
     try {
+      if (S.mode.startsWith('tv')) return await hostOnTv(drinking);
       if (S.mode === 'local') {
         const names = S.names.map((n, i) => n.trim() || `Player ${i + 1}`);
         if (window.ArcadeStats) ArcadeStats.play();
@@ -140,6 +157,20 @@
         api(`/rooms/${code}/join`, { method: 'POST', body: { name: $('joinName').value, password } }));
       if (r) enterRoom(r);
     } catch (e) { $('setupMsg').textContent = e.message; }
+  }
+
+  // ---- the TV hosts ------------------------------------------------------------------
+  // The TV makes the room as its screen: it shows the table and starts the
+  // game, and doesn't play. An adult deck needs a lobby password for the
+  // guests' phones; typing on a TV is slow, so the TV makes one up and shows
+  // it in its lobby.
+  const PASSWORDS = ['tacos', 'disco', 'pickle', 'waffle', 'banjo', 'noodle', 'meteor', 'cactus', 'walrus', 'jelly'];
+  async function hostOnTv(drinking) {
+    if (window.ArcadeStats) ArcadeStats.play();
+    const password = levelInfo(S.level).adult ? PASSWORDS[Math.floor(Math.random() * PASSWORDS.length)] + (10 + Math.floor(Math.random() * 90)) : undefined;
+    const name = (ArcadeTV.state.tv && ArcadeTV.state.tv.name) || 'TV';
+    const r = await api('/rooms', { method: 'POST', body: { name, screen: true, level: S.level, drinking, password }, headers: pinHeaders() });
+    enterRoom(r);
   }
 
   // ---- rooms ------------------------------------------------------------------------
@@ -177,21 +208,29 @@
         const snap = await api(`/local/${S.table.id}/act`, { method: 'POST', body: { ...body, as: body.as || S.viewer }, headers: { 'X-Table-Token': S.table.token } });
         applySnap(snap);
       } else {
-        applySnap(await api(`/rooms/${S.table.code}/act`, { method: 'POST', body: { ...roomCreds(), ...body } }));
+        // A phone passed around plays for whoever's hand it's showing.
+        applySnap(await api(`/rooms/${S.table.code}/act`, { method: 'POST', body: { ...roomCreds(), as: body.as || S.snap.as || undefined, ...body } }));
       }
     } catch (e) { toast(e.message); }
   }
 
   // ---- drawing everything ----------------------------------------------------------------
 
-  const me = () => (S.table.kind === 'room' ? S.snap.you : S.viewer);
+  // Whose hand this screen shows: in a room, the server says (nobody's on the
+  // TV, and on a phone passed around, only whoever's turn it is).
+  const me = () => (S.table.kind === 'room' ? S.snap.as : S.viewer);
+  const shared = () => S.table.kind === 'room' && (S.snap.mine || []).length > 1;
   const nameOf = id => ((G() && G().players.find(p => p.id === id)) || {}).name || '?';
   const myHand = () => (S.table.kind === 'room' ? G().hand : (G().hands && G().hands[S.viewer]) || []);
 
   function applySnap(snap) {
+    const before = S.snap && S.snap.game ? `${S.snap.game.turn}|${S.snap.game.deckCount}|${S.snap.game.top && S.snap.game.top.id}` : null;
     S.snap = snap;
     document.documentElement.classList.toggle('adult-mode', levelInfo(snap.level).adult);
+    document.body.classList.toggle('tv-screen', !!snap.isScreen);
     if (snap.kind === 'room' && !snap.game) return renderLobby(snap);
+    // A move on the TV's table counts as a game being played (adults' night keeps going).
+    if (TV && snap.game && `${snap.game.turn}|${snap.game.deckCount}|${snap.game.top && snap.game.top.id}` !== before) ArcadeTV.played();
     if (snap.kind === 'room' && snap.game.phase === 'over' && S.overShown && !$('overView').classList.contains('hidden')) { /* keep results */ }
     show('game');
     renderGame();
@@ -228,6 +267,9 @@
     const lv = levelInfo(snap.level);
     $('lobbyInfo').textContent = `Deck: ${lv.emoji} ${lv.label}` + (snap.drinking ? ' · 🍺 Drinking' : '') +
       (snap.lobbyPassword ? ` · 🔒 Password: ${snap.lobbyPassword}` : snap.locked ? ' · 🔒 Locked' : '');
+    $('lobbyHow').textContent = !snap.isScreen ? ''
+      : S.mode === 'tvpass' ? 'Scan the code with the phone you\'ll pass around, then add everyone\'s names on it. The table shows up here on the TV, and the phone shows each person their own cards on their turn.'
+        : 'Everyone scans the code with their own phone and types their name. Your cards stay on your phone, and the table shows up here on the TV. Sharing a phone? Add more players on it.';
     $('lobbyCount').textContent = `(${snap.players.length})`;
     const ul = $('lobbyPlayers');
     ul.innerHTML = '';
@@ -235,12 +277,28 @@
       const li = document.createElement('li');
       li.className = p.online ? '' : 'offline';
       li.textContent = p.name;
-      if (p.id === snap.you) li.insertAdjacentHTML('beforeend', '<span class="tag">you</span>');
-      if (p.host) li.insertAdjacentHTML('beforeend', '<span class="tag">host</span>');
+      const tag = text => { const t = document.createElement('span'); t.className = 'tag'; t.textContent = text; li.appendChild(t); };
+      if (p.id === snap.you) tag('you');
+      if (p.host) tag('host');
+      if (p.on) tag(`on ${p.on}'s phone`);
+      // Players this phone added can be taken off again before the start.
+      if ((snap.mine || []).includes(p.id) && p.id !== snap.you) {
+        const x = document.createElement('button');
+        x.className = 'ghost seat-x';
+        x.textContent = '✕';
+        x.title = `Take ${p.name} off`;
+        x.style.cssText = 'margin-left:10px;padding:2px 10px';
+        x.onclick = () => api(`/rooms/${snap.code}/seats/remove`, { method: 'POST', body: { ...roomCreds(), seat: p.id } }).catch(e => toast(e.message));
+        li.appendChild(x);
+      }
       ul.appendChild(li);
     }
+    if (!snap.players.length) ul.innerHTML = '<li class="offline">Nobody yet. Scan the code to join.</li>';
+    // Passing one phone around: more players on it (in a game the TV hosts).
+    $('seatBox').classList.toggle('hidden', !snap.screen || snap.isScreen);
     $('hostControls').classList.toggle('hidden', !snap.youAreHost);
     $('waitHost').classList.toggle('hidden', snap.youAreHost);
+    $('waitHost').textContent = snap.screen ? 'Waiting for the TV to start the game…' : 'Waiting for the host to start…';
     if (snap.youAreHost) {
       renderLevels($('lobbyLevels'), snap.level, async id => {
         if (levelInfo(id).adult && !unlocked() && !(await unlockAdult())) return;
@@ -251,6 +309,8 @@
       $('lobbyDrinkRow').classList.toggle('hidden', !lv.adult);
       $('lobbyDrinking').checked = snap.drinking;
       $('startBtn').disabled = snap.players.length < 2;
+      $('startBtn').toggleAttribute('data-tv-start', snap.players.length >= 2);
+      $('lobbyMsg').textContent = snap.isScreen && snap.players.length < 2 ? 'Uh-Oh needs at least two players to start.' : '';
     }
   }
 
@@ -280,8 +340,10 @@
     const g = G();
     const local = S.table.kind === 'local';
 
-    // One phone: hide the hand until the right person has it.
-    if (local && g.phase !== 'over' && g.turn !== S.viewer) {
+    // One phone: hide the hand until the right person has it. A phone passed
+    // around in a room does the same, on the turns of the players it holds.
+    const passing = local || (shared() && S.snap.mine.includes(g.turn));
+    if (passing && g.phase !== 'over' && g.turn !== S.viewer) {
       $('passTitle').textContent = `Pass the phone to ${nameOf(g.turn)}`;
       const forgot = g.vulnerable && g.vulnerable !== g.turn;
       $('passCatch').classList.toggle('hidden', !forgot);
@@ -297,7 +359,7 @@
     }
 
     const viewer = me();
-    const myTurn = g.phase !== 'over' && g.turn === viewer;
+    const myTurn = g.phase !== 'over' && g.turn === viewer && (!shared() || S.viewer === g.turn);
 
     // Everyone else around the table
     const opp = $('opponents');
@@ -347,9 +409,12 @@
     const playable = new Set(local ? playableLocal(g, cards) : g.playable);
     $('myArea').classList.toggle('myturn', myTurn);
     $('turnLine').textContent = g.phase === 'over' ? `${nameOf(g.winner)} wins! 🏆`
-      : myTurn ? `✨ YOUR TURN${local ? `, ${nameOf(viewer).toUpperCase()}` : ''} ✨`
-        : `Waiting for ${nameOf(g.turn)}…`;
+      : myTurn ? `✨ YOUR TURN${local || shared() ? `, ${nameOf(viewer).toUpperCase()}` : ''} ✨`
+        : S.snap.isScreen ? `${nameOf(g.turn).toUpperCase()}'S TURN`
+          : `Waiting for ${nameOf(g.turn)}…`;
     $('turnHint').textContent = g.phase === 'over' ? ''
+      : S.snap.isScreen ? (g.pendingDraw ? `+${g.pendingDraw} waiting for ${nameOf(g.turn)}!` : `${nameOf(g.turn)} is playing on their phone.`)
+      : !viewer ? 'Your cards show up when it\'s your turn.'
       : !myTurn ? `${cards.length} card${cards.length === 1 ? '' : 's'} in your hand`
         : g.pendingDraw ? `Take the +${g.pendingDraw}, or play a ✋ Nope to bounce it.`
           : g.drew ? 'You drew one that fits. Play it, or keep it.'
@@ -496,7 +561,7 @@
   function showOver(g) {
     if (S.overShown) return;
     S.overShown = true;
-    const iWon = g.winner === me() || S.table.kind === 'local';
+    const iWon = g.winner === me() || S.table.kind === 'local' || S.snap.isScreen;
     $('overTitle').textContent = `${nameOf(g.winner)} wins!`;
     $('overHint').textContent = g.players.filter(p => p.id !== g.winner).map(p => `${p.name}: ${p.cards} left`).join(' · ');
     $('againBtn').classList.toggle('hidden', S.table.kind === 'room' && !S.snap.youAreHost);
@@ -520,7 +585,10 @@
   }
 
   async function leave() {
+    S.viewer = null;
     if (S.table && S.table.kind === 'room') {
+      // Stop listening first: the room ending as we leave isn't news to us.
+      if (S.es) { S.es.close(); S.es = null; }
       try { await api(`/rooms/${S.table.code}/leave`, { method: 'POST', body: roomCreds() }); } catch { /* gone anyway */ }
       closeRoom();
     }
@@ -563,8 +631,29 @@
   $('startBtn').onclick = async () => { if (window.ArcadeStats) ArcadeStats.play(); try { await api(`/rooms/${S.table.code}/start`, { method: 'POST', body: roomCreds() }); } catch (e) { $('lobbyMsg').textContent = e.message; } };
   $('lobbyDrinking').onchange = () => api(`/rooms/${S.table.code}/settings`, { method: 'POST', body: { ...roomCreds(), drinking: $('lobbyDrinking').checked } }).catch(e => toast(e.message));
   $('leaveBtn').onclick = leave;
-  $('quitBtn').onclick = () => { if (confirm('Leave this game?')) leave(); };
-  $('passLeave').onclick = () => { if (confirm('Leave this game?')) leave(); };
+  $('quitBtn').onclick = async () => { if (await ask(S.snap && S.snap.isScreen ? 'End this game for everyone?' : 'Leave this game?')) leave(); };
+  $('passLeave').onclick = async () => { if (await ask('Leave this game?')) leave(); };
+  const addSeat = () => {
+    const name = $('seatName').value.trim();
+    $('seatName').value = '';
+    api(`/rooms/${S.table.code}/seats`, { method: 'POST', body: { ...roomCreds(), name } }).catch(e => { $('lobbyMsg').textContent = e.message; });
+  };
+  $('seatAdd').onclick = addSeat;
+  $('seatName').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); addSeat(); } };
+  if (TV) {
+    // Adults' night ended (Back to family, or it ran out): family mode at
+    // once. An adult game on the TV ends and the setup comes back.
+    document.addEventListener('arcadetv:mode', e => {
+      if (!S.config) return;
+      if (!e.detail.adult) {
+        S.pin = '';
+        if (S.snap && levelInfo(S.snap.level).adult) { leave(); toast('Back to family mode.'); }
+        if (levelInfo(S.level).adult) S.level = 'kids';
+        paintLevel(S.level);
+      }
+      renderLevels($('levelList'), S.level, pickLevel);
+    });
+  }
   $('againBtn').onclick = playAgain;
   $('menuBtn').onclick = leave;
   $('helpBtn').onclick = () => help.open();
@@ -577,13 +666,14 @@
     renderLevels($('levelList'), S.level, pickLevel);
     paintLevel(S.level);
     renderNames();
-    setMode('local');
+    setMode(S.mode);
     const join = new URLSearchParams(location.search).get('join');
-    if (join) { setMode('join'); $('joinCode').value = join.toUpperCase().slice(0, 4); }
+    if (join && !TV) { setMode('join'); $('joinCode').value = join.toUpperCase().slice(0, 4); }
     try {
       const saved = JSON.parse(sessionStorage.getItem('pd.room') || 'null');
       if (saved && saved.code) { S.table = saved; connect(); }
     } catch { /* nothing saved */ }
-    help.autoOpen();
+    // On a TV, How to play waits for the ? button instead of opening by itself.
+    if (!TV) help.autoOpen();
   })();
 })();

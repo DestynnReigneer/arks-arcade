@@ -23,6 +23,7 @@ router.use('/admin', adminRouter);
 // means a confirmation tap is all that stands in front of it. ADULT_PIN in
 // .env sets it; the admin page can change it later (arcade/adult-pin.js).
 const adultPin = require('../arcade/adult-pin');
+const adultJoin = require('../arcade/adult-join');
 const comm = require('../arcade/comm');
 
 const INITIALS_RE = /^[A-Z0-9]{1,3}$/;
@@ -392,7 +393,9 @@ router.post('/rooms', roomLimiter, (req, res, next) => {
       size: body.size,
       profile,
       durationSec: body.durationSec,
-      password: body.password
+      password: body.password,
+      // screen: a TV hosts the room and shows the board; it doesn't play.
+      screen: body.screen === true
     });
     res.status(201).json({
       code: room.code,
@@ -405,8 +408,10 @@ router.post('/rooms', roomLimiter, (req, res, next) => {
   }
 });
 
-router.post('/rooms/:code/join', (req, res, next) => {
+// A phone signed in to ARKS ID as a kid, a teen or a TV can't join an Unfiltered room.
+router.post('/rooms/:code/join', async (req, res, next) => {
   try {
+    await adultJoin.refuseKids(req, rooms.requireRoom(req.params.code).settings.profile === 'adult');
     const { room, player } = rooms.joinRoom(req.params.code, (req.body || {}).name, (req.body || {}).password);
     res.status(201).json({
       code: room.code,

@@ -3,6 +3,8 @@
 // Shuffle Scuffle rooms: a four-letter code, a phone each, everyone racing
 // on the same letters at the same time. The server keeps the clock, checks
 // every word and adds up every score; phones only send the words people type.
+// A room can be hosted by a screen (a TV): it shows the letters, the clock
+// and everyone's counts to the whole room, and isn't a player itself.
 // Rooms live in memory, like the other games' rooms.
 
 const crypto = require('node:crypto');
@@ -45,16 +47,23 @@ function newPlayer(r, name) {
   return { id: makeId(), token: makeToken(), name: out, score: 0, found: new Map(), roundScore: 0, done: false, clients: 0, joinedAt: Date.now() };
 }
 
-function create({ name, settings, password }) {
+// screen: this device (a TV) hosts and shows the game, and doesn't play.
+function create({ name, settings, password, screen = false }) {
   if (rooms.size >= MAX_ROOMS) sweep();
   if (rooms.size >= MAX_ROOMS) throw fail('Too many games running right now. Try again later.', 503);
   const r = {
-    code: makeCode(), settings: cleanSettings(settings), phase: 'lobby', players: [], hostId: null,
+    code: makeCode(), settings: cleanSettings(settings), phase: 'lobby', players: [], hostId: null, screen: null,
     rounds: [], index: -1, endsAt: 0, firstFull: null, timer: null, clients: new Set(),
     lastActivity: Date.now(), password: null, history: []
   };
   // The grown-up list gets a lobby password the host makes up.
   if (r.settings.dictionary === 'adult') r.password = roomPassword.requireNew(password);
+  if (screen) {
+    r.screen = { id: makeId(), token: makeToken(), name: cleanName(name, 'TV'), clients: 0, screen: true };
+    r.hostId = r.screen.id;
+    rooms.set(r.code, r);
+    return { code: r.code, playerId: r.screen.id, token: r.screen.token };
+  }
   const host = newPlayer(r, name || 'Host');
   r.players.push(host);
   r.hostId = host.id;
@@ -68,8 +77,10 @@ function room(code) {
   return r;
 }
 
+// A device in the room: a player, or the screen.
+const member = (r, id) => r.players.find(x => x.id === id) || (r.screen && r.screen.id === id ? r.screen : null);
 function authenticate(r, playerId, token) {
-  const p = r.players.find(x => x.id === String(playerId || ''));
+  const p = member(r, String(playerId || ''));
   if (!p || !token || p.token !== String(token)) throw fail('You are not in this game.', 403);
   return p;
 }
@@ -100,6 +111,7 @@ function start(code, playerId, token) {
   const r = room(code);
   requireHost(r, authenticate(r, playerId, token));
   if (r.phase === 'playing' || r.phase === 'reveal') throw fail('A game is already going.', 409);
+  if (!r.players.length) throw fail('Nobody has joined yet.', 409);
   r.rounds = game.makeRounds({ count: r.settings.rounds, profile: r.settings.dictionary });
   r.history = [];
   for (const p of r.players) p.score = 0;
@@ -121,6 +133,7 @@ function nextRound(r) {
 function word(code, playerId, token, raw) {
   const r = room(code);
   const p = authenticate(r, playerId, token);
+  if (p.screen) throw fail('The TV shows the game; words come from the phones.', 403);
   if (r.phase !== 'playing' || Date.now() > r.endsAt + GRACE_MS) throw fail('Time\'s up for this round.', 409);
   if (p.found.size >= MAX_WORDS) throw fail('That\'s every word this round can hold.', 409);
   const def = r.rounds[r.index];
@@ -143,7 +156,7 @@ function word(code, playerId, token, raw) {
 function done(code, playerId, token) {
   const r = room(code);
   const p = authenticate(r, playerId, token);
-  if (r.phase !== 'playing') return;
+  if (r.phase !== 'playing' || p.screen) return;
   p.done = true;
   const here = r.players.filter(x => x.clients > 0 || x.id === p.id);
   if (here.every(x => x.done)) endRound(r); else touch(r);
@@ -171,8 +184,10 @@ function next(code, playerId, token) {
 function leave(code, playerId, token) {
   const r = room(code);
   const p = authenticate(r, playerId, token);
+  // The screen going away ends the game: there's nothing left to look at.
+  if (p.screen) { close(r); return; }
   r.players = r.players.filter(x => x.id !== p.id);
-  if (!r.players.length) { close(r); return; }
+  if (!r.players.length && !r.screen) { close(r); return; }
   if (r.hostId === p.id) r.hostId = r.players.slice().sort((a, b) => a.joinedAt - b.joinedAt)[0].id;
   touch(r);
 }
@@ -186,7 +201,9 @@ function snapshot(r, viewerId) {
   const showing = r.phase === 'reveal' || r.phase === 'over';
   return {
     code: r.code, phase: r.phase, you: viewerId, host: r.hostId === viewerId,
-    hostName: (r.players.find(p => p.id === r.hostId) || {}).name || '',
+    hostName: (member(r, r.hostId) || {}).name || '',
+    // screen: a TV hosts this room; isScreen: you're that TV.
+    screen: !!r.screen, isScreen: !!(r.screen && r.screen.id === viewerId),
     locked: !!r.password, lobbyPassword: r.hostId === viewerId ? r.password : null,
     settings: r.settings, maxPlayers: MAX_PLAYERS,
     index: r.index, totalRounds: r.rounds.length || r.settings.rounds,

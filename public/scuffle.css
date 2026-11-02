@@ -115,3 +115,23 @@
   .fx-banner-inner { transition: none !important; }
   .fx-title, .sc-guess.bad { animation: none !important; }
 }
+
+/* ---- on a TV (tv.js puts .tv on <html>) ----
+   Played with the remote, the tiles and keys are big targets for the
+   highlight. Hosting a room, the TV shows the letters, the clock and the
+   scores for everyone, and none of the typing parts. */
+html.tv #lobby:not(.hidden) { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
+html.tv #lobby .code { font-size: 64px; letter-spacing: 12px; }
+html.tv #joinQr { width: 220px !important; height: 220px !important; }
+html.tv .people li { font-size: 18px; }
+html.tv .keys-hint { display: none; }
+body.tv-screen .sc-guess,
+body.tv-screen .sc-keys,
+body.tv-screen #found { display: none; }
+body.tv-screen .sc-tiles .sc-tile { opacity: 1; cursor: default; }
+body.tv-screen .sc-goal { font-size: 18px; }
+body.tv-screen .score-strip li { font-size: 18px; }
+/* After a round, the TV's buttons (Next round) come first, so the highlight
+   on them keeps the full word in sight. */
+body.tv-screen #reveal:not(.hidden) { display: flex; flex-direction: column; }
+body.tv-screen #reveal > .stack { order: -1; margin-bottom: 12px; }

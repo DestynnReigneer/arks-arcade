@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-tv-nav>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
@@ -13,6 +13,10 @@
 <link rel="stylesheet" href="adult-mode.css">
 <link rel="stylesheet" href="look.css">
 <link rel="stylesheet" href="topbar.css">
+<link rel="stylesheet" href="tv.css">
+<!-- On a TV: the TV layout, the remote's arrows, and setting the TV up (tv.js). -->
+<script src="tv-core.js"></script>
+<script src="tv.js"></script>
 </head>
 <body>
 <script src="topbar.js"></script>
@@ -35,8 +39,9 @@
     <div class="seg mode-seg" id="modeSeg">
       <button data-mode="daily" aria-pressed="true">📅 Daily</button>
       <button data-mode="free" aria-pressed="false">🎲 Free play</button>
-      <button data-mode="host" aria-pressed="false">📡 Host</button>
-      <button data-mode="join" aria-pressed="false">🔗 Join</button>
+      <button data-mode="host" aria-pressed="false" class="no-tv">📡 Host</button>
+      <button data-mode="join" aria-pressed="false" class="no-tv">🔗 Join</button>
+      <button data-mode="tvphones" aria-pressed="false" class="tv-only">📱 Everyone on their own phone</button>
     </div>
     <p class="hint" id="modeHint"></p>
     <div id="hostSetup" class="hidden">
@@ -76,7 +81,7 @@
     <div class="code" id="lobbyCode">----</div>
     <img class="join-qr hidden" id="joinQr" width="150" height="150" alt="QR code to join">
     <div class="join-link" id="joinLink"></div>
-    <p class="hint">Scan the code with another phone, or open Shuffle Scuffle there, tap Join and type the code in.</p>
+    <p class="hint" id="lobbyHow">Scan the code with another phone, or open Shuffle Scuffle there, tap Join and type the code in.</p>
     <p class="hint" id="lobbySettings"></p>
   </div>
   <div class="panel">
