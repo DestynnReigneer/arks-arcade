@@ -32,6 +32,7 @@ COPY crisscross ./crisscross
 COPY clueless ./clueless
 COPY tumbler ./tumbler
 COPY discodrop ./discodrop
+COPY royale ./royale
 COPY words ./words
 COPY public ./public
 

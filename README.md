@@ -326,6 +326,28 @@ Everything is under `/api/tumbler`.
 | `POST /run/:id/save` `{ initials?, profileToken? }` | Puts a finished run's score on the boards. Returns today's and all-time rank. |
 | `GET /board?scope=day\|all&day=` | The best scores, highest first. |
 
+### Roll Royale (`/royale.html`)
+
+A ball-rolling game in the style of a coin-op cabinet, like skee-ball with a power meter. You get **9 balls**, and each one rolls up a neon lane, hops off a lip and drops into a target board at the top. The board has five rings: **10, 20, 30 and 40** from the outside in, and **50** for the small one in the middle. Above the rings is a little gold **jackpot cup** worth 100. A ball that misses every ring scores nothing.
+
+- **Aim, then power.** Before each ball an arrow sways left and right, with a dashed line showing exactly where the ball would go across the board. Pressing locks the aim. While you hold, the power meter climbs for a second, then comes back down if you keep holding, and letting go rolls the ball with the power the meter shows. The meter has a pink band for the power that reaches the middle ring and a gold band for the jackpot cup's row. A tap shorter than 80 milliseconds isn't a roll, and a ball held for 4 seconds rolls by itself.
+- **Bonus balls:** the last three balls have a star on them. On those, the jackpot cup slides from side to side and is worth 200, and the arrow sways faster on later balls (a trip there and back takes 2.6 seconds on balls 1 to 3, 2.1 on balls 4 to 6 and 1.7 on balls 7 to 9). A perfect run is 1,200 points.
+- **Controls:** press and hold anywhere on the lane or the big HOLD · ROLL button on a phone (letting go anywhere counts, so a flick up the lane works), hold Space or Enter on a keyboard, or hold a game controller's A button or right trigger (through the browser's Gamepad API; Start pauses). The lane is drawn on a canvas at the screen's frame rate. With reduced motion turned on, the glow, the shake and the moving lights are left out, and the game plays the same.
+- **The server works out every score.** Starting a run writes down the moment on the server's clock and hands the page a random seed, which decides where each ball's arrow starts its sway and where the bonus cup starts sliding. The page and the server run the same small simulation (`public/royale-engine.js`), with simple sums instead of a physics engine: the aim at the moment you pressed and the power at the moment you let go give the spot where the ball lands. When the ninth ball is done the page sends only the press and release times, in whole milliseconds since the run started, and the server replays them to find every landing spot and the score itself. It refuses times that couldn't have come from a real run: anything but exactly 9 balls, a ball pressed before it was ready, a press and release closer together than 80 milliseconds or further apart than 4 seconds, or times later than the run has really lasted by the server's clock. Opening How to play or leaving the page pauses the run (a ball you were holding goes back), and there's a countdown before it carries on.
+- **High-score boards** for today and for all time. Every run you save counts, profiles show their name or initials the way they chose, and guests type initials. After a run the game says how many more points would have passed the next real score on today's board. A new best score ever posts to the Comm Center.
+
+#### The Roll Royale API
+
+Everything is under `/api/royale`.
+
+| Call | What it does |
+|---|---|
+| `POST /start` `{ profileToken? }` | Starts a run. Returns the run id, the seed and the rules. |
+| `GET /run/:id` | Where a run stands, and its score and each ball's points once it's finished. |
+| `POST /run/:id/finish` `{ balls }` | Replays the 9 `[press, release]` pairs (whole milliseconds since the run started) and keeps the score the server worked out. Impossible times are refused. |
+| `POST /run/:id/save` `{ initials?, profileToken? }` | Puts a finished run's score on the boards. Returns today's and all-time rank. |
+| `GET /board?scope=day\|all&day=` | The best scores, highest first, with each run's points per ball and jackpots. |
+
 ### Know-It-All (`/trivia.html`)
 
 Multiple-choice trivia. Solo (high-score board), take turns on one phone, or a room where everyone answers on their own phone at the same time and faster right answers score more. Pick genres, difficulty, how many questions and how long to answer.
@@ -488,6 +510,7 @@ crisscross/               Criss Cross: the rules (engine.js), the computer playe
 discodrop/                Disco Drop: runs, the replayed drops and the boards (/api/discodrop); the motion is public/discodrop-engine.js
 clueless/                 Clueless: shapes and the filler (grid.js), clue checks (clues.js), the day's puzzles (maker.js, puzzles.js), the built-in clues, /api/clueless
 tumbler/                  Tumbler Rumble's runs, the replay check and the boards (/api/tumbler; the rules are public/tumbler-engine.js)
+royale/                   Roll Royale's runs, the replay check and the boards (/api/royale; the rules are public/royale-engine.js)
 spinsolve/                Spin & Solve levels, adult banks, packs and requests (/api/spinsolve)
 trivia/                   Know-It-All questions, packs, Open Trivia DB download, rooms (/api/trivia)
 arcade/                   Arcade-wide pieces: Comm Center, adult PIN, high scores, profiles, stats and the error log, Wordless hints
@@ -507,6 +530,7 @@ public/crisscross.*       Criss Cross
 public/clueless.*         Clueless (admin side in admin-clueless.js)
 public/tumbler.*          Tumbler Rumble (the rules, shared with the server, in tumbler-engine.js)
 public/discodrop*         Disco Drop (discodrop-engine.js is shared with the server)
+public/royale.*           Roll Royale (the rules, shared with the server, in royale-engine.js)
 public/game-shell.*       Shared game-over panel and high scores for those four
 public/arcade-ui.css      Shared look for the newer games, with arcade-kit.js and blip.js
 public/admin.html/.js     Admin panel

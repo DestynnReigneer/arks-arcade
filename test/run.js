@@ -23,7 +23,8 @@ const SUITES = [
   ['crisscross', require('./crisscross.test.js')],
   ['clueless', require('./clueless.test.js')],
   ['tumbler', require('./tumbler.test.js')],
-  ['discodrop', require('./discodrop.test.js')]
+  ['discodrop', require('./discodrop.test.js')],
+  ['royale', require('./royale.test.js')]
 ];
 
 // A throwaway brand/ and media/ folder, so the tests can check what the
@@ -68,7 +69,9 @@ function startServer(port = PORT, extraEnv = {}) {
         CLUELESS_MIN_MS_PER_SQUARE: '20',
         // Tumbler Rumble refuses taps later than the run has really lasted;
         // this lets the suite send a whole run without playing it in real time.
-        TUMBLER_SLACK_MS: '60000'
+        TUMBLER_SLACK_MS: '60000',
+        // The same for Roll Royale's press and release times.
+        ROYALE_SLACK_MS: '60000'
       },
       stdio: ['ignore', 'pipe', 'pipe']
     });
