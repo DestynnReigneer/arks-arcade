@@ -23,7 +23,8 @@
     crisscross: { label: 'Criss Cross', href: 'crisscross.html' },
     clueless: { label: 'Clueless', href: 'clueless.html' },
     tumbler: { label: 'Tumbler Rumble', href: 'tumbler.html' },
-    discodrop: { label: 'Disco Drop', href: 'discodrop.html' }
+    discodrop: { label: 'Disco Drop', href: 'discodrop.html' },
+    royale: { label: 'Roll Royale', href: 'royale.html' }
   };
 
   // ---- who's playing ---------------------------------------------------------

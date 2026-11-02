@@ -378,7 +378,7 @@
     const r = result || local;
     $('overTitle').textContent = local.endedBy === 'slip' ? 'The light slipped past the pin!' : 'Missed! The light wasn\'t on the pin.';
     $('overScore').textContent = '0';
-    if (window.Fx) Fx.countUp($('overScore'), 0, r.score, 900); else $('overScore').textContent = String(r.score);
+    if (window.Fx) Fx.countUp($('overScore'), 0, r.score, 900); else $('overScore').textContent = r.score.toLocaleString('en-US');
     $('overDetail').textContent = `You reached lock ${r.level}, popped ${plural(r.pins, 'pin')} and hit ${plural(r.bullseyes, 'bullseye')}` +
       (r.bestStreak > 1 ? `, with a best streak of ${r.bestStreak} bullseyes in a row.` : '.');
     $('chaseLine').textContent = '';
@@ -402,7 +402,7 @@
     $('over').classList.remove('hidden');
     msg(null);
     setTimeout(() => $('over').scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'nearest' }), 60);
-    say(`Game over. You scored ${r.score} and reached lock ${r.level}.`);
+    say(`Game over. You scored ${r.score.toLocaleString('en-US')} and reached lock ${r.level}.`);
   }
 
   // How far this score is from the next one up on today's board. Every number
