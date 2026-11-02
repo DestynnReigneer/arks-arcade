@@ -148,3 +148,10 @@ body[data-state="over"] .cl-tools, body[data-state="over"] .cl-keys, body[data-s
   .cl-keys .row { gap: 4px; }
   .cl-tool small { font-size: 11px; }
 }
+
+/* ---- on a TV (tv.js puts .tv on <html>): the highlight is the cursor, so
+   the square it's on wears the ring, and the keys are big enough to aim at. */
+html.tv .cl-keys { display: block; }
+html.tv .cl-key { min-height: 44px; font-size: 17px; }
+html.tv .cl-wrap { max-width: 330px; margin-left: auto; margin-right: auto; }
+html.tv .cl-cell:focus { z-index: 3; }

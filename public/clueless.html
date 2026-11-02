@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-tv-nav>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
@@ -13,6 +13,10 @@
 <link rel="stylesheet" href="clueless.css">
 <link rel="stylesheet" href="look.css">
 <link rel="stylesheet" href="topbar.css">
+<link rel="stylesheet" href="tv.css">
+<!-- On a TV: the TV layout, the remote's arrows, and setting the TV up (tv.js). -->
+<script src="tv-core.js"></script>
+<script src="tv.js"></script>
 </head>
 <body>
 <script src="topbar.js"></script>
@@ -49,7 +53,7 @@
     <div class="cl-cover-box">
       <b id="coverTitle">Today's crossword</b>
       <p id="coverText"></p>
-      <button class="primary big" id="coverBtn">Start</button>
+      <button class="primary big" id="coverBtn" data-tv-start>Start</button>
     </div>
   </div>
 </div>
@@ -75,7 +79,8 @@
 </div>
 
 <div class="cl-keys" id="keys" aria-label="Keyboard"></div>
-<p class="hint center keys-hint">Keyboard: type letters, <b>arrows</b> to move, <b>Space</b> to switch across and down, <b>Tab</b> for the next clue, <b>Backspace</b> to erase.</p>
+<p class="hint center keys-hint tv-only">With the remote: the arrows move around the grid, OK picks a square (OK again switches between across and down), and the keyboard below types into it. Arrow back up to the grid and you're on your square again.</p>
+<p class="hint center keys-hint no-tv">Keyboard: type letters, <b>arrows</b> to move, <b>Space</b> to switch across and down, <b>Tab</b> for the next clue, <b>Backspace</b> to erase.</p>
 
 <div class="cl-lists" id="lists">
   <section><h2>Across</h2><ol id="acrossList"></ol></section>
