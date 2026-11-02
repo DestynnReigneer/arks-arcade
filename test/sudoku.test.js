@@ -136,6 +136,51 @@ async function run({ base, root }) {
   ok('an old day\'s board is empty, not an error', (await api('/board?level=family&scope=day&day=2001-01-01')).data.length === 0);
   ok('a made-up run id is a 404', (await api('/run/0123456789abcdef0123456789abcdef')).status === 404);
 
+  console.log('\n-- sudoku: progress follows a profile --');
+  // One profile (the arcade allows only a few profile requests an hour per address).
+  const post = (url, body, headers = {}) => fetch(base + url, { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify(body) }).then(r => r.json());
+  const asked = await post('/api/profiles', { name: 'Sudoku Sam', avatar: 'shiba:3' });
+  await post(`/api/profiles/admin/${asked.id}/approve`, {}, { 'X-Admin-Token': 'test-admin-token' });
+  const sam = (await post(`/api/profiles/${asked.id}/use`, {})).token;
+  const phone = (await api('/start', 'POST', { level: 'easy', profileToken: sam })).data;
+  ok('a profile\'s run says its progress is kept on the arcade', phone.syncs === true && phone.progress === null, JSON.stringify({ syncs: phone.syncs, progress: phone.progress }));
+  const easyAnswer = gen.solve(digits(phone.puzzle)).join('');
+  // Fill in the first three empty squares, with a pencil mark and a wrong-number mark.
+  const fill = phone.puzzle.split('');
+  const empties3 = [];
+  for (let i = 0; i < 81 && empties3.length < 3; i++) if (phone.puzzle[i] === '0') { fill[i] = easyAnswer[i]; empties3.push(i); }
+  const notesSent = new Array(81).fill(0);
+  const pencil = phone.puzzle.split('').findIndex((v, i) => v === '0' && !empties3.includes(i));
+  notesSent[pencil] = (1 << 2) | (1 << 7);
+  const sent = await api(`/run/${phone.runId}/progress`, 'POST', { grid: fill.join(''), notes: notesSent, marks: { [empties3[0]]: 'hinted', 99: 'wrong', 5: 'sparkly' }, profileToken: sam });
+  ok('the page can save its progress for the profile', sent.status === 200 && sent.data.saved === true, JSON.stringify(sent.data));
+  const laptop = (await api('/start', 'POST', { level: 'easy', profileToken: sam })).data;
+  ok('opening the puzzle on another device carries on the same run', laptop.runId === phone.runId);
+  ok('…with the numbers filled in so far', laptop.progress && laptop.progress.grid === fill.join(''), JSON.stringify(laptop.progress));
+  ok('…the pencil marks', laptop.progress && laptop.progress.notes[pencil] === notesSent[pencil] && laptop.progress.notes.length === 81);
+  ok('…and only the square marks that make sense', laptop.progress && JSON.stringify(laptop.progress.marks) === JSON.stringify({ [empties3[0]]: 'hinted' }), JSON.stringify(laptop.progress && laptop.progress.marks));
+  ok('reopening by run id hands the progress back too', (await api(`/run/${phone.runId}`)).data.progress.grid === fill.join(''));
+  await api(`/run/${phone.runId}/pause`, 'POST', {});
+  const resumed = await api(`/run/${phone.runId}/resume`, 'POST', {});
+  ok('carrying on after a pause hands back the latest progress', resumed.data.progress && resumed.data.progress.grid === fill.join(''));
+  ok('a checked number or a pause doesn\'t carry the progress (it only comes back when needed)',
+    !('progress' in (await api(`/run/${phone.runId}/pause`, 'POST', {})).data));
+  await api(`/run/${phone.runId}/resume`, 'POST', {});
+  ok('saving progress needs the profile\'s sign-in', (await api(`/run/${phone.runId}/progress`, 'POST', { grid: fill.join('') })).status === 403);
+  ok('…and a made-up one is refused', (await api(`/run/${phone.runId}/progress`, 'POST', { grid: fill.join(''), profileToken: 'x.y' })).status === 403);
+  ok('a board that isn\'t 81 squares is refused', (await api(`/run/${phone.runId}/progress`, 'POST', { grid: '123', profileToken: sam })).status === 400);
+  ok('pencil marks that aren\'t 81 small numbers are refused', (await api(`/run/${phone.runId}/progress`, 'POST', { grid: fill.join(''), notes: [1, 2], profileToken: sam })).status === 400);
+  const guest = (await api('/start', 'POST', { level: 'easy' })).data;
+  ok('a guest\'s run keeps its progress on the device only', guest.syncs === false &&
+    (await api(`/run/${guest.runId}/progress`, 'POST', { grid: guest.puzzle })).status === 409);
+  // Saved progress never decides anything: a whole solved board saved as
+  // progress doesn't finish the puzzle, and the finish still checks what's sent.
+  await api(`/run/${phone.runId}/progress`, 'POST', { grid: easyAnswer, profileToken: sam });
+  const stillOpen = (await api(`/run/${phone.runId}`)).data;
+  ok('saving a full, right board as progress doesn\'t finish the puzzle', stillOpen.finished === false && stillOpen.timeMs === null);
+  ok('…and the finish still needs the whole board sent and checked', (await api(`/run/${phone.runId}/finish`, 'POST', {})).status === 400 &&
+    (await api(`/run/${phone.runId}/finish`, 'POST', { grid: phone.puzzle })).status === 400);
+
   console.log(`\n  ${pass} passed, ${fail} failed`);
   return { pass, fail };
 }

@@ -7,6 +7,50 @@ to-do list as checkboxes (the rule is in the maintainer's global CLAUDE.md
 and `arks-internal/conventions/sessions.md`): do the checked items in the
 order they were clicked, and keep the rest pinned here.
 
+## Sudoku follows you, one score off a board, a cheap /healthz, and env_file (2026-11-01)
+
+- **Sudoku progress follows a profile across devices.** `sudoku_runs` gained `progress`
+  (JSON: the 81-digit grid, 81 pencil-mark bit masks, and the square marks `wrong`/`hinted`)
+  and `progress_at`. The page sends it to `POST /api/sudoku/run/:id/progress` 1.5 seconds
+  after the last tap and, with `keepalive`, when the page is hidden or closed. Only the
+  profile that owns the run can save it (its `profileToken`); a guest's run is refused (409)
+  and keeps device-only progress as before. `/start`, `GET /run/:id` and `/resume` hand the
+  progress back (`syncs` says whether the run keeps it). On this device the copy is marked
+  `unsent` until the arcade has it, and an unsent device copy wins over the arcade's copy
+  next time (so changes made with no signal aren't lost); otherwise the arcade's copy wins.
+  Progress is never read by the finish or the clock: the finish still checks the grid it's
+  sent. Tests in `test/sudoku.test.js`.
+- **The admin can take one score off a board, and put it back** (`arcade/score-admin.js`,
+  the admin page's new 🏆 Boards tab, `public/admin-boards.js`, routes under
+  `/api/admin/scores`). Remove takes two taps (the first turns the button into "Tap again to
+  remove" for four seconds). The row is moved, whole, into `removed_scores` with
+  `removed_at` and `removed_by` (the ARKS ID name if the admin is signed in there, otherwise
+  "the admin page" or "an admin script"), so every game's boards, ranks and "fastest ever"
+  leave it out without any game's own queries changing. Put back copies it into its table
+  again with the same id (refused with a clear message if the same player has since put
+  another score in that day's slot). Covered: Sudoku, Clueless, Tumbler Rumble, Disco Drop,
+  Roll Royale, Shuffle Scuffle, Wordless (by difficulty) and the older games' shared
+  `arcade_scores` (each game by its own boards). **Any other `<game>_scores` table** with
+  `id`, `initials` and `score` or `time_ms` is found by itself (named from `NAMES` in
+  `arcade/switches.js`, split by `level` if it has one, by day if it has `day`), so the
+  baseball game picks it up when it lands. Rambler is left out: it has its own Remove and
+  Clear on the Rambler tab, and its seasons turn the boards into badges. Tests in
+  `test/boards.test.js` and `test/browser/boards.spec.js`.
+- **`/healthz` only looks now.** The Rambler season check and the forced theme-pack
+  refresh moved to `rambler/housekeeping.js`, a once-a-minute timer started after the
+  server opens its port (it replaced the 10-minute timer that was in `rambler/seasons.js`).
+  Seasons end at a local midnight; every Rambler board read and score post still checks
+  first, and startup still checks and refreshes, so nothing changed for players except a
+  quiet arcade now rolls over within a minute instead of within 30 seconds. The pack refresh
+  is no longer forced: it rebuilds the dictionary only when the word edits or the season's
+  theme changed (admin edits still force it). `HOUSEKEEPING_MS` slows the timer for the test
+  suite only. Tests in `test/housekeeping.test.js`.
+- **`env_file: .env`** in both compose files, keeping the `environment:` list and its
+  defaults. Every setting in `.env` now reaches the arcade, so a new setting only needs a
+  line in `.env`. `docs/SETUP.md` says so. On the server: copy the new
+  `docker-compose.prod.yml` over `docker-compose.yml`, then
+  `docker compose pull && docker compose up -d`. Nothing changes in `.env`.
+
 ## Roll Royale (2026-11-01)
 
 A cabinet-style ball-rolling game like the skee-ball machines with a power meter, with our own
@@ -252,7 +296,7 @@ clues.
   sign, Comm Center posts (fastest-ever time per crossword), its own music in `public/blip.js`,
   the Dockerfile, the Playwright page list and a browser test that solves the mini through the
   page.
-- Not done: no removing a single time from a board (no game has that yet), no adult crossword,
+- Not done: no adult crossword,
   and no "reveal the whole puzzle" (a finish after that wouldn't mean much).
 
 ## Criss Cross (2026-11-01)
@@ -355,8 +399,8 @@ shares, Family, Easy, Medium and Hard, pencil marks, fastest-time boards, and ph
 - Wired into the home page card, the QR picker, the admin game switches ("Pardon our
   dust"), stats, feedback, Comm Center posts (a new fastest-ever time per level) and the
   Playwright page list. It has its own calm music in `public/blip.js`.
-- Not done yet: the admin can't remove a single Sudoku time from a board (no game's
-  arcade-wide board has that yet either).
+- Since the later 2026-11-01 change at the top of this file, a profile's squares and pencil
+  marks follow it to another device, and the admin can take a single time off a board.
 
 ## Feedback goes to ARKS ID's one inbox (2026-11-01, contract v10)
 
@@ -411,9 +455,8 @@ shares, Family, Easy, Medium and Hard, pencil marks, fastest-time boards, and ph
   characters instead of 12.
 - CI also labels every image `sha-<commit>` and passes the build date in. Rolling back
   is in `CONTRIBUTING.md`.
-- Worth a look later: `/healthz` still runs the Rambler season check and a forced theme
-  pack refresh on every call (lines that slipped in there back in #6 and #7). It
-  works, but it isn't as cheap as it could be for a dashboard that polls it.
+- ~~`/healthz` still runs the Rambler season check and a forced theme pack refresh on
+  every call~~: moved to a once-a-minute timer (see the top of this file).
 
 ## Review fixes and browser tests (2026-11-01)
 

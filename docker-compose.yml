@@ -6,6 +6,11 @@ services:
     restart: unless-stopped
     ports:
       - "${HOST_PORT:-3000}:3000"
+    # Every setting in .env reaches the arcade, so a new setting only ever needs a
+    # line in .env, never a change to this file. The list below repeats the
+    # main ones (with their defaults) so they're documented here.
+    env_file:
+      - .env
     environment:
       - ARCADE_NAME=${ARCADE_NAME:-}
       - TRIVIA_ONLINE=${TRIVIA_ONLINE:-}
