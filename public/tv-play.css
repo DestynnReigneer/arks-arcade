@@ -22,7 +22,7 @@ html.tv.tv-play body {
 html.tv.tv-play .tv-stage {
   position: fixed;
   zoom: 0.666667;
-  top: 17%;
+  top: max(17%, 165px);   /* below the top bar, even in a short window */
   bottom: 4%;
   left: 44%;
   right: 4%;
