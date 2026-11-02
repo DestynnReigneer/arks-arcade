@@ -1,0 +1,71 @@
+/* Moonshot: the batting cage, the big SWING button and the end screen.
+   The shared look comes from arcade-ui.css, game-shell.css and look.css. */
+:root { --accent: #7cf5ff; --on-accent: #00212a; --ms-gold: #ffd23f; --ms-pink: #ff2ec4; }
+
+.hud b#pitch, .hud b#mult { font-size: 15px; }
+.hud b#mult.up { color: var(--ms-gold); }
+
+/* The cage: one big tap area, 4 wide by 5 tall, never wider than the page.
+   On a short screen (a laptop, a TV, a small phone) it gets smaller so the
+   whole cage and the SWING button fit without scrolling. */
+.ms-stage {
+  position: relative; width: 100%; margin: 0 auto; aspect-ratio: 4 / 5;
+  max-width: min(480px, max(240px, (100vh - 280px) * 0.8));
+  border-radius: 16px; overflow: hidden; border: 3px solid var(--accent);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--accent) 45%, transparent), inset 0 0 24px rgba(0, 0, 0, .6);
+  background: #060418; cursor: pointer; touch-action: manipulation;
+  user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
+}
+.ms-stage canvas { display: block; width: 100%; height: 100%; }
+
+.ms-cover {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 18px;
+  background: color-mix(in srgb, #060418 82%, transparent); text-align: center; cursor: default;
+  backdrop-filter: blur(3px);
+}
+.ms-cover-box { max-width: 300px; }
+.ms-cover b { font-size: 21px; letter-spacing: 0.5px; color: var(--accent); }
+.ms-cover p { color: var(--text); font-size: 14px; line-height: 1.5; margin: 8px 0 4px; }
+.ms-live { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+/* The big button under the cage, like the one on a real cabinet. */
+.ms-swing {
+  display: block; width: 100%; max-width: min(480px, max(240px, (100vh - 280px) * 0.8)); margin: 12px auto 0; padding: 16px; border-radius: 999px;
+  border: 3px solid var(--accent); background: radial-gradient(circle at 50% 30%, #d2fcff, var(--accent) 55%, #1fa6c4);
+  color: var(--on-accent); font: 900 22px/1 var(--font); letter-spacing: 3px; cursor: pointer;
+  box-shadow: 0 6px 0 #0a5566, 0 0 22px color-mix(in srgb, var(--accent) 50%, transparent);
+  -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+}
+.ms-swing:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 2px 0 #0a5566, 0 0 12px var(--accent); }
+.ms-swing:disabled { filter: grayscale(.7) brightness(.6); cursor: default; }
+
+/* What each pitch did, on the end screen. */
+.ms-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; margin: 8px 0 4px; }
+.ms-chips span {
+  min-width: 42px; padding: 4px 6px; border-radius: 8px; font-size: 12.5px; font-weight: 800;
+  background: var(--card-2); border: 1px solid var(--border); color: var(--text); font-variant-numeric: tabular-nums;
+}
+.ms-chips span.homer { background: var(--ms-gold); color: #2a1a00; border-color: var(--ms-gold); }
+.ms-chips span.hit { border-color: var(--accent); color: var(--accent); }
+.ms-chips span.strike { color: var(--dim); }
+
+body[data-state="over"] .ms-swing, body[data-state="over"] .keys-hint { display: none; }
+
+/* Celebrations (fx.js): the coins and confetti, and the big banner for a
+   home run. */
+#fxCanvas { position: fixed; inset: 0; pointer-events: none; z-index: 90; }
+.fx-banner { position: fixed; inset: 0; z-index: 95; display: flex; align-items: center; justify-content: center; pointer-events: none; opacity: 0; transition: opacity .25s ease; padding: 20px; }
+.fx-banner.on { opacity: 1; }
+.fx-banner-inner { text-align: center; transform: scale(.7); transition: transform .4s cubic-bezier(.2, .9, .25, 1.4); }
+.fx-banner.on .fx-banner-inner { transform: scale(1); }
+.fx-title { font-family: "Orbitron", system-ui, sans-serif; font-weight: 800; font-size: clamp(30px, 11vw, 74px); line-height: 1; text-wrap: balance; }
+.fx-sub { font-weight: 700; font-size: clamp(13px, 4vw, 19px); letter-spacing: .2em; text-transform: uppercase; margin-top: 12px; color: #f5eaff; }
+.fx-banner.tone-gold .fx-title { color: #ffd23f; text-shadow: 0 0 26px rgba(255, 210, 63, .9), 0 0 70px rgba(124, 245, 255, .55), 0 4px 0 #7a4e08; animation: msStrobe .34s steps(2) infinite; }
+.fx-banner.tone-teal .fx-title { color: #7cf5ff; text-shadow: 0 0 26px rgba(124, 245, 255, .85), 0 0 60px rgba(255, 46, 196, .35); }
+@keyframes msStrobe { 50% { filter: brightness(1.45); } }
+.fx-flash { position: fixed; inset: 0; z-index: 89; pointer-events: none; background: rgba(255, 255, 255, .25); opacity: 0; transition: opacity .45s ease; }
+.fx-flash.on { opacity: 1; }
+@media (prefers-reduced-motion: reduce) {
+  .fx-banner-inner { transition: none !important; }
+  .fx-title { animation: none !important; }
+}

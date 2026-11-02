@@ -183,6 +183,32 @@ Everything is under `/api/discodrop`.
 | `POST /run/:id/save` `{ initials?, profileToken? }` | Puts a finished run on the boards. Returns today's and all-time rank, and how far behind the next score up today it is. |
 | `GET /board?scope=day\|all&day=` | The best runs, highest first. |
 
+### Moonshot (`/moonshot.html`)
+
+An arcade batting cage for one player. You stand at the plate under the stadium lights, and a pitching machine throws twelve pitches at you, one at a time. Tap to swing just as the ball reaches the glowing ring over the plate. The closer your timing, the bigger the hit, and a perfect swing sends the ball over the wall and up to the moon for a home run.
+
+- **Timing is everything.** The cage measures how far your swing was from the moment the ball reached the ring, in milliseconds (thousandths of a second). Within 25 either way is a home run (100 points), then a triple (60) within 50, a double (40) within 80, a single (25) within 120, a grounder (5) within 160 and a foul ball (2) within 210. Anything further off, or no swing at all, is a strike. Early swings go to the left and late ones to the right, and after every swing the cage says how many milliseconds early or late it was.
+- **Three pitches, and they speed up.** A fastball is quick and straight, a changeup leaves the machine the same way but comes in slower, and a curveball swings out to one side and bends back over the plate. The lights around the machine fill up during its windup, so you can see each pitch coming. Pitches 1 to 4 score normal points, 5 to 8 come faster and score double, and 9 to 12 come faster still and score triple. Home runs in a row earn a streak bonus of 50 points for each one before it (up to 200 extra, before the double or triple). A run takes about a minute, and the most it can score is 6,700.
+- **The server decides every score.** Starting a run picks a random seed on the server and writes down the moment it started. Every pitch comes from that seed alone, using whole-number math in one shared file (`public/moonshot-engine.js`), so the page and the server always agree. For each swing the page sends only *when* it happened, in milliseconds since the run started. The server replays the whole run from the seed to work out every hit and adds up the score itself. It turns away a swing that couldn't have happened: between pitches, a second one at the same pitch, one later than the server's own clock says the run has been going, or one that arrives more than ten seconds after it happened. A score sent by the page is ignored.
+- **Pausing is fair.** Opening How to play, the high scores or another tab pauses the run, on the page and on the server, so the clocks stay together. Coming back gives you a short countdown before the next ball.
+- **Celebrations are earned.** A home run gets a banner, a coin shower, fireworks over the moon and a jingle, but only when the server says it was one. "So close!" only shows when the server measured a swing within 15 milliseconds of the home-run window, and it says by how much.
+- **Boards** for today and for all time. Every run you save counts. Profiles show their name or initials (their own choice), and guests type initials. A new best-ever run posts to the Comm Center.
+- **Phones first, and TV-ready:** the whole cage is the tap area, with a big SWING button under it, and it fits a phone screen with no sideways scrolling. **Space** or **Enter** swings on a keyboard (**P** or **Esc** pauses), and a game controller's **A** button swings through the browser's Gamepad API (**Start** pauses). The animation runs on `requestAnimationFrame`, and with reduced motion turned on the stars, lights and fireworks hold still (the pitches still move, since that's the game).
+
+#### The Moonshot API
+
+Everything is under `/api/moonshot`.
+
+| Call | What it does |
+|---|---|
+| `GET /rules` | The number of pitches, the timing for each kind of hit and its points, the three pitches and the streak bonus. |
+| `POST /start` `{ profileToken? }` | Starts a run. Returns its id and seed. |
+| `GET /run/:id` | Where a run stands: the swing times so far, what each pitch did, the total, and whether it's over. |
+| `POST /run/:id/swing` `{ t }` | A swing `t` milliseconds after the run started. Returns what it did, any pitches let go by since the last swing, and the new total. |
+| `POST /run/:id/pause`, `POST /run/:id/resume` | Stops and restarts the run's clock. |
+| `POST /run/:id/save` `{ initials?, profileToken? }` | Puts a finished run on the boards. Returns today's and all-time rank, and how far behind the next score up today it is. |
+| `GET /board?scope=day|all&day=` | The best runs, highest first. |
+
 ### Sudoku (`/sudoku.html`)
 
 The classic 9x9 number puzzle: fill every empty square with 1 to 9 so no row, column or 3x3 box has the same number twice. There's a new puzzle at midnight on each of four levels, and it's the same puzzle for everyone that day (it's made from the date alone), so the family can race each other.
@@ -511,6 +537,7 @@ discodrop/                Disco Drop: runs, the replayed drops and the boards (/
 clueless/                 Clueless: shapes and the filler (grid.js), clue checks (clues.js), the day's puzzles (maker.js, puzzles.js), the built-in clues, /api/clueless
 tumbler/                  Tumbler Rumble's runs, the replay check and the boards (/api/tumbler; the rules are public/tumbler-engine.js)
 royale/                   Roll Royale's runs, the replay check and the boards (/api/royale; the rules are public/royale-engine.js)
+moonshot/                 Moonshot: runs, the replayed swings and the boards (/api/moonshot); the pitches are public/moonshot-engine.js
 spinsolve/                Spin & Solve levels, adult banks, packs and requests (/api/spinsolve)
 trivia/                   Know-It-All questions, packs, Open Trivia DB download, rooms (/api/trivia)
 arcade/                   Arcade-wide pieces: Comm Center, adult PIN, high scores, profiles, stats and the error log, Wordless hints
@@ -531,6 +558,7 @@ public/clueless.*         Clueless (admin side in admin-clueless.js)
 public/tumbler.*          Tumbler Rumble (the rules, shared with the server, in tumbler-engine.js)
 public/discodrop*         Disco Drop (discodrop-engine.js is shared with the server)
 public/royale.*           Roll Royale (the rules, shared with the server, in royale-engine.js)
+public/moonshot*          Moonshot (moonshot-engine.js is shared with the server)
 public/game-shell.*       Shared game-over panel and high scores for those four
 public/arcade-ui.css      Shared look for the newer games, with arcade-kit.js and blip.js
 public/admin.html/.js     Admin panel

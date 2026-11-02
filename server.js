@@ -174,6 +174,7 @@ app.use('/api/sudoku', require('./sudoku/routes').router);
 app.use('/api/scuffle', require('./scuffle/routes'));
 app.use('/api/crisscross', require('./crisscross/routes'));
 app.use('/api/discodrop', require('./discodrop/routes').router);
+app.use('/api/moonshot', require('./moonshot/routes').router);
 app.use('/api/clueless', require('./clueless/routes')({ requireAdmin }));
 app.use('/api/tumbler', require('./tumbler/routes').router);
 app.use('/api/royale', require('./royale/routes').router);
