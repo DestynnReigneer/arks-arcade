@@ -137,16 +137,8 @@ function setWarnDays(days) {
   return status();
 }
 
-// A cheap heartbeat so a season rolls over even if nobody loads a page at
-// midnight. unref so it never holds the process open.
-const timer = setInterval(() => {
-  try {
-    checkDue();
-  } catch (e) {
-    console.error('season rollover failed:', e.message);
-  }
-}, 10 * 60 * 1000);
-if (typeof timer.unref === 'function') timer.unref();
+// The timer that rolls a season over when nobody loads a page at midnight
+// lives in rambler/housekeeping.js (once a minute, started by server.js).
 
 module.exports = {
   DEFAULT_INTERVAL,

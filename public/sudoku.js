@@ -3,6 +3,9 @@
 // Sudoku: the page. The server (sudoku/routes.js) makes the day's puzzles,
 // keeps the answers, runs the clock and decides the time; this page draws the
 // board, takes taps and keys, and remembers your progress on this device.
+// Playing as a profile, the progress is also saved on the arcade (a moment
+// after you stop tapping, and when you leave the page), so it follows you to
+// another device. It's never used for the time: the finish sends the board.
 
 (() => {
   const { $, toast, api } = ArcadeKit;
@@ -144,26 +147,59 @@
     if (grid.every(Boolean)) finish();
   }
 
-  // ---- this device's copy of your progress --------------------------------------------------
+  // ---- your progress: on this device, and on the arcade for profiles ----------------------
   const progressKey = id => `sudoku.progress.${id}`;
   const currentKey = (day, lv) => `sudoku.current.${day}.${lv}`;
+  const SYNC_AFTER_MS = 1500;     // a pause in tapping this long, then it's sent
+  let version = 0, sentVersion = 0, sendTimer = null;
+  const unsent = () => version !== sentVersion;
+  // `unsent` in the device copy means the arcade hasn't got these changes yet
+  // (no signal, or the page closed first), so this device's copy wins next time.
+  function keep(unsentToo) {
+    if (!run) return;
+    store(progressKey(run.runId), JSON.stringify({ grid: grid.join(''), notes, marks, unsent: !!unsentToo }));
+  }
   function save() {
     if (!run) return;
-    store(progressKey(run.runId), JSON.stringify({ grid: grid.join(''), notes, marks }));
+    version++;
+    keep(run.syncs);
+    if (run.syncs) { clearTimeout(sendTimer); sendTimer = setTimeout(send, SYNC_AFTER_MS); }
   }
-  function load(state) {
-    givens = state.puzzle.split('').map(Number);
+  const progressBody = () => ({ grid: grid.join(''), notes, marks, profileToken: token() });
+  async function send() {
+    clearTimeout(sendTimer); sendTimer = null;
+    if (!run || !run.syncs || run.finished || !unsent() || !token()) return;
+    const v = version, id = run.runId;
+    try {
+      await api(`/api/sudoku/run/${id}/progress`, progressBody());
+      if (!run || run.runId !== id) return;
+      sentVersion = v;
+      if (v === version) keep(false);
+    } catch { /* kept on this device; sent again after the next change or on leaving */ }
+  }
+  // Puts saved progress on the board (the givens always stay as they are).
+  function apply(saved) {
     grid = givens.slice();
     notes = new Array(81).fill(0);
     marks = {};
-    try {
-      const saved = JSON.parse(recall(progressKey(state.runId), 'null'));
-      if (saved && /^[0-9]{81}$/.test(saved.grid)) {
-        saved.grid.split('').map(Number).forEach((v, i) => { if (!givens[i]) grid[i] = v; });
-        if (Array.isArray(saved.notes) && saved.notes.length === 81) notes = saved.notes.map(n => n | 0);
-        if (saved.marks && typeof saved.marks === 'object') marks = saved.marks;
-      }
-    } catch { /* start clean */ }
+    if (!saved || !/^[0-9]{81}$/.test(saved.grid)) return;
+    saved.grid.split('').map(Number).forEach((v, i) => { if (!givens[i]) grid[i] = v; });
+    if (Array.isArray(saved.notes) && saved.notes.length === 81) notes = saved.notes.map(n => n | 0);
+    if (saved.marks && typeof saved.marks === 'object') marks = { ...saved.marks };
+  }
+  const sameAsBoard = p => !!p && p.grid === grid.join('') && JSON.stringify(p.notes) === JSON.stringify(notes) &&
+    JSON.stringify(p.marks || {}) === JSON.stringify(marks);
+  function load(state) {
+    givens = state.puzzle.split('').map(Number);
+    let local = null;
+    try { local = JSON.parse(recall(progressKey(state.runId), 'null')); } catch { /* start clean */ }
+    // The arcade's copy is the newest, unless this device has changes it never got to send.
+    const server = state.syncs ? state.progress || null : null;
+    const useLocal = !!local && (!server || !!local.unsent);
+    apply(useLocal ? local : server);
+    clearTimeout(sendTimer);
+    version = sentVersion = 0;
+    if (useLocal && local.unsent && state.syncs) { version = 1; sendTimer = setTimeout(send, 300); }
     // Clear out older days' saved progress so it doesn't pile up.
     try {
       for (let k = localStorage.length - 1; k >= 0; k--) {
@@ -173,6 +209,7 @@
       }
     } catch { /* unavailable */ }
     store(currentKey(state.day, state.level), state.runId);
+    if (!useLocal) store(progressKey(state.runId), JSON.stringify({ grid: grid.join(''), notes, marks, unsent: false }));
     undo = [];
     checked.clear();
     sel = -1;
@@ -256,7 +293,15 @@
   async function setPaused(on, { quiet = false } = {}) {
     if (!run || run.finished || !!run.paused === on) return;
     try {
-      took(await runApi(on ? '/pause' : '/resume'));
+      const r = took(await runApi(on ? '/pause' : '/resume'));
+      // Carrying on: another device may have moved on while this one was away.
+      if (!on && r.syncs && r.progress && !unsent() && !sameAsBoard(r.progress)) {
+        apply(r.progress);
+        keep(false);
+        undo = [];
+        sel = -1;
+        paint();
+      }
       if (!quiet) showState();
     } catch (e) { if (!quiet) toast(e.message); }
   }
@@ -492,7 +537,16 @@
   });
   // Leaving the page (another app, another tab, closing it) pauses the clock.
   function away() {
-    if (!run || run.paused || run.finished) return;
+    if (!run || run.finished) return;
+    // Whatever hasn't reached the arcade yet goes now, before the page closes.
+    if (run.syncs && unsent() && token()) {
+      clearTimeout(sendTimer);
+      try {
+        fetch(`/api/sudoku/run/${run.runId}/progress`, { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(progressBody()) })
+          .then(r => { if (r.ok) { sentVersion = version; keep(false); } }).catch(() => {});
+      } catch { /* best effort */ }
+    }
+    if (run.paused) return;
     run.paused = true;
     try { fetch(`/api/sudoku/run/${run.runId}/pause`, { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json' }, body: '{}' }); } catch { /* best effort */ }
     showState();
@@ -536,7 +590,7 @@
     {
       emoji: '⏱️', title: 'The clock and the boards',
       html: `<p>The clock starts when you tap <b>Start</b> and the arcade keeps the time, not your phone. <b>Pause</b> (or leaving the page) stops it and hides the board until you come back.</p>
-        <p>Finish the puzzle to put your time on the 🏆 board for today, and the all-time board for that level. Only your <b>first finish of the day</b> counts, because a second go at the same puzzle would be easy. If you're playing as a profile, your clock carries on from where it was even if you open the puzzle again on another device.</p>`
+        <p>Finish the puzzle to put your time on the 🏆 board for today, and the all-time board for that level. Only your <b>first finish of the day</b> counts, because a second go at the same puzzle would be easy. If you're playing as a profile, the puzzle follows you: open it on another device and your clock, your numbers and your pencil marks carry on from where you left them.</p>`
     },
     {
       emoji: '💡', title: 'Getting help costs time',

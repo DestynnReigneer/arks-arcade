@@ -371,7 +371,7 @@
 
   function bind() {
     // One panel per tab; admin-arcade.js listens for 'admin-tab' to load its own.
-    const TABS = { tabArcade: 'arcadePanel', tabRambler: 'ramblerPanel', tabWordless: 'wordlessPanel', tabSpin: 'spinPanel', tabTrivia: 'triviaPanel', tabClueless: 'cluelessPanel', tabStats: 'statsPanel' };
+    const TABS = { tabArcade: 'arcadePanel', tabRambler: 'ramblerPanel', tabWordless: 'wordlessPanel', tabSpin: 'spinPanel', tabTrivia: 'triviaPanel', tabClueless: 'cluelessPanel', tabBoards: 'boardsPanel', tabStats: 'statsPanel' };
     function showTab(tabId) {
       for (const [tab, panel] of Object.entries(TABS)) {
         $(panel).classList.toggle('hidden', tab !== tabId);

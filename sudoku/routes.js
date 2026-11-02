@@ -8,6 +8,11 @@
 // browser sends the grid; the server checks it against the answer it kept and
 // works out the time itself (minus any pauses, plus any help penalties). No
 // time from the browser is ever read.
+//
+// A profile's progress (the numbers and pencil marks filled in so far) is
+// kept with its run too, so it follows them to another device. It's only
+// ever handed back to the page; the finish still checks the whole grid the
+// browser sends against the answer, so saved progress can't change a time.
 
 const crypto = require('node:crypto');
 const express = require('express');
@@ -66,6 +71,10 @@ db.db.exec(`
   CREATE INDEX IF NOT EXISTS sudoku_scores_day ON sudoku_scores (level, day, time_ms);
   CREATE INDEX IF NOT EXISTS sudoku_scores_all ON sudoku_scores (level, time_ms);
 `);
+// Where a profile got to: { grid, notes, marks } as JSON, and when it was saved.
+for (const col of ['progress TEXT', 'progress_at INTEGER']) {
+  try { db.db.exec(`ALTER TABLE sudoku_runs ADD COLUMN ${col}`); } catch { /* already there */ }
+}
 
 const fail = (message, status = 400, extra = {}) => Object.assign(new Error(message), { status, ...extra });
 const profiles = () => require('../arcade/profiles');
@@ -101,9 +110,14 @@ function playMs(run, now = Date.now()) {
   return Math.max(0, end - run.started_at - run.paused_ms);
 }
 
-function view(run, now = Date.now()) {
+// withProgress: also hand back the saved progress (opening, reopening or
+// carrying on after a pause, the moments another device may have moved on).
+function view(run, now = Date.now(), { withProgress = false } = {}) {
   const p = puzzleFor(run.day, run.level);
   return {
+    ...(withProgress ? { progress: readProgress(run) } : {}),
+    // Whether this run's progress is kept on the server (profiles only).
+    syncs: !!run.profile_id,
     runId: run.id, day: run.day, level: run.level, label: gen.LEVELS[run.level].label,
     puzzle: p.puzzle, clues: p.clues,
     playMs: playMs(run, now), penaltyMs: run.penalty_ms,
@@ -129,13 +143,13 @@ function start({ level, profileToken }, now = Date.now()) {
   if (profile) {
     const had = db.db.prepare('SELECT * FROM sudoku_runs WHERE day = ? AND level = ? AND profile_id = ? ORDER BY started_at LIMIT 1')
       .get(day, level, profile.id);
-    if (had) return view(had, now);
+    if (had) return view(had, now, { withProgress: true });
   }
   puzzleFor(day, level);
   const id = crypto.randomBytes(16).toString('hex');
   db.db.prepare('INSERT INTO sudoku_runs (id, day, level, profile_id, started_at) VALUES (?, ?, ?, ?, ?)')
     .run(id, day, level, profile ? profile.id : null, now);
-  return view(getRun(id), now);
+  return view(getRun(id), now, { withProgress: true });
 }
 
 function playing(run) {
@@ -150,7 +164,34 @@ function pause(id, on, now = Date.now()) {
   if (!on && run.paused_at) {
     db.db.prepare('UPDATE sudoku_runs SET paused_ms = paused_ms + ?, paused_at = NULL WHERE id = ?').run(now - run.paused_at, run.id);
   }
-  return view(getRun(run.id), now);
+  return view(getRun(run.id), now, { withProgress: !on });
+}
+
+// ---- progress that follows a profile -----------------------------------------------
+function readProgress(run) {
+  if (!run.progress) return null;
+  try { return { ...JSON.parse(run.progress), savedAt: run.progress_at }; } catch { return null; }
+}
+const MARKS = new Set(['wrong', 'hinted']);
+// Saved for the profile playing this run only; guests keep theirs on their device.
+function saveProgress(id, { grid, notes, marks, profileToken }, now = Date.now()) {
+  const run = needRun(id);
+  if (!run.profile_id) throw fail('Only profiles have their progress kept on the arcade. Yours is kept on this device.', 409);
+  const profile = profileToken ? profiles().verify(profileToken) : null;
+  if (!profile || profile.id !== run.profile_id) throw fail('This puzzle belongs to a different profile.', 403);
+  if (run.finished_at) return { saved: false };
+  const g = readGrid(grid).join('');
+  const n = Array.isArray(notes) ? notes : [];
+  if (n.length && (n.length !== 81 || n.some(v => !Number.isInteger(v) || v < 0 || v > 1022))) throw fail('Those pencil marks do not look right.');
+  const m = {};
+  for (const [k, v] of Object.entries(marks && typeof marks === 'object' ? marks : {})) {
+    const i = Number(k);
+    if (Number.isInteger(i) && i >= 0 && i <= 80 && MARKS.has(v)) m[i] = v;
+  }
+  const notesOut = n.length ? n : new Array(81).fill(0);
+  db.db.prepare('UPDATE sudoku_runs SET progress = ?, progress_at = ? WHERE id = ?')
+    .run(JSON.stringify({ grid: g, notes: notesOut, marks: m }), now, run.id);
+  return { saved: true, savedAt: now };
 }
 
 // The grid the browser sends: 81 characters, 1-9 for a number and 0 (or a
@@ -303,7 +344,8 @@ router.get('/levels', wrap(() => ({
   levels: gen.LEVEL_IDS.map(id => ({ id, label: gen.LEVELS[id].label }))
 })));
 router.post('/start', startLimit, wrap(req => start(body(req))));
-router.get('/run/:id', wrap(req => view(needRun(req.params.id))));
+router.get('/run/:id', wrap(req => view(needRun(req.params.id), Date.now(), { withProgress: true })));
+router.post('/run/:id/progress', playLimit, wrap(req => saveProgress(req.params.id, body(req))));
 router.post('/run/:id/pause', playLimit, wrap(req => pause(req.params.id, true)));
 router.post('/run/:id/resume', playLimit, wrap(req => pause(req.params.id, false)));
 router.post('/run/:id/check', playLimit, wrap(req => check(req.params.id, body(req).grid)));
@@ -320,4 +362,4 @@ router.use((err, req, res, next) => {
   res.status(err.status).json({ error: err.message, ...(err.solved === false ? { solved: false } : {}) });
 });
 
-module.exports = { router, start, pause, check, cell, hint, finish, save, board, puzzleFor, PENALTY, MIN_MS_PER_SQUARE };
+module.exports = { router, start, pause, saveProgress, check, cell, hint, finish, save, board, puzzleFor, PENALTY, MIN_MS_PER_SQUARE };
