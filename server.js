@@ -89,8 +89,12 @@ if (arks) {
   require('./arcade/switches').createArcadeSwitches({ client: arks.client }).start();
   adultPin.usePasses(arks.passOk);
   app.use(arks.routes());
+  // The arcade on a TV (contract v14): setting a TV up with a pairing code,
+  // and adults' night (arcade/tv.js).
+  app.use(require('./arcade/tv').createTv({ arks }).routes());
 } else {
   app.get('/api/arksid/me', (req, res) => res.set('Cache-Control', 'no-store').json({ on: false }));
+  app.use(require('./arcade/tv').offRoutes());
 }
 
 // ---- Rate limiting for public write endpoints ----
@@ -161,7 +165,8 @@ app.get('/healthz', (req, res) => {
 
 app.use('/api/chess', require('./chess/routes'));
 app.use('/api/spinsolve', require('./spinsolve/routes')({ requireAdmin, notify: notifyDiscord }));
-app.use('/api/trivia', require('./trivia/routes')({ requireAdmin, notify: notifyDiscord }));
+// whoIs: who's asking, with ARKS ID on, so a kid's phone can't join an adult game.
+app.use('/api/trivia', require('./trivia/routes')({ requireAdmin, notify: notifyDiscord, whoIs: arks ? req => arks.current(req) : null }));
 app.use('/api/partdeux', require('./partdeux/routes'));
 app.use('/api/daredevil', require('./daredevil/routes'));
 app.use('/api/sudoku', require('./sudoku/routes').router);

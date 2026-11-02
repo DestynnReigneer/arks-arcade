@@ -381,6 +381,18 @@ Multiple-choice trivia. Solo (high-score board), take turns on one phone, or a r
 
 Questions come from a built-in bank (`trivia/bank.js`), packs built from an AI prompt in the admin Trivia tab (with player topic requests), and Open Trivia DB (opentdb.com, CC BY-SA 4.0), which the server downloads in the background and saves for offline play (`TRIVIA_ONLINE=off` to skip it). Cheeky, Spicy and Filthy levels sit behind the adult PIN, with optional Drinking rules and Couples dares that get spicier with the level.
 
+#### Know-It-All on a TV
+
+Opened on a TV (a TV app whose browser adds `ARKS-TV/<version>` to its user agent, or any browser with `?tv=1` on the address to try it), the arcade switches to a TV layout: everything is drawn half as big again, it stays inside the edges some TVs cut off, and a thick turquoise ring shows which button the remote is on. The remote's arrows move the ring to the nearest button in that direction, and OK (Enter) presses it. The home page shows the games as big tiles with Know-It-All first. On a TV, Know-It-All's "Who's playing?" offers three ways, and in all of them the TV hosts a room and the server keeps every score:
+
+- **Everyone on their own phone:** the TV shows the code and a QR code to join, the questions, who has locked in and the scores. Everyone answers on their own phone at the same time.
+- **Pass one phone around:** you take turns. Scan the code with the phone you'll pass around and add everyone's names on it. Before each turn the TV says whose turn it is, and the clock starts when they press I'm ready.
+- **Play with the remote:** the same turns, with the players added on the TV, and the remote answers. A controller's X, Y and shoulder buttons pick answers A to D too.
+
+The room API gained `screen: true` when making a room (the device shows the game and isn't a player), `settings.style` (`together` or `turns`), `POST /api/trivia/rooms/:code/seats` and `/seats/remove` (more players on one device, for turns), `POST /api/trivia/rooms/:code/ready` (start the clock on a turn), and `seat` on `/answer` (which of the device's players is answering).
+
+With ARKS ID on, a TV signs itself in with a pairing code that a grown-up approves on their own phone, starts in family mode, and plays adult levels only during an "adults' night" unlocked from a grown-up's phone, with a sign on every screen and a Back to family button. The routes are under `/api/tv/` (`arcade/tv.js`). Without ARKS ID, the TV layout works but adult levels stay locked on the TV.
+
 ### Uh-Oh: Part Deux (`/partdeux.html`)
 
 A shedding card game for 2-8: match the top card by color or number and be first to empty your hand. Skips, Draw Twos, Reverses, Nopes (bounce a draw penalty), Gifts (give a card away), Wilds and the 💣 Draw Four wear funny names at every level. Say "Uh-Oh!" before your last card or get caught for +2. One phone or a phone each; adult decks behind the PIN with an optional Drinking mode.

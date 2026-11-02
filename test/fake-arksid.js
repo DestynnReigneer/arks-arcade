@@ -1,8 +1,8 @@
 'use strict';
 
-// A pretend ARKS ID for the tests: just enough of its contract (v13) for the
+// A pretend ARKS ID for the tests: just enough of its contract (v14) for the
 // arcade's sign-in, "whose device is this?", sessions, the clip inbox, the
-// feedback inbox, and
+// feedback inbox, TVs (the pairing code sign-in and adults' night), and
 // the photos and team pictures people pick (served from /avatars/).
 // Whoever is in `next` signs in on the next /signin; `deviceOwner` is who owns
 // the next device that asks /device (null for a visitor's phone).
@@ -17,7 +17,9 @@ function startFakeArksId({ secret, arcadeBase, port = 0 }) {
     alex: { id: 'u_alex000001', name: 'Alex', role: 'adult', boardName: 'Alex', avatar: { icon: 'cat', color: 'teal', image: null, art: null } },
     milo: { id: 'u_milo000001', name: 'Milo', role: 'kid', boardName: 'MIL', avatar: { icon: 'rocket', color: 's1', image: null, art: 'toon:2' } },
     // A photo; its address is filled in once the fake knows where it lives.
-    kim: { id: 'u_kim0000001', name: 'Kim', role: 'adult', boardName: 'Kim', avatar: { icon: 'star', color: 'pink', image: null, art: null } }
+    kim: { id: 'u_kim0000001', name: 'Kim', role: 'adult', boardName: 'Kim', avatar: { icon: 'star', color: 'pink', image: null, art: null } },
+    // A TV's own account (v14): always the kid role.
+    tv: { id: 'u_tv00000001', name: 'Living room TV', role: 'kid', kind: 'tv', boardName: '', avatar: { icon: 'controller', color: 'turquoise', image: null, art: null } }
   };
   // The pictures, as ARKS ID serves them: real 1-pixel pictures, so a browser can draw them.
   const WEBP = Buffer.from('UklGRiQAAABXRUJQVlA4IBgAAAAwAQCdASoBAAEAAwA0JaQAA3AA/vuUAAA=', 'base64');
@@ -37,9 +39,31 @@ function startFakeArksId({ secret, arcadeBase, port = 0 }) {
     // admin set in the console (set[key] = { all, roles, people }), and the
     // banner showing.
     features: null, set: {}, banner: null,
+    // TVs (v14): pairings waiting for an adult's phone (pollToken -> pairing),
+    // adults' night per TV session, unlock codes showing, and every TV call.
+    pairs: new Map(), pairInterval: 2, adult: new Map(), unlocks: new Map(), tvCalls: [],
+    // An adult approves the code on their phone: the TV signs in as `tv`.
+    approvePair(userCode) {
+      const p = [...fake.pairs.values()].find(x => x.userCode === userCode && x.status === 'pending');
+      if (!p) return false;
+      p.status = 'approved';
+      p.code = code();
+      codes.set(p.code, 'tv');
+      return true;
+    },
+    // An adult (by: a key in users) unlocks adults' night from their phone.
+    approveUnlock(userCode, by = 'alex') {
+      const sessionId = fake.unlocks.get(userCode);
+      if (!sessionId || !['admin', 'adult'].includes(users[by].role)) return false;
+      fake.unlocks.delete(userCode);
+      fake.adult.set(sessionId, { until: Date.now() + 30 * 60 * 1000, by: { id: users[by].id, name: users[by].name }, since: Date.now() });
+      return true;
+    },
+    latest: { pair: null, unlock: null },
     adminReply(id, text) { fake.notes.find(n => n.id === id).replies.push({ id: 99, fromAdmin: true, name: 'Sam', body: text, at: Date.now() }); },
     setStage(id, stage) { fake.notes.find(n => n.id === id).stage = stage; } };
   const codes = new Map(), deviceCodes = new Map();
+  const tvAdult = sessionId => { const a = fake.adult.get(sessionId); return a && a.until > Date.now() ? a : null; };
   const code = () => crypto.randomBytes(24).toString('base64url');
   const json = (res, status, body) => { res.writeHead(status, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(body)); };
   const back = (res, url) => { res.writeHead(303, { Location: url }); res.end(); };
@@ -80,6 +104,10 @@ function startFakeArksId({ secret, arcadeBase, port = 0 }) {
     // For the browser tests, which can't reach this object: play the admin in
     // the sign-in service's console. POST /test/switches { set }.
     if (req.method === 'POST' && u.pathname === '/test/switches') { fake.set = (await readBody(req)).set || {}; return json(res, 200, { ok: true }); }
+    // The same for TVs: the codes showing now, and an adult's phone saying yes.
+    if (req.method === 'GET' && u.pathname === '/test/tv') return json(res, 200, fake.latest);
+    if (req.method === 'POST' && u.pathname === '/test/tv/approve') return json(res, 200, { ok: fake.approvePair((await readBody(req)).userCode) });
+    if (req.method === 'POST' && u.pathname === '/test/tv/unlock') { const b = await readBody(req); return json(res, 200, { ok: fake.approveUnlock(b.userCode, b.by || 'alex') }); }
     if (!u.pathname.startsWith('/api/')) return json(res, 404, { error: 'Not found.' });
     if (req.headers.authorization !== `Bearer ${secret}`) return json(res, 401, { error: 'no' });
     if (req.method === 'POST' && u.pathname === '/api/prefill') {
@@ -94,14 +122,56 @@ function startFakeArksId({ secret, arcadeBase, port = 0 }) {
       codes.delete(b.code);
       if (!key) return json(res, 400, { error: 'bad code' });
       const sessionId = 's_' + crypto.randomBytes(12).toString('hex');
+      // Signing a TV in again ends its old sign-in (and any adults' night).
+      if (users[key].kind === 'tv') for (const [id, s] of fake.sessions) if (s.key === key) { s.valid = false; fake.adult.delete(id); }
       fake.sessions.set(sessionId, { key, valid: true });
-      return json(res, 200, { user: { ...users[key], device: 'personal' }, sessionId, expiresAt: Date.now() + 15 * 864e5 });
+      const tvPart = users[key].kind === 'tv' ? { adultMode: null } : {};
+      return json(res, 200, { user: { ...users[key], device: 'personal' }, sessionId, expiresAt: Date.now() + 15 * 864e5, ...tvPart });
     }
     let m = /^\/api\/session\/(s_[0-9a-f]+)$/.exec(u.pathname);
     if (req.method === 'GET' && m) {
       const s = fake.sessions.get(m[1]);
       if (!s || !s.valid) return json(res, 200, { valid: false });
-      return json(res, 200, { valid: true, user: { ...users[s.key], device: 'personal' }, expiresAt: Date.now() + 15 * 864e5 });
+      const tvPart = users[s.key].kind === 'tv' ? { adultMode: tvAdult(m[1]) } : {};
+      return json(res, 200, { valid: true, user: { ...users[s.key], device: 'personal' }, expiresAt: Date.now() + 15 * 864e5, ...tvPart });
+    }
+    // TVs (contract v14): the pairing code sign-in.
+    if (req.method === 'POST' && u.pathname === '/api/tv/pair') {
+      const pollToken = crypto.randomBytes(32).toString('base64url');
+      const userCode = Array.from({ length: 6 }, () => 'BCDFGHJKLMNPQRSTVWXZ'[crypto.randomInt(20)]).join('');
+      fake.pairs.set(pollToken, { userCode, status: 'pending', code: null, lastPoll: 0, interval: fake.pairInterval });
+      fake.latest.pair = userCode;
+      fake.tvCalls.push('pair');
+      return json(res, 200, { userCode, pairUrl: `${fake.base}/tv/${userCode}`, enterUrl: `${fake.base}/tv`, pollToken, expiresIn: 600, interval: fake.pairInterval });
+    }
+    if (req.method === 'POST' && u.pathname === '/api/tv/pair/poll') {
+      const p = fake.pairs.get((await readBody(req)).pollToken);
+      fake.tvCalls.push('poll');
+      if (!p || p.status === 'done') return json(res, 200, { status: 'expired' });
+      const early = Date.now() - p.lastPoll < p.interval * 1000 - 300;
+      p.lastPoll = Date.now();
+      if (p.status === 'approved') { p.status = 'done'; return json(res, 200, { status: 'approved', code: p.code, tv: { id: users.tv.id, name: users.tv.name } }); }
+      if (early) { p.interval += 5; return json(res, 200, { status: 'slow_down', interval: p.interval, expiresAt: Date.now() + 600000 }); }
+      return json(res, 200, { status: 'pending', interval: p.interval, expiresAt: Date.now() + 600000 });
+    }
+    // Adults' night: an unlock code, games being played, and Back to family.
+    if (req.method === 'POST' && ['/api/tv/unlock', '/api/app/tv/activity', '/api/app/tv/lock'].includes(u.pathname)) {
+      const b = await readBody(req);
+      const s = fake.sessions.get(b.session);
+      if (!s || !s.valid) return json(res, 401, { error: 'That session isn\'t valid.' });
+      if (users[s.key].kind !== 'tv') return json(res, 400, { error: 'That\'s a person\'s session, not a TV\'s.' });
+      fake.tvCalls.push(u.pathname);
+      if (u.pathname === '/api/tv/unlock') {
+        for (const [c, sid] of fake.unlocks) if (sid === b.session) fake.unlocks.delete(c);
+        const userCode = Array.from({ length: 6 }, () => 'BCDFGHJKLMNPQRSTVWXZ'[crypto.randomInt(20)]).join('');
+        fake.unlocks.set(userCode, b.session);
+        fake.latest.unlock = userCode;
+        return json(res, 200, { userCode, unlockUrl: `${fake.base}/tv/${userCode}`, enterUrl: `${fake.base}/tv`, expiresIn: 600, adultMode: tvAdult(b.session) });
+      }
+      if (u.pathname === '/api/app/tv/lock') { fake.adult.delete(b.session); return json(res, 200, { ok: true, adultMode: null }); }
+      const a = tvAdult(b.session);
+      if (a) a.until = Date.now() + 30 * 60 * 1000;
+      return json(res, 200, { ok: true, adultMode: a });
     }
     if (req.method === 'POST' && u.pathname === '/api/device') {
       const b = await readBody(req);
