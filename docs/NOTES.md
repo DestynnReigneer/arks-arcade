@@ -41,8 +41,6 @@ the ball, and "royale" is the casino-floor glamour the arcade's look goes for.
 - Wired into the home card, the QR picker, the admin game switches, stats, feedback, the dust sign,
   `NAMES` in `arcade/switches.js`, Comm Center posts, its own music in `public/blip.js`, the
   Dockerfile, the Playwright page list and a browser test that rolls a ball into the middle.
-- `Fx.countUp` (`public/fx.js`) now writes big numbers with thousands separators, which fixes the
-  Tumbler Rumble game-over score showing 4560 instead of 4,560 (and Rambler Marathon's).
 - Not done: a swipe whose speed sets the power. The server can only check times, so touch uses the
   same press, hold and let go as the keyboard (a flick up the lane as you let go still works). No
   per-person "best only" view of the boards, and as with the other timing games, a bot that reads
