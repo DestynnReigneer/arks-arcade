@@ -7,6 +7,34 @@ to-do list as checkboxes (the rule is in the maintainer's global CLAUDE.md
 and `arks-internal/conventions/sessions.md`): do the checked items in the
 order they were clicked, and keep the rest pinned here.
 
+## Game switches and the banner from ARKS ID (2026-11-01, contract v13)
+
+- **With ARKS ID on, its admin console can turn games on and off** for everyone, for a
+  role or for one person (`arcade/switches.js`, through the shared kit's new
+  `kit/switches.js` and the client's `appCall()`). The arcade sends its list of games
+  (`game.<id>`, named from `NAMES` in that file) a few seconds after it starts, whenever
+  the list changes (checked every minute), and right after the admin page's game list is
+  saved. Each game's default there is the arcade's own setting: on, unless it's turned off
+  on the admin page.
+- **Who decides:** for a game someone set in ARKS ID's console, ARKS ID's answer; for every
+  other game, the admin page's own switch, so it keeps working as before. A game that's off
+  shows the "Pardon our dust" sign, on its tile and its page, the same as before.
+  `/api/arcade-info` works the closed list out for whoever is asking (answers kept a
+  minute). Without ARKS ID nothing changes. The admin page's game list says, under the
+  buttons, that ARKS ID's console can switch games too (`arksId` on `/home-games`).
+- **The banner:** `GET /api/banner` hands the message typed in ARKS ID's console to every
+  page, and the kit's new `public/banner.js` shows it across the top (Hide puts it away on
+  that device until tomorrow). Without ARKS ID it's always `{ banner: null }`. Every page
+  in `public/` loads `banner.js`; a new game page needs the same line.
+- When adding a game, also add its name to `NAMES` in `arcade/switches.js`, or the
+  console shows its id.
+- Nothing changes in `.env` or the compose file. Tests: the ARKS ID suite (switching
+  games there and on the admin page, one person turned back on, the banner), `api.test.js`
+  (no banner without ARKS ID), and `test/browser/switches.spec.js` (the banner shows and
+  hides; a switched-off game shows the sign). The pretend ARKS ID has `/test/switches` for the
+  browser tests, on the port after the arcade's. The banner browser test answers
+  `/api/banner` for its own page only, so a banner never shifts another test's page.
+
 ## Status reports to ARKS ID (2026-11-01, contract v12)
 
 - **With ARKS ID on, the arcade reports how it's doing every five minutes** (the first
@@ -310,8 +338,9 @@ board-name setting and adult PIN are only for copies running without it.
 - **Shared family accounts ("ARKS ID")**: planned and approved. The
   contract is in the private `arks-id` repo (`docs/SPEC.md`); see CLAUDE.md
   for how to use it. The arcade integrates last (after ARKS ID, the Hub's
-  sign-in and passkeys). **Built against ARKS ID contract: v12** (2026-11-01): status
-  reports for ARKS ID's admin console (see the top of this file). Before that, v10
+  sign-in and passkeys). **Built against ARKS ID contract: v13** (2026-11-01): game
+  switches and the banner from ARKS ID's admin console (see the top of this file). Before
+  that, v12 (2026-11-01): status reports for ARKS ID's admin console. Before that, v10
   (2026-11-01): feedback goes to ARKS ID's one inbox. Before that, v8 (2026-10-28): silent
   sign-in (at most once an hour, `/auth/signin?silent=1`, so someone signed in to ARKS ID
   elsewhere is signed in here with no tap). Before that, v7 (2026-10-26):

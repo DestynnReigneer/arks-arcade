@@ -84,6 +84,9 @@ if (arks) {
   const dbFile = require('./db').db.location();
   require('./kit/status-report').createStatusReporter({ dbFile, call: (p, body) => arks.client.appReport(p, body) }).start();
   comm.setInbox({ relay, current: arks.current, url: arks.client.url });
+  // Game switches and the banner from ARKS ID's admin console
+  // (arcade/switches.js): the list of games goes now, and again when it changes.
+  require('./arcade/switches').createArcadeSwitches({ client: arks.client }).start();
   adultPin.usePasses(arks.passOk);
   app.use(arks.routes());
 } else {
@@ -202,14 +205,34 @@ comm.setAdminCheck(async req => require('./arcade/admin-session').isAdmin(req) |
 app.use('/api/comm/admin', comm.adminRouter(requireAdmin));
 app.use('/api/comm', comm.router);
 
-// The arcade's name for the hub page, from ARCADE_NAME in .env.
-app.get('/api/arcade-info', (req, res) => {
+// The arcade's name for the hub page, from ARCADE_NAME in .env. With ARKS ID
+// on, a game can also be turned off from its admin console, for everyone or
+// for one person (arcade/switches.js), so the closed list is worked out for
+// whoever is asking.
+app.get('/api/arcade-info', async (req, res) => {
+  const games = require('./arcade/home-games').get();
+  const sw = arks ? require('./arcade/switches').current() : null;
+  if (sw) {
+    let me = null;
+    try { me = await arks.current(req); } catch { /* treat as nobody signed in */ }
+    games.closed = await sw.closedFor(me ? me.sessionId : null);
+  }
   res.json({
     name: String(process.env.ARCADE_NAME || '').trim().slice(0, 30),
     adultRequiresPin: adultPin.status().set,
-    games: require('./arcade/home-games').get(),
+    games,
     publicUrl: require('./arcade/lobby').publicUrl()
   });
+});
+
+// The banner from ARKS ID's admin console, for public/banner.js on every
+// page. Only when the arcade signs in through ARKS ID; otherwise there's none.
+app.get('/api/banner', async (req, res) => {
+  let banner = null;
+  if (arks) {
+    try { banner = await require('./arcade/switches').current().banner(); } catch { /* none */ }
+  }
+  res.set('Cache-Control', 'no-store').json({ banner });
 });
 
 // Adult-only Wordless themes (and their scores) show up only when the page

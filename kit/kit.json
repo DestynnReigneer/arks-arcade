@@ -1,5 +1,5 @@
 {
-  "kit": "77dcb9c4432d (2026-11-02)",
+  "kit": "41791adc5ba0 (2026-11-02)",
   "files": {
     "kit/version.js": "e56d4939ea224ba25bf93bc6de6f4ba544b4c5431249ce2e543c3ce909214ad4",
     "kit/burst-limit.js": "388fe82828c68bec3b60e4c20ba46aed6e2d2d76cbeee46fede2972c7608d717",
@@ -7,9 +7,12 @@
     "kit/feedback.js": "6b7d7d7b75d95b6c5e1776bd5520dca03dad8b304add078018c6e8e11890bb58",
     "kit/feedback-relay.js": "ad37d2812839af50a797aa9367994fb9a984ba3f13f56ac09004bba4ce73bcc9",
     "kit/status-report.js": "76b6f00e0dbaa5d71ffb64b896f99ad0a3d434d5064b13b649390c9703d00bd4",
+    "kit/switches.js": "623c0c04b38c7b692b5d1d2622f1657af5231b71758c028f8129ec284aa43ecb",
     "public/dock.js": "e09372930c4157b3cc2d40a4a3e890f7c50440e1abbfe19e4f0b904ee1f7edc5",
     "public/snapframe.js": "f164ad5403d484a2b39e0f64fa78c06bbc02e3df581dc3ae63d040b3dbc100e9",
     "public/avatars.js": "f4a59d8d75a4c4e120d6443726130cac14dcdd98558fa360046f0fc0e25b5a50",
+    "public/banner.js": "4c07cd3775ed93e609d724b495c1052a2090beb123be285202fdc4b69b20614a",
+    "public/banner.css": "e52eb331dae9332c2866b8c7807685c399dcec9551d93b2f4b8e5b9e5960dd51",
     "scripts/check-kit.js": "f885e09fb6be088dee2fa6fb4ce1d94e8cc71270fc3fac6b52381abaf9938db2"
   }
 }
