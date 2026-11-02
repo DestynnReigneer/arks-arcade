@@ -31,8 +31,9 @@ order they were clicked, and keep the rest pinned here.
 - Nothing changes in `.env` or the compose file. Tests: the ARKS ID suite (switching
   games there and on the admin page, one person turned back on, the banner), `api.test.js`
   (no banner without ARKS ID), and `test/browser/switches.spec.js` (the banner shows and
-  hides; a switched-off game shows the sign). The pretend ARKS ID has `/test/switches` and
-  `/test/banner` for the browser tests, on the port after the arcade's.
+  hides; a switched-off game shows the sign). The pretend ARKS ID has `/test/switches` for the
+  browser tests, on the port after the arcade's. The banner browser test answers
+  `/api/banner` for its own page only, so a banner never shifts another test's page.
 
 ## Status reports to ARKS ID (2026-11-01, contract v12)
 
