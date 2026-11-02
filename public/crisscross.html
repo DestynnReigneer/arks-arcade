@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Criss Cross</title>
+<link rel="icon" href="/custom/brand/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/custom/brand/app-icon-180.png">
+<link rel="stylesheet" href="arcade-ui.css">
+<link rel="stylesheet" href="tutorial.css">
+<link rel="stylesheet" href="crisscross.css">
+<link rel="stylesheet" href="adult-mode.css">
+<link rel="stylesheet" href="look.css">
+<link rel="stylesheet" href="topbar.css">
+</head>
+<body>
+<script src="topbar.js"></script>
+
+<header class="top">
+  <a href="/" class="icon-btn" title="Back to the arcade">←</a>
+  <h1><i class="t-emoji">🔡 </i>CRISS <span>CROSS</span></h1>
+  <div class="btns">
+    <button class="icon-btn" id="muteBtn" title="Sound">🔊</button>
+    <button class="icon-btn music-btn" id="musicBtn" title="Music">🎵</button>
+    <button class="icon-btn" id="helpBtn" title="How to play">?</button>
+  </div>
+</header>
+
+<!-- ============ your games ============ -->
+<section id="home">
+  <div class="panel" id="minepanel">
+    <h2 id="mineTitle">Your games</h2>
+    <p class="hint" id="mineHint"></p>
+    <ul class="cc-list" id="mineList"></ul>
+    <button class="primary big" id="newOnlineBtn">📱 New game with the family</button>
+  </div>
+  <div class="panel" id="noProfile">
+    <h2>Playing on everyone's own phone</h2>
+    <p class="hint">A game can last a few days, with each person taking their turn whenever they're free, so the arcade needs to know who you are. Pick your profile to start one or to see the games you've been invited to.</p>
+    <button class="primary big" id="pickProfileBtn">Pick my profile</button>
+  </div>
+  <div class="panel">
+    <h2>On this phone</h2>
+    <p class="hint">Pass one phone around the table, or play against the computer. Guests are welcome.</p>
+    <ul class="cc-list" id="localList"></ul>
+    <button class="ghost big" id="newLocalBtn">🤝 Play on this phone</button>
+  </div>
+</section>
+
+<!-- ============ a new online game ============ -->
+<section id="newOnline" class="hidden">
+  <div class="panel">
+    <h2>Who are you playing with?</h2>
+    <p class="hint">Tick up to three people. They'll find the game in their list the next time they open Criss Cross.</p>
+    <ul class="cc-people" id="peopleList"></ul>
+    <div class="hint">Seats left open for a share link (for someone who isn't on the list)</div>
+    <div class="seg" id="openSeg"></div>
+  </div>
+  <div class="panel">
+    <h2>Which words count?</h2>
+    <div class="seg" id="dictSeg">
+      <button data-v="kids" aria-pressed="true">🧒 Family words</button>
+      <button data-v="adult" aria-pressed="false">🔞 Unfiltered</button>
+    </div>
+    <p class="hint" id="dictHint"></p>
+  </div>
+  <div class="msg center" id="onlineMsg"></div>
+  <button class="primary big" id="onlineGo">Start the game</button>
+  <button class="ghost big" id="onlineBack">Back</button>
+</section>
+
+<!-- ============ a new game on one phone ============ -->
+<section id="newLocal" class="hidden">
+  <div class="panel">
+    <h2>Who's playing?</h2>
+    <p class="hint">Two to four players take turns on this phone. Between turns the tiles are hidden, so you can pass it along without peeking.</p>
+    <div id="localPlayers"></div>
+    <div class="row-btns">
+      <button class="ghost" id="addPerson">➕ Add a person</button>
+      <button class="ghost" id="addBot">🤖 Add the computer</button>
+    </div>
+  </div>
+  <div class="panel">
+    <h2>Which words count?</h2>
+    <div class="seg" id="localDictSeg">
+      <button data-v="kids" aria-pressed="true">🧒 Family words</button>
+      <button data-v="adult" aria-pressed="false">🔞 Unfiltered</button>
+    </div>
+    <p class="hint" id="localDictHint"></p>
+  </div>
+  <div class="msg center" id="localMsg"></div>
+  <button class="primary big" id="localGo">Start the game</button>
+  <button class="ghost big" id="localBack">Back</button>
+</section>
+
+<!-- ============ waiting for people to join ============ -->
+<section id="waiting" class="hidden">
+  <div class="panel center">
+    <h2>Waiting for players</h2>
+    <p class="hint" id="waitHint"></p>
+    <img class="cc-qr hidden" id="joinQr" width="150" height="150" alt="QR code to join">
+    <div class="cc-link" id="joinLink"></div>
+    <button class="ghost" id="copyLink">Copy the link</button>
+    <ul class="cc-people seated" id="seatedList"></ul>
+    <button class="primary big hidden" id="startNow">Start with who's here</button>
+    <button class="ghost big" id="waitLeave">Leave</button>
+    <button class="ghost big" id="waitBack">Back to my games</button>
+  </div>
+</section>
+
+<!-- ============ an invite link ============ -->
+<section id="invite" class="hidden">
+  <div class="panel center">
+    <div class="big-emoji">🔡</div>
+    <h2 id="inviteTitle">You're invited</h2>
+    <p class="hint" id="inviteText"></p>
+    <div class="msg" id="inviteMsg"></div>
+    <button class="primary big" id="inviteJoin">Join the game</button>
+    <button class="ghost big" id="inviteBack">Not now</button>
+  </div>
+</section>
+
+<!-- ============ the game ============ -->
+<section id="game" class="hidden">
+  <ul class="cc-scores" id="scoreStrip" aria-label="Scores"></ul>
+  <div class="cc-status" id="status" aria-live="polite"></div>
+  <div class="cc-board-box" id="boardBox">
+    <div class="cc-board" id="board" role="grid" aria-label="The board"></div>
+  </div>
+  <div class="cc-board-tools">
+    <button class="cc-mini" id="zoomBtn" title="Zoom the board in or out">🔍 Zoom in</button>
+    <span class="cc-bag" id="bagLabel"></span>
+  </div>
+  <div class="cc-rack" id="rack" aria-label="Your tiles"></div>
+  <div class="cc-preview" id="preview" aria-live="polite"></div>
+  <div class="cc-actions" id="actions">
+    <button class="cc-key" id="shuffleBtn" title="Shuffle your tiles"><span>🔀</span><small>Shuffle</small></button>
+    <button class="cc-key" id="recallBtn" title="Bring your tiles back"><span>↩️</span><small>Recall</small></button>
+    <button class="cc-key" id="swapBtn" title="Swap tiles for new ones"><span>♻️</span><small>Swap</small></button>
+    <button class="cc-key" id="passBtn" title="Skip your turn"><span>⏭️</span><small>Pass</small></button>
+    <button class="cc-key cc-play" id="playBtn" title="Play your word"><span>✔</span><small>Play</small></button>
+  </div>
+  <div class="cc-actions hidden" id="swapActions">
+    <p class="hint center">Tap the tiles you want to swap, then tap Swap them. Swapping uses your turn.</p>
+    <div class="row-btns">
+      <button class="ghost" id="swapCancel">Cancel</button>
+      <button class="primary" id="swapGo">Swap them</button>
+    </div>
+  </div>
+  <div class="panel center hidden over-panel" id="overPanel">
+    <div class="over-top"><button class="primary" id="againBtn">Play again</button></div>
+    <h2 id="overTitle">Game over</h2>
+    <ol class="cc-final" id="finalList"></ol>
+    <p class="hint" id="overNote"></p>
+  </div>
+  <div class="panel">
+    <h2>Words played</h2>
+    <ol class="cc-moves" id="moveList"></ol>
+  </div>
+  <div class="stack">
+    <button class="ghost" id="resignBtn">Leave this game</button>
+    <button class="ghost" id="backBtn">Back to my games</button>
+  </div>
+</section>
+
+<!-- ============ overlays ============ -->
+<div class="overlay hidden" id="handoff">
+  <div class="card-panel center">
+    <div class="big-emoji">📲</div>
+    <h2 id="handoffTitle">Pass the phone</h2>
+    <p class="hint" id="handoffText"></p>
+    <button class="primary big" id="handoffGo">Show my tiles</button>
+  </div>
+</div>
+
+<div class="overlay hidden" id="blankView">
+  <div class="card-panel center">
+    <h2>Which letter is the blank?</h2>
+    <p class="hint">A blank tile can be any letter you like, but it doesn't score any points.</p>
+    <div class="cc-letters" id="blankLetters"></div>
+    <div class="stack"><button class="ghost" id="blankCancel">Cancel</button></div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="pinView">
+  <div class="card-panel center">
+    <div class="big-emoji">🔞</div>
+    <h2>Adults only</h2>
+    <p class="hint">The unfiltered word list has rude words in it. Enter the adult PIN to use it.</p>
+    <input type="password" id="pinInput" inputmode="numeric" maxlength="6" class="code-input" autocomplete="off">
+    <div class="msg" id="pinMsg"></div>
+    <div class="stack"><button class="ghost" id="pinCancel">Cancel</button></div>
+  </div>
+</div>
+
+<script src="feedback.js"></script>
+<script src="avatars.js"></script>
+<script src="avatar-photo.js"></script>
+<script src="pin-pad.js"></script>
+<script src="profile.js"></script>
+<script src="custom-media.js"></script>
+<script src="stats.js"></script>
+<script src="dust-sign.js"></script>
+<script src="tutorial.js"></script>
+<script src="blip.js"></script>
+<script src="fx.js"></script>
+<script src="arcade-kit.js"></script>
+<script src="arcade-qr.js"></script>
+<script src="crisscross.js"></script>
+</body>
+</html>

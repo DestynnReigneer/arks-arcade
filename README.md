@@ -220,6 +220,40 @@ Everything is under `/api/scuffle`. `dictionary` is `kids` or `adult` (the adult
 | `POST /rooms/:code/start`, `/word`, `/done`, `/next`, `/leave`, `/settings` | Playing in a room (each with `playerId` and `token`). |
 | `GET /rooms/:code/events` | The room's live updates (server-sent events). |
 
+### Criss Cross (`/crisscross.html`)
+
+A crossword tile game for 2 to 4 players. Everyone has seven letter tiles, and you take turns laying them on an 11 by 11 board to make words that cross the words already there. It's built for playing on everyone's own phone over a few days: a turn can wait hours, and the arcade's home page says "Your turn in N games" on the Criss Cross card.
+
+- **Each person on their own phone** needs a profile (or ARKS ID), because a game lasts days and has to know who you are. **New game with the family** lists the family's profiles to tick (up to three), and can leave seats open for a share link or QR code that anyone with a profile can join. A game with only invited people starts straight away; one with open seats starts when they fill up, or when the host taps Start with whoever has joined. The game list shows whose turn it is, the last move and how long ago it was, and an open game checks for new moves every few seconds.
+- **On this phone** is pass-and-play, open to guests: two to four names, and the computer can take any seat. Between turns the tiles are hidden behind a "Pass the phone to Sam" screen. Only that device can open the game (it keeps a key).
+- **The rules:** the first word covers the star in the middle. After that, a turn's tiles go in one line, across or down, with no gaps, joined onto tiles already on the board, and every new word made (crosses included) has to be on the game's word list. Two-letter words count. Instead of playing you can swap tiles (when 7 or more are left in the bag), pass, or leave. The game ends when the bag is empty and someone uses their last tile (they get everyone else's leftover points, which everyone else loses), or after six scoreless turns in a row (everyone loses their leftovers), or when only one player is left.
+- **Points:** our own 66-tile bag and values: common letters are worth 1, and Q and Z are worth 10. Two blanks can be any letter and score nothing. The board's bonus squares double or triple a letter (2L, 3L) or a word (2W, 3W, and the star in the middle), on the turn a tile lands on them. Using all seven tiles in one turn adds 40.
+- **Words:** family words (the kids list, `words/blocklist-kids.txt` keeps rude words out) or unfiltered. An unfiltered game follows the adult rules for every player, not just the host: each request needs the adult PIN (or an ARKS ID adult pass), and with ARKS ID on, every invited profile has to belong to a grown-up's account.
+- **The server decides everything** (`crisscross/`): it keeps the bag and every rack, shows each player only their own rack (everyone's leftovers are shown once the game is over), checks every move and finds every new word, and adds up the score. The page only sends where its tiles went; a score in the request is ignored.
+- **The computer** (`crisscross/bot.js`) plays the best-scoring word it can find with its rack along every row and column. It doesn't use blanks, and when it can't find a word it swaps or passes.
+- **Phones first:** tap a tile and then a square, or drag a tile onto the board; tap a placed tile to take it back. Shuffle, Recall, Swap and Pass, a Zoom button that makes the board bigger and lets it slide around inside its own box, the score of your word before you play it, the last move lit up, and a list of every word played. There's no chat between players, on purpose.
+- **No push messages.** ARKS ID doesn't offer a way to send a short "your turn" note, so turns show up on the home page and the game list instead.
+
+#### The Criss Cross API
+
+Everything is under `/api/crisscross`. Who's asking goes in headers, never the address: `X-Profile-Token` for online games, `X-Game-Key` for a game on one phone, and `X-Adult-Pin` for an unfiltered game. A refusal because of the adult PIN says `adult: true`.
+
+| Call | What it does |
+|---|---|
+| `GET /config` | The board size, bonus layout, tile counts and values, and the rules' numbers. |
+| `GET /people` | The profiles you can invite (with `adultOk` when ARKS ID is on). |
+| `GET /mine` | Your online games, newest first, and how many are waiting on you. |
+| `GET /turns` | Just that count, for the home page. |
+| `POST /games` `{ kind: 'online', invite: [profileId], openSeats, dictionary }` | Starts an online game. |
+| `POST /games` `{ kind: 'local', players: [{ name } \| { bot: true }], dictionary }` | Starts a game on one phone. Returns its `key`, shown once. |
+| `GET /invite/:code`, `POST /invite/:code/join` | The share link: who's in, and taking a seat. |
+| `GET /games/:id` | The game as you may see it: the board, the scores, your rack, the bag's count, the moves. |
+| `POST /games/:id/preview` `{ placements }` | Checks a play and scores it without making it. |
+| `POST /games/:id/play` `{ placements: [{ index, letter, blank? }] }` | Plays tiles (square 0 to 120, row by row). |
+| `POST /games/:id/swap` `{ tiles }`, `/pass`, `/resign` | The other moves. Leaving a game that hasn't started takes you out of it (the host's leaving calls it off). |
+| `POST /games/:id/start` | The host starts a waiting game with whoever has joined. |
+| `POST /games/:id/hide` | Clears a finished game from your list. |
+
 ### Know-It-All (`/trivia.html`)
 
 Multiple-choice trivia. Solo (high-score board), take turns on one phone, or a room where everyone answers on their own phone at the same time and faster right answers score more. Pick genres, difficulty, how many questions and how long to answer.
@@ -374,6 +408,7 @@ rambler/                   Rambler, self-contained
 chess/                    Two-phone chess rooms (/api/chess)
 sudoku/                   Sudoku's puzzle maker (generator.js) and its runs and boards (/api/sudoku)
 scuffle/                  Shuffle Scuffle: letters and points (game.js), solo games and the daily board (solo.js), rooms (rooms.js), /api/scuffle
+crisscross/               Criss Cross: the rules (engine.js), the computer player (bot.js), games in the database (games.js), /api/crisscross
 spinsolve/                Spin & Solve levels, adult banks, packs and requests (/api/spinsolve)
 trivia/                   Know-It-All questions, packs, Open Trivia DB download, rooms (/api/trivia)
 arcade/                   Arcade-wide pieces: Comm Center, adult PIN, high scores, profiles, stats and the error log, Wordless hints
@@ -389,6 +424,7 @@ public/dino.*             Dino Dash
 public/snake*, bricks*, blocks*, towers*   Snake, Brick Breaker, Block Drop, Tower Defense (each with an -engine.js for its rules)
 public/sudoku.*           Sudoku
 public/scuffle.*          Shuffle Scuffle
+public/crisscross.*       Criss Cross
 public/game-shell.*       Shared game-over panel and high scores for those four
 public/arcade-ui.css      Shared look for the newer games, with arcade-kit.js and blip.js
 public/admin.html/.js     Admin panel
