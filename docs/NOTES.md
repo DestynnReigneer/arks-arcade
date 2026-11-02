@@ -7,6 +7,48 @@ to-do list as checkboxes (the rule is in the maintainer's global CLAUDE.md
 and `arks-internal/conventions/sessions.md`): do the checked items in the
 order they were clicked, and keep the rest pinned here.
 
+## Know-It-All on the TV (2026-11-01, contract v14)
+
+- **The TV layout** (`public/tv-core.js`, `public/tv.js`, `public/tv.css`): on when the user agent has
+  `ARKS-TV/` (the TV app) or the address has `?tv=1` (remembered for the visit, `?tv=0` turns it off).
+  `html.tv` draws the page at 1.5x inside the overscan safe area and hides hover-only things (the
+  feedback bug, the Admin link). Pages that opt in with `<html data-tv-nav>` (the home page and
+  Know-It-All) get the focus helper: the arrows move a turquoise ring to the nearest button in that
+  direction (`TvCore.pick`, left and right stay in the row, the bars pinned to the top and bottom come
+  after the page's own buttons), Enter presses it (and cycles a menu, ticks a checkbox), dialogs keep the
+  ring inside them, and when the screen changes the ring jumps to `[data-tv-start]` or the first button
+  outside the bars. Other game pages get tv.js through topbar.js for the sign-in and the adults' night
+  sign, but not the arrow navigation (they use the arrows themselves).
+- **Setting the TV up** (`arcade/tv.js`, ARKS ID only): `POST /api/tv/pair` asks ARKS ID for a code,
+  keeps the pollToken in the server's memory (tied to the page by the `arcade_tvpair` cookie) and hands
+  the page the code and a QR code picture. `GET /api/tv/pair` is polled by the page every 2 seconds; the
+  server asks ARKS ID only every `interval` (and slows down when told to). On approved it trades the code
+  at `/api/token` like a callback and sets the usual `arcade_me` cookie. `profile.js` skips the silent
+  sign-in, the device check and the "Who's playing?" picker on a TV.
+- **Adults' night:** TV accounts (`kind: "tv"`, a new `kind` column on `arcade_id_accounts`) have the
+  kid role. arksid.js keeps each TV's `adultMode` in memory from the latest session check, and the adult
+  pass works for a TV only while it's set (checked on every use, so Back to family stops it at once).
+  `POST /api/tv/unlock` (code + QR), `GET /api/tv/state?waiting=1` (checks ARKS ID at most every 1.5 s
+  while the code shows, otherwise every 20 s), `POST /api/tv/lock` (Back to family, local first), and
+  `POST /api/tv/activity` (sent to ARKS ID at most once every 55 s; Know-It-All calls it on each new
+  question). Losing touch with ARKS ID means family. The bar along the bottom shows the TV's name and
+  Adults' night, or "Adults' night until 11:40 PM · unlocked by Kim" and Back to family.
+- **Know-It-All's rooms** gained a screen host (`screen: true`, not a player), `style: 'together' | 'turns'`,
+  seats (more players on one device; a seat has no token of its own), a `ready` phase before each turn,
+  and `seat` on answers. In turns mode each player gets `count` questions (at most 100 in all) and only
+  the player whose turn it is gets scored. The TV leaving ends the room; a device leaving takes its seats.
+  An adult room now also turns away a phone signed in to ARKS ID as a kid, a teen or a TV (password or not).
+  The TV makes up the lobby password for an adult room and shows it in its lobby.
+- **Tests:** `test/tv.test.js` (detection, `TvCore.pick`, the three ways through the room API),
+  `test/tv-arksid.test.js` (pairing, family by default, unlock, Back to family, activity, kid phone
+  turned away), and `test/browser/tv.spec.js` at 1920x1080 with the TV app's user agent (home screen with
+  only the arrows, Know-It-All to the end with the keyboard, a phone joining in a second browser,
+  adults' night and Back to family). The pretend ARKS ID has the TV routes, plus `/test/tv`,
+  `/test/tv/approve` and `/test/tv/unlock` for the browser tests. **Profile requests:** the 6-an-hour
+  limit is 60 only under `NODE_ENV=test` (never in production), so new suites can make profiles.
+- **Left for later:** the other games' TV layouts and arrow navigation, controller play for the cabinet
+  games, and per-controller seats (each controller its own player answering together).
+
 ## Sudoku follows you, one score off a board, a cheap /healthz, and env_file (2026-11-01)
 
 - **Sudoku progress follows a profile across devices.** `sudoku_runs` gained `progress`
@@ -589,7 +631,8 @@ board-name setting and adult PIN are only for copies running without it.
 - **Shared family accounts ("ARKS ID")**: planned and approved. The
   contract is in the private `arks-id` repo (`docs/SPEC.md`); see CLAUDE.md
   for how to use it. The arcade integrates last (after ARKS ID, the Hub's
-  sign-in and passkeys). **Built against ARKS ID contract: v13** (2026-11-01): game
+  sign-in and passkeys). **Built against ARKS ID contract v14** (2026-11-01): TVs (the pairing
+  code sign-in, adults' night, see the top of this file). Before that, v13 (2026-11-01): game
   switches and the banner from ARKS ID's admin console (see the top of this file). Before
   that, v12 (2026-11-01): status reports for ARKS ID's admin console. Before that, v10
   (2026-11-01): feedback goes to ARKS ID's one inbox. Before that, v8 (2026-10-28): silent
