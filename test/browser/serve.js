@@ -40,7 +40,10 @@ for (const end of ['', '-journal', '-wal', '-shm']) {
       CLIP_SURPRISE: '0',
       // Clueless turns away a finish faster than 0.3 seconds a square; the
       // browser test types quicker than a person.
-      CLUELESS_MIN_MS_PER_SQUARE: '20'
+      CLUELESS_MIN_MS_PER_SQUARE: '20',
+      // Every Criss Cross game is dealt the same tiles (only honored with
+      // NODE_ENV=test), so the browser test always has a word to play.
+      CRISSCROSS_DEAL_SEED: '1'
     }
   });
   const stop = () => { child.kill(); fake.close(); process.exit(0); };
