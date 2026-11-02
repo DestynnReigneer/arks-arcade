@@ -7,6 +7,22 @@
 // own header stays under it, minus its back arrow, which the bar replaces.
 (() => {
   const SVG_NS = 'http://www.w3.org/2000/svg';
+  // On a TV (the ARKS TV app, or ?tv=1), every page gets the TV's sign-in and
+  // its adults' night sign (tv.js). Know-It-All and the home page load it
+  // themselves; the other games get it here.
+  const tvWanted = () => {
+    if (/(^|\s)ARKS-TV\//.test(navigator.userAgent)) return true;
+    try {
+      const q = new URLSearchParams(location.search).get('tv');
+      return q === '1' || (q !== '0' && sessionStorage.getItem('arcade.tv') === '1');
+    } catch { return false; }
+  };
+  if (!window.ArcadeTV && tvWanted()) {
+    const core = document.createElement('script');
+    core.src = 'tv-core.js';
+    core.onload = () => { const tv = document.createElement('script'); tv.src = 'tv.js'; document.head.appendChild(tv); };
+    document.head.appendChild(core);
+  }
   const fonts = document.createElement('link');
   fonts.rel = 'stylesheet';
   fonts.href = 'https://fonts.googleapis.com/css2?family=Orbitron:wght@800&family=Rajdhani:wght@700&display=swap';

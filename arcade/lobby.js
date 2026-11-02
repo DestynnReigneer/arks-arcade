@@ -48,7 +48,7 @@ function collect() {
   const trivia = require('../trivia/rooms');
   const bank = require('../trivia/bank');
   for (const r of trivia._rooms.values()) {
-    const host = r.players.find(p => p.id === r.hostId);
+    const host = r.screen || r.players.find(p => p.id === r.hostId);
     add('trivia', {
       adult: bank.LEVELS[r.settings.level].adult, locked: !!r.password,
       code: r.code, host: host ? host.name : '', players: r.players.length, max: 12,
