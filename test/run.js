@@ -8,12 +8,44 @@
 
 const path = require('node:path');
 const { spawn } = require('node:child_process');
+const net = require('node:net');
 
 const fs = require('node:fs');
 
-const PORT = process.env.TEST_PORT || 3222;
-const BASE = `http://localhost:${PORT}`;
+// Each run gets its own free ports unless TEST_PORT says otherwise, so two
+// copies of the repo can run their tests at the same time without one suite
+// quietly talking to the other's server (and sharing its rate limits).
+let PORT = Number(process.env.TEST_PORT) || 0;
+let BASE = '';
+
+function freePort() {
+  return new Promise((resolve, reject) => {
+    const probe = net.createServer();
+    probe.on('error', reject);
+    probe.listen(0, () => {
+      const { port } = probe.address();
+      probe.close(() => resolve(port));
+    });
+  });
+}
 const ROOT = path.join(__dirname, '..');
+
+// The suites that run right here in this process (the unit checks, the bot
+// playing a whole Criss Cross game, random Snake and Blocks games, free-play
+// Shuffle Scuffle rounds) use Math.random. A seeded one makes every run roll
+// the same dice, so a failure shows up every time instead of once in a while.
+// TEST_SEED tries a different roll. The servers the suites talk to are
+// separate processes and keep the real Math.random.
+const SEED = Number(process.env.TEST_SEED) || 20261101;
+Math.random = (() => {
+  let a = SEED >>> 0;
+  return () => {
+    a = (a + 0x6D2B79F5) >>> 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+})();
 
 const SUITES = [
   ['unit', require('./unit.test.js')],
@@ -44,7 +76,7 @@ for (const [file, body] of [
   fs.writeFileSync(path.join(MEDIA_ROOT, file), body);
 }
 
-function startServer(port = PORT, extraEnv = {}) {
+function startServer(port, extraEnv = {}) {
   return new Promise((resolve, reject) => {
     const child = spawn(process.execPath, ['server.js'], {
       cwd: ROOT,
@@ -86,7 +118,7 @@ function startServer(port = PORT, extraEnv = {}) {
 }
 
 // Poll rather than assume: the log line appears just before listen() resolves.
-async function waitForHealth(base = BASE) {
+async function waitForHealth(base) {
   for (let i = 0; i < 40; i++) {
     try {
       const res = await fetch(`${base}/healthz`);
@@ -114,8 +146,10 @@ function resetTestDb() {
   let failed = 0;
 
   try {
-    server = await startServer();
-    await waitForHealth();
+    if (!PORT) PORT = await freePort();
+    BASE = `http://localhost:${PORT}`;
+    server = await startServer(PORT);
+    await waitForHealth(BASE);
 
     for (const [name, suite] of SUITES) {
       console.log(`\n${'='.repeat(60)}\n  ${name}\n${'='.repeat(60)}`);
@@ -126,7 +160,7 @@ function resetTestDb() {
     // The same arcade signing in through ARKS ID: a second server with
     // ARKS_ID_URL set, talking to a pretend ARKS ID, on its own database.
     const { startFakeArksId } = require('./fake-arksid');
-    const ID_PORT = Number(PORT) + 1, ID_BASE = `http://localhost:${ID_PORT}`;
+    const ID_PORT = process.env.TEST_PORT ? PORT + 1 : await freePort(), ID_BASE = `http://localhost:${ID_PORT}`;
     const secret = 'arcade-test-secret-'.padEnd(43, 's');
     fake = await startFakeArksId({ secret, arcadeBase: ID_BASE });
     // FEEDBACK_PICTURES_MAX_BYTES: a tiny cap, to try what happens when the
@@ -148,6 +182,7 @@ function resetTestDb() {
 
   console.log(`\n${'='.repeat(60)}`);
   console.log(`  ${total - failed}/${total} checks passed`);
+  console.log(`  (dice seed ${SEED}; set TEST_SEED to roll differently)`);
   console.log(`${'='.repeat(60)}\n`);
   process.exit(failed ? 1 : 0);
 })();
