@@ -13,6 +13,12 @@
 <link rel="stylesheet" href="royale.css">
 <link rel="stylesheet" href="look.css">
 <link rel="stylesheet" href="topbar.css">
+<link rel="stylesheet" href="tv.css">
+<link rel="stylesheet" href="tv-play.css">
+<!-- On a TV: the TV layout, the remote and a game controller (tv.js, tv-play.js). -->
+<script src="tv-core.js"></script>
+<script src="tv.js"></script>
+<script src="tv-play.js"></script>
 </head>
 <body data-state="idle">
 <script src="topbar.js"></script>
@@ -47,7 +53,7 @@
   </div>
   <button class="rr-roll" id="rollBtn" type="button" aria-label="Hold to roll">HOLD · ROLL</button>
 </div>
-<p class="hint center keys-hint">Keyboard: hold <b>Space</b> or <b>Enter</b> and let go to roll. A game controller's <b>A</b> button or right trigger works too.</p>
+<p class="hint center keys-hint">Keyboard: hold <b>Space</b> or <b>Enter</b> and let go to roll. A game controller's <b>A</b>, <b>X</b>, <b>R1</b> or right trigger works too, held.</p>
 <div class="sr-only" id="say" aria-live="polite"></div>
 
 <div class="panel center hidden over-panel" id="over" role="dialog" aria-live="polite">

@@ -1,11 +1,78 @@
 # Status and to-dos
 
-Last updated 2026-11-01. Update this file whenever a piece of work lands or
+Last updated 2026-11-02. Update this file whenever a piece of work lands or
 a plan changes, so the next session can pick up from here. When the
 maintainer says "I'm back", start from "Last session" below, then show the
 to-do list as checkboxes (the rule is in the maintainer's global CLAUDE.md
 and `arks-internal/conventions/sessions.md`): do the checked items in the
 order they were clicked, and keep the rest pinned here.
+
+## The cabinet games and the classics on the TV, with controllers (2026-11-02, contract v14)
+
+Tumbler Rumble, Disco Drop, Roll Royale, Moonshot, Snake, Dino Dash, Block Drop, Brick Breaker, Tower
+Defense, Sudoku and Chess (against the computer, or two players sharing the remote) play on the TV with only
+the remote, or with a game controller. Nothing changed on the server: the replay games still send only
+their inputs, and the server still decides every score.
+
+- **`public/tv-play.js` and `tv-play.css`** (new, loaded by these eleven pages after tv-core.js and tv.js in
+  their head). `TvPlay.setup({ stage, steering, active, begin, ready, start, enter, buttons, navButtons,
+  dirs, hint })` is called at the end of each game's script. On a TV (`html.tv`, which adds `html.tv-play`)
+  the `stage` is moved into a fixed `.tv-stage` on the right of the screen, drawn at the TV's own size
+  (`zoom: 0.666667` undoes tv.css's 1.5x, so canvases are sharp), and the rest of the page is a 470px
+  column on the left (phone width, drawn 1.5x). The TV bar moves under the left column. The phone's thumb
+  pads and keyboard notes hide; a TV line says what the remote and a controller do; `begin` adds a big Play
+  button (shown while `ready()`).
+- **Who has the remote.** While `steering()` is true the game gets the arrows and OK and nothing wears the
+  highlight; otherwise `data-tv-nav` is on and tv.js moves the highlight, and tv-play stops the arrows and OK
+  from also reaching the game (so a menu press can't start or steer it). A dialog (How to play, the scores)
+  always takes the highlight. `enter` turns OK into the game's own key while steering (Space in Snake, Block
+  Drop, Brick Breaker and Dino Dash). The state is checked every 100ms, on every key press, and right after
+  anything on the page changes (a MutationObserver); that last one closed real races where a press landed
+  in the moment between a screen changing and the timer noticing. On a new screen with nothing highlighted
+  the highlight goes straight to `start()` or, by default, the first initial, the Play button, then Play
+  again.
+- **The games keep the remote until their game-over panel is up** (Snake, Block Drop and Brick Breaker show
+  it half a second after the crash), so pressing OK as a game ends can't reach the top bar's Arcade link.
+- **Initials like an arcade cabinet** (tv-play.js, any `.initials input.ini` on these pages): up and down
+  change the letter (A to Z, then 0 to 9), left and right move between the three (right from the last goes
+  to Save), OK saves. `inputmode="none"` keeps Android's keyboard away; typing on a real keyboard still works.
+- **On a TV the score goes under the initials, not the TV's account** (the TV is signed in as itself, not as
+  whoever has the remote). The cabinet games and Sudoku start and save as a guest there (`token()` is null on
+  a TV), GameShell, Dino Dash and Chess pass `profileToken: null`, and `ArcadeKit.wireInitials(boxes, onEnter,
+  { guest })` keeps the boxes showing. `ArcadeKit.saveScore` honors a `profileToken` in the entry; without one
+  it works as before, so the other games are unchanged.
+- **Game by game.** The cabinet games keep their own controller code for A and Start and add X, R1 and the
+  right trigger (Roll Royale: X and R1 held; its own code already had the trigger). Tower Defense: the map
+  takes the highlight like a button, the arrows move a turquoise cursor around it (off the edge, the highlight
+  leaves the map), OK picks the square the same as a tap (`pickSquare`), and picking grass sends the highlight
+  to the towers; a controller's X calls the wave, Y upgrades, L1 and R1 change the speed, Start pauses.
+  Sudoku: the arrows move around the board as on a keyboard, OK opens a number picker beside the board (the
+  numbers with how many are left, Erase, Notes, Undo, Hint, Check), and the pad and tools under the board
+  hide. Chess: the squares are buttons, so the highlight moves square by square; a redraw keeps it on the same
+  square, the board hides with the game section, and Host and Join (two phones) are hidden on a TV.
+- **Controllers everywhere** (not only on a TV): tv-play.js reads the Gamepad API every frame and sends the
+  game the keys it already knows (`buttons`, plus the D-pad and left stick as arrows with `dirs`). In the TV
+  app A arrives as Enter and the D-pad as arrow keys, so those are skipped there. If the TV app ever turns the
+  left stick into arrow keys too, tv-play notices real arrow keys arriving as the stick moves and stops
+  sending its own.
+- **Activity** (`ArcadeTV.played()`): when a game starts, then every 20 seconds while `active()` (the game is
+  really being played, not paused or in a menu); tv.js passes it on at most once a minute.
+- **Tests:** `test/browser/tv-games.spec.js`, one test per game at 1920x1080 with the TV app's user agent:
+  the game fills the right side inside the safe area with no sideways scroll, it's started and played with
+  only the arrow keys and Enter, a pretend controller (`navigator.getGamepads` replaced in the page) presses
+  the other buttons, and Tumbler Rumble, Disco Drop, Roll Royale, Dino Dash and Block Drop save initials
+  picked with the arrows. One TV is set up per worker and its sign-in reused (the arcade allows 30 new TV
+  codes in 10 minutes), as the pretend ARKS ID's fourth TV account, `playroom` ("Playroom TV"). The pretend
+  controller holds each change until the page has drawn two frames.
+- **A flaky test fixed:** `test/browser/discodrop.spec.js` dropped the first ball by waiting for the jackpot
+  moment and then pressing, but a press takes a while to reach the page (Playwright's tap checks the stage
+  first; on a busy machine the ball let go 120 to 560 ms late, after the cup had passed). It now stops the
+  page's clock (`page.clock`) a little early, waits until the arcade's own clock is past the moment, moves
+  the page's clock to exactly that moment and drops while time stands still.
+- **Left for later:** Moonshot's, Snake's, Brick Breaker's, Sudoku's and Chess's own save flows aren't
+  driven to the end in the TV tests (they share the same initials code as the five that are). Per-controller
+  seats (two controllers as two players) and Rambler with the remote are still open. The other helper's word
+  games skip initials on a TV; they could use the same letter picker by loading tv-play.js.
 
 ## The puzzles and Spin & Solve on the TV (2026-11-02, contract v14)
 
@@ -116,7 +183,8 @@ Following Know-It-All's pattern, so read its section below first. Built against 
   `/test/tv/approve` and `/test/tv/unlock` for the browser tests. **Profile requests:** the 6-an-hour
   limit is 60 only under `NODE_ENV=test` (never in production), so new suites can make profiles.
 - **Left for later:** the other games' TV layouts and arrow navigation, controller play for the cabinet
-  games, and per-controller seats (each controller its own player answering together).
+  games, and per-controller seats (each controller its own player answering together). The layouts and
+  controller play have since landed (the sections above); per-controller seats are still open.
 
 ## Sudoku follows you, one score off a board, a cheap /healthz, and env_file (2026-11-01)
 

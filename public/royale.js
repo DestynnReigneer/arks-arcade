@@ -13,7 +13,10 @@
   const E = RoyaleEngine;
   const R = E.RULES;
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const token = () => (typeof ArcadeProfile !== 'undefined' ? ArcadeProfile.token() : null);
+  // On a TV the arcade is signed in as the TV, not as whoever has the
+  // remote, so a run there is a guest's and goes on the board under the
+  // initials picked on the screen.
+  const token = () => (typeof ArcadeProfile !== 'undefined' && !TvPlay.on ? ArcadeProfile.token() : null);
   const css = (name, fallback) => getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
   const fmt = n => Number(n || 0).toLocaleString('en-US');
 
@@ -578,7 +581,7 @@
     pressAt = null;
     holdSource = null;
     $('rollBtn').classList.remove('down');
-    msg('Paused', 'Tap the lane when you\'re ready. You\'ll get a short countdown before it starts again.');
+    msg('Paused', `${TvPlay.on ? 'Press OK' : 'Tap the lane'} when you're ready. You'll get a short countdown before it starts again.`);
   }
   function resume() {
     if (mode !== 'paused') return;
@@ -675,7 +678,7 @@
     } catch { /* the line is a bonus */ }
   }
 
-  const initials = ArcadeKit.wireInitials([...document.querySelectorAll('#iniRow .ini')], () => saveScore());
+  const initials = ArcadeKit.wireInitials([...document.querySelectorAll('#iniRow .ini')], () => saveScore(), { guest: TvPlay.on });
   async function saveScore() {
     if (!result || !result.finished || result.saved) return;
     const p = profile();
@@ -833,7 +836,8 @@
       html: `<table>
           <tr><td>📱 Phone</td><td>Press and hold anywhere on the lane or the big <b>HOLD · ROLL</b> button, then let go (a flick up the lane works too).</td></tr>
           <tr><td>⌨️ Keyboard</td><td>Hold <b>Space</b> or <b>Enter</b>, then let go.</td></tr>
-          <tr><td>🎮 Controller</td><td>Hold the <b>A</b> button or the right trigger, then let go. <b>Start</b> pauses, and starts a new run after the last ball.</td></tr>
+          <tr><td>🎮 Controller</td><td>Hold the <b>A</b> button (or <b>X</b>, <b>R1</b> or the right trigger), then let go. <b>Start</b> pauses, and starts a new run after the last ball.</td></tr>
+          <tr><td>📺 TV</td><td>The remote's <b>OK</b> button: hold it, then let go.</td></tr>
         </table>
         <p>A quick tap doesn't roll the ball, because it needs some power. If you hold for 4 seconds it rolls by itself.</p>`
     },
@@ -854,6 +858,20 @@
     if (mode === 'playing') { pausedForHelp = true; pause(); }
     help.open();
   });
+
+  // ---- on the TV ----------------------------------------------------------------------------
+  // The lane on the right, big. Hold OK and let go to roll; a controller's
+  // X or R1 work the same way, held (A, the right trigger and Start are above).
+  TvPlay.setup({
+    stage: $('zone'),
+    steering: () => mode !== 'idle' && mode !== 'over',
+    active: () => mode === 'playing' || mode === 'resuming',
+    begin: () => down('key'),
+    ready: () => mode === 'idle',
+    buttons: { 2: ' ', 5: ' ' },
+    hint: 'Press OK to set the aim, keep holding it while the power meter climbs, and let go to roll. On a game controller, A, X, R1 or the right trigger works the same way, held, and Start pauses.'
+  });
+  if (TvPlay.on) { $('msgTitle').textContent = 'Ready?'; $('msgText').textContent = 'Press OK on Play to start a run of 9 balls.'; }
 
   // ---- start ---------------------------------------------------------------------------------
   requestAnimationFrame(frame);

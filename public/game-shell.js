@@ -50,10 +50,15 @@ const GameShell = (() => {
     mount.after(over);
     const q = sel => over.querySelector(sel);
     q('.again-btn').textContent = againLabel;
-    const initials = ArcadeKit.wireInitials([...over.querySelectorAll('.ini')], () => save());
+    // On a TV the arcade is signed in as the TV, not as whoever has the
+    // remote, so scores there go on the board under the initials picked on
+    // the screen (tv-play.js).
+    const onTv = () => typeof TvPlay !== 'undefined' && TvPlay.on;
+    const initials = ArcadeKit.wireInitials([...over.querySelectorAll('.ini')], () => save(), { guest: onTv });
     let pending = null;
 
     function profile() {
+      if (onTv()) return null;
       try { return typeof ArcadeProfile !== 'undefined' && ArcadeProfile.token() ? ArcadeProfile.get() : null; } catch { return null; }
     }
 
@@ -64,7 +69,7 @@ const GameShell = (() => {
       if (!who) { q('.msg').textContent = 'Type your initials first.'; return; }
       q('.save-btn').disabled = true;
       try {
-        const r = await ArcadeKit.saveScore(game, { initials: who, score: pending.score, board: pending.board, detail: pending.detail || '' });
+        const r = await ArcadeKit.saveScore(game, { initials: who, score: pending.score, board: pending.board, detail: pending.detail || '', ...(p ? {} : { profileToken: null }) });
         if (!p) initials.remember(who);
         q('.save-part').classList.add('hidden');
         toast(r.rank === 1 ? '🏆 New #1!' : `Saved: #${r.rank}`);
@@ -160,7 +165,9 @@ const GameShell = (() => {
       const dpr = Math.max(1, window.devicePixelRatio || 1);
       let w = box.clientWidth;
       let h = aspect ? w / aspect : box.clientHeight;
-      const mh = typeof maxHeight === 'function' ? maxHeight() : maxHeight;
+      // On the TV the box is the whole right side of the screen (tv-play.css):
+      // as tall as that, not a share of the window like on a phone.
+      const mh = box.closest('.tv-stage') ? box.clientHeight : typeof maxHeight === 'function' ? maxHeight() : maxHeight;
       if (h > mh) { h = mh; if (aspect) w = h * aspect; }
       canvas.style.width = `${w}px`;
       canvas.style.height = `${h}px`;

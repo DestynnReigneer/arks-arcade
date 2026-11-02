@@ -8,7 +8,10 @@
 (() => {
   const { $, toast, api } = ArcadeKit;
   const E = DiscoDropEngine;
-  const token = () => (typeof ArcadeProfile !== 'undefined' ? ArcadeProfile.token() : null);
+  // On a TV the arcade is signed in as the TV, not as whoever has the
+  // remote, so a run there is a guest's and goes on the board under the
+  // initials picked on the screen.
+  const token = () => (typeof ArcadeProfile !== 'undefined' && !TvPlay.on ? ArcadeProfile.token() : null);
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   // The picture is drawn in stage units: 1000 wide by 1250 tall.
@@ -409,7 +412,7 @@
 
   // ---- the end of a run ---------------------------------------------------------------------
   const iniBoxes = [...document.querySelectorAll('#iniRow .ini')];
-  const initials = ArcadeKit.wireInitials(iniBoxes, () => saveScore());
+  const initials = ArcadeKit.wireInitials(iniBoxes, () => saveScore(), { guest: TvPlay.on });
   function profile() {
     try { return token() ? ArcadeProfile.get() : null; } catch { return null; }
   }
@@ -553,7 +556,8 @@
         <p>The ball takes a moment to fall, so let go a little before the cup you want arrives.</p>
         <table>
           <tr><td>⌨️ Keyboard</td><td><b>Space</b> or <b>Enter</b> drops the ball.</td></tr>
-          <tr><td>🎮 Controller</td><td>The <b>A</b> button drops it, and starts a new run from the start screen.</td></tr>
+          <tr><td>🎮 Controller</td><td>The <b>A</b> button drops it (so do <b>X</b>, <b>R1</b> and the right trigger), and starts a new run from the start screen.</td></tr>
+          <tr><td>📺 TV</td><td>The remote's <b>OK</b> button drops it.</td></tr>
         </table>`
     },
     {
@@ -583,6 +587,18 @@
     }
   ]);
   $('helpBtn').addEventListener('click', () => help.open());
+
+  // ---- on the TV ----------------------------------------------------------------------------
+  // The cabinet on the right, big, with its own Start button. OK drops; a
+  // controller's X, R1 and right trigger drop too (A is above).
+  TvPlay.setup({
+    stage: $('stage'),
+    steering: () => state === 'playing',
+    start: () => (!$('cover').classList.contains('hidden') ? $('coverBtn') : null),
+    buttons: { 2: ' ', 5: ' ', 7: ' ' },
+    hint: 'Press OK to let the disco ball go. On a game controller, A, X, R1 or the right trigger drops it too.'
+  });
+  if (TvPlay.on) $('coverText').textContent = 'You get 10 disco balls. Press OK to let each one go and land it in the best cup you can. The tiny gold cup is the jackpot.';
 
   // ---- start ---------------------------------------------------------------------------------
   document.body.dataset.state = 'ready';

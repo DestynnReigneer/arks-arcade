@@ -48,7 +48,8 @@
     document.body.dataset.state = 'ready';
     paintOptions();
     $('options').classList.remove('hidden');
-    message('Ready?', mode === 'rush' ? 'Score as much as you can in two minutes. Tap to start.' : 'Tap the well or press any key to start.');
+    message('Ready?', mode === 'rush' ? `Score as much as you can in two minutes. ${TvPlay.on ? 'Press OK on Play to start.' : 'Tap to start.'}`
+      : TvPlay.on ? 'Pick a mode, then press OK on Play.' : 'Tap the well or press any key to start.');
     hud();
   }
   function start() {
@@ -62,7 +63,7 @@
     if (window.ArcadeStats) ArcadeStats.play();
   }
   function pause(on = state === 'playing') {
-    if (on && state === 'playing') { state = 'paused'; held = null; down = null; message('Paused', 'Tap or press P to keep going.'); }
+    if (on && state === 'playing') { state = 'paused'; held = null; down = null; message('Paused', TvPlay.on ? 'Press OK to keep going.' : 'Tap or press P to keep going.'); }
     else if (!on && state === 'paused') { state = 'playing'; last = performance.now(); message(null); }
     $('pauseBtn').textContent = state === 'paused' ? '▶' : '⏸';
   }
@@ -444,6 +445,23 @@
     }
   ]);
   $('helpBtn').addEventListener('click', () => help.open());
+
+  // ---- on the TV ----------------------------------------------------------------------------
+  // The well on the right, big. Left and right move, up turns, down speeds
+  // the piece up (hold it to drop), and OK drops it the rest of the way.
+  // A controller adds a turn back, the hold box and pause.
+  TvPlay.setup({
+    stage: $('stage'),
+    // Until the game-over panel is up, OK and the arrows stay with the game.
+    steering: () => state === 'playing' || state === 'paused' || (state === 'over' && !shell.isOver),
+    active: () => state === 'playing',
+    begin: () => start(),
+    ready: () => state === 'ready',
+    enter: ' ',
+    buttons: { 0: ' ', 2: 'x', 3: 'c', 4: 'z', 5: 'x', 6: 'c', 7: ' ', 9: 'p' },
+    dirs: true,
+    hint: 'On the remote, left and right move the piece, up turns it, down speeds it up (hold it to drop), and OK drops it the rest of the way. On a game controller, the D-pad or left stick moves, A or the right trigger drops, X or R1 turns, L1 turns back, Y or the left trigger puts the piece in the hold box, and Start pauses.'
+  });
 
   reset();
   requestAnimationFrame(frame);
