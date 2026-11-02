@@ -21,7 +21,8 @@
     sudoku: { label: 'Sudoku', href: 'sudoku.html' },
     scuffle: { label: 'Shuffle Scuffle', href: 'scuffle.html' },
     crisscross: { label: 'Criss Cross', href: 'crisscross.html' },
-    clueless: { label: 'Clueless', href: 'clueless.html' }
+    clueless: { label: 'Clueless', href: 'clueless.html' },
+    tumbler: { label: 'Tumbler Rumble', href: 'tumbler.html' }
   };
 
   // ---- who's playing ---------------------------------------------------------
