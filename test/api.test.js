@@ -656,6 +656,11 @@ async function run({ base, root }) {
 
   ok('the arcade name endpoint answers', typeof (await wl('/arcade-info')).data.name === 'string');
   ok('without a sign-in service there is no banner', (await wl('/banner')).data.banner === null);
+  {
+    const dir = require('node:path').join(root, 'public');
+    const missing = require('node:fs').readdirSync(dir).filter(f => f.endsWith('.html') && !require('node:fs').readFileSync(require('node:path').join(dir, f), 'utf8').includes('<script src="banner.js" defer></script>'));
+    ok('every page loads the banner script (a new game page needs it too)', missing.length === 0, missing.join(', '));
+  }
 
   // ---- Comm Center ------------------------------------------------------------
   const asAdmin = async (p, method = 'GET', body, token = ADMIN) => {

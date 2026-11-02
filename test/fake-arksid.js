@@ -78,9 +78,8 @@ function startFakeArksId({ secret, arcadeBase, port = 0 }) {
       return res.end(body);
     }
     // For the browser tests, which can't reach this object: play the admin in
-    // the sign-in service's console. POST /test/switches { set }, /test/banner { banner }.
+    // the sign-in service's console. POST /test/switches { set }.
     if (req.method === 'POST' && u.pathname === '/test/switches') { fake.set = (await readBody(req)).set || {}; return json(res, 200, { ok: true }); }
-    if (req.method === 'POST' && u.pathname === '/test/banner') { fake.banner = (await readBody(req)).banner || null; return json(res, 200, { ok: true }); }
     if (!u.pathname.startsWith('/api/')) return json(res, 404, { error: 'Not found.' });
     if (req.headers.authorization !== `Bearer ${secret}`) return json(res, 401, { error: 'no' });
     if (req.method === 'POST' && u.pathname === '/api/prefill') {
