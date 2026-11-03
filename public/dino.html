@@ -32,16 +32,6 @@
   </div>
 </header>
 
-<div class="stage dino-stage">
-  <canvas id="canvas" aria-label="Dino Dash game. Tap or press space to jump, down arrow to duck."></canvas>
-</div>
-
-<div class="pad">
-  <button id="duckBtn" class="pad-btn">⬇<small>Duck</small></button>
-  <button id="jumpBtn" class="pad-btn primary-pad">⬆<small>Jump</small></button>
-</div>
-<p class="hint center keys-hint">Keyboard: <b>Space</b> or <b>↑</b> to jump, <b>↓</b> to duck.</p>
-
 <div class="panel center hidden" id="overPanel">
   <div class="over-top"><button class="primary" id="againBtn">Run again</button></div>
   <h2 id="overTitle">Game over</h2>
@@ -55,6 +45,16 @@
     <div class="msg" id="scoreMsg"></div>
   </div>
 </div>
+
+<div class="stage dino-stage">
+  <canvas id="canvas" aria-label="Dino Dash game. Tap or press space to jump, down arrow to duck."></canvas>
+</div>
+
+<div class="pad">
+  <button id="duckBtn" class="pad-btn">⬇<small>Duck</small></button>
+  <button id="jumpBtn" class="pad-btn primary-pad">⬆<small>Jump</small></button>
+</div>
+<p class="hint center keys-hint">Keyboard: <b>Space</b> or <b>↑</b> to jump, <b>↓</b> to duck.</p>
 
 <div class="overlay hidden" id="scoresView">
   <div class="card-panel">
