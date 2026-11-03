@@ -1,6 +1,6 @@
 'use strict';
 
-// Admin for Clueless: crossword clue packs, made the same way as the other
+// Admin for Clueless Crosswords: crossword clue packs, made the same way as the other
 // packs (copy a prompt, paste it into any chatbot, paste the answer back).
 // The server picks the words and checks every clue that comes back.
 
