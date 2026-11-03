@@ -1184,10 +1184,26 @@ async function run({ base, root }) {
   const snakeVisit = await statsPost('/visit', { game: 'snake', name: 'Guest 8' });
   await statsPost('/beat', { id: snakeVisit.data.id, activeMs: 90000 });
   await statsPost('/beat', { id: snakeVisit.data.id, activeMs: 90000 });
+  const adminOrder = (await wl('/arcade-info')).data.games.order;
+  const onePlayOrder = (await statsPost('/game-order', {})).data.order;
+  ok('one play of each game does not reorder the list', onePlayOrder.join() === adminOrder.join(), onePlayOrder.join());
+  // Two more plays of Snake today (three counts as a clear lead).
+  for (let k = 0; k < 2; k++) {
+    const v = await statsPost('/visit', { game: 'snake', name: 'Guest 8' });
+    await statsPost('/beat', { id: v.data.id, activeMs: 30000 });
+  }
   const everyoneOrder = (await statsPost('/game-order', {})).data.order;
-  ok('without a profile, the most-played games overall come first', everyoneOrder.slice(0, 3).join() === 'snake,chess,dino', everyoneOrder.join());
-  const mayaOrder = (await statsPost('/game-order', { token: mayaTok })).data.order;
-  ok('a profile sees its own most-played game first, then the most-played overall', mayaOrder.slice(0, 3).join() === 'chess,snake,dino', mayaOrder.join());
+  ok('without a profile, a game everyone keeps playing comes first', everyoneOrder[0] === 'snake', everyoneOrder.join());
+  const mayaFirst = (await statsPost('/game-order', { token: mayaTok })).data.order;
+  ok('a profile with one play of its own starts from everyone\'s order', mayaFirst[0] === 'snake', mayaFirst.join());
+  const kept = (await statsPost('/game-order', { token: mayaTok, previous: ['dino', 'chess', 'nope'] })).data.order;
+  ok('the order the page showed last time is kept when nothing clearly passes it', kept.slice(0, 2).join() === 'dino,chess' && kept.length === adminOrder.length, kept.join());
+  for (let k = 0; k < 2; k++) {
+    const v = await statsPost('/visit', { game: 'chess', token: mayaTok });
+    await statsPost('/beat', { id: v.data.id, activeMs: 30000, token: mayaTok });
+  }
+  const mayaOrder = (await statsPost('/game-order', { token: mayaTok, previous: everyoneOrder })).data.order;
+  ok('a profile\'s own steady play moves its game to the top', mayaOrder[0] === 'chess', mayaOrder.join());
   // ---- the owner's own logos and clips ------------------------------------------
   const custom = (await wl('/custom')).data;
   ok('clips in media/clips are listed, with their type', custom.clips.length === 1 && custom.clips[0].name === 'rickroll' && custom.clips[0].type === 'image', JSON.stringify(custom.clips));
