@@ -1006,6 +1006,14 @@
     $('setup').classList.remove('hidden');
   }
 
+  // Back: from a game (or its results) to the setup screen, asking first
+  // while the game's going, and from there to the arcade.
+  ArcadeBack.setup({
+    atMenu: () => !$('setup').classList.contains('hidden'),
+    back: backToSetup,
+    busy: () => !$('game').classList.contains('hidden') && $('overView').classList.contains('hidden')
+  });
+
   // ---- how to play ----------------------------------------------------------------------
 
   const help = Tutorial.create('spinsolve', [

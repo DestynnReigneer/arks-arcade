@@ -766,6 +766,19 @@
   Blip.muteButton($('muteBtn'));
   initials = ArcadeKit.wireInitials([...document.querySelectorAll('#overScore .ini')], saveScore, { guest: TvPlay.on });
 
+  // Back: from a game (or its results, or the two-phone lobby) to the setup
+  // screen, asking first if moves have been played, and from there to the arcade.
+  ArcadeBack.setup({
+    atMenu: () => !$('setup').classList.contains('hidden'),
+    back: () => {
+      $('overView').classList.add('hidden');
+      if (S.mode === 'room' && S.state && !S.ended) roomAct('resign');
+      backToSetup();
+    },
+    busy: () => !$('game').classList.contains('hidden') && !!S.state && !S.ended && S.moves.length > 0,
+    question: () => (S.mode === 'room' ? 'Leave this game? Leaving counts as resigning.' : 'Leave this game? It ends here and won\'t be saved.')
+  });
+
   // ---- on the TV ---------------------------------------------------------------------------
   // The board on the right, big; the players, the moves and the buttons on
   // the left. The squares are buttons, so the remote's arrows move the

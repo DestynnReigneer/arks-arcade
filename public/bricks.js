@@ -48,7 +48,7 @@
     if (state === 'over' || state === 'cleared') return;
     Blip.unlock();
     if (g.phase === 'serve') {
-      if (!counted && window.ArcadeStats) { counted = true; ArcadeStats.play(); }
+      if (!counted) { counted = true; if (window.ArcadeStats) ArcadeStats.play(); }
       launchQueued = true;
     }
   }
@@ -430,6 +430,15 @@
     buttons: { 0: ' ', 2: ' ', 5: ' ', 7: ' ', 9: 'p' },
     dirs: true,
     hint: 'Press OK on Play, then the arrows on the remote move the paddle and OK launches the ball. On a game controller, the D-pad or left stick moves, A, X, R1 or the right trigger launches, and Start pauses.'
+  });
+
+  // Back: a game that's started goes back to level 1 (asking first, while
+  // it's going), and from there to the arcade.
+  ArcadeBack.setup({
+    atMenu: () => !counted && (state === 'ready' || state === 'paused'),
+    back: () => { shell.hideOver(); tvPlaying = false; newGame(); },
+    busy: () => counted && state !== 'over',
+    pause: () => pause(true)
   });
 
   newGame();

@@ -428,7 +428,8 @@
       error = e.message;
       result = null;
     }
-    setTimeout(() => showOver(error), reduced ? 200 : 700);
+    // (Unless Back took the lock back to the start meanwhile.)
+    setTimeout(() => { if (mode === 'finishing') showOver(error); }, reduced ? 200 : 700);
   }
 
   const plural = (n, word) => `${n.toLocaleString('en-US')} ${word}${n === 1 ? '' : 's'}`;
@@ -655,6 +656,22 @@
   $('helpBtn').addEventListener('click', () => {
     if (mode === 'playing') { pausedForHelp = true; pause(); }
     help.open();
+  });
+
+  // Back: a run (or its results) goes back to the start, asking first while
+  // the lock is turning, and from there to the arcade.
+  ArcadeBack.setup({
+    atMenu: () => mode === 'idle' || mode === 'starting',
+    back: () => {
+      mode = 'idle';
+      sim = null; run = null; result = null;
+      effects.length = 0;
+      $('over').classList.add('hidden');
+      document.body.dataset.state = 'ready';
+      msg(TvPlay.on ? 'Ready?' : 'Tap to play', TvPlay.on ? 'Press OK on Play to start.' : 'Tap anywhere on the lock, or press Space, to start.');
+    },
+    busy: () => ['playing', 'paused', 'resuming', 'finishing'].includes(mode),
+    pause: () => pause()
   });
 
   // ---- on the TV ----------------------------------------------------------------------------
