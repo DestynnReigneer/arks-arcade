@@ -5,6 +5,10 @@
 // list of tap times the page sends at the end, and the score the server gets
 // is the only one that counts.
 //
+// A run is one long lock that never opens: the light keeps going round, every
+// pop turns it around and lights a new pin, and the run goes on until the
+// first miss. The score is how many pins you popped.
+//
 // Everything is decided by the run's seed and the tap times (whole
 // milliseconds since the run started), so the same seed and the same taps
 // always give the same result, on any device. Time is in milliseconds and
@@ -12,7 +16,7 @@
 //
 //   const s = TumblerEngine.create(seed);
 //   TumblerEngine.tap(s, t)      -> { kind: 'pop' | 'miss' | 'ignored' | 'over', ... }
-//   TumblerEngine.advance(s, t)  -> true once the marker has slipped past a target
+//   TumblerEngine.advance(s, t)  -> true once the marker has slipped past a pin
 //   TumblerEngine.replay(seed, taps)  the server's check (throws on impossible input)
 
 (function (root, factory) {
@@ -21,28 +25,40 @@
   else root.TumblerEngine = api;
 })(typeof self !== 'undefined' ? self : this, () => {
   const RULES = {
-    LEAD_MS: 2200,        // "Ready... go!" before the first lock starts turning
-    BREAK_MS: 1800,       // the pause after a lock pops open, before the next one
-    HALF_DEG: 12,         // how far either side of a pin's middle still counts as a hit
-    BULL_DEG: 4,          // this close to the middle is a bullseye
+    COUNT_MS: 1000,       // each number of the 3, 2, 1 countdown is up for this long...
+    LEAD_MS: 3000,        // ...so the light starts turning ("Go!") 3 seconds into the run
+    WAVE: 10,             // pins in a wave: it gets harder for 7, then eases off for 3
+    CLIMB: 7,
     MIN_GAP_DEG: 75,      // a new pin is at least this far ahead of the marker...
     MAX_GAP_DEG: 300,     // ...and at most this far
     MIN_TAP_GAP_MS: 60,   // two taps closer than this are one tap (a double tap counts once)
-    MAX_TAPS: 4000
+    MAX_TAPS: 4000,
+    // How hard a pin is, from 0 (the start) to 1 (as hard as it gets):
+    SLOW_DEG_S: 130,      // the light's speed at 0, in degrees a second...
+    FAST_DEG_S: 320,      // ...and at 1
+    WIDE_DEG: 16,         // how far either side of a pin's middle still counts, at 0...
+    NARROW_DEG: 9         // ...and at 1
   };
 
-  // Level 1 turns at 140 degrees a second, a bit faster every level, topping
-  // out at 400 (more than a full turn a second) from level 20.
-  const speedOf = level => Math.min(140 + 14 * (level - 1), 400) / 1000;   // degrees per ms
-  // Pins to pop to open each lock: 3 on the first, one more every level, at most 20.
-  const pinsFor = level => Math.min(level + 2, 20);
-
-  // Points, in one place so How to play and the tests can quote them.
-  const POINTS = {
-    pin: level => 10 * level,                            // every pin popped
-    bullseye: (level, streak) => 10 * level * Math.min(streak, 5),   // on top, for a bullseye
-    lock: level => 50 * level                            // opening the lock
-  };
+  // How hard the next pin is, from how many pins have been popped so far. It
+  // comes in waves of 10: each wave gets harder for 7 pins, eases off a
+  // little for the last 3, and starts the next wave a bit harder than the
+  // last one started. After about 110 pins every wave peaks at the hardest
+  // there is, and it still eases off and climbs back, wave after wave.
+  const peakOf = wave => Math.min(1, 0.16 + 0.08 * wave);
+  const lowOf = wave => (wave === 0 ? 0 : Math.max(0, peakOf(wave) - 0.2));
+  function difficulty(pops) {
+    const wave = Math.floor(pops / RULES.WAVE), k = pops % RULES.WAVE;
+    const lo = lowOf(wave), hi = peakOf(wave), next = lowOf(wave + 1);
+    if (k < RULES.CLIMB) return lo + (hi - lo) * (k / (RULES.CLIMB - 1));
+    return hi + (next - hi) * ((k - RULES.CLIMB + 1) / (RULES.WAVE - RULES.CLIMB + 1));
+  }
+  const speedAt = d => (RULES.SLOW_DEG_S + (RULES.FAST_DEG_S - RULES.SLOW_DEG_S) * d) / 1000;   // degrees per ms
+  const halfAt = d => RULES.WIDE_DEG - (RULES.WIDE_DEG - RULES.NARROW_DEG) * d;
+  // Which wave a pin is in (1 for the first ten pins), and whether it's in the
+  // part of the wave that eases off.
+  const waveOf = pops => Math.floor(pops / RULES.WAVE) + 1;
+  const easingAt = pops => pops % RULES.WAVE >= RULES.CLIMB;
 
   // The small seeded random numbers the arcade uses elsewhere (mulberry32).
   function rng(seed) {
@@ -60,18 +76,21 @@
 
   function create(seed) {
     const s = {
-      seed: seed >>> 0, rand: rng(seed),
-      level: 1, pinsLeft: pinsFor(1), dir: 1,
-      segStart: RULES.LEAD_MS, segAngle: 0, gap: 0, speed: speedOf(1),
-      score: 0, pins: 0, locks: 0, streak: 0, bestStreak: 0, bullseyes: 0,
+      seed: seed >>> 0, rand: rng(seed), dir: 1,
+      segStart: RULES.LEAD_MS, segAngle: 0, gap: 0, speed: 0, half: 0, hard: 0,
+      pops: 0, streak: 0, bestStreak: 0, bullseyes: 0,
       lastTap: -Infinity, over: false, endedAt: null, endedBy: null, taps: []
     };
     placePin(s);
     return s;
   }
 
-  // A new pin, somewhere ahead of the marker in the way it's going.
+  // A new pin, somewhere ahead of the marker in the way it's going, with the
+  // speed and width the wave says.
   function placePin(s) {
+    s.hard = difficulty(s.pops);
+    s.speed = speedAt(s.hard);
+    s.half = halfAt(s.hard);
     s.gap = RULES.MIN_GAP_DEG + s.rand() * (RULES.MAX_GAP_DEG - RULES.MIN_GAP_DEG);
   }
 
@@ -82,9 +101,10 @@
   }
   const pinAngle = s => norm(s.segAngle + s.dir * s.gap);
   // The moment the marker is dead center on the pin, and the moment it has
-  // gone past the edge without a tap.
+  // gone past the edge without a tap. A bullseye is the middle third.
   const centerAt = s => s.segStart + s.gap / s.speed;
-  const windowMs = s => RULES.HALF_DEG / s.speed;
+  const windowMs = s => s.half / s.speed;
+  const bullDeg = s => s.half / 3;
   const slipAt = s => centerAt(s) + windowMs(s);
 
   function end(s, t, why) {
@@ -101,8 +121,8 @@
   }
 
   // A tap at time t. Only a 'pop' or a 'miss' is a tap the page sends to the
-  // server; 'ignored' ones (a double tap, or a tap while no lock is turning)
-  // and taps after the run is over are left out.
+  // server; 'ignored' ones (a double tap, or a tap during the countdown) and
+  // taps after the run is over are left out.
   function tap(s, t) {
     if (advance(s, t)) return { kind: 'over' };
     if (t < s.segStart || t - s.lastTap < RULES.MIN_TAP_GAP_MS) return { kind: 'ignored' };
@@ -113,37 +133,23 @@
       end(s, t, 'miss');
       return { kind: 'miss', off };
     }
-    const level = s.level;
-    const bullseye = Math.abs(off) <= RULES.BULL_DEG / s.speed;
+    const bullseye = Math.abs(off) <= bullDeg(s) / s.speed;
     s.streak = bullseye ? s.streak + 1 : 0;
     s.bestStreak = Math.max(s.bestStreak, s.streak);
     if (bullseye) s.bullseyes++;
-    let points = POINTS.pin(level) + (bullseye ? POINTS.bullseye(level, s.streak) : 0);
-    s.pins++;
-    s.pinsLeft--;
+    s.pops++;
     const at = markerAt(s, t);
-    let opened = false;
-    if (s.pinsLeft === 0) {
-      // The lock pops open. The next one starts after a short break, with the
-      // marker back at the top going clockwise.
-      opened = true;
-      points += POINTS.lock(level);
-      s.locks++;
-      s.level++;
-      s.pinsLeft = pinsFor(s.level);
-      s.speed = speedOf(s.level);
-      s.dir = 1;
-      s.segAngle = 0;
-      s.segStart = t + RULES.BREAK_MS;
-    } else {
-      // Every pin turns the marker around.
-      s.dir = -s.dir;
-      s.segAngle = at;
-      s.segStart = t;
-    }
+    // Every pin turns the marker around, and the next one lights up at once.
+    s.dir = -s.dir;
+    s.segAngle = at;
+    s.segStart = t;
+    const wasHard = s.hard;
     placePin(s);
-    s.score += points;
-    return { kind: 'pop', bullseye, streak: s.streak, points, opened, level, off, at };
+    return {
+      kind: 'pop', bullseye, streak: s.streak, pops: s.pops, off, at,
+      wave: waveOf(s.pops), newWave: s.pops % RULES.WAVE === 0,
+      easing: s.hard < wasHard
+    };
   }
 
   function fail(message) {
@@ -173,19 +179,20 @@
     return summary(s);
   }
 
+  // score is the number of pins popped; wave is the wave the run ended in.
   function summary(s) {
     return {
-      score: s.score, level: s.level, locks: s.locks, pins: s.pins,
+      score: s.pops, pops: s.pops, wave: waveOf(s.pops),
       bullseyes: s.bullseyes, bestStreak: s.bestStreak, endedBy: s.endedBy, endedAt: Math.round(s.endedAt)
     };
   }
 
-  // Perfect play: a tap dead center on every pin, for the first `locks` locks
-  // (the tests use it).
-  function perfectTaps(seed, locks = 1) {
+  // Perfect play: a tap dead center on each of the first `pops` pins (the
+  // tests use it).
+  function perfectTaps(seed, pops = 1) {
     const s = create(seed);
     const taps = [];
-    while (s.locks < locks) {
+    while (s.pops < pops) {
       const t = Math.round(centerAt(s));
       taps.push(t);
       tap(s, t);
@@ -194,7 +201,7 @@
   }
 
   return {
-    RULES, POINTS, speedOf, pinsFor, create, tap, advance, replay, summary, perfectTaps,
-    markerAt, pinAngle, centerAt, windowMs, slipAt
+    RULES, difficulty, speedAt, halfAt, waveOf, easingAt, create, tap, advance, replay, summary, perfectTaps,
+    markerAt, pinAngle, centerAt, windowMs, bullDeg, slipAt
   };
 });

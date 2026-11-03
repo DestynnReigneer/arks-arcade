@@ -130,7 +130,11 @@ Validation always uses the full list, so a real word is never rejected as fake â
 
 ### Spin & Solve (`/spinsolve.html`)
 
-A wheel-and-phrase puzzle game. Spin, call consonants, buy vowels for $250, solve. Solo gets three strikes a round and goes on the high-score board; 2-4 players pass one phone. 200+ built-in family-friendly puzzles in `public/spin-puzzles.js`.
+A wheel-and-phrase puzzle game that follows the TV show's turns. On your turn you spin, buy a vowel for $250, or solve. Landing on money means calling a consonant, worth that much for every time it's in the puzzle, and finding one means you go again. A letter that isn't there, a wrong answer, Bankrupt (which also takes the round's money) or Lose a Turn passes the turn. Only whoever solves banks the round's money, at least $1,000. Solo gets three strikes a round and goes on the high-score board; 2-4 players pass one phone. 200+ built-in family-friendly puzzles in `public/spin-puzzles.js`.
+
+- **The turn timer** (30 to 90 seconds, or off) only runs when you owe an answer, like on the show: once the wheel stops (to call a letter), when you buy a vowel, and when you tap Solve. Nothing ticks while you decide what to do next, so it never runs before your first spin.
+- **Sounds** are our own, made in the browser like the rest of the arcade's (`public/blip.js`), in the spirit of a TV wheel game without using any of the show's recordings: a bright ding for each letter that lights up, a low buzzer for a letter that isn't there, a wrong answer or running out of time, a click for every peg the wheel passes, a sting for Bankrupt and a fanfare when the puzzle is solved.
+- **Sound off:** each of those has something to see too. Letters glow as they turn over, the buzzer flashes the board red with a big âœ• over the wheel, the pointer kicks at every peg, and Bankrupt, Lose a Turn, Time's up and Solved show over the wheel.
 
 Levels run Kids, Cheeky, Spicy, Filthy like the party card games; the three adult levels have their own built-in banks (`spinsolve/puzzles.js`), sit behind the adult PIN, switch on the adult look, and keep their own unannounced high-score board. Players can suggest a theme from the game; the admin builds packs at any level in the Spin & Solve tab by copying a prompt and pasting the AI's answer, and every pasted puzzle is checked to fit the board and use American spelling.
 
@@ -334,12 +338,16 @@ Everything is under `/api/clueless`. A grid is one character per square, row by 
 
 ### Tumbler Rumble (`/tumbler.html`)
 
-A timing game in the style of a coin-op cabinet. A bright light races around a lock, and one spot on the ring glows gold: that's the **pin**. Tap the moment the light is on the pin to pop it, and the light turns around while a new pin lights up somewhere ahead of it. Pop every pin to open the lock. The first lock needs 3 pins and each lock after it needs one more (up to 20), and the light turns a little faster every lock (140 degrees a second on the first, topping out at 400 from lock 20). The run ends the first time you tap when the light isn't on the pin, or let it slide past the pin without a tap. There's no last lock, so it's all about how far you get.
+A timing game in the style of a coin-op cabinet. A bright light races around a lock, and one spot on the ring glows gold: that's the **pin**. Tap the moment the light is on the pin to pop it, and the light turns around while a new pin lights up somewhere ahead of it straight away. A run never stops to start over: it goes on until the first time you tap when the light isn't on the pin, or let it slide past the pin without a tap, and your score is how many pins you popped.
+
+- **A real countdown:** every run starts with 3, 2, 1 and Go on the lock, one second each. The POP! button says Start before a run, stays dimmed and can't be pressed during the countdown (it counts down too), and lights up when the light starts moving.
+- **Waves:** the pins come in waves of 10. The first pins are wide and slow (130 degrees a second, with 16 degrees either side of a pin's middle counting as a hit). In each wave the light speeds up and the pin narrows for 7 pins, then eases off for the last 3, and each wave starts and peaks a bit harder than the one before. By about 110 pins the waves peak at the hardest there is (320 degrees a second, 9 degrees either side) and still ease off and climb back. The Pace box says whether the wave is getting harder or easier right now.
+- **Bullseyes:** popping a pin in the middle third of it is a bullseye. They don't change the score, but the run's bullseyes and best streak show at the end.
+- **Sound off:** every sound has something to see too. Pops, bullseyes, Go and each new wave make the lock glow, a miss turns it red (and shakes it, unless reduced motion is on), and wave news shows across the top of the lock.
 
 - **Controls:** tap anywhere on the lock or the big POP! button on a phone, press Space or Enter on a keyboard, or press a game controller's A, X, R1 or right trigger (through the browser's Gamepad API; Start pauses). The lock is drawn on a canvas at the screen's frame rate. With reduced motion turned on, the glowing trail, the shake and most of the confetti are left out, and the game plays the same.
-- **Points:** every pin is worth 10 points times the lock number, and opening a lock is worth 50 times the lock number. Popping a pin right on the white stripe in its middle is a **bullseye**, worth the pin's points again times your streak of bullseyes in a row (up to 5 times).
 - **The server works out every score.** Starting a run writes down the moment on the server's clock and hands the page a random seed, which decides where every pin goes. The page and the server run the same small simulation (`public/tumbler-engine.js`): the page plays it live, and when the run ends it sends only the list of its tap times, in whole milliseconds since the run started. The server replays those taps through the simulation and gets the score itself. It refuses taps that couldn't have come from a real run: two taps closer together than 60 milliseconds, taps out of order, more than 4,000 of them, a tap after the run was already over, or times later than the run has really lasted by the server's clock. Opening How to play or leaving the page pauses the run, and there's a countdown before the light moves again.
-- **High-score boards** for today and for all time. Every run you save counts, profiles show their name or initials the way they chose, and guests type initials. After a run the game says how many more points would have passed the next real score on today's board. A new best score ever posts to the Comm Center.
+- **High-score boards** for today and for all time, counted in pins popped. Every run you save counts, profiles show their name or initials the way they chose, and guests type initials. After a run the game says how many more pins would have passed the next real score on today's board. A new best score ever posts to the Comm Center. Scores from the first version of the game (points over locks that opened) are kept in the database, marked `rules = 1`, but left off the boards, since the two kinds of score can't be compared.
 
 #### The Tumbler Rumble API
 
@@ -349,7 +357,7 @@ Everything is under `/api/tumbler`.
 |---|---|
 | `POST /start` `{ profileToken? }` | Starts a run. Returns the run id, the seed and the rules. |
 | `GET /run/:id` | Where a run stands, and its score once it's finished. |
-| `POST /run/:id/finish` `{ taps }` | Replays the tap times (whole milliseconds since the run started) and keeps the score the server worked out. Impossible taps are refused. |
+| `POST /run/:id/finish` `{ taps }` | Replays the tap times (whole milliseconds since the run started) and keeps the score the server worked out: `score` (pins popped), `wave`, `bullseyes` and `bestStreak`. Impossible taps are refused. |
 | `POST /run/:id/save` `{ initials?, profileToken? }` | Puts a finished run's score on the boards. Returns today's and all-time rank. |
 | `GET /board?scope=day\|all&day=` | The best scores, highest first. |
 

@@ -193,7 +193,7 @@ test('Tumbler Rumble with the remote and a controller', async ({ page }) => {
     };
     go();
   }));
-  await expect(page.locator('#hudPins')).toHaveText('2');
+  await expect(page.locator('#hudPops')).toHaveText('1');
 
   // A controller's X pops too. Pressed right away the light isn't on the new
   // pin, so it's a miss and the run ends.
