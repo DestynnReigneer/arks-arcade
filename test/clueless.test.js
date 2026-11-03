@@ -197,6 +197,53 @@ async function run({ base, root }) {
   const bigAns = (await api(`/test/answer/${big.data.runId}`)).data.letters;
   ok('…and different from the mini', bigAns !== ans);
 
+  console.log('\n-- clueless: crossing off solved clues --');
+  // A grid with only some squares filled in from the answer.
+  const only = (answer, keep) => [...answer].map((ch, i) => (ch !== '#' && keep.includes(i) ? ch : '.')).join('');
+  const c = await api('/start', 'POST', { level: 'mini' });
+  const e1 = c.data.puzzle.across[0];
+  const s1 = await api(`/run/${c.data.runId}/solved`, 'POST', { grid: only(ans, e1.cells) });
+  ok('on the mini, a right word is crossed off straight away', s1.status === 200 && s1.data.rule === 'word' &&
+    s1.data.across.includes(e1.num), JSON.stringify(s1.data));
+  ok('…and the answer never comes with it', !/"(letters|answer|answers)"/.test(s1.text) && !s1.text.includes(ans));
+  const wrongWord = [...only(ans, e1.cells)];
+  wrongWord[e1.cells[0]] = ans[e1.cells[0]] === 'A' ? 'B' : 'A';
+  const s2 = await api(`/run/${c.data.runId}/solved`, 'POST', { grid: wrongWord.join('') });
+  ok('one wrong letter and it isn\'t', s2.status === 200 && !s2.data.across.includes(e1.num) && !('wrong' in s2.data));
+  ok('an empty grid has nothing crossed off', (await api(`/run/${c.data.runId}/solved`, 'POST', { grid: blank })).data.across.length === 0);
+
+  const bp = big.data.puzzle, n7 = bp.size;
+  // An across word sharing its row with another word: on the grown-ups' crossword it waits for the whole row.
+  const rowOf = e => [...Array(n7).keys()].map(k => e.row * n7 + k).filter(i => bigAns[i] !== '#');
+  const shared = bp.across.find(e => rowOf(e).length > e.cells.length) || bp.across[0];
+  const s3 = await api(`/run/${big.data.runId}/solved`, 'POST', { grid: only(bigAns, shared.cells) });
+  ok('on the grown-ups\' crossword the rule is the whole line', s3.data.rule === 'line');
+  if (rowOf(shared).length > shared.cells.length) {
+    ok('…so a right word alone isn\'t crossed off while its row has another word to fill', !s3.data.across.includes(shared.num), JSON.stringify(s3.data));
+  }
+  const s4 = await api(`/run/${big.data.runId}/solved`, 'POST', { grid: only(bigAns, rowOf(shared)) });
+  ok('…and once the whole row is right, every across clue in it is', bp.across.filter(e => e.row === shared.row).every(e => s4.data.across.includes(e.num)), JSON.stringify(s4.data));
+  const fullBig = await api(`/run/${big.data.runId}/solved`, 'POST', { grid: bigAns });
+  ok('a fully right grid crosses off every clue', fullBig.data.across.length === bp.across.length && fullBig.data.down.length === bp.down.length);
+
+  console.log('\n-- clueless: free play --');
+  const f1 = await api('/start', 'POST', { level: 'mini', free: true });
+  const f2 = await api('/start', 'POST', { level: 'mini', free: true });
+  ok('free play hands out a crossword marked free', f1.status === 200 && f1.data.free === true && f1.data.puzzle.size === 5 && c.data.free === false);
+  const f1Ans = (await api(`/test/answer/${f1.data.runId}`)).data.letters;
+  const f2Ans = (await api(`/test/answer/${f2.data.runId}`)).data.letters;
+  ok('New board (another free start) gives a different crossword, not today\'s', f1Ans !== f2Ans && f1Ans !== ans && f2Ans !== ans);
+  ok('…and its start never carries a letter', !/"(letters|answer|answers)"/.test(f1.text));
+  ok('a free crossword stays the same when you come back to it', JSON.stringify((await api(`/run/${f1.data.runId}`)).data.puzzle) === JSON.stringify(f1.data.puzzle));
+  ok('today\'s puzzle is still today\'s after free play', (await api(`/test/answer/${(await api('/start', 'POST', { level: 'mini' })).data.runId}`)).data.letters === ans);
+  await wait(500);
+  const fDone = await api(`/run/${f1.data.runId}/finish`, 'POST', { grid: f1Ans });
+  ok('a free crossword can be finished', fDone.status === 200 && fDone.data.finished && fDone.data.free);
+  const fSave = await api(`/run/${f1.data.runId}/save`, 'POST', { initials: 'FRE' });
+  ok('…but its time doesn\'t go on the board', fSave.status === 409 && /Free play/.test(fSave.data.error));
+  const fBig = await api('/start', 'POST', { level: 'big', free: true });
+  ok('free play works for the grown-ups\' crossword too', fBig.status === 200 && fBig.data.free && fBig.data.puzzle.size === 7);
+
   console.log('\n-- clueless: clue packs in admin --');
   ok('the clue pack pages need the admin', (await api('/admin/batch?kind=kids')).status === 401 &&
     (await api('/admin/packs', 'POST', { label: 'x', kind: 'kids', text: 'APPLE: Fruit' })).status === 401);

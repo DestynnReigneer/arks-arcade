@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Clueless</title>
+<title>Clueless Crosswords</title>
 <link rel="icon" href="/custom/brand/favicon.svg" type="image/svg+xml">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="apple-touch-icon" href="/custom/brand/app-icon-180.png">
@@ -23,7 +23,7 @@
 
 <header class="top">
   <a href="/" class="icon-btn" title="Back to the arcade">←</a>
-  <h1><i class="t-emoji">📰 </i><span>CLUELESS</span></h1>
+  <h1><i class="t-emoji">📰 </i>CLUELESS <span>CROSSWORDS</span></h1>
   <div class="btns">
     <button class="icon-btn" id="pauseBtn" title="Pause">⏸</button>
     <button class="icon-btn" id="muteBtn" title="Sound">🔊</button>
@@ -33,7 +33,10 @@
   </div>
 </header>
 
-<div class="seg level-seg" id="levelSeg" role="group" aria-label="Which crossword"></div>
+<div class="cl-picks">
+  <div class="seg level-seg" id="levelSeg" role="group" aria-label="Which crossword"></div>
+  <div class="seg level-seg" id="modeSeg" role="group" aria-label="Today's puzzle or free play"></div>
+</div>
 
 <div class="hud">
   <div><small>Time</small><b id="clock">0:00</b></div>
@@ -64,6 +67,11 @@
   <button class="cl-step" id="nextClue" aria-label="Next clue">›</button>
 </div>
 
+<div class="cl-free hidden" id="freeBar">
+  <p>Free play picks a random crossword. Not the one you want? Get another until you type your first letter.</p>
+  <button class="ghost" id="newBoardBtn">🔀 New board</button>
+</div>
+
 <div class="cl-wrap" id="wrap">
   <div class="cl-grid" id="grid" role="grid" aria-label="Crossword grid"></div>
   <div class="cl-cover" id="cover">
@@ -74,6 +82,8 @@
     </div>
   </div>
 </div>
+
+<div class="cl-legend" aria-hidden="true"><span class="lg-across">→ Across</span><span class="lg-down">↓ Down</span><span class="lg-done">✓ <s>Solved</s></span></div>
 
 <div class="cl-tools" id="tools">
   <div class="cl-menu-wrap">
@@ -92,7 +102,7 @@
     </div>
   </div>
   <button class="cl-tool" id="pencilBtn" aria-pressed="false" title="Pencil: letters you're not sure of go in gray"><span>✏️</span><small>Pencil off</small></button>
-  <button class="cl-tool" id="dirBtn" title="Switch between across and down"><span>⇄</span><small>Across</small></button>
+  <button class="cl-tool" id="dirBtn" title="Switch between across and down"><span>→</span><small>Across</small></button>
 </div>
 
 <div class="cl-keys" id="keys" aria-label="Keyboard"></div>
@@ -100,8 +110,8 @@
 <p class="hint center keys-hint no-tv">Keyboard: type letters, <b>arrows</b> to move, <b>Space</b> to switch across and down, <b>Tab</b> for the next clue, <b>Backspace</b> to erase.</p>
 
 <div class="cl-lists" id="lists">
-  <section><h2>Across</h2><ol id="acrossList"></ol></section>
-  <section><h2>Down</h2><ol id="downList"></ol></section>
+  <section class="across"><h2>→ Across</h2><ol id="acrossList"></ol></section>
+  <section class="down"><h2>↓ Down</h2><ol id="downList"></ol></section>
 </div>
 
 <div class="overlay hidden" id="scores" role="dialog" aria-label="Fastest times">

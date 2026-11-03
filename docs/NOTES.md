@@ -7,6 +7,35 @@ to-do list as checkboxes (the rule is in the maintainer's global CLAUDE.md
 and `arks-internal/conventions/sessions.md`): do the checked items in the
 order they were clicked, and keep the rest pinned here.
 
+## Clueless is now Clueless Crosswords, with free play (2026-11-02)
+
+The maintainer asked for these after playing: the new name, different colors for across and down, a grid
+that doesn't change shape while typing, solved clues crossed off, and a New board button.
+
+- **The name** changed everywhere a player or the admin reads it (title, header, home card, QR picker, How
+  to play, the admin's tab, switches, stats and Boards list, feedback, the dust sign, the Comm Center post).
+  The id is still `clueless` (page, API, tables, storage keys), so links, boards and runs carry on.
+- **Across is blue (`--across: #38c6ff`) and down is pink (`--down: #ff6ec7`)**, in the highlighted word
+  and square, the clue bar, the direction button and the lists, always beside an arrow (→, ↓), with a small
+  key under the grid. Neither is a status color or gold, which mean right, wrong and revealed here. The
+  arcade has no light mode, so they were only checked on the dark background (cream letters on the selected
+  square stay above 3:1 for these big letters).
+- **Steady grid:** the rows and columns are `minmax(0, 1fr)` shares of a square box and each square is square
+  with its overflow hidden, so a letter can't stretch a row any more (the rows used to be sized by their
+  content). The browser test compares every square's size before and after typing.
+- **Crossing off clues** (`POST /api/clueless/run/:id/solved`): the page sends the grid when a word is full
+  and the server answers which clues to cross off. The Family mini crosses a clue off as soon as its word
+  is right; the Grown-ups crossword waits until its whole row (across) or column (down) is right, so it
+  gives away less. It never says which letter is wrong, and it costs nothing, which is a deliberate trade:
+  on the mini, a full word that isn't crossed off is a free hint that something in it is wrong.
+- **Free play** (`POST /start` with `free: true`): a random crossword at either level, its puzzle saved
+  under a `free-<hex>` key in `clueless_puzzles` (new column `clueless_runs.puzzle_key`), and dropped by
+  the sweep once no run is on it. Until the first letter is typed, **New board** starts another free run;
+  it has its own rate limit (80 in 10 minutes). Free play times are refused by `/save`. The daily puzzle is
+  untouched and still seeded by the date.
+- On phones the level and mode pickers sit side by side with shorter names, so the clue bar, grid and
+  keyboard still fit on a 390 by 844 screen.
+
 ## Criss Cross is now Words with Family (2026-11-02)
 
 The maintainer renamed it after playing. Everything a player reads says Words with Family: the page title and
