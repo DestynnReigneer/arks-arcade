@@ -7,6 +7,27 @@ to-do list as checkboxes (the rule is in the maintainer's global CLAUDE.md
 and `arks-internal/conventions/sessions.md`): do the checked items in the
 order they were clicked, and keep the rest pinned here.
 
+## Shuffle Scuffle: a family daily and an unfiltered daily (2026-11-02)
+
+The maintainer asked for a daily for each word list, and for a played daily to fade, say "Come back tomorrow"
+and hand over to free play.
+
+- **Letters** (`scuffle/game.js` `dailyRounds(day, list)`): the family daily keeps the old seed
+  (`scuffle|<date>`, picked from the kids list), so today's family letters didn't change. The unfiltered daily is
+  seeded `scuffle|<date>|adult` and picked the unfiltered way (about 3 rounds in 10 hide a cheeky full word).
+- **Boards:** `scuffle_scores` is now `UNIQUE (day, dictionary, who)` and `scuffle_daily_plays` is keyed by
+  `(day, dictionary, profile_id)`. SQLite can't change those in place, so `migrate()` in `scuffle/solo.js` copies
+  the old tables into new ones once (ids kept, so a removed score can still be put back; old plays count as
+  family plays). `/board` takes `dictionary`, ranks and the Comm Center's best-ever post are per list, and the
+  admin's Boards tab shows Family daily and Unfiltered daily. Old scores stay on the board of the list they were
+  played with, even though back then both lists shared the family letters.
+- **Fading** (`public/scuffle.js`): `POST /daily-status` says, for a profile, whether each daily is open,
+  playing (can be carried on) or done; a guest's device remembers it in `scuffle.dailyDone` for the day. When the
+  daily for the chosen list is done, the Daily button gets `.faded` and `aria-disabled`, its tip shows on hover,
+  focus and tap, and free play is picked. Switching the word list re-checks, so the other daily is still there.
+- The TV keeps the daily and free play with the remote (the TV plays as a guest, so its own device record is
+  used). How to play, the board's note and the README say all of this.
+
 ## Clueless is now Clueless Crosswords, with free play (2026-11-02)
 
 The maintainer asked for these after playing: the new name, different colors for across and down, a grid

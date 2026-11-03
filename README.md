@@ -249,7 +249,8 @@ Everything is under `/api/sudoku`. A grid is 81 characters, row by row, with `0`
 A word race. Everyone gets the same 6 or 7 letters, mixed up, and races to find the word they spell (the **full word**). Every smaller word you can make from the letters, 3 letters or more, scores too, so there's always something to find while you hunt for the big one. A round lasts 60, 75 or 90 seconds, and a game is several rounds, starting with six letters and moving up to seven.
 
 - **Points by length:** 10 for 3 letters, 20 for 4, 35 for 5, 60 for 6 and 90 for 7, plus 100 for the full word. Any word that uses every letter counts as the full word (LISTEN and SILENT both do). In a room, the first person to find it gets 50 more.
-- **Daily:** four rounds of 75 seconds, with letters made from the date alone, so everyone gets the same ones that day. The first go of the day can go on the daily high-score board (today and all time). The full words are always everyday words on the kids list; the word list you pick only decides which smaller words count, and each row on the board says which list it was played with. A profile gets one daily a day.
+- **Two dailies:** a **family daily** and an **unfiltered daily**, each four rounds of 75 seconds with letters made from the date alone, so everyone gets the same ones that day. They have different letters and separate high-score boards (today and all time); the word list you pick under Which words count decides which one Daily plays. The family daily's full words are everyday words on the kids list (the same seed as the single daily before November 2026); the unfiltered one is picked the unfiltered way, so now and then its full word is a cheeky one. The first go at each can go on its board, and a profile gets one go at each a day.
+- **A daily you've played fades:** its Daily button goes pale, can't be started again, and says "Come back tomorrow for a new one" on hover, on focus (the TV's highlight) and when tapped (phones have no hover), and free play is picked instead. For a profile the server says which are done (`POST /daily-status`); a guest's device remembers it.
 - **Free play:** new letters every game, 3, 5 or 7 rounds, any round length. These scores don't go on a board.
 - **Rooms, a phone each:** the host gets a four-letter code (and a QR code), picks the rounds, the time and the word list, and everyone races on the same letters at once. Each phone sees how many words the others have found and a star when someone gets the full word, but not their words until the round ends. Latecomers can join mid-game, and rooms show on the Join a game board.
 - **Family words or unfiltered:** the family list is the kids dictionary (`words/blocklist-kids.txt` keeps rude words out). Unfiltered is the full list and follows the arcade's adult rules: the adult PIN (or an ARKS ID adult pass) to play it, and a lobby password the host makes up for a room. Guests get in with the password, never the PIN. Unfiltered rounds sometimes hide a cheeky word from `words/spice-adult.txt`.
@@ -268,8 +269,9 @@ Everything is under `/api/scuffle`. `dictionary` is `kids` or `adult` (the adult
 | `POST /solo/:id/word` `{ word }` | Checks one word. Returns `ok`, the reason if not (`short`, `letters`, `again`, `unknown`), the points and the game. |
 | `POST /solo/:id/stop` | Ends the round early. |
 | `GET /solo/:id` | Where the game stands; after a round, its full word and every word. |
-| `POST /solo/:id/save` `{ initials?, profileToken? }` | Puts a finished daily on the board. Only the first per player per day. |
-| `GET /board?scope=day\|all&day=` | The daily high scores. |
+| `POST /solo/:id/save` `{ initials?, profileToken? }` | Puts a finished daily on its list's board. Only the first per player per day for each list. |
+| `GET /board?scope=day\|all&day=&dictionary=kids\|adult` | One daily's high scores (the family board when `dictionary` is left out). |
+| `POST /daily-status` `{ profileToken? }` | Which of today's dailies a profile has played: `{ day, kids, adult }`, each `open`, `playing` (started and still going) or `done`. Without a profile both say `open`. |
 | `POST /rooms` `{ name, settings: { rounds, seconds, dictionary }, password?, screen? }` | Hosts a room (`screen: true`: a TV that shows it and doesn't play). |
 | `POST /rooms/:code/join` `{ name, password? }` | Joins one. |
 | `POST /rooms/:code/start`, `/word`, `/done`, `/next`, `/leave`, `/settings` | Playing in a room (each with `playerId` and `token`). |
@@ -605,7 +607,7 @@ rambler/                   Rambler, self-contained
 
 chess/                    Two-phone chess rooms (/api/chess)
 sudoku/                   Sudoku's puzzle maker (generator.js) and its runs and boards (/api/sudoku)
-scuffle/                  Shuffle Scuffle: letters and points (game.js), solo games and the daily board (solo.js), rooms (rooms.js), /api/scuffle
+scuffle/                  Shuffle Scuffle: letters and points (game.js), solo games and the two daily boards (solo.js), rooms (rooms.js), /api/scuffle
 crisscross/               Words with Family: the rules (engine.js), the computer player (bot.js), games in the database (games.js), /api/crisscross
 discodrop/                Disco Drop: runs, the replayed drops and the boards (/api/discodrop); the motion is public/discodrop-engine.js
 clueless/                 Clueless Crosswords: shapes and the filler (grid.js), clue checks (clues.js), the day's puzzles (maker.js, puzzles.js), the built-in clues, /api/clueless

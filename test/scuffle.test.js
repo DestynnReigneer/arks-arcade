@@ -51,8 +51,10 @@ async function run({ base, root }) {
     game.dailyRounds('2026-12-25').map(r => r.letters).join() === game.dailyRounds('2026-12-25').map(r => r.letters).join());
   ok('different dates give different letters',
     game.dailyRounds('2026-12-25').map(r => r.letters).join() !== game.dailyRounds('2026-12-26').map(r => r.letters).join());
-  ok('the daily\'s letters don\'t depend on the word list chosen',
-    game.dailyRounds('2026-12-25', 'adult').map(r => r.letters).join() === game.dailyRounds('2026-12-25', 'kids').map(r => r.letters).join());
+  ok('the family and the unfiltered daily each have their own letters',
+    game.dailyRounds('2026-12-25', 'adult').map(r => r.letters).join() !== game.dailyRounds('2026-12-25', 'kids').map(r => r.letters).join());
+  ok('…and each is the same all day',
+    game.dailyRounds('2026-12-25', 'adult').map(r => r.letters).join() === game.dailyRounds('2026-12-25', 'adult').map(r => r.letters).join());
   const free = game.makeRounds({ count: 5, profile: 'kids' });
   ok('free play makes the rounds asked for', free.length === 5 && free.every(r => /^[A-Z]{6,7}$/.test(r.letters)));
 
@@ -136,6 +138,24 @@ async function run({ base, root }) {
   const board = (await api('/board?scope=day')).data;
   ok('today\'s board is highest first and tags the word list', board.length === 2 && board[0].initials === 'DAY' && board[0].score > board[1].score && board[0].dictionary === 'kids');
   ok('the all-time board has them too', (await api('/board?scope=all')).data.length === 2);
+  ok('the family board is the default, and the unfiltered board is separate',
+    (await api('/board?scope=day&dictionary=kids')).data.length === 2 && (await api('/board?scope=day&dictionary=adult')).data.length === 0);
+
+  console.log('\n-- scuffle: which dailies are done --');
+  const askedP = (await api('/api/profiles', 'POST', { name: 'Scuffle Sky', avatar: 'shiba:2' })).data;
+  await api(`/api/profiles/admin/${askedP.id}/approve`, 'POST', {}, { 'X-Admin-Token': 'test-admin-token' });
+  const sky = (await api(`/api/profiles/${askedP.id}/use`, 'POST', {})).data.token;
+  const st0 = (await api('/daily-status', 'POST', { profileToken: sky })).data;
+  ok('a profile starts the day with both dailies open', st0.kids === 'open' && st0.adult === 'open' && st0.day === today());
+  ok('a guest is told both are open (their device keeps track)', (await api('/daily-status', 'POST', {})).data.kids === 'open');
+  const sd = (await api('/solo', 'POST', { mode: 'daily', dictionary: 'kids', profileToken: sky })).data;
+  await api(`/solo/${sd.gameId}/next`, 'POST', {});
+  ok('a started daily is "playing", so it can be carried on', (await api('/daily-status', 'POST', { profileToken: sky })).data.kids === 'playing');
+  for (let i = 0; i < 4; i++) { await api(`/solo/${sd.gameId}/stop`, 'POST', {}); await api(`/solo/${sd.gameId}/next`, 'POST', {}); }
+  const st1 = (await api('/daily-status', 'POST', { profileToken: sky })).data;
+  ok('a finished daily is "done", and the other list\'s daily is still open', st1.kids === 'done' && st1.adult === 'open', JSON.stringify(st1));
+  const skyAgain = await api('/solo', 'POST', { mode: 'daily', dictionary: 'kids', profileToken: sky });
+  ok('starting the finished one again hands back the finished game, not new letters', skyAgain.data.gameId === sd.gameId && skyAgain.data.phase === 'over');
 
   console.log('\n-- scuffle: grown-up words --');
   await api('/api/comm/admin/adult-pin', 'POST', { pin: '246810' }, { 'X-Admin-Token': 'test-admin-token' });
@@ -143,6 +163,16 @@ async function run({ base, root }) {
   ok('the unfiltered list needs the adult PIN on your own', (await api('/solo', 'POST', { mode: 'free', dictionary: 'adult' })).status === 403);
   ok('…and works with it', (await api('/solo', 'POST', { mode: 'free', dictionary: 'adult' }, PIN)).status === 201);
   ok('the unfiltered daily needs it too', (await api('/solo', 'POST', { mode: 'daily', dictionary: 'adult' })).status === 403);
+  const ad = (await api('/solo', 'POST', { mode: 'daily', dictionary: 'adult', profileToken: sky }, PIN)).data;
+  const adr = (await api(`/solo/${ad.gameId}/next`, 'POST', {})).data;
+  ok('the unfiltered daily has its own letters', ad.mode === 'daily' && ad.dictionary === 'adult' &&
+    adr.round.letters === game.dailyRounds(today(), 'adult')[0].letters && adr.round.letters !== dr.round.letters);
+  for (let i = 0; i < 4; i++) { await api(`/solo/${ad.gameId}/stop`, 'POST', {}); await api(`/solo/${ad.gameId}/next`, 'POST', {}); }
+  const adSaved = await api(`/solo/${ad.gameId}/save`, 'POST', { profileToken: sky });
+  ok('…and its own board, so the same player can be on both today', adSaved.status === 201 && adSaved.data.dayRank === 1 &&
+    (await api('/board?scope=day&dictionary=adult')).data.length === 1);
+  const st2 = (await api('/daily-status', 'POST', { profileToken: sky })).data;
+  ok('now both of that profile\'s dailies are done', st2.kids === 'done' && st2.adult === 'done');
   ok('a room on the unfiltered list needs the PIN', (await api('/rooms', 'POST', { name: 'H', settings: { dictionary: 'adult' }, password: 'limes' })).status === 403);
   const noPw = await api('/rooms', 'POST', { name: 'H', settings: { dictionary: 'adult' } }, PIN);
   ok('…and a lobby password', noPw.status === 400 && noPw.data.needsPassword === 'create');
