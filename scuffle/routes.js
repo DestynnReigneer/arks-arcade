@@ -59,7 +59,10 @@ router.post('/solo/:id/stop', wordLimit, wrap(req => solo.stop(req.params.id)));
 router.post('/solo/:id/save', saveLimit, (req, res, next) => {
   try { res.status(201).json(solo.save(req.params.id, body(req))); } catch (e) { next(e); }
 });
-router.get('/board', wrap(req => solo.board({ scope: req.query.scope, day: req.query.day, limit: req.query.limit })));
+router.get('/board', wrap(req => solo.board({ scope: req.query.scope, day: req.query.day, limit: req.query.limit, dictionary: req.query.dictionary })));
+// Which of today's dailies this profile has finished. A POST, so the profile
+// token stays out of the address.
+router.post('/daily-status', startLimit, wrap(req => solo.dailyStatus(body(req))));
 
 // ---- rooms ---------------------------------------------------------------------------
 const creds = req => [req.params.code, body(req).playerId, body(req).token];

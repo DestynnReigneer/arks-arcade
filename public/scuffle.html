@@ -37,7 +37,7 @@
   <div class="panel">
     <h2>How do you want to play?</h2>
     <div class="seg mode-seg" id="modeSeg">
-      <button data-mode="daily" aria-pressed="true">📅 Daily</button>
+      <button data-mode="daily" aria-pressed="true" aria-describedby="dailyTip">📅 Daily<span class="sc-tip" role="tooltip" id="dailyTip"></span></button>
       <button data-mode="free" aria-pressed="false">🎲 Free play</button>
       <button data-mode="host" aria-pressed="false" class="no-tv">📡 Host</button>
       <button data-mode="join" aria-pressed="false" class="no-tv">🔗 Join</button>
@@ -173,6 +173,10 @@
 <div class="overlay hidden" id="scores" role="dialog" aria-label="Daily high scores">
   <div class="card-panel">
     <h2>🏆 Daily high scores</h2>
+    <div class="seg" id="scoreDict">
+      <button data-dict="kids" aria-pressed="true">🧒 Family daily</button>
+      <button data-dict="adult" aria-pressed="false">🔞 Unfiltered daily</button>
+    </div>
     <div class="seg" id="scoreScope">
       <button data-scope="day" aria-pressed="true">Today</button>
       <button data-scope="all" aria-pressed="false">All time</button>

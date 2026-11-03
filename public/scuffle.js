@@ -20,6 +20,7 @@
 
   const S = {
     config: null,
+    status: null,        // which of today's dailies this profile has finished, from the server
     mode: TV ? 'tvphones' : ['daily', 'free', 'host', 'join'].includes(recall('scuffle.mode')) ? recall('scuffle.mode') : 'daily',
     dict: 'kids',
     rounds: Number(recall('scuffle.rounds')) || 5,
@@ -50,6 +51,35 @@
   const playing = () => (S.room ? S.snap && S.snap.phase === 'playing' : S.solo && S.solo.phase === 'playing');
   const adultMode = on => document.documentElement.classList.toggle('adult-mode', !!on);
 
+  // ---- today's dailies -------------------------------------------------------------------
+  // There's a family daily and an unfiltered daily, each with its own letters
+  // and board. Once you've played one today it fades and free play is picked
+  // instead. A profile's plays come from the server; a guest's are kept on
+  // this device.
+  const LIST = { kids: 'family', adult: 'unfiltered' };
+  const today = () => (S.config && S.config.day) || (S.status && S.status.day) || '';
+  function localDone() {
+    try {
+      const v = JSON.parse(recall('scuffle.dailyDone', 'null'));
+      return v && v.day === today() ? v : { day: today() };
+    } catch { return { day: today() }; }
+  }
+  const dailyDone = dict => !!today() && ((S.status && S.status.day === today() && S.status[dict] === 'done') || !!localDone()[dict]);
+  function markDailyDone(st) {
+    if (!st || st.mode !== 'daily' || st.phase !== 'over') return;
+    if (st.day !== today()) return;
+    const v = localDone();
+    v[st.dictionary] = true;
+    store('scuffle.dailyDone', JSON.stringify(v));
+    if (S.status) S.status[st.dictionary] = 'done';
+  }
+  async function refreshStatus() {
+    try {
+      S.status = await api('/api/scuffle/daily-status', { profileToken: token() });
+      paintSetup();
+    } catch { /* the device's own record still works */ }
+  }
+
   // ---- setup ---------------------------------------------------------------------------
   const HINTS = {
     daily: 'Today\'s letters are the same for everyone: four rounds of 75 seconds. Your first go of the day can go on the 🏆 board.',
@@ -75,8 +105,17 @@
   }
 
   function paintSetup() {
+    // Today's daily on this word list is done: fade it and pick free play.
+    const done = dailyDone(S.dict);
+    if (done && S.mode === 'daily') S.mode = 'free';
+    const daily = $('modeSeg').querySelector('[data-mode="daily"]');
+    daily.classList.toggle('faded', done);
+    if (done) daily.setAttribute('aria-disabled', 'true'); else { daily.removeAttribute('aria-disabled'); daily.classList.remove('tip-on'); }
+    $('dailyTip').textContent = done ? `You've played today's ${LIST[S.dict]} daily. Come back tomorrow for a new one.` : '';
     for (const b of $('modeSeg').children) b.setAttribute('aria-pressed', String(b.dataset.mode === S.mode));
-    $('modeHint').textContent = HINTS[S.mode];
+    $('modeHint').textContent = S.mode === 'daily'
+      ? `${HINTS.daily} The ${LIST[S.dict]} daily has its own letters and its own board; ${S.dict === 'adult' ? 'family words' : 'the unfiltered list'} has a separate one.`
+      : HINTS[S.mode];
     $('hostSetup').classList.toggle('hidden', S.mode !== 'host');
     $('joinSetup').classList.toggle('hidden', S.mode !== 'join');
     $('wordsPanel').classList.toggle('hidden', S.mode === 'join');
@@ -140,6 +179,7 @@
         }, pinHeaders());
         S.solo = state;
         S.room = null;
+        markDailyDone(state);
         if (window.ArcadeStats) ArcadeStats.play();
         if (state.phase === 'ready') await soloNext(); else applySolo(state);
         return;
@@ -185,6 +225,7 @@
 
   function applySolo(state) {
     S.solo = state;
+    markDailyDone(state);
     S.skew = state.serverNow - Date.now();
     adultMode(state.dictionary === 'adult');
     if (state.phase === 'playing') {
@@ -285,28 +326,30 @@
         : `You're #${r.dayRank} on today's board, and #${r.allRank} of all time.`;
       // Celebrations are real: the banner only says #1 when the board says so.
       if (r.dayRank === 1 && window.Fx) { Fx.banner(r.allRank === 1 ? 'BEST EVER!' : 'TOP OF TODAY!', 'You\'re #1', { ms: 2200 }); Fx.burst({ count: 200, coins: 30 }); }
-      openScores('day', r.id);
+      openScores('day', r.id, st.dictionary);
     } catch (e) {
       $('saveMsg').textContent = e.message;
       $('saveBtn').disabled = false;
     }
   }
 
-  let scoreScope = 'day';
-  async function openScores(scope = scoreScope, highlightId) {
+  let scoreScope = 'day', scoreDict = null;
+  async function openScores(scope = scoreScope, highlightId, dict = scoreDict || S.dict) {
     scoreScope = scope;
+    scoreDict = dict === 'adult' ? 'adult' : 'kids';
     for (const b of $('scoreScope').children) b.setAttribute('aria-pressed', String(b.dataset.scope === scope));
+    for (const b of $('scoreDict').children) b.setAttribute('aria-pressed', String(b.dataset.dict === scoreDict));
     $('scoreNote').textContent = scope === 'day'
-      ? 'Everyone gets the same letters today. Only your first go counts, and new letters arrive at midnight. 🔞 marks a score played with the unfiltered list, which has more words to find.'
-      : 'The best daily scores from every day so far. 🔞 marks a score played with the unfiltered list.';
+      ? `Everyone gets the same ${LIST[scoreDict]} letters today. Only your first go counts, and new letters arrive at midnight.`
+      : `The best ${LIST[scoreDict]} daily scores from every day so far. Before November 2026 there was one daily for both lists; those scores are on the board of the list they were played with.`;
     $('scores').classList.remove('hidden');
     const list = $('scoreList');
     list.innerHTML = '<li class="empty">Loading…</li>';
     try {
-      const rows = await api(`/api/scuffle/board?scope=${scope}&limit=20`);
+      const rows = await api(`/api/scuffle/board?scope=${scope}&dictionary=${scoreDict}&limit=20`);
       ArcadeKit.renderScores(list, rows.map(r => ({
         ...r,
-        detail: [r.dictionary === 'adult' ? '🔞' : '', `${r.words} words`, r.bestWord || '', scope === 'all' ? niceDay(r.day) : '']
+        detail: [`${r.words} words`, r.bestWord || '', scope === 'all' ? niceDay(r.day) : '']
           .filter(Boolean).join(' · ')
       })), highlightId);
       if (!rows.length) list.firstChild.textContent = scope === 'day' ? 'Nobody has played today\'s letters yet. Be the first!' : 'No scores yet. Be the first!';
@@ -692,6 +735,7 @@
     Blip.musicPlaying(false);
     show('setup');
     paintSetup();
+    refreshStatus();
   }
 
   // Back: from a round, the scores between rounds or a room's lobby to the
@@ -733,7 +777,8 @@
     {
       emoji: '📅', title: 'Daily or free play',
       html: `<table>
-          <tr><td>📅 Daily</td><td>Four rounds of 75 seconds, with letters that are the same for everybody today. Your first go can go on the 🏆 board. New letters arrive at midnight.</td></tr>
+          <tr><td>📅 Daily</td><td>Four rounds of 75 seconds, with letters that are the same for everybody today. There are two: one for <b>family words</b> and one for the <b>unfiltered</b> list, each with its own letters and its own 🏆 board. Pick the list under Which words count. Your first go at each can go on its board. New letters arrive at midnight.</td></tr>
+          <tr><td>✔️ Played it?</td><td>Once you've played today's daily for a list, its button fades (tap or point at it to see why) and free play is picked for you. Come back tomorrow for a new one.</td></tr>
           <tr><td>🎲 Free play</td><td>New letters every game. Pick how many rounds and how long. These scores don't go on the board.</td></tr>
         </table>`
     },
@@ -750,7 +795,19 @@
   ]);
 
   // ---- wiring -------------------------------------------------------------------------------
-  for (const b of $('modeSeg').children) b.onclick = () => { S.mode = b.dataset.mode; store('scuffle.mode', S.mode); paintSetup(); };
+  for (const b of $('modeSeg').children) {
+    b.onclick = () => {
+      // A daily you've already played only says why it's faded.
+      if (b.dataset.mode === 'daily' && dailyDone(S.dict)) {
+        b.classList.add('tip-on');
+        clearTimeout(b.tipTimer);
+        b.tipTimer = setTimeout(() => b.classList.remove('tip-on'), 2800);
+        return;
+      }
+      S.mode = b.dataset.mode; store('scuffle.mode', S.mode); paintSetup();
+    };
+  }
+  for (const b of $('scoreDict').children) b.onclick = () => openScores(scoreScope, undefined, b.dataset.dict);
   for (const b of $('dictSeg').children) b.onclick = () => pickDict(b.dataset.v);
   $('goBtn').onclick = go;
   $('joinCode').onkeydown = e => { if (e.key === 'Enter') go(); };
@@ -772,7 +829,7 @@
     go();
   };
   $('saveBtn').onclick = saveScore;
-  $('scoresBtn').onclick = () => openScores('day');
+  $('scoresBtn').onclick = () => openScores('day', undefined, S.solo ? S.solo.dictionary : S.dict);
   $('scoresClose').onclick = () => $('scores').classList.add('hidden');
   $('scores').addEventListener('click', e => { if (e.target === $('scores')) $('scores').classList.add('hidden'); });
   for (const b of $('scoreScope').children) b.onclick = () => openScores(b.dataset.scope);
@@ -812,7 +869,10 @@
     if (!c.rounds.includes(S.rounds)) S.rounds = c.defaultRounds;
     if (!c.seconds.includes(S.seconds)) S.seconds = c.defaultSeconds;
     paintSetup();
+    refreshStatus();
   }).catch(e => toast(e.message));
+  // Signing in or switching profile changes whose dailies these are.
+  if (typeof ArcadeProfile !== 'undefined' && ArcadeProfile.onChange) ArcadeProfile.onChange(() => refreshStatus());
   const joinParam = new URLSearchParams(location.search).get('join');
   if (joinParam && !TV) { S.mode = 'join'; $('joinCode').value = joinParam.toUpperCase().slice(0, 4); paintSetup(); }
   try {
