@@ -25,7 +25,7 @@
   let pausedForHelp = false;
   let overSince = 0;
   let result = null;       // the server's verdict
-  let lastOpenAt = -1e9;   // game time the last lock popped open
+  let lastCount = 0;       // the countdown number last shown (3, 2, 1, then 0 for Go)
   const effects = [];      // pops, bullseyes and the miss, drawn on the lock
 
   const now = () => performance.now();
@@ -69,15 +69,10 @@
 
     const over = sim && sim.over;
     const ring = over ? COLORS.miss : COLORS.accent;
-    const breakTime = sim && !over && t < sim.segStart && sim.level > 1;
+    const counting = sim && !over && t < E.RULES.LEAD_MS;
 
-    // The shackle: lifts when a lock pops open, and drops back on the next one.
-    let lift = 0;
-    if (sim) {
-      const k = (t - lastOpenAt) / E.RULES.BREAK_MS;
-      if (k >= 0 && k < 1) lift = k < 0.7 ? ease(k / 0.18) : 1 - ease((k - 0.7) / 0.3);
-    }
-    const legX = R * 0.6, legTop = cy - R * 1.22 - lift * R * 0.42;
+    // The shackle. This lock never opens: the run goes on until a miss.
+    const legX = R * 0.6, legTop = cy - R * 1.22;
     ctx.save();
     ctx.lineCap = 'round';
     ctx.lineWidth = R * 0.2;
@@ -86,10 +81,10 @@
     ctx.moveTo(cx - legX, cy - R * 0.6);
     ctx.lineTo(cx - legX, legTop);
     ctx.arc(cx, legTop, legX, Math.PI, 0);
-    ctx.lineTo(cx + legX, cy - R * 0.6 - lift * R * 0.42);
+    ctx.lineTo(cx + legX, cy - R * 0.6);
     ctx.stroke();
     ctx.lineWidth = R * 0.06;
-    ctx.strokeStyle = lift > 0 ? COLORS.pin : ring;
+    ctx.strokeStyle = ring;
     if (!reduced) { ctx.shadowColor = ctx.strokeStyle; ctx.shadowBlur = 12; }
     ctx.stroke();
     ctx.restore();
@@ -114,7 +109,7 @@
       const a = i * 360 / LEDS;
       const behind = (((marker - a) * dir) % 360 + 360) % 360;
       const trail = reduced ? 360 / LEDS : 40;
-      const glow = sim && !breakTime && behind < trail ? 1 - behind / trail : 0;
+      const glow = sim && !counting && behind < trail ? 1 - behind / trail : 0;
       const [x1, y1] = at(cx, cy, R - 9, a), [x2, y2] = at(cx, cy, R + 9, a);
       ctx.lineWidth = 4;
       ctx.lineCap = 'butt';
@@ -131,8 +126,9 @@
       }
     }
 
-    // The pin: a glowing block on the ring, as wide as the part that counts.
-    if (sim && !breakTime) {
+    // The pin: a glowing block on the ring, as wide as the part that counts
+    // (wide at first, narrower as the waves get harder).
+    if (sim) {
       const p = E.pinAngle(sim);
       const pulse = reduced || over ? 1 : 0.85 + 0.15 * Math.sin(now() / 120);
       ctx.save();
@@ -140,13 +136,13 @@
       ctx.lineWidth = 20 * pulse;
       if (!reduced) { ctx.shadowColor = COLORS.pin; ctx.shadowBlur = 20; }
       ctx.beginPath();
-      ctx.arc(cx, cy, R, rad(p - E.RULES.HALF_DEG), rad(p + E.RULES.HALF_DEG));
+      ctx.arc(cx, cy, R, rad(p - sim.half), rad(p + sim.half));
       ctx.stroke();
       // The bullseye in its middle.
       ctx.strokeStyle = '#fff6c9';
       ctx.lineWidth = 6;
       ctx.beginPath();
-      ctx.arc(cx, cy, R, rad(p - E.RULES.BULL_DEG), rad(p + E.RULES.BULL_DEG));
+      ctx.arc(cx, cy, R, rad(p - E.bullDeg(sim)), rad(p + E.bullDeg(sim)));
       ctx.stroke();
       ctx.restore();
     } else if (!sim) {
@@ -155,13 +151,13 @@
       ctx.lineWidth = 20;
       ctx.globalAlpha = 0.8;
       ctx.beginPath();
-      ctx.arc(cx, cy, R, rad(120 - 12), rad(120 + 12));
+      ctx.arc(cx, cy, R, rad(120 - E.RULES.WIDE_DEG), rad(120 + E.RULES.WIDE_DEG));
       ctx.stroke();
       ctx.restore();
     }
 
     // The marker: a bright bar across the ring. It's what has to be on the pin.
-    if (!breakTime) {
+    {
       const [x1, y1] = at(cx, cy, R - 17, marker), [x2, y2] = at(cx, cy, R + 17, marker);
       ctx.save();
       ctx.strokeStyle = over ? COLORS.miss : COLORS.marker;
@@ -175,22 +171,18 @@
       ctx.restore();
     }
 
-    // The middle: pins left, or what's happening.
+    // The middle: the 3, 2, 1 countdown, then how many pins you've popped.
     ctx.save();
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     let big = '', small = '';
+    const count = sim ? countAt(t) : 0;
     if (!sim) { big = '🔒'; small = 'TAP TO PLAY'; }
     else if (over) { big = '✕'; small = sim.endedBy === 'slip' ? 'SLIPPED PAST' : 'MISSED'; }
-    else if (breakTime) {
-      const k = (t - lastOpenAt) / E.RULES.BREAK_MS;
-      big = k < 0.55 ? '🔓' : String(sim.pinsLeft);
-      small = k < 0.55 ? 'UNLOCKED!' : `LOCK ${sim.level}`;
-    } else if (t < sim.segStart) {
-      big = t < E.RULES.LEAD_MS - 700 ? String(sim.pinsLeft) : 'GO!';
-      small = t < E.RULES.LEAD_MS - 700 ? 'READY…' : `LOCK ${sim.level}`;
-    } else { big = String(sim.pinsLeft); small = `LOCK ${sim.level}`; }
-    ctx.fillStyle = over ? COLORS.miss : big === 'GO!' ? COLORS.pin : COLORS.text;
+    else if (count > 0) { big = String(count); small = 'GET READY'; }
+    else if (t < E.RULES.LEAD_MS + 700) { big = 'GO!'; small = 'POP THE PIN'; }
+    else { big = String(sim.pops); small = sim.pops === 1 ? 'POP' : 'POPS'; }
+    ctx.fillStyle = over ? COLORS.miss : big === 'GO!' || count > 0 ? COLORS.pin : COLORS.text;
     ctx.font = `800 ${Math.round(R * (big.length > 2 ? 0.5 : 0.72))}px Orbitron, system-ui, sans-serif`;
     if (!reduced) { ctx.shadowColor = over ? COLORS.miss : COLORS.accent; ctx.shadowBlur = 14; }
     ctx.fillText(big, cx, cy - R * 0.08);
@@ -216,7 +208,13 @@
         ctx.arc(x, y, 10 + ease(k) * 34, 0, Math.PI * 2);
         ctx.stroke();
       }
-      if (f.text) {
+      if (f.text && f.top) {
+        // Wave news goes along the top of the lock.
+        ctx.fillStyle = f.color;
+        ctx.textAlign = 'center';
+        ctx.font = `800 ${f.size || 15}px Orbitron, system-ui, sans-serif`;
+        ctx.fillText(f.text, cx, W * 0.08);
+      } else if (f.text) {
         const [tx, ty] = at(cx, cy, R + 40, f.angle);
         ctx.fillStyle = f.color;
         ctx.textAlign = 'center';
@@ -228,13 +226,67 @@
   }
 
   // ---- the loop -----------------------------------------------------------------------------
+  // Where the 3, 2, 1 countdown is at game time t (0 once it's done).
+  const countAt = t => (t < E.RULES.LEAD_MS ? Math.ceil((E.RULES.LEAD_MS - t) / E.RULES.COUNT_MS) : 0);
+
   let shown = {};
   function hud() {
-    const v = sim ? { level: sim.level, score: sim.score, pins: sim.pinsLeft, streak: sim.streak } : { level: 1, score: 0, pins: E.pinsFor(1), streak: 0 };
-    if (result) v.score = result.score;
-    for (const [id, key] of [['hudLevel', 'level'], ['hudScore', 'score'], ['hudPins', 'pins'], ['hudStreak', 'streak']]) {
-      if (shown[key] !== v[key]) { shown[key] = v[key]; $(id).textContent = v[key].toLocaleString('en-US'); }
+    const live = sim && !sim.over && gameTime() >= E.RULES.LEAD_MS;
+    const v = {
+      pops: result ? result.score : sim ? sim.pops : 0,
+      wave: sim ? E.waveOf(sim.pops) : 1,
+      streak: sim ? sim.streak : 0,
+      pace: !live ? '-' : E.easingAt(sim.pops) ? 'Easier' : 'Harder'
+    };
+    for (const [id, key] of [['hudPops', 'pops'], ['hudWave', 'wave'], ['hudStreak', 'streak'], ['hudPace', 'pace']]) {
+      if (shown[key] === v[key]) continue;
+      shown[key] = v[key];
+      $(id).textContent = typeof v[key] === 'number' ? v[key].toLocaleString('en-US') : v[key];
+      if (key === 'pace') $(id).parentElement.classList.toggle('easing', v.pace === 'Easier');
     }
+  }
+
+  // The POP button only lights up once the light is really moving. Before a
+  // run it says Start; during the countdown it's dimmed, can't be pressed and
+  // counts down along with the lock; after a miss it's dimmed until the next run.
+  let btnShown = '';
+  function popButton() {
+    let label = 'START', state = 'start';
+    if (mode === 'starting') { label = '…'; state = 'wait'; }
+    else if (mode === 'paused') label = 'GO ON';
+    else if (mode === 'resuming') { label = String(Math.max(1, Math.ceil((resumeAt - now()) / 1000))); state = 'wait'; }
+    else if (mode === 'playing') {
+      const c = countAt(gameTime());
+      if (c > 0) { label = String(c); state = 'wait'; } else { label = 'POP!'; state = 'live'; }
+    } else if (mode === 'finishing' || mode === 'over') { label = 'POP!'; state = 'wait'; }
+    const key = `${label}|${state}`;
+    if (key === btnShown) return;
+    if (state === 'live' && btnShown.endsWith('|wait')) flash('go');
+    btnShown = key;
+    const b = $('popBtn');
+    b.textContent = label;
+    b.dataset.state = state;
+    b.disabled = state === 'wait';
+    b.setAttribute('aria-label', state === 'live' ? 'Pop' : state === 'wait' ? `Wait (${label})` : label === 'GO ON' ? 'Carry on' : 'Start');
+  }
+
+  // A quick glow around the lock, so every sound has something to see too.
+  function flash(kind) {
+    const st = $('stage');
+    st.classList.remove('flash-pop', 'flash-bull', 'flash-miss', 'flash-go', 'flash-wave');
+    void st.offsetWidth;
+    st.classList.add('flash-' + kind);
+  }
+
+  // The 3, 2, 1 countdown: a beep for each number and a higher one for Go.
+  // The big numbers on the lock and on the button show it with the sound off.
+  function countdownTick() {
+    if (mode !== 'playing' || !sim) return;
+    const c = countAt(gameTime());
+    if (c === lastCount) return;
+    lastCount = c;
+    if (c > 0) { Blip.tone(660, 0.1, { type: 'square', volume: 0.05 }); say(String(c)); }
+    else { Blip.tone(990, 0.18, { type: 'square', volume: 0.06 }); say('Go!'); }
   }
 
   function frame() {
@@ -248,9 +300,11 @@
         msg(null);
       } else msg(String(Math.ceil(left / 1000)), 'Get ready…');
     }
+    countdownTick();
     if (mode === 'playing' && E.advance(sim, gameTime())) gameOver();
     Blip.musicPlaying(mode === 'playing' || mode === 'resuming');
     hud();
+    popButton();
     draw();
   }
 
@@ -266,7 +320,7 @@
   async function begin() {
     if (mode === 'starting') return;
     mode = 'starting';
-    msg('Get ready', 'Starting a new lock…');
+    msg('Get ready', 'Starting a new run…');
     try {
       run = await api('/api/tumbler/start', { profileToken: token() });
     } catch (e) {
@@ -278,23 +332,20 @@
     t0 = now();
     pausedTotal = 0;
     result = null;
-    lastOpenAt = -1e9;
+    lastCount = 0;
     effects.length = 0;
     shown = {};
     mode = 'playing';
     msg(null);
     $('over').classList.add('hidden');
     document.body.dataset.state = 'playing';
-    say(`Lock 1. Pop ${sim.pinsLeft} pins.`);
     if (window.ArcadeStats) ArcadeStats.play();
-    Blip.tone(660, 0.08, { type: 'square', volume: 0.05 });
-    Blip.tone(990, 0.12, { type: 'square', volume: 0.05, delay: (E.RULES.LEAD_MS - 700) / 1000 });
     // Only the test suites get this (the server says so): when the next pin
     // is due, so a browser test can play a real run.
     if (run.testHook) {
       window.TumblerTest = {
         msToNextPin: () => (sim && !sim.over ? E.centerAt(sim) - gameTime() : null),
-        state: () => ({ mode, level: sim.level, pins: sim.pins, over: sim.over })
+        state: () => ({ mode, pops: sim.pops, wave: E.waveOf(sim.pops), over: sim.over })
       };
     }
   }
@@ -305,6 +356,8 @@
     if (mode === 'paused') { resume(); return; }
     if (mode !== 'playing') return;
     const t = Math.round(gameTime());
+    // A press during the countdown does nothing (the button is dimmed then).
+    if (t < E.RULES.LEAD_MS) return;
     const r = E.tap(sim, t);
     if (r.kind === 'pop') popped(r);
     else if (r.kind === 'miss' || r.kind === 'over') gameOver();
@@ -314,22 +367,30 @@
     }
   }
 
+  // Every sound here has something to see as well: the ring and the words on
+  // the lock, and a glow around it.
   function popped(r) {
     const color = r.bullseye ? COLORS.pin : COLORS.accent;
-    effects.push({ angle: r.at, born: now(), ms: 650, ring: true, color, text: r.bullseye ? (r.streak > 1 ? `BULLSEYE ×${Math.min(r.streak, 5)}` : 'BULLSEYE') : `+${r.points}`, size: r.bullseye ? 14 : 16 });
-    const step = sim.pins % 12;
+    effects.push({ angle: r.at, born: now(), ms: 650, ring: true, color, text: r.bullseye ? (r.streak > 1 ? `BULLSEYE ×${r.streak}` : 'BULLSEYE') : 'POP!', size: r.bullseye ? 14 : 16 });
+    flash(r.bullseye ? 'bull' : 'pop');
+    const step = sim.pops % 12;
     Blip.tone(440 * Math.pow(2, step / 12), 0.06, { type: 'square', volume: 0.06 });
     if (r.bullseye) Blip.tone(1320 + 60 * Math.min(r.streak, 5), 0.09, { type: 'sine', volume: 0.07, delay: 0.04 });
-    if (r.opened) {
-      lastOpenAt = Math.round(gameTime());
+    if (r.newWave) {
+      // A new wave: a little fanfare, coins, and the wave's number on the lock.
       const box = $('stage').getBoundingClientRect();
       Blip.tune([[523, 0.08], [659, 0.08], [784, 0.08], [1047, 0.22]], { type: 'square', volume: 0.06 });
+      flash('wave');
+      effects.push({ angle: 0, born: now(), ms: 1500, color: COLORS.pin, text: `WAVE ${r.wave}`, size: 18, top: true });
       if (window.Fx) {
-        Fx.burst({ count: 70, coins: Math.min(40, 6 + 3 * r.level), origin: { x: box.left + box.width / 2, y: box.top + box.height * 0.45 } });
-        // Every fifth lock gets the big banner.
-        if (r.level % 5 === 0) Fx.banner(`LOCK ${r.level} CRACKED!`, 'and they only get faster', { ms: 1500 });
+        Fx.burst({ count: 50, coins: Math.min(40, 4 + 3 * r.wave), origin: { x: box.left + box.width / 2, y: box.top + box.height * 0.45 } });
+        // Every fifty pops gets the big banner.
+        if (r.pops % 50 === 0) Fx.banner(`${r.pops} POPS!`, 'and still going', { ms: 1500 });
       }
-      say(`Unlocked! Lock ${sim.level} next: ${sim.pinsLeft} pins.`);
+      say(`${r.pops} pops. Wave ${r.wave}.`);
+    } else if (r.easing && !E.easingAt(r.pops - 1)) {
+      // The wave eases off for its last few pins.
+      effects.push({ angle: 0, born: now(), ms: 1300, color: COLORS.accent, text: 'EASING OFF', size: 15, top: true });
     }
   }
 
@@ -354,6 +415,7 @@
     effects.push({ angle, born: now(), ms: 900, ring: true, color: COLORS.miss, text: sim.endedBy === 'slip' ? 'TOO LATE' : 'MISS', size: 16 });
     Blip.noise(0.18, 0.12);
     Blip.womp();
+    flash('miss');
     if (!reduced) {
       $('stage').classList.remove('shake');
       void $('stage').offsetWidth;
@@ -382,8 +444,8 @@
     $('overTitle').textContent = local.endedBy === 'slip' ? 'The light slipped past the pin!' : 'Missed! The light wasn\'t on the pin.';
     $('overScore').textContent = '0';
     if (window.Fx) Fx.countUp($('overScore'), 0, r.score, 900); else $('overScore').textContent = r.score.toLocaleString('en-US');
-    $('overDetail').textContent = `You reached lock ${r.level}, popped ${plural(r.pins, 'pin')} and hit ${plural(r.bullseyes, 'bullseye')}` +
-      (r.bestStreak > 1 ? `, with a best streak of ${r.bestStreak} bullseyes in a row.` : '.');
+    $('overDetail').textContent = !r.score ? 'You didn\'t pop any pins this time.' : `You popped ${plural(r.score, 'pin')} in a row and made it to wave ${r.wave}, with ${plural(r.bullseyes, 'bullseye')}` +
+      (r.bestStreak > 1 ? ` and a best streak of ${r.bestStreak} bullseyes in a row.` : '.');
     $('chaseLine').textContent = '';
     $('rankLine').textContent = '';
     $('saveMsg').textContent = '';
@@ -394,7 +456,7 @@
       $('rankLine').textContent = `The arcade couldn't check this run, so it can't go on the board. (${error || 'No answer.'})`;
     } else if (!result.score) {
       $('savePart').classList.add('hidden');
-      $('rankLine').textContent = 'Pop at least one pin to get a score on the board. The first pin is the hardest, so give it another go!';
+      $('rankLine').textContent = 'Pop at least one pin to get a score on the board. Wait until the light is on the gold pin, then tap, and give it another go!';
     } else {
       $('savePart').classList.remove('hidden');
       $('iniRow').classList.toggle('hidden', !!p);
@@ -405,7 +467,7 @@
     $('over').classList.remove('hidden');
     msg(null);
     setTimeout(() => $('over').scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'nearest' }), 60);
-    say(`Game over. You scored ${r.score.toLocaleString('en-US')} and reached lock ${r.level}.`);
+    say(`Game over. You popped ${plural(r.score, 'pin')} and reached wave ${r.wave}.`);
   }
 
   // How far this score is from the next one up on today's board. Every number
@@ -422,7 +484,7 @@
         const next = above[above.length - 1];
         const gap = next.score - score + 1;
         const who = next.profileName || next.initials;
-        text = `${gap <= Math.max(20, score * 0.25) ? 'Just ' : ''}${plural(gap, 'more point')} would have passed ${who} for #${above.length} on today's board.`;
+        text = `${gap <= Math.max(3, score * 0.25) ? 'Just ' : ''}${plural(gap, 'more pin')} would have passed ${who} for #${above.length} on today's board.`;
       }
       $('chaseLine').textContent = text;
     } catch { /* the line is a bonus */ }
@@ -446,7 +508,7 @@
       $('rankLine').textContent = r.allRank === 1 ? 'That\'s the best Tumbler Rumble score ever! 🏆'
         : `You're #${r.dayRank} on today's board, and #${r.allRank} of all time.`;
       if (window.Fx && (r.dayRank === 1 || r.allRank === 1)) {
-        Fx.banner(r.allRank === 1 ? 'BEST SCORE EVER' : 'TOP OF TODAY', `${r.score.toLocaleString('en-US')} points`, { ms: 2400 });
+        Fx.banner(r.allRank === 1 ? 'BEST SCORE EVER' : 'TOP OF TODAY', plural(r.score, 'pop'), { ms: 2400 });
         Fx.burst({ count: 200, coins: 40 });
         Blip.tune([[523, 0.1], [659, 0.1], [784, 0.1], [1047, 0.1], [1319, 0.3]], { type: 'square', volume: 0.06 });
       } else toast(`Saved: #${r.dayRank} today`);
@@ -480,7 +542,7 @@
     list.innerHTML = '<li class="empty">Loading…</li>';
     try {
       const rows = await api(`/api/tumbler/board?scope=${which}&limit=20`);
-      ArcadeKit.renderScores(list, rows.map(r => ({ ...r, detail: `lock ${r.level}` })), highlightId);
+      ArcadeKit.renderScores(list, rows.map(r => ({ ...r, detail: `wave ${r.wave}` })), highlightId);
       if (!rows.length) list.firstChild.textContent = which === 'day' ? 'Nobody has saved a score today. Be the first!' : 'No scores yet. Be the first!';
     } catch (e) {
       list.innerHTML = '<li class="empty"></li>';
@@ -495,7 +557,7 @@
 
   // ---- controls ----------------------------------------------------------------------------
   $('stage').addEventListener('pointerdown', e => { if (e.button > 0) return; e.preventDefault(); tap('stage'); });
-  $('popBtn').addEventListener('pointerdown', e => { if (e.button > 0) return; e.preventDefault(); tap('button'); });
+  $('popBtn').addEventListener('pointerdown', e => { if (e.button > 0 || $('popBtn').disabled) return; e.preventDefault(); tap('button'); });
   // Keyboard users who tab to the POP button press it with Space or Enter,
   // which the key handler below already counts.
   $('popBtn').addEventListener('click', e => e.preventDefault());
@@ -546,13 +608,17 @@
   Blip.music('tumbler');
 
   // ---- how to play -------------------------------------------------------------------------
-  const P = E.POINTS;
   const help = Tutorial.create('tumbler', [
     {
       emoji: '🔓', title: 'Pop the pins',
       html: `<p>A bright light races around the lock, and one spot on the ring glows gold. That's the <b>pin</b>.</p>
-        <p>Tap the moment the light is on the pin to pop it. The light turns around and a new pin lights up somewhere else on the ring.</p>
-        <p>The number in the middle of the lock is how many pins are left. Pop them all and the lock opens.</p>`
+        <p>Tap the moment the light is on the pin to pop it. The light turns around and a new pin lights up somewhere else on the ring, right away, so keep going.</p>
+        <p>Your score is how many pins you pop in a row. The number in the middle of the lock counts them.</p>`
+    },
+    {
+      emoji: '⏱️', title: 'Wait for Go',
+      html: `<p>Every run starts with a countdown on the lock: <b>3</b>, <b>2</b>, <b>1</b>, then <b>Go!</b> The POP! button stays dimmed and counts down too, and it lights up when the light starts moving.</p>
+        <p>Everything you can hear, you can also see, so the game plays the same with the sound off: pops and bullseyes flash on the lock, a miss turns it red, and each new wave shows its number at the top.</p>`
     },
     {
       emoji: '👆', title: 'How to tap',
@@ -566,16 +632,17 @@
     {
       emoji: '💥', title: 'One slip and it\'s over',
       html: `<p>The run ends if you tap when the light <b>isn't</b> on the pin, or if the light slides all the way past the pin without a tap.</p>
-        <p>Every lock needs one more pin than the last (3 on the first, then 4, then 5), and the light turns a little faster on each one. Nobody gets to the end, because there isn't one: see how far you can go.</p>`
+        <p>There's no last pin, so a run goes on until that first slip. See how many you can get!</p>`
     },
     {
-      emoji: '🎯', title: 'Points and bullseyes',
-      html: `<p>The pin has a white stripe in its middle. Popping it right on that stripe is a <b>bullseye</b>, and bullseyes in a row build a streak.</p>
-        <table>
-          <tr><td>Each pin</td><td>${P.pin(1)} points on lock 1, ${P.pin(2)} on lock 2, and so on.</td></tr>
-          <tr><td>🎯 Bullseye</td><td>The same again on top, times your streak (up to 5 times). A plain pop resets the streak.</td></tr>
-          <tr><td>🔓 Opening a lock</td><td>${P.lock(1)} points for lock 1, ${P.lock(2)} for lock 2, and so on.</td></tr>
-        </table>`
+      emoji: '🌊', title: 'Waves',
+      html: `<p>The pins come in <b>waves</b> of ${E.RULES.WAVE}. The first pins are wide and the light moves slowly, so you can find the rhythm.</p>
+        <p>In each wave the light speeds up and the pin gets narrower for ${E.RULES.CLIMB} pins, then it eases off for the last ${E.RULES.WAVE - E.RULES.CLIMB} so you can catch your breath. The next wave starts a little harder than the last one did, so it gets tougher, then easier, then tougher again, and keeps getting harder overall.</p>
+        <p>The <b>Pace</b> box at the top says whether the wave is getting harder or easier right now.</p>`
+    },
+    {
+      emoji: '🎯', title: 'Bullseyes',
+      html: `<p>The pin has a white stripe in its middle. Popping it right on that stripe is a <b>bullseye</b>, and bullseyes in a row build a streak. They don't change your score, which is always the number of pins popped, but your bullseyes and your best streak show at the end of the run.</p>`
     },
     {
       emoji: '🏆', title: 'The high scores',
