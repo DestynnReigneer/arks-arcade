@@ -174,15 +174,23 @@
     card.onclick = closed ? e => { e.preventDefault(); toast(DustSign.message(id), 3200); } : null;
   }
   // Your most-played games first; everyone's favorites if you haven't
-  // picked a profile or haven't played much yet.
+  // picked a profile or haven't played much yet. The order moves slowly
+  // (arcade/game-order.js), starting from what this device showed last time,
+  // so one game played once doesn't jump up and push the others around.
+  const orderKey = () => `arcade.homeOrder.${(ArcadeProfile.get() || {}).id || 'guest'}`;
   async function sortByPlayed() {
     if (!homeGames || homeGames.sort !== 'played') return;
+    let previous = null;
+    try { previous = JSON.parse(localStorage.getItem(orderKey()) || 'null'); } catch { /* nothing kept */ }
     try {
       const res = await fetch('/api/stats/game-order', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: ArcadeProfile.token() })
+        body: JSON.stringify({ token: ArcadeProfile.token(), previous })
       });
-      if (res.ok) placeGames((await res.json()).order);
+      if (!res.ok) return;
+      const { order } = await res.json();
+      placeGames(order);
+      try { localStorage.setItem(orderKey(), JSON.stringify(order)); } catch { /* private mode */ }
     } catch { /* keep the admin's order */ }
   }
   ArcadeProfile.onChange(sortByPlayed);

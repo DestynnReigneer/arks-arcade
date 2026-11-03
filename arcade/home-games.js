@@ -4,7 +4,7 @@
 // page's Arcade tab; the home page reads it from /api/arcade-info. A game
 // added in a later release (not in the saved order yet) goes on the end.
 // With sort 'played' (the default) the home page puts the most-played games
-// first (see stats.gameOrder), and this order only breaks ties.
+// first (see stats.gameOrder), and this order is where that list starts.
 //
 // A closed game is one the admin has turned off while it's being worked on:
 // it stays on the home page, faded, with a "Pardon our dust" sign, and its

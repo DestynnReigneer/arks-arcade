@@ -7,6 +7,30 @@ to-do list as checkboxes (the rule is in the maintainer's global CLAUDE.md
 and `arks-internal/conventions/sessions.md`): do the checked items in the
 order they were clicked, and keep the rest pinned here.
 
+## "Your games" on the home page move slowly (2026-11-02)
+
+The maintainer found that a game played once jumped up the home page's list, and the
+games they actually play a lot got pushed around. The order is now damped
+(`arcade/game-order.js`, used by `gameOrder` in `arcade/stats.js`):
+
+- **A play** is a visit to a game with at least 20 seconds on screen. Only the first
+  three plays of a game on one day count, so one long evening doesn't outweigh weeks of
+  steady play. Each play loses half its weight every 14 days, and plays older than 120
+  days aren't read at all.
+- **A game only moves up past the one right above it** when its score is more than 1.25
+  times that game's plus 1.5. One play is worth at most 1, so a single play never moves
+  a game on its own, and a game played a few times can't leapfrog one played many
+  times. Games that are close keep the order they already had.
+- **The list starts from what the page showed last time.** `public/hub.js` keeps the
+  order it got in the browser's storage (one per profile, plus one for guests) and
+  sends it back as `previous` with `POST /api/stats/game-order`; the server only checks
+  it's a list of games it knows. Without one, the start is the admin's order, moved by
+  everyone's plays. With a profile, its own plays decide; without one, everyone's do.
+- **Tests:** the rule is in `test/unit.test.js` ("the home page's game order moves
+  slowly"): one play doesn't jump past a game played 10 times, steady daily play passes
+  it on the tenth day, and the per-day cap and half-life. `test/api.test.js`
+  checks the endpoint end to end.
+
 ## The cabinet games and the classics on the TV, with controllers (2026-11-02, contract v14)
 
 Tumbler Rumble, Disco Drop, Roll Royale, Moonshot, Snake, Dino Dash, Block Drop, Brick Breaker, Tower
