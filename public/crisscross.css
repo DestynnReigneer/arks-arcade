@@ -1,4 +1,4 @@
-/* Criss Cross: the board, the tiles, the rack and the game lists. The shared
+/* Words with Family: the board, the tiles, the rack and the game lists. The shared
    look comes from arcade-ui.css and look.css. */
 :root {
   --accent: #ff7a59; --on-accent: #2a0d00; --gold: #ffc72c;
@@ -159,3 +159,6 @@ html.tv #game > #boardBox { grid-column: 1; grid-row: 3 / span 9; max-width: non
 /* The game-over panel (first in the page, so it sits above the board on a phone) goes at the top of the right-hand column. */
 html.tv #game > #overPanel { grid-row: 3; }
 html.tv .cc-cell:focus { z-index: 3; }
+
+/* The Words with Family logo: wooden tiles spelling the name, over the game lists and on an invite. */
+.cc-logo { display: block; width: min(220px, 62vw); height: auto; margin: 4px auto 14px; filter: drop-shadow(0 6px 14px rgba(0, 0, 0, .35)); }

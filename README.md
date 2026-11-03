@@ -274,9 +274,11 @@ Everything is under `/api/scuffle`. `dictionary` is `kids` or `adult` (the adult
 | `POST /rooms/:code/start`, `/word`, `/done`, `/next`, `/leave`, `/settings` | Playing in a room (each with `playerId` and `token`). |
 | `GET /rooms/:code/events` | The room's live updates (server-sent events). |
 
-### Criss Cross (`/crisscross.html`)
+### Words with Family (`/crisscross.html`)
 
-A crossword tile game for 2 to 4 players. Everyone has seven letter tiles, and you take turns laying them on an 11 by 11 board to make words that cross the words already there. It's built for playing on everyone's own phone over a few days: a turn can wait hours, and the arcade's home page says "Your turn in N games" on the Criss Cross card.
+A crossword tile game for 2 to 4 players. Everyone has seven letter tiles, and you take turns laying them on an 11 by 11 board to make words that cross the words already there. It's built for playing on everyone's own phone over a few days: a turn can wait hours, and the arcade's home page says "Your turn in N games" on the Words with Family card.
+
+It was called Criss Cross until November 2026. Only the name changed: the page is still `crisscross.html`, the API is still `/api/crisscross`, and the tables and saved games are the same, so old links, bookmarks and games in progress keep working. The logo (`public/words-with-family-logo.svg`) is our own: wooden letter tiles spelling the name, each with the point value it has in this game.
 
 - **Each person on their own phone** needs a profile (or ARKS ID), because a game lasts days and has to know who you are. **New game with the family** lists the family's profiles to tick (up to three), and can leave seats open for a share link or QR code that anyone with a profile can join. A game with only invited people starts straight away; one with open seats starts when they fill up, or when the host taps Start with whoever has joined. The game list shows whose turn it is, the last move and how long ago it was, and an open game checks for new moves every few seconds.
 - **On this phone** is pass-and-play, open to guests: two to four names, and the computer can take any seat. Between turns the tiles are hidden behind a "Pass the phone to Sam" screen. Only that device can open the game (it keeps a key).
@@ -288,7 +290,7 @@ A crossword tile game for 2 to 4 players. Everyone has seven letter tiles, and y
 - **Phones first:** tap a tile and then a square, or drag a tile onto the board; tap a placed tile to take it back. Shuffle, Recall, Swap and Pass, a Zoom button that makes the board bigger and lets it slide around inside its own box, the score of your word before you play it, the last move lit up, and a list of every word played. There's no chat between players, on purpose.
 - **No push messages.** ARKS ID doesn't offer a way to send a short "your turn" note, so turns show up on the home page and the game list instead.
 
-#### The Criss Cross API
+#### The Words with Family API
 
 Everything is under `/api/crisscross`. Who's asking goes in headers, never the address: `X-Profile-Token` for online games, `X-Game-Key` for a game on one phone, and `X-Adult-Pin` for an unfiltered game. A refusal because of the adult PIN says `adult: true`.
 
@@ -428,7 +430,7 @@ The puzzles and Spin & Solve are played on the TV with the remote alone, and the
 |---|---|
 | Wordless | The arrows move along the keyboard on the screen and OK types a letter (or presses Enter or ⌫ on it). |
 | Clueless | The arrows move the highlight around the grid, OK picks a square (OK again switches between across and down), and the keyboard on the screen types into it. Arrowing back up from the keyboard lands on the picked square. |
-| Criss Cross | Against the computer, or with the remote passed between players: OK on one of your tiles picks it up and sends the highlight to the board, the arrows take it to a square, and OK puts it down. The tiles show on the TV, so for secret tiles play on your own phones. The games on everyone's own phone stay on the phones. |
+| Words with Family | Against the computer, or with the remote passed between players: OK on one of your tiles picks it up and sends the highlight to the board, the arrows take it to a square, and OK puts it down. The tiles show on the TV, so for secret tiles play on your own phones. The games on everyone's own phone stay on the phones. |
 | Spin & Solve | One to four players pass the remote around. The arrows move between Spin, Buy a vowel and Solve and across the letters, and solving uses a keyboard on the screen. |
 
 Initials can't be typed on a TV, so a solo score made there only goes on a board when the TV is signed in as a profile; otherwise the page says to play on your own phone for that.
@@ -598,7 +600,7 @@ rambler/                   Rambler, self-contained
 chess/                    Two-phone chess rooms (/api/chess)
 sudoku/                   Sudoku's puzzle maker (generator.js) and its runs and boards (/api/sudoku)
 scuffle/                  Shuffle Scuffle: letters and points (game.js), solo games and the daily board (solo.js), rooms (rooms.js), /api/scuffle
-crisscross/               Criss Cross: the rules (engine.js), the computer player (bot.js), games in the database (games.js), /api/crisscross
+crisscross/               Words with Family: the rules (engine.js), the computer player (bot.js), games in the database (games.js), /api/crisscross
 discodrop/                Disco Drop: runs, the replayed drops and the boards (/api/discodrop); the motion is public/discodrop-engine.js
 clueless/                 Clueless: shapes and the filler (grid.js), clue checks (clues.js), the day's puzzles (maker.js, puzzles.js), the built-in clues, /api/clueless
 tumbler/                  Tumbler Rumble's runs, the replay check and the boards (/api/tumbler; the rules are public/tumbler-engine.js)
@@ -619,7 +621,7 @@ public/dino.*             Dino Dash
 public/snake*, bricks*, blocks*, towers*   Snake, Brick Breaker, Block Drop, Tower Defense (each with an -engine.js for its rules)
 public/sudoku.*           Sudoku
 public/scuffle.*          Shuffle Scuffle
-public/crisscross.*       Criss Cross
+public/crisscross.*       Words with Family (and words-with-family-logo.svg)
 public/clueless.*         Clueless (admin side in admin-clueless.js)
 public/tumbler.*          Tumbler Rumble (the rules, shared with the server, in tumbler-engine.js)
 public/discodrop*         Disco Drop (discodrop-engine.js is shared with the server)

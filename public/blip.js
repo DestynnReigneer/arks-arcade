@@ -334,7 +334,7 @@ const Blip = (() => {
       chords: [[0, 4, 7], [5, 9, 12], [-3, 0, 4], [-5, -1, 2]],
       tune: [12, _, 7, _, 9, 7, 4, _,  5, _, 9, _, 12, _, _, _,  7, _, 4, 7, 9, _, 7, _,  2, _, 4, _, 7, _, _, _]
     },
-    // Criss Cross: easygoing, for a game where a turn can take a while.
+    // Words with Family: easygoing, for a game where a turn can take a while.
     crisscross: {
       bpm: 88, root: 53, wave: 'triangle', hat: false, arp: [0, 1, 2, 1, 0, 1, 2, 1],
       chords: [[0, 4, 7], [-3, 0, 4], [2, 5, 9], [-5, -1, 2]],

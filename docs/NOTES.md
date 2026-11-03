@@ -7,6 +7,20 @@ to-do list as checkboxes (the rule is in the maintainer's global CLAUDE.md
 and `arks-internal/conventions/sessions.md`): do the checked items in the
 order they were clicked, and keep the rest pinned here.
 
+## Criss Cross is now Words with Family (2026-11-02)
+
+The maintainer renamed it after playing. Everything a player reads says Words with Family: the page title and
+header, the home card, the QR picker, How to play (its first page says it used to be Criss Cross and games
+carried over), the admin's switches, stats and Boards list, feedback, the dust sign and the turn badge.
+
+- **Nothing behind the name moved,** so old links, bookmarks, saved games and the database keep working: the
+  page is still `crisscross.html`, the id is still `crisscross` (API, tables, storage keys, music, tutorial key).
+- **The logo** is `public/words-with-family-logo.svg`, made by a little script from the game's own tile values:
+  wooden tiles in three rows (WORDS, WITH, FAMILY), each a little tilted, with its point value in the corner.
+  It's on the home card, over the game lists and on an invite. It's our own art; it doesn't copy any other
+  game's logo or name (the repo is public).
+- The browser test checks the title, the header and that the logo loads.
+
 ## Play again and Back to setup above the board (2026-11-02)
 
 The maintainer asked for the end-of-game buttons to sit above the board instead of at the

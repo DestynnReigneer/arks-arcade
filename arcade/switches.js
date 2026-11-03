@@ -30,7 +30,7 @@ const { createSwitches, createBanner } = require('../kit/switches');
 const NAMES = {
   wordless: 'Wordless', rambler: 'Rambler', spinsolve: 'Spin & Solve', chess: 'Chess', dino: 'Dino Dash',
   trivia: 'Know-It-All', partdeux: 'Uh-Oh: Part Deux', daredevil: 'Dare Devil', snake: 'Snake',
-  bricks: 'Brick Breaker', blocks: 'Block Drop', towers: 'Tower Defense', sudoku: 'Sudoku', scuffle: 'Shuffle Scuffle', crisscross: 'Criss Cross',
+  bricks: 'Brick Breaker', blocks: 'Block Drop', towers: 'Tower Defense', sudoku: 'Sudoku', scuffle: 'Shuffle Scuffle', crisscross: 'Words with Family',
   clueless: 'Clueless', tumbler: 'Tumbler Rumble', discodrop: 'Disco Drop', royale: 'Roll Royale', moonshot: 'Moonshot'
 };
 const ALL = { guest: true, kid: true, teen: true, adult: true, admin: true };

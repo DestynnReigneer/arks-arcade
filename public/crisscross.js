@@ -1,6 +1,6 @@
 'use strict';
 
-// Criss Cross: the page. The server (crisscross/) keeps the bag and every
+// Words with Family (once called Criss Cross): the page. The server (crisscross/) keeps the bag and every
 // rack, checks every move and decides every score. This page draws the board
 // and your tiles, lets you tap or drag them into place, and sends only where
 // they went.
@@ -348,7 +348,7 @@
     try {
       const r = await call(`/invite/${encodeURIComponent(code)}`);
       $('inviteTitle').textContent = `${r.players[0]} invited you`;
-      $('inviteText').textContent = `${names(r.players)} ${r.players.length === 1 ? 'is' : 'are'} playing Criss Cross, with ${r.seats - r.players.length} seat${r.seats - r.players.length === 1 ? '' : 's'} left, on ${r.dictionary === 'adult' ? 'the unfiltered word list (grown-ups only)' : 'family words'}.` +
+      $('inviteText').textContent = `${names(r.players)} ${r.players.length === 1 ? 'is' : 'are'} playing Words with Family, with ${r.seats - r.players.length} seat${r.seats - r.players.length === 1 ? '' : 's'} left, on ${r.dictionary === 'adult' ? 'the unfiltered word list (grown-ups only)' : 'family words'}.` +
         (me() ? '' : ' Pick your profile first, so the game knows whose turn is whose.');
       $('inviteJoin').textContent = me() ? 'Join the game' : 'Pick my profile';
       $('inviteJoin').onclick = async () => {
@@ -934,7 +934,8 @@
     {
       emoji: '🔡', title: 'Build words that cross',
       html: `<p>Everyone has seven letter tiles on their rack. Take turns putting tiles on the board to make words, across or down, that join onto the words already there, like a crossword.</p>
-        <p>The first word has to cover the <b>★</b> in the middle. After that, every new word has to touch a tile that's already on the board.</p>`
+        <p>The first word has to cover the <b>★</b> in the middle. After that, every new word has to touch a tile that's already on the board.</p>
+        <p>This game used to be called Criss Cross. Only the name changed, so any game you had going is still in your list.</p>`
     },
     {
       emoji: '👆', title: 'Placing your tiles',

@@ -31,7 +31,7 @@ function freePort() {
 const ROOT = path.join(__dirname, '..');
 
 // The suites that run right here in this process (the unit checks, the bot
-// playing a whole Criss Cross game, random Snake and Blocks games, free-play
+// playing a whole Words with Family game, random Snake and Blocks games, free-play
 // Shuffle Scuffle rounds) use Math.random. A seeded one makes every run roll
 // the same dice, so a failure shows up every time instead of once in a while.
 // TEST_SEED tries a different roll. The servers the suites talk to are
