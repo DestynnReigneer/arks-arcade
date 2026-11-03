@@ -50,7 +50,7 @@ function known() {
 
   add({ id: 'sudoku', label: 'Sudoku', table: 'sudoku_scores', boardCol: 'level', unit: 'time', daily: true,
     boards: levels(require('../sudoku/generator').LEVELS) });
-  add({ id: 'clueless', label: 'Clueless', table: 'clueless_scores', boardCol: 'level', unit: 'time', daily: true,
+  add({ id: 'clueless', label: 'Clueless Crosswords', table: 'clueless_scores', boardCol: 'level', unit: 'time', daily: true,
     boards: levels(require('../clueless/maker').LEVELS) });
   add({ id: 'tumbler', label: 'Tumbler Rumble', table: 'tumbler_scores', unit: 'points', daily: true, boards: one });
   add({ id: 'discodrop', label: 'Disco Drop', table: 'discodrop_scores', unit: 'points', daily: true, boards: one });

@@ -1,6 +1,9 @@
 'use strict';
 
-// Clueless: the clue packs and the day's puzzles, kept in the database.
+// Clueless Crosswords: the clue packs and the puzzles, kept in the database.
+//
+// Free play puzzles are kept here too, under a key like `free-1a2b...` in
+// place of the day, for as long as a run is on them.
 //
 // A day's puzzle is made the first time anyone opens it and then saved, so it
 // stays the same all day for everyone, even if a clue pack is added or
@@ -78,7 +81,10 @@ function puzzleFor(day, level) {
 function sweep(today) {
   const cutoff = new Date(`${today}T12:00:00`);
   cutoff.setDate(cutoff.getDate() - 31);
-  db.db.prepare('DELETE FROM clueless_puzzles WHERE day < ?').run(cutoff.toISOString().slice(0, 10));
+  db.db.prepare("DELETE FROM clueless_puzzles WHERE day < ? AND day NOT LIKE 'free-%'").run(cutoff.toISOString().slice(0, 10));
+  // Free play puzzles are kept only while a run is on them (runs are swept
+  // after a few days), so pressing New board doesn't pile them up.
+  db.db.prepare("DELETE FROM clueless_puzzles WHERE day LIKE 'free-%' AND day NOT IN (SELECT puzzle_key FROM clueless_runs WHERE puzzle_key IS NOT NULL)").run();
 }
 
 // ---- clue packs ------------------------------------------------------------------------------

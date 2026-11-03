@@ -239,8 +239,9 @@ Everything is under `/api/sudoku`. A grid is 81 characters, row by row, with `0`
 | `POST /run/:id/check` `{ grid }` | The wrong squares on the board so far. Adds 15 seconds. |
 | `POST /run/:id/cell` `{ index, value }` | Whether one number is right. A wrong one adds 10 seconds. |
 | `POST /run/:id/hint` `{ grid }` | The right number for one square. Adds 30 seconds. |
+| `POST /run/:id/solved` `{ grid }` | Which clues to cross off: `{ rule, across: [numbers], down: [numbers] }`, where `rule` is `word` (the mini) or `line` (the grown-ups' one). Free, and says nothing about wrong letters. |
 | `POST /run/:id/finish` `{ grid }` | Checks the full grid and fixes the time. A wrong grid is refused. |
-| `POST /run/:id/save` `{ initials?, profileToken? }` | Puts a finished time on the boards. Returns today's and all-time rank. |
+| `POST /run/:id/save` `{ initials?, profileToken? }` | Puts a finished time on the boards. Returns today's and all-time rank. Free play runs are refused. |
 | `GET /board?level=&scope=day\|all&day=` | The fastest times, quickest first. |
 
 ### Shuffle Scuffle (`/scuffle.html`)
@@ -310,17 +311,21 @@ Everything is under `/api/crisscross`. Who's asking goes in headers, never the a
 | `POST /games/:id/start` | The host starts a waiting game with whoever has joined. |
 | `POST /games/:id/hide` | Clears a finished game from your list. |
 
-### Clueless (`/clueless.html`)
+### Clueless Crosswords (`/clueless.html`)
+
+It was called Clueless until November 2026. Only the name changed on screen: the page, the API, the tables and saved times still use `clueless`, so old links and boards keep working.
 
 A small crossword every day, the same one for everybody (it's made from the date alone), so the family can race each other for the fastest time. The **Family mini** is a 5 by 5 grid with clues written for kids, and the **Grown-ups** crossword is a 7 by 7 grid with longer words and trickier clues. Both use words from the family word list. There's no unfiltered crossword, because there are no grown-up-only clue packs to build one from.
 
-- **Playing:** tap a square and type; the word you're on lights up and its clue shows in the bar above the grid. Tap the same square again (or the clue bar) to switch between across and down, and tap any clue in the lists to jump to it. Phones get a keyboard on the page; a laptop's own keyboard works too (arrows, Space to switch direction, Tab for the next clue). **Pencil** puts letters in gray for the ones you're not sure of.
+- **Playing:** tap a square and type; the word you're on lights up and its clue shows in the bar above the grid. Tap the same square again (or the clue bar) to switch between across and down, and tap any clue in the lists to jump to it. Phones get a keyboard on the page; a laptop's own keyboard works too (arrows, Space to switch direction, Tab for the next clue). **Pencil** puts letters in gray for the ones you're not sure of. Across is blue and down is pink, in the grid, the clue bar and the lists, always next to an arrow (→ or ↓), with a little key under the grid. The grid's rows and columns are fixed equal shares of a square, so typing never changes the size of a square.
+- **Crossing off clues:** when a word is right, its clue is crossed off in the lists with a ✓. The server decides (`POST /run/:id/solved`), and the rule depends on the level: the Family mini crosses a clue off as soon as its word is right, and the Grown-ups crossword waits until the whole line is right (every square in that row for an across clue, in that column for a down clue), so it gives away less. Nothing is ever said about which letter is wrong.
+- **Free play:** a random crossword at either level, made from a random seed instead of the date, and kept by the server the same way (it holds the letters and the clock). Until you type your first letter, **New board** swaps it for another one, as often as you like. Free play times don't go on the board, because everyone gets a different one. Today's puzzle stays fixed all day.
 - **Where the clues come from:** every clue is written by a person or pasted in from a chatbot by the admin; the server never asks an AI for anything. The game ships with about a thousand family clues written for it (`clueless/starter-clues.txt`), and admin can add **crossword clue packs**: copy a prompt with a batch of words from the arcade's everyday list, paste it into any chatbot, and paste the `WORD: clue` lines back. Each clue is checked on the way in: the word must be on the family list (3 to 7 letters, no British spellings), the clue must be 80 characters or fewer, it can't contain its own answer (or a word that starts with it), and it can't use a word the kids blocklist removes. Family clues go in both crosswords; grown-up clues only in the bigger one.
 - **Making the grid, in our own code** (`clueless/grid.js`): a few hand-made shapes of black squares per size, the same upside down, with every word 3 letters or more. The filler tries clued words in an order seeded by the date, always filling the spot with the fewest words that still fit next, and backs up when it gets stuck; no word appears twice. If the words can't fill one shape it tries the next, and if none work it falls back to the built-in clues alone, which fill every shape (the tests try a few years of dates). A day's puzzles are saved the first time anyone opens them, so they stay the same all day even if a clue pack is added or the server restarts.
 - **The server keeps the answers and the time.** Start records the moment on the server and hands the page a long random run id, the shape and the clues, never a letter. **Check** (a square for 5 seconds, a word for 10, the whole puzzle for 20) says which letters are wrong without saying what's right, and **Reveal** (a square or a word, 15 seconds a letter) hands over only the letters asked for, and the server writes down every one. When the grid is full the page sends it, and the server checks it against the answer and works the time out itself, leaving out pauses. A finish quicker than 0.3 seconds for each square you typed is turned away.
 - **Fastest-time boards** for today and for all time, for each crossword. Only a player's first finish of the day counts, and a profile has one clock per puzzle, so opening it again on another device carries on with the same time. A new fastest-ever time posts to the Comm Center.
 
-#### The Clueless API
+#### The Clueless Crosswords API
 
 Everything is under `/api/clueless`. A grid is one character per square, row by row: a letter, or anything else for an empty or black square.
 
@@ -328,6 +333,7 @@ Everything is under `/api/clueless`. A grid is one character per square, row by 
 |---|---|
 | `GET /levels` | Today's date, when the puzzles turn over, the two crosswords and what help costs. |
 | `POST /start` `{ level, profileToken? }` | Starts (or, for a profile, carries on with) today's `mini` or `big` crossword. Returns the run id, the shape, the numbers and the clues, and the clock so far. |
+| `POST /start` `{ level, free: true }` | Starts a free play crossword, a new random one every time (`free: true` in the run). Its own, smaller rate limit, since each one is made on the spot. |
 | `GET /run/:id` | Where a run stands, including any letters already revealed. |
 | `POST /run/:id/pause`, `/resume` | Stops and restarts the clock. |
 | `POST /run/:id/check` `{ scope, index, dir, grid }` | Which letters are wrong in one square, one word or (`scope: puzzle`) the whole grid. Adds 5, 10 or 20 seconds. |
@@ -429,7 +435,7 @@ The puzzles and Spin & Solve are played on the TV with the remote alone, and the
 | Game | On a TV |
 |---|---|
 | Wordless | The arrows move along the keyboard on the screen and OK types a letter (or presses Enter or ⌫ on it). |
-| Clueless | The arrows move the highlight around the grid, OK picks a square (OK again switches between across and down), and the keyboard on the screen types into it. Arrowing back up from the keyboard lands on the picked square. |
+| Clueless Crosswords | The arrows move the highlight around the grid, OK picks a square (OK again switches between across and down), and the keyboard on the screen types into it. Arrowing back up from the keyboard lands on the picked square. |
 | Words with Family | Against the computer, or with the remote passed between players: OK on one of your tiles picks it up and sends the highlight to the board, the arrows take it to a square, and OK puts it down. The tiles show on the TV, so for secret tiles play on your own phones. The games on everyone's own phone stay on the phones. |
 | Spin & Solve | One to four players pass the remote around. The arrows move between Spin, Buy a vowel and Solve and across the letters, and solving uses a keyboard on the screen. |
 
@@ -560,7 +566,7 @@ Visit `/admin.html` and enter your `ADMIN_PASSWORD`.
 - Comm Center: the feedback inbox (with screenshots, the page and device each message came from, and a Copy for chat button), announcements, high-score boards, Spin & Solve and Know-It-All packs and requests
 
 **Boards:**
-- Take a single score off any game's board (Sudoku, Clueless, Tumbler Rumble, Disco Drop, Roll Royale, Moonshot, Shuffle Scuffle, Wordless, and the games that share the older high-score board). Pick the game and board, then tap Remove twice. It leaves the board and everyone's ranks straight away but isn't deleted: it's kept in a list under the board with when it was taken off and by whom, and Put back returns it exactly as it was. A game added later shows up here by itself, as long as its scores live in a table named `<game>_scores`. Rambler's boards keep their own tools on the Rambler tab.
+- Take a single score off any game's board (Sudoku, Clueless Crosswords, Tumbler Rumble, Disco Drop, Roll Royale, Moonshot, Shuffle Scuffle, Wordless, and the games that share the older high-score board). Pick the game and board, then tap Remove twice. It leaves the board and everyone's ranks straight away but isn't deleted: it's kept in a list under the board with when it was taken off and by whom, and Put back returns it exactly as it was. A game added later shows up here by itself, as long as its scores live in a table named `<game>_scores`. Rambler's boards keep their own tools on the Rambler tab.
 
 **Rambler:**
 - See the current season, how long is left, and rename it ("Spooky Season")
@@ -572,7 +578,7 @@ Visit `/admin.html` and enter your `ADMIN_PASSWORD`.
 - Theme packs: copy a prompt, paste the answer back, and dress the season in it. The ingest tells you what percentage of boards the pack's words will actually appear on, so you find out immediately if it is all nine-letter names
 - Dictionary: add or remove words from the browser. Edits live in the database, not the word files, so they survive a `docker compose pull`
 
-**Clueless:**
+**Clueless Crosswords:**
 - Make crossword clue packs: pick Family or Grown-up clues, copy the prompt (it carries a batch of words that don't have a clue yet), paste the chatbot's `WORD: clue` lines back, and see which ones were kept and which were skipped and why
 - See how many words have clues, and delete a pack
 
@@ -602,7 +608,7 @@ sudoku/                   Sudoku's puzzle maker (generator.js) and its runs and 
 scuffle/                  Shuffle Scuffle: letters and points (game.js), solo games and the daily board (solo.js), rooms (rooms.js), /api/scuffle
 crisscross/               Words with Family: the rules (engine.js), the computer player (bot.js), games in the database (games.js), /api/crisscross
 discodrop/                Disco Drop: runs, the replayed drops and the boards (/api/discodrop); the motion is public/discodrop-engine.js
-clueless/                 Clueless: shapes and the filler (grid.js), clue checks (clues.js), the day's puzzles (maker.js, puzzles.js), the built-in clues, /api/clueless
+clueless/                 Clueless Crosswords: shapes and the filler (grid.js), clue checks (clues.js), the day's puzzles (maker.js, puzzles.js), the built-in clues, /api/clueless
 tumbler/                  Tumbler Rumble's runs, the replay check and the boards (/api/tumbler; the rules are public/tumbler-engine.js)
 royale/                   Roll Royale's runs, the replay check and the boards (/api/royale; the rules are public/royale-engine.js)
 moonshot/                 Moonshot: runs, the replayed swings and the boards (/api/moonshot); the pitches are public/moonshot-engine.js
@@ -622,7 +628,7 @@ public/snake*, bricks*, blocks*, towers*   Snake, Brick Breaker, Block Drop, Tow
 public/sudoku.*           Sudoku
 public/scuffle.*          Shuffle Scuffle
 public/crisscross.*       Words with Family (and words-with-family-logo.svg)
-public/clueless.*         Clueless (admin side in admin-clueless.js)
+public/clueless.*         Clueless Crosswords (admin side in admin-clueless.js)
 public/tumbler.*          Tumbler Rumble (the rules, shared with the server, in tumbler-engine.js)
 public/discodrop*         Disco Drop (discodrop-engine.js is shared with the server)
 public/royale.*           Roll Royale (the rules, shared with the server, in royale-engine.js)

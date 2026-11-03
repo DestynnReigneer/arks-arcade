@@ -1,6 +1,6 @@
 'use strict';
 
-// Clueless in a real browser: start today's family mini, type every letter
+// Clueless Crosswords in a real browser: start today's family mini, type every letter
 // through the page (the on-screen keyboard on a phone, the real keyboard on a
 // laptop) and see it solved. The letters come from a hook the server only
 // has under the test suite (NODE_ENV=test).
@@ -32,7 +32,7 @@ test('solving the family mini in Clueless', async ({ page, isMobile }) => {
     expect(keys.y + keys.height).toBeLessThanOrEqual(844 + 1);
   }
 
-  const runId = await page.evaluate(() => Object.keys(localStorage).filter(k => k.startsWith('clueless.current.')).map(k => localStorage.getItem(k))[0]);
+  const runId = await page.evaluate(() => Object.keys(localStorage).filter(k => /^clueless\.current\.\d/.test(k)).map(k => localStorage.getItem(k))[0]);
   expect(runId).toMatch(/^[0-9a-f]{32}$/);
   const { letters } = await (await page.request.get(`/api/clueless/test/answer/${runId}`)).json();
 
@@ -51,4 +51,60 @@ test('solving the family mini in Clueless', async ({ page, isMobile }) => {
   expect(problems, problems.join('\n')).toEqual([]);
   const sizes = await page.evaluate(() => ({ page: document.documentElement.scrollWidth, screen: window.innerWidth }));
   expect(sizes.page).toBeLessThanOrEqual(sizes.screen);
+});
+
+// Typing never changes the size of a square, a right word is crossed off,
+// and free play's New board swaps the crossword until the first letter.
+test('Clueless Crosswords: steady squares, crossed-off clues and New board', async ({ page, isMobile }) => {
+  await quietFonts(page);
+  const problems = watchProblems(page);
+  await openPage(page, '/clueless.html');
+  await page.getByRole('button', { name: /Play as a guest/ }).click();
+  await page.getByRole('button', { name: 'Play', exact: true }).click();
+  const close = page.locator('.tut-x');
+  if (await close.isVisible().catch(() => false)) await close.click();
+  await expect(page).toHaveTitle('Clueless Crosswords');
+
+  await page.locator('#coverBtn').click();
+  await expect(page.locator('#cover')).toBeHidden();
+  const runId = await page.evaluate(() => Object.keys(localStorage).filter(k => /^clueless\.current\.\d/.test(k)).map(k => localStorage.getItem(k))[0]);
+  const { letters } = await (await page.request.get(`/api/clueless/test/answer/${runId}`)).json();
+  const sizes = () => page.locator('#grid .cl-cell').evaluateAll(els => els.map(e => { const r = e.getBoundingClientRect(); return `${r.width.toFixed(1)}x${r.height.toFixed(1)}`; }).join());
+  const before = await sizes();
+
+  // Across is one color and down another.
+  const across = await page.locator('.cl-cell.sel').evaluate(e => getComputedStyle(e).backgroundColor);
+  await page.locator('#dirBtn').click();
+  const down = await page.locator('.cl-cell.sel').evaluate(e => getComputedStyle(e).backgroundColor);
+  if (await page.locator('#dirBtn small').textContent() === 'Down') expect(down).not.toBe(across);
+  await page.locator('#acrossList li').first().click();
+
+  // Type the first across word right: it's crossed off, and no square moved.
+  const first = await page.evaluate(() => {
+    const li = document.querySelector('#acrossList li');
+    return li.querySelector('b').textContent;
+  });
+  const sel = () => page.locator('.cl-cell.sel').evaluate(e => [...e.parentNode.children].indexOf(e));
+  const wordLen = await page.locator('.cl-cell.word').count();
+  for (let k = 0; k < wordLen; k++) {
+    const i = await sel();
+    if (isMobile) await page.locator(`#keys [data-key="${letters[i]}"]`).tap();
+    else await page.keyboard.press(letters[i].toLowerCase());
+  }
+  await expect(page.locator('#acrossList li.solved').first()).toContainText(first);
+  expect(await sizes()).toBe(before);
+
+  // Free play: New board until the first letter.
+  await page.locator('#modeSeg button', { hasText: 'Free play' }).click();
+  await page.locator('#coverBtn').click();
+  await expect(page.locator('#freeBar')).toBeVisible();
+  await expect(page.locator('#dayLabel')).toHaveText('Free play');
+  const clues = () => page.locator('.cl-lists li').allTextContents().then(t => t.join('|'));
+  const one = await clues();
+  await page.locator('#newBoardBtn').click();
+  await expect.poll(clues).not.toBe(one);
+  if (isMobile) await page.locator('#keys [data-key="E"]').tap();
+  else await page.keyboard.press('e');
+  await expect(page.locator('#freeBar')).toBeHidden();
+  expect(problems, problems.join('\n')).toEqual([]);
 });
