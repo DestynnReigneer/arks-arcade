@@ -1,6 +1,7 @@
 'use strict';
 
-// Shuffle Scuffle on your own: the daily set and free play.
+// Shuffle Scuffle on your own: the two daily sets (family and unfiltered)
+// and free play.
 //
 // The server keeps the game. Starting one hands the page a long random game
 // id; each round's clock starts on the server when the round does, every
@@ -37,17 +38,73 @@ db.db.exec(`
     full_words INTEGER NOT NULL DEFAULT 0,
     best_word TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    UNIQUE (day, who)
+    UNIQUE (day, dictionary, who)
   );
-  CREATE INDEX IF NOT EXISTS scuffle_scores_day ON scuffle_scores (day, score);
-  CREATE INDEX IF NOT EXISTS scuffle_scores_all ON scuffle_scores (score);
   CREATE TABLE IF NOT EXISTS scuffle_daily_plays (
     day TEXT NOT NULL,
+    dictionary TEXT NOT NULL DEFAULT 'kids',
     profile_id TEXT NOT NULL,
     game_id TEXT NOT NULL,
-    PRIMARY KEY (day, profile_id)
+    PRIMARY KEY (day, dictionary, profile_id)
   );
 `);
+
+// Before 2026-11-02 there was one daily for both lists, so a player had one
+// score a day (UNIQUE (day, who)) and one play a day. Now the family and the
+// unfiltered daily are separate, each with its own board. SQLite can't change
+// a UNIQUE or a key in place, so the old tables are copied into new ones
+// (same ids, so a removed score can still be put back). Old plays were all on
+// the family letters.
+function migrate() {
+  const sqlOf = name => (db.db.prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?").get(name) || {}).sql || '';
+  if (/UNIQUE\s*\(\s*day\s*,\s*who\s*\)/i.test(sqlOf('scuffle_scores'))) {
+    db.db.exec(`
+      BEGIN;
+      CREATE TABLE scuffle_scores_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        day TEXT NOT NULL,
+        who TEXT NOT NULL,
+        initials TEXT NOT NULL,
+        profile_id TEXT,
+        profile_name TEXT,
+        profile_avatar TEXT,
+        dictionary TEXT NOT NULL DEFAULT 'kids',
+        score INTEGER NOT NULL,
+        words INTEGER NOT NULL DEFAULT 0,
+        full_words INTEGER NOT NULL DEFAULT 0,
+        best_word TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        UNIQUE (day, dictionary, who)
+      );
+      INSERT INTO scuffle_scores_new (id, day, who, initials, profile_id, profile_name, profile_avatar, dictionary, score, words, full_words, best_word, created_at)
+        SELECT id, day, who, initials, profile_id, profile_name, profile_avatar, dictionary, score, words, full_words, best_word, created_at FROM scuffle_scores;
+      DROP TABLE scuffle_scores;
+      ALTER TABLE scuffle_scores_new RENAME TO scuffle_scores;
+      COMMIT;
+    `);
+  }
+  if (!db.db.prepare('PRAGMA table_info(scuffle_daily_plays)').all().some(c => c.name === 'dictionary')) {
+    db.db.exec(`
+      BEGIN;
+      CREATE TABLE scuffle_daily_plays_new (
+        day TEXT NOT NULL,
+        dictionary TEXT NOT NULL DEFAULT 'kids',
+        profile_id TEXT NOT NULL,
+        game_id TEXT NOT NULL,
+        PRIMARY KEY (day, dictionary, profile_id)
+      );
+      INSERT INTO scuffle_daily_plays_new (day, dictionary, profile_id, game_id) SELECT day, 'kids', profile_id, game_id FROM scuffle_daily_plays;
+      DROP TABLE scuffle_daily_plays;
+      ALTER TABLE scuffle_daily_plays_new RENAME TO scuffle_daily_plays;
+      COMMIT;
+    `);
+  }
+  db.db.exec(`
+    CREATE INDEX IF NOT EXISTS scuffle_scores_day ON scuffle_scores (dictionary, day, score);
+    CREATE INDEX IF NOT EXISTS scuffle_scores_all ON scuffle_scores (dictionary, score);
+  `);
+}
+migrate();
 
 const fail = (message, status = 400) => Object.assign(new Error(message), { status });
 const profiles = () => require('../arcade/profiles');
@@ -112,13 +169,13 @@ function start({ mode, dictionary, rounds, seconds, profileToken }, now = Date.n
   const day = today(new Date(now));
   const profile = profileToken ? profiles().verify(profileToken) : null;
   if (daily && profile) {
-    // A profile gets one go at the day's set: the letters are the same all
-    // day, so a second go would always score better.
-    const had = db.db.prepare('SELECT game_id FROM scuffle_daily_plays WHERE day = ? AND profile_id = ?').get(day, profile.id);
+    // A profile gets one go at each of the day's sets: the letters are the
+    // same all day, so a second go would always score better.
+    const had = db.db.prepare('SELECT game_id FROM scuffle_daily_plays WHERE day = ? AND dictionary = ? AND profile_id = ?').get(day, dict, profile.id);
     if (had) {
       const g = games.get(had.game_id);
       if (g) { g.touched = now; return view(g, now); }
-      throw fail('You\'ve already played today\'s set. A new one arrives at midnight; free play is open any time.', 409);
+      throw fail(`You've already played today's ${LIST_NAME[dict]} daily. Come back tomorrow for a new one; free play is open any time.`, 409);
     }
   }
   const g = {
@@ -130,8 +187,31 @@ function start({ mode, dictionary, rounds, seconds, profileToken }, now = Date.n
     profileId: profile ? profile.id : null, touched: now
   };
   games.set(g.id, g);
-  if (daily && profile) db.db.prepare('INSERT INTO scuffle_daily_plays (day, profile_id, game_id) VALUES (?, ?, ?)').run(day, profile.id, g.id);
+  if (daily && profile) db.db.prepare('INSERT INTO scuffle_daily_plays (day, dictionary, profile_id, game_id) VALUES (?, ?, ?, ?)').run(day, dict, profile.id, g.id);
   return view(g, now);
+}
+
+const LIST_NAME = { kids: 'family', adult: 'unfiltered' };
+
+// Which of today's dailies a profile has finished, so the page can fade them.
+// 'done' once the game is over (or gone from memory, or on the board),
+// 'playing' while a started one can still be carried on, 'open' otherwise.
+// Guests have no profile, so their page keeps track on the device instead.
+function dailyStatus({ profileToken } = {}, now = Date.now()) {
+  const day = today(new Date(now));
+  const out = { day, kids: 'open', adult: 'open' };
+  const profile = profileToken ? profiles().verify(profileToken) : null;
+  if (!profile) return out;
+  for (const dict of ['kids', 'adult']) {
+    const had = db.db.prepare('SELECT game_id FROM scuffle_daily_plays WHERE day = ? AND dictionary = ? AND profile_id = ?').get(day, dict, profile.id);
+    const saved = db.db.prepare('SELECT 1 FROM scuffle_scores WHERE day = ? AND dictionary = ? AND who = ?').get(day, dict, `p:${profile.id}`);
+    if (saved) { out[dict] = 'done'; continue; }
+    if (!had) continue;
+    const g = games.get(had.game_id);
+    if (g) settle(g, now);
+    out[dict] = g && !g.finished ? 'playing' : 'done';
+  }
+  return out;
 }
 
 // Starts the next round; its clock starts now, on the server.
@@ -190,8 +270,8 @@ function save(id, { initials, profileToken }) {
   const ini = profile ? profile.initials || initialsOf(profile.name) : String(initials || '').toUpperCase().trim();
   if (!INITIALS_RE.test(ini)) throw fail('Initials must be 1-3 letters or numbers.');
   const who = profile ? `p:${profile.id}` : `g:${ini}`;
-  if (db.db.prepare('SELECT 1 FROM scuffle_scores WHERE day = ? AND who = ?').get(g.day, who)) {
-    throw fail('You already have a score on today\'s board. Only your first go counts, because the letters stay the same all day.', 409);
+  if (db.db.prepare('SELECT 1 FROM scuffle_scores WHERE day = ? AND dictionary = ? AND who = ?').get(g.day, g.dictionary, who)) {
+    throw fail(`You already have a score on today's ${LIST_NAME[g.dictionary]} board. Only your first go counts, because the letters stay the same all day.`, 409);
   }
   // Counted from what the server recorded for each round.
   let words = 0, fulls = 0, best = '';
@@ -208,31 +288,33 @@ function save(id, { initials, profileToken }) {
     profile ? profile.avatar : null, g.dictionary, g.total, words, fulls, best || null);
   g.saved = true;
   const scoreId = Number(info.lastInsertRowid);
-  const dayRank = db.db.prepare('SELECT COUNT(*) AS c FROM scuffle_scores WHERE day = ? AND (score > ? OR (score = ? AND id < ?))')
-    .get(g.day, g.total, g.total, scoreId).c + 1;
-  const allRank = db.db.prepare('SELECT COUNT(*) AS c FROM scuffle_scores WHERE score > ? OR (score = ? AND id < ?)')
-    .get(g.total, g.total, scoreId).c + 1;
+  const dayRank = db.db.prepare('SELECT COUNT(*) AS c FROM scuffle_scores WHERE day = ? AND dictionary = ? AND (score > ? OR (score = ? AND id < ?))')
+    .get(g.day, g.dictionary, g.total, g.total, scoreId).c + 1;
+  const allRank = db.db.prepare('SELECT COUNT(*) AS c FROM scuffle_scores WHERE dictionary = ? AND (score > ? OR (score = ? AND id < ?))')
+    .get(g.dictionary, g.total, g.total, scoreId).c + 1;
   if (allRank === 1 && g.total > 0) {
     const shout = profile ? (profiles().boardName(profile.id) || {}).label || profile.name : ini;
     comm.safePost({
       kind: 'highscore', emoji: '🔀', game: 'scuffle',
-      title: `${shout} set the best Shuffle Scuffle daily score ever`,
-      body: `${shout} scored ${g.total.toLocaleString('en-US')} on the daily set, the highest anyone has managed. Today's letters are waiting if you want a go.`
+      title: `${shout} set the best Shuffle Scuffle ${LIST_NAME[g.dictionary]} daily score ever`,
+      body: `${shout} scored ${g.total.toLocaleString('en-US')} on the ${LIST_NAME[g.dictionary]} daily set, the highest anyone has managed. Today's letters are waiting if you want a go.`
     });
   }
   return { id: scoreId, dayRank, allRank, score: g.total };
 }
 
-// The kids and grown-up lists share one board, so a grown-up's best word
-// might not be one to show the kids. The score still counts; only the word is
-// left off.
+// Each daily has its own board. Anyone can look at the unfiltered board, so
+// a best word that isn't on the kids list is left off; the score still counts.
+// (Scores from before the two dailies are on the board of the list they were
+// played with.)
 const dictionary = require('../rambler/dictionary');
-function board({ scope = 'day', day, limit = 20 }) {
+function board({ scope = 'day', day, limit = 20, dictionary: list }) {
   const cap = Math.min(Math.max(parseInt(limit, 10) || 20, 1), 100);
+  const dict = game.profileOf(list);
   const rows = scope === 'all'
-    ? db.db.prepare('SELECT * FROM scuffle_scores ORDER BY score DESC, id ASC LIMIT ?').all(cap)
-    : db.db.prepare('SELECT * FROM scuffle_scores WHERE day = ? ORDER BY score DESC, id ASC LIMIT ?')
-      .all(DAY_RE.test(String(day || '')) ? day : today(), cap);
+    ? db.db.prepare('SELECT * FROM scuffle_scores WHERE dictionary = ? ORDER BY score DESC, id ASC LIMIT ?').all(dict, cap)
+    : db.db.prepare('SELECT * FROM scuffle_scores WHERE dictionary = ? AND day = ? ORDER BY score DESC, id ASC LIMIT ?')
+      .all(dict, DAY_RE.test(String(day || '')) ? day : today(), cap);
   return rows.map(r => {
     const now = r.profile_id ? profiles().boardName(r.profile_id) : null;
     return {
@@ -244,4 +326,4 @@ function board({ scope = 'day', day, limit = 20 }) {
   });
 }
 
-module.exports = { start, next, word, stop, save, board, view: id => view(need(id)), GRACE_MS, _games: games };
+module.exports = { start, next, word, stop, save, board, dailyStatus, view: id => view(need(id)), GRACE_MS, _games: games };

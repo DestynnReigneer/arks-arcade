@@ -4,6 +4,23 @@
 :root { --accent: #b6ff3b; --on-accent: #0d1a00; --gold: #ffc72c; }
 
 .mode-seg { flex-wrap: wrap; }
+/* Today's daily, once you've played it: faded, and it says why on hover, on
+   focus (the TV's highlight, a keyboard) and when tapped (phones have no hover). */
+.mode-seg button { position: relative; }
+.mode-seg button.faded { opacity: 0.42; filter: grayscale(0.7); cursor: not-allowed; }
+.sc-tip {
+  position: absolute; left: 50%; bottom: calc(100% + 8px); transform: translateX(-50%); z-index: 20;
+  width: max-content; max-width: min(240px, 80vw); padding: 8px 11px; border-radius: 10px; pointer-events: none;
+  background: var(--text); color: var(--bg); font-size: 12.5px; font-weight: 700; line-height: 1.35; white-space: normal; text-align: center;
+  box-shadow: 0 10px 24px -10px #000; opacity: 0; visibility: hidden; transition: opacity 0.15s;
+}
+.sc-tip::after {
+  content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+  border: 6px solid transparent; border-top-color: var(--text);
+}
+.mode-seg button.faded:hover .sc-tip, .mode-seg button.faded:focus .sc-tip, .mode-seg button.faded.tip-on .sc-tip { opacity: 1; visibility: visible; }
+/* The faded button keeps full strength for its own tip. */
+.mode-seg button.faded .sc-tip { filter: none; }
 .seg button { min-width: 0; }
 .join-qr { width: 150px; height: 150px; background: #fff; padding: 6px; border-radius: 10px; margin: 10px auto 2px; display: block; }
 .join-link { font-size: 11px; opacity: 0.65; word-break: break-all; }

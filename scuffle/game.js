@@ -172,10 +172,12 @@ function pickWord(rng, length, profile, used) {
   throw new Error('Could not find a word for this round.');
 }
 
-// The rounds for a game. `seed` makes it repeatable: the daily set uses the
+// The rounds for a game. `seed` makes it repeatable: a daily set uses the
 // date and nothing else, so the same day gives everyone the same letters.
-// The daily's words are always picked from the kids list; the dictionary
-// chosen only decides which smaller words count.
+// There are two dailies (since 2026-11-02): the family one, picked from the
+// kids list with the same seed as the single daily before it, and the
+// unfiltered one, with its own seed and picked the unfiltered way (now and
+// then a cheeky full word).
 function makeRounds({ count, profile = 'kids', seed = null, pickAs = profile }) {
   const rng = seed ? seededRng(seedFrom(seed)) : Math.random;
   const used = new Set();
@@ -188,8 +190,9 @@ function makeRounds({ count, profile = 'kids', seed = null, pickAs = profile }) 
   return rounds;
 }
 
-const dailyRounds = (day, profile = 'kids') =>
-  makeRounds({ count: DAILY.rounds, profile, seed: `scuffle|${day}`, pickAs: 'kids' });
+const dailyRounds = (day, profile = 'kids') => (profile === 'adult'
+  ? makeRounds({ count: DAILY.rounds, profile: 'adult', seed: `scuffle|${day}|adult`, pickAs: 'adult' })
+  : makeRounds({ count: DAILY.rounds, profile: 'kids', seed: `scuffle|${day}`, pickAs: 'kids' }));
 
 module.exports = {
   MIN_LENGTH, POINTS, FULL_BONUS, FIRST_BONUS, ROUND_CHOICES, SECOND_CHOICES, DEFAULT_ROUNDS, DEFAULT_SECONDS, DAILY,

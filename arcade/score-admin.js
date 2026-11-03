@@ -55,7 +55,8 @@ function known() {
   add({ id: 'tumbler', label: 'Tumbler Rumble', table: 'tumbler_scores', unit: 'points', daily: true, boards: one });
   add({ id: 'discodrop', label: 'Disco Drop', table: 'discodrop_scores', unit: 'points', daily: true, boards: one });
   add({ id: 'royale', label: 'Roll Royale', table: 'royale_scores', unit: 'points', daily: true, boards: one });
-  add({ id: 'scuffle', label: 'Shuffle Scuffle', table: 'scuffle_scores', unit: 'points', daily: true, boards: one });
+  add({ id: 'scuffle', label: 'Shuffle Scuffle', table: 'scuffle_scores', boardCol: 'dictionary', unit: 'points', daily: true,
+    boards: [{ id: 'kids', label: 'Family daily' }, { id: 'adult', label: 'Unfiltered daily' }] });
   add({ id: 'wordless', label: 'Wordless', table: 'scores', boardCol: 'difficulty', unit: 'points', daily: false,
     boards: [['easy', 'Easy'], ['normal', 'Normal'], ['hard', 'Hard'], ['ludicrous', 'Ludicrous']].map(([id, label]) => ({ id, label })) });
   // The older games share one table, split by game and then by board.
