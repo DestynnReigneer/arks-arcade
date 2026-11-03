@@ -61,6 +61,113 @@ const Blip = (() => {
     src.start();
   }
 
+  // ---- game-show sounds --------------------------------------------------------------------------
+  // Our own sounds in the spirit of a TV wheel game, all made here from plain
+  // tones: nothing recorded, nothing borrowed.
+
+  // One note with a few overtones that rings out and fades, like a bell.
+  function bell(freq, { volume = 0.08, length = 0.7, delay = 0 } = {}) {
+    const a = audio();
+    if (!a) return;
+    const t = a.currentTime + delay;
+    for (const [mult, share] of [[1, 1], [2, 0.45], [3, 0.2], [4.2, 0.12]]) {
+      const o = a.createOscillator(), g = a.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(freq * mult, t);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(volume * share, t + 0.004);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + length / mult);
+      o.connect(g).connect(a.destination);
+      o.start(t);
+      o.stop(t + length + 0.05);
+    }
+  }
+  // A bright ding, for each letter that lights up. `step` nudges it up a
+  // little each time, so a run of letters climbs.
+  function ding(step = 0) { bell(1318.5 * Math.pow(2, Math.min(step, 7) / 24), { volume: 0.09, length: 0.8 }); }
+
+  // The classic low buzzer, for a letter that isn't there or a wrong answer:
+  // two rough, slightly out-of-tune tones, muffled a little.
+  function buzzer(length = 0.75) {
+    const a = audio();
+    if (!a) return;
+    const t = a.currentTime;
+    const muffle = a.createBiquadFilter();
+    muffle.type = 'lowpass';
+    muffle.frequency.value = 1400;
+    const g = a.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(0.09, t + 0.02);
+    g.gain.setValueAtTime(0.09, t + length - 0.08);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + length);
+    muffle.connect(g).connect(a.destination);
+    for (const f of [116, 123]) {
+      const o = a.createOscillator();
+      o.type = 'sawtooth';
+      o.frequency.value = f;
+      o.connect(muffle);
+      o.start(t);
+      o.stop(t + length + 0.05);
+    }
+  }
+
+  // The wheel's click as a peg passes the pointer: a tiny knock of noise.
+  function tick(volume = 0.12) {
+    const a = audio();
+    if (!a) return;
+    const len = 0.018;
+    const buffer = a.createBuffer(1, Math.floor(a.sampleRate * len), a.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / data.length, 3);
+    const src = a.createBufferSource(), band = a.createBiquadFilter(), g = a.createGain();
+    band.type = 'bandpass';
+    band.frequency.value = 2600;
+    band.Q.value = 1.2;
+    g.gain.value = volume;
+    src.buffer = buffer;
+    src.connect(band).connect(g).connect(a.destination);
+    src.start();
+  }
+
+  // Bankrupt: a sour stab that slides all the way down, then a thud.
+  function sting() {
+    const a = audio();
+    if (!a) return;
+    const t = a.currentTime;
+    const muffle = a.createBiquadFilter();
+    muffle.type = 'lowpass';
+    muffle.frequency.setValueAtTime(3000, t);
+    muffle.frequency.exponentialRampToValueAtTime(300, t + 1.1);
+    muffle.connect(a.destination);
+    for (const f of [311, 330, 466]) {   // a clashing chord
+      const o = a.createOscillator(), g = a.createGain();
+      o.type = 'sawtooth';
+      o.frequency.setValueAtTime(f, t);
+      o.frequency.setValueAtTime(f, t + 0.18);
+      o.frequency.exponentialRampToValueAtTime(f / 5, t + 1.1);
+      g.gain.setValueAtTime(0.06, t);
+      g.gain.setValueAtTime(0.06, t + 0.9);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 1.15);
+      o.connect(g).connect(muffle);
+      o.start(t);
+      o.stop(t + 1.2);
+    }
+    tone([90, 40], 0.35, { type: 'sine', volume: 0.25, delay: 1.0 });
+  }
+
+  // Solved: a bright brassy run up to a big held chord.
+  function fanfare() {
+    const run = [[523, 0.11], [659, 0.11], [784, 0.11], [1047, 0.16], [784, 0.09], [1047, 0.5]];
+    let delay = 0;
+    for (const [f, len] of run) {
+      tone(f, len, { type: 'square', volume: 0.045, delay });
+      tone(f * 1.005, len, { type: 'sawtooth', volume: 0.025, delay });
+      delay += len * 0.95;
+    }
+    for (const f of [1047, 1319, 1568]) tone(f, 0.9, { type: 'triangle', volume: 0.05, delay });
+    for (let i = 0; i < 4; i++) bell(2093 + i * 260, { volume: 0.03, length: 0.5, delay: delay + 0.1 + i * 0.08 });
+  }
+
   // ---- comedy sounds -----------------------------------------------------------------------------
 
   // Sad trombone: two drooping notes, the second long and wobbly.
@@ -330,7 +437,7 @@ const Blip = (() => {
   document.addEventListener('visibilitychange', syncMusic);
 
   return {
-    tone, tune, noise, womp, backup, timesUp, think, thinker,
+    tone, tune, noise, womp, backup, timesUp, think, thinker, ding, buzzer, tick, sting, fanfare,
     get tuneOn() { return tuneOn; },
     // Wires a button that turns just the countdown tune on and off (the rest
     // of the game's sound stays as it is).
