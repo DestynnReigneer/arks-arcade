@@ -41,21 +41,6 @@
   <div><small>Jackpots</small><b id="hudJackpots">0</b></div>
 </div>
 
-<!-- The whole lane and the ROLL button under it are one big place to press. -->
-<div class="rr-zone" id="zone">
-  <div class="stage rr-stage" id="stage" role="button" tabindex="0"
-    aria-label="The lane. Press and hold, or hold Space or Enter, to fill the power meter, and let go to roll.">
-    <canvas id="lane"></canvas>
-    <div class="stage-msg" id="msg">
-      <b id="msgTitle">Press to play</b>
-      <span id="msgText">Tap the lane, or press Space, to start a run of 9 balls.</span>
-    </div>
-  </div>
-  <button class="rr-roll" id="rollBtn" type="button" aria-label="Hold to roll">HOLD · ROLL</button>
-</div>
-<p class="hint center keys-hint">Keyboard: hold <b>Space</b> or <b>Enter</b> and let go to roll. A game controller's <b>A</b>, <b>X</b>, <b>R1</b> or right trigger works too, held.</p>
-<div class="sr-only" id="say" aria-live="polite"></div>
-
 <div class="panel center hidden over-panel" id="over" role="dialog" aria-live="polite">
   <div class="over-top"><button class="primary" id="againBtn">Play again</button></div>
   <h2 class="over-title" id="overTitle">That's all 9 balls!</h2>
@@ -74,6 +59,21 @@
   <p class="hint" id="rankLine"></p>
   <div class="stack"><button class="ghost" id="overScoresBtn">🏆 High scores</button></div>
 </div>
+
+<!-- The whole lane and the ROLL button under it are one big place to press. -->
+<div class="rr-zone" id="zone">
+  <div class="stage rr-stage" id="stage" role="button" tabindex="0"
+    aria-label="The lane. Press and hold, or hold Space or Enter, to fill the power meter, and let go to roll.">
+    <canvas id="lane"></canvas>
+    <div class="stage-msg" id="msg">
+      <b id="msgTitle">Press to play</b>
+      <span id="msgText">Tap the lane, or press Space, to start a run of 9 balls.</span>
+    </div>
+  </div>
+  <button class="rr-roll" id="rollBtn" type="button" aria-label="Hold to roll">HOLD · ROLL</button>
+</div>
+<p class="hint center keys-hint">Keyboard: hold <b>Space</b> or <b>Enter</b> and let go to roll. A game controller's <b>A</b>, <b>X</b>, <b>R1</b> or right trigger works too, held.</p>
+<div class="sr-only" id="say" aria-live="polite"></div>
 
 <div class="overlay hidden" id="scores" role="dialog" aria-label="High scores">
   <div class="card-panel">

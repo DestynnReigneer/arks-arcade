@@ -868,6 +868,7 @@
     await act('resign');
   };
   $('backBtn').onclick = home;
+  $('overBackBtn').onclick = home;
   $('shuffleBtn').onclick = () => {
     for (let i = S.rack.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [S.rack[i], S.rack[j]] = [S.rack[j], S.rack[i]]; }
     paintRack();

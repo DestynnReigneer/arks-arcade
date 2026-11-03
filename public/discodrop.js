@@ -442,7 +442,7 @@
     if (canSave && !p) initials.reset();
     $('over').classList.remove('hidden');
     if (!problem && window.Fx && total > 0) Fx.burst({ count: 90, coins: Math.min(30, Math.round(total / 100)) });
-    setTimeout(() => $('over').scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 60);
+    setTimeout(() => $('over').scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
   }
 
   async function saveScore() {

@@ -41,6 +41,23 @@
   <div><small>Puzzle</small><b id="dayLabel">Today</b></div>
 </div>
 
+<div class="panel center hidden over-panel" id="over" role="dialog" aria-live="polite">
+  <div class="over-top"><button class="primary" id="otherLevelBtn">Try the other one</button></div>
+  <h2 class="over-title" id="overTitle">Solved! 🎉</h2>
+  <div class="final-score" id="overTime">0:00</div>
+  <div class="over-detail hint" id="overDetail"></div>
+  <div id="savePart">
+    <p class="hint" id="saveHint">Put your time on today's board and see where you stack up.</p>
+    <div class="initials" id="iniRow">
+      <input maxlength="1" class="ini" autocomplete="off" aria-label="First initial"><input maxlength="1" class="ini" autocomplete="off" aria-label="Second initial"><input maxlength="1" class="ini" autocomplete="off" aria-label="Third initial">
+    </div>
+    <button class="primary big" id="saveBtn">Save my time</button>
+    <div class="msg" id="saveMsg"></div>
+  </div>
+  <p class="hint" id="rankLine"></p>
+  <div class="stack"><button class="ghost" id="overScoresBtn">🏆 Fastest times</button></div>
+</div>
+
 <div class="cl-bar" id="clueBar">
   <button class="cl-step" id="prevClue" aria-label="Previous clue">‹</button>
   <button class="cl-current" id="currentClue" aria-live="polite" title="Tap to switch between across and down"><b id="clueTag"></b><span id="clueText">Tap Start to see the first clue.</span></button>
@@ -85,23 +102,6 @@
 <div class="cl-lists" id="lists">
   <section><h2>Across</h2><ol id="acrossList"></ol></section>
   <section><h2>Down</h2><ol id="downList"></ol></section>
-</div>
-
-<div class="panel center hidden over-panel" id="over" role="dialog" aria-live="polite">
-  <div class="over-top"><button class="primary" id="otherLevelBtn">Try the other one</button></div>
-  <h2 class="over-title" id="overTitle">Solved! 🎉</h2>
-  <div class="final-score" id="overTime">0:00</div>
-  <div class="over-detail hint" id="overDetail"></div>
-  <div id="savePart">
-    <p class="hint" id="saveHint">Put your time on today's board and see where you stack up.</p>
-    <div class="initials" id="iniRow">
-      <input maxlength="1" class="ini" autocomplete="off" aria-label="First initial"><input maxlength="1" class="ini" autocomplete="off" aria-label="Second initial"><input maxlength="1" class="ini" autocomplete="off" aria-label="Third initial">
-    </div>
-    <button class="primary big" id="saveBtn">Save my time</button>
-    <div class="msg" id="saveMsg"></div>
-  </div>
-  <p class="hint" id="rankLine"></p>
-  <div class="stack"><button class="ghost" id="overScoresBtn">🏆 Fastest times</button></div>
 </div>
 
 <div class="overlay hidden" id="scores" role="dialog" aria-label="Fastest times">

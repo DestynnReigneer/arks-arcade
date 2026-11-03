@@ -38,7 +38,7 @@
 .keys-hint { margin-top: 10px; }
 @media (hover: none) { .keys-hint { display: none; } }
 
-.over-panel { margin-top: 14px; }
+.over-panel { margin: 14px 0; }
 .final-score { font-size: 40px; font-weight: 800; color: var(--accent); font-variant-numeric: tabular-nums; }
 .over-detail { margin-top: 0; }
 .board-tabs { margin-bottom: 8px; }

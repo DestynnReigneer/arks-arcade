@@ -156,4 +156,6 @@ html.tv #game:not(.hidden) { display: grid; grid-template-columns: 430px 1fr; co
 html.tv #game > * { grid-column: 2; }
 html.tv #game > #scoreStrip, html.tv #game > #status { grid-column: 1 / -1; }
 html.tv #game > #boardBox { grid-column: 1; grid-row: 3 / span 9; max-width: none; }
+/* The game-over panel (first in the page, so it sits above the board on a phone) goes at the top of the right-hand column. */
+html.tv #game > #overPanel { grid-row: 3; }
 html.tv .cc-cell:focus { z-index: 3; }

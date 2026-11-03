@@ -35,7 +35,7 @@
   let particles = [], castleHurt = 0;
   let ground = null, groundKey = '';
 
-  const shell = GameShell.create({ game: 'towers', boards: Object.fromEntries(Object.entries(E.MAPS).map(([id, m]) => [id, m.label])), mount: $('info'), onAgain: () => reset() });
+  const shell = GameShell.create({ game: 'towers', boards: Object.fromEntries(Object.entries(E.MAPS).map(([id, m]) => [id, m.label])), mount: $('stage'), onAgain: () => reset() });
   let view = null;
 
   function paintOptions() {

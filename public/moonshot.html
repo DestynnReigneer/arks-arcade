@@ -40,6 +40,24 @@
   <div><small>Points</small><b id="mult">×1</b></div>
 </div>
 
+<div class="panel center hidden over-panel" id="over" role="dialog" aria-live="polite">
+  <div class="over-top"><button class="primary" id="againBtn">Play again</button></div>
+  <h2 class="over-title" id="overTitle">That's the last pitch!</h2>
+  <div class="final-score" id="overScore">0</div>
+  <div class="ms-chips" id="overChips" aria-label="What each pitch did"></div>
+  <div class="over-detail hint" id="overDetail"></div>
+  <div id="savePart">
+    <p class="hint" id="saveHint">Put your score on the board and see where you stack up.</p>
+    <div class="initials" id="iniRow">
+      <input maxlength="1" class="ini" autocomplete="off" aria-label="First initial"><input maxlength="1" class="ini" autocomplete="off" aria-label="Second initial"><input maxlength="1" class="ini" autocomplete="off" aria-label="Third initial">
+    </div>
+    <button class="primary big" id="saveBtn">Save my score</button>
+    <div class="msg" id="saveMsg"></div>
+  </div>
+  <p class="hint" id="rankLine"></p>
+  <div class="stack"><button class="ghost" id="overScoresBtn">🏆 High scores</button></div>
+</div>
+
 <div class="ms-stage" id="stage">
   <canvas id="canvas" aria-label="Moonshot. A batting cage at night. Pitches fly toward you; tap anywhere here, or press Space, to swing when the ball reaches the glowing ring over the plate."></canvas>
   <div class="ms-cover" id="cover">
@@ -61,24 +79,6 @@
 
 <button class="ms-swing" id="swingBtn" type="button" disabled>SWING!</button>
 <p class="hint center keys-hint">Tap the cage or the button. Keyboard: <b>Space</b> or <b>Enter</b>. A game controller's <b>A</b>, <b>X</b>, <b>R1</b> or right trigger works too, and <b>Start</b> pauses.</p>
-
-<div class="panel center hidden over-panel" id="over" role="dialog" aria-live="polite">
-  <div class="over-top"><button class="primary" id="againBtn">Play again</button></div>
-  <h2 class="over-title" id="overTitle">That's the last pitch!</h2>
-  <div class="final-score" id="overScore">0</div>
-  <div class="ms-chips" id="overChips" aria-label="What each pitch did"></div>
-  <div class="over-detail hint" id="overDetail"></div>
-  <div id="savePart">
-    <p class="hint" id="saveHint">Put your score on the board and see where you stack up.</p>
-    <div class="initials" id="iniRow">
-      <input maxlength="1" class="ini" autocomplete="off" aria-label="First initial"><input maxlength="1" class="ini" autocomplete="off" aria-label="Second initial"><input maxlength="1" class="ini" autocomplete="off" aria-label="Third initial">
-    </div>
-    <button class="primary big" id="saveBtn">Save my score</button>
-    <div class="msg" id="saveMsg"></div>
-  </div>
-  <p class="hint" id="rankLine"></p>
-  <div class="stack"><button class="ghost" id="overScoresBtn">🏆 High scores</button></div>
-</div>
 
 <div class="overlay hidden" id="scores" role="dialog" aria-label="High scores">
   <div class="card-panel">

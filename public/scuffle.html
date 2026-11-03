@@ -121,22 +121,17 @@
 <!-- ============ after a round ============ -->
 <section id="reveal" class="hidden">
   <div class="panel center">
-    <div class="over-top"><button class="primary hidden" id="againBtn">Play again</button></div>
+    <div class="over-top">
+      <button class="ghost" id="menuBtn">Back to the menu</button>
+      <button class="primary hidden" id="nextBtn">Next round</button>
+      <button class="primary hidden" id="againBtn">Play again</button>
+    </div>
+    <p class="hint center hidden" id="waitNext">Waiting for the host to start the next round…</p>
     <div class="hint" id="revealRound"></div>
     <div class="hint">The full word was</div>
     <div class="sc-full" id="revealFull"></div>
     <p class="hint" id="revealFirst"></p>
     <div class="final-line" id="revealScore"></div>
-  </div>
-  <div class="panel hidden" id="standingsPanel">
-    <h2 id="standingsTitle">Scores</h2>
-    <ol class="sc-standings" id="standings"></ol>
-  </div>
-  <div class="panel">
-    <h2>Words you found</h2>
-    <ul class="sc-found" id="revealFound"></ul>
-    <h2 class="sc-missed-title" id="missedTitle">Words you missed</h2>
-    <ul class="sc-found missed" id="revealMissed"></ul>
   </div>
   <div class="panel center hidden" id="overPanel">
     <h2 id="overTitle">Game over</h2>
@@ -151,10 +146,15 @@
     </div>
     <p class="hint" id="rankLine"></p>
   </div>
-  <div class="stack">
-    <button class="primary big hidden" id="nextBtn">Next round</button>
-    <p class="hint center hidden" id="waitNext">Waiting for the host to start the next round…</p>
-    <button class="ghost" id="menuBtn">Back to the menu</button>
+  <div class="panel hidden" id="standingsPanel">
+    <h2 id="standingsTitle">Scores</h2>
+    <ol class="sc-standings" id="standings"></ol>
+  </div>
+  <div class="panel">
+    <h2>Words you found</h2>
+    <ul class="sc-found" id="revealFound"></ul>
+    <h2 class="sc-missed-title" id="missedTitle">Words you missed</h2>
+    <ul class="sc-found missed" id="revealMissed"></ul>
   </div>
 </section>
 

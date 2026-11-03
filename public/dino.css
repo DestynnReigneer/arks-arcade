@@ -20,5 +20,5 @@
 .keys-hint { margin-top: 10px; }
 @media (hover: none) { .keys-hint { display: none; } }
 
-#overPanel { margin-top: 14px; }
+#overPanel { margin: 14px 0; }
 .final-score { font-size: 40px; font-weight: 800; color: var(--accent); font-variant-numeric: tabular-nums; }
