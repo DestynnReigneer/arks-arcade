@@ -19,6 +19,7 @@ const rateLimit = require('express-rate-limit');
 const db = require('../db');
 const profiles = require('./profiles');
 const homeGames = require('./home-games');
+const GameOrder = require('./game-order');
 
 db.db.exec(`
   CREATE TABLE IF NOT EXISTS arcade_visits (
@@ -82,24 +83,26 @@ function whoFrom(body) {
 }
 
 // ---- most played ---------------------------------------------------------------------------
-// The home page's game order: the games this profile has spent the most
-// on-screen time in over the last 90 days come first, then what everyone
-// plays most, then the admin's order for anything nobody has touched.
-const ORDER_WINDOW = 90 * DAY;
+// The home page's game order. It moves slowly on purpose (the rule is spelled
+// out in arcade/game-order.js): plays count for less as they get older, and a
+// game only moves above the one over it when it's been played clearly more.
+// With a profile, its own plays decide; without one, everyone's do. The page
+// sends the order it showed last time (`previous`), so a game that has
+// earned its spot keeps it. Without that, the start is the admin's order,
+// moved by everyone's plays first.
+const ORDER_WINDOW = 120 * DAY;
 
-function gameOrder({ token, now = Date.now() } = {}) {
+function gameOrder({ token, previous, now = Date.now() } = {}) {
   const { order } = homeGames.get();
   const me = token ? profiles.verify(token) : null;
-  const since = now - ORDER_WINDOW;
-  const timeBy = (extra, args) => new Map(db.db.prepare(
-    `SELECT game, SUM(active_ms) AS ms FROM arcade_visits WHERE started_at >= ? ${extra} GROUP BY game`
-  ).all(since, ...args).map(r => [r.game, r.ms]));
-  const mine = me ? timeBy('AND profile_id = ?', [me.id]) : new Map();
-  const everyone = timeBy('', []);
-  return order.slice().sort((a, b) =>
-    (mine.get(b) || 0) - (mine.get(a) || 0) ||
-    (everyone.get(b) || 0) - (everyone.get(a) || 0) ||
-    order.indexOf(a) - order.indexOf(b));
+  const visitsOf = (extra, args) => db.db.prepare(
+    `SELECT game, started_at, active_ms FROM arcade_visits WHERE started_at >= ? AND game <> 'hub' ${extra} LIMIT 50000`
+  ).all(now - ORDER_WINDOW, ...args);
+  const everyone = GameOrder.playScores(visitsOf('', []), { now });
+  const fresh = GameOrder.dampedOrder(order, everyone);
+  const start = GameOrder.cleanPrevious(previous, order) || fresh;
+  if (!me) return GameOrder.dampedOrder(start, everyone);
+  return GameOrder.dampedOrder(start, GameOrder.playScores(visitsOf('AND profile_id = ?', [me.id]), { now }));
 }
 
 // ---- visits ------------------------------------------------------------------------------
@@ -207,7 +210,7 @@ function routes({ requireAdmin }) {
   }));
   // POST so the profile token stays out of URLs and logs.
   router.post('/game-order', limiter(300, 'requests'), send((req, res) => {
-    res.json({ order: gameOrder({ token: (req.body || {}).token }) });
+    res.json({ order: gameOrder({ token: (req.body || {}).token, previous: (req.body || {}).previous }) });
   }));
   router.post('/error', limiter(60, 'error reports'), send((req, res) => {
     const b = req.body || {};

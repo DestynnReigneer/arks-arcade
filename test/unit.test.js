@@ -612,6 +612,42 @@ async function run() {
     ok(`public/${f} parses`, !error, error);
   }
 
+  console.log('\n-- the home page\'s game order moves slowly --');
+  {
+    const GO = require(path.join(ROOT, 'arcade/game-order.js'));
+    const DAY = GO.DAY;
+    const now = Date.UTC(2026, 10, 2, 18);
+    const play = (game, daysAgo, ms = 60000) => ({ game, started_at: now - daysAgo * DAY, active_ms: ms });
+    // Ten plays of chess over the last ten days, then snake played once today.
+    const tenChess = Array.from({ length: 10 }, (_, k) => play('chess', k + 0.5));
+    const once = GO.playScores([...tenChess, play('snake', 0)], { now });
+    ok('one play of a game does not jump past a game played 10 times', GO.dampedOrder(['chess', 'snake'], once).join() === 'chess,snake');
+    ok('one play does not even jump past a game nobody has played', GO.dampedOrder(['dino', 'snake'], GO.playScores([play('snake', 0)], { now })).join() === 'dino,snake');
+    const oldTen = Array.from({ length: 10 }, (_, k) => play('chess', 40 + k));
+    ok('one play does not jump past ten plays from over a month ago either',
+      GO.dampedOrder(['chess', 'snake'], GO.playScores([...oldTen, play('snake', 0)], { now })).join() === 'chess,snake');
+    // Steady play: snake once a day from today on, chess's ten plays left behind.
+    let passedOn = null;
+    for (let day = 0; day <= 30 && passedOn === null; day++) {
+      const visits = [...tenChess];
+      for (let k = 0; k <= day; k++) visits.push({ game: 'snake', started_at: now + k * DAY, active_ms: 60000 });
+      if (GO.dampedOrder(['chess', 'snake'], GO.playScores(visits, { now: now + day * DAY }))[0] === 'snake') passedOn = day;
+    }
+    ok('steady play moves a game up over time, but not in the first few days', passedOn !== null && passedOn >= 4 && passedOn <= 21, String(passedOn));
+    const binge = GO.playScores(Array.from({ length: 10 }, () => play('dino', 0.1)), { now });
+    ok('only three plays of one game count on one day', Math.abs(binge.get('dino') - 3) < 0.05, String(binge.get('dino')));
+    ok('a visit shorter than 20 seconds is not a play', !GO.playScores([play('dino', 0, 5000)], { now }).has('dino'));
+    ok('a play from two weeks ago counts half', Math.abs(GO.playScores([play('dino', 14)], { now }).get('dino') - 0.5) < 0.001);
+    const close = new Map([['chess', 5], ['snake', 6]]);
+    ok('games that are close keep the order they had, either way round',
+      GO.dampedOrder(['chess', 'snake'], close).join() === 'chess,snake' && GO.dampedOrder(['snake', 'chess'], close).join() === 'snake,chess');
+    ok('a game played far more climbs past several at once',
+      GO.dampedOrder(['a', 'b', 'c', 'd'], new Map([['a', 2], ['b', 1], ['d', 12]])).join() === 'd,a,b,c');
+    ok('the order the page sent is cleaned up, and missing games go on the end',
+      GO.cleanPrevious(['snake', 'nope', 'snake', 3, 'chess'], ['chess', 'dino', 'snake']).join() === 'snake,chess,dino');
+    ok('nothing usable from the page means no previous order', GO.cleanPrevious('snake', ['snake']) === null && GO.cleanPrevious(['x'], ['snake']) === null);
+  }
+
   console.log('\n-- which build is running --');
   const { version } = require(path.join(ROOT, 'kit/version.js'));
   const pkgVersion = require(path.join(ROOT, 'package.json')).version;
