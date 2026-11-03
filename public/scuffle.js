@@ -694,6 +694,14 @@
     paintSetup();
   }
 
+  // Back: from a round, the scores between rounds or a room's lobby to the
+  // menu (asking first while the game's still going), and from there to the arcade.
+  ArcadeBack.setup({
+    atMenu: () => !$('setup').classList.contains('hidden'),
+    back: backToMenu,
+    busy: () => !$('play').classList.contains('hidden') || (!$('reveal').classList.contains('hidden') && $('overPanel').classList.contains('hidden'))
+  });
+
   // ---- how to play --------------------------------------------------------------------------
   const help = Tutorial.create('scuffle', [
     {

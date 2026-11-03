@@ -463,6 +463,10 @@
     hint: 'On the remote, left and right move the piece, up turns it, down speeds it up (hold it to drop), and OK drops it the rest of the way. On a game controller, the D-pad or left stick moves, A or the right trigger drops, X or R1 turns, L1 turns back, Y or the left trigger puts the piece in the hold box, and Start pauses.'
   });
 
+  // Back: a game being played goes back to the start (asking first), and
+  // from there to the arcade.
+  ArcadeBack.setup({ atMenu: () => state === 'ready', back: reset, busy: () => state === 'playing' || state === 'paused', pause: () => pause(true) });
+
   reset();
   requestAnimationFrame(frame);
   help.autoOpen();

@@ -725,6 +725,15 @@
   Blip.tuneButton($('tuneBtn'));
   initials = ArcadeKit.wireInitials([...document.querySelectorAll('#overScore .ini')], saveScore);
 
+  // Back: from a game, its results or a room's lobby to the setup screen
+  // (asking first while questions are left), and from there to the arcade.
+  ArcadeBack.setup({
+    atMenu: () => !$('setup').classList.contains('hidden'),
+    back: backToSetup,
+    busy: () => !$('play').classList.contains('hidden') && $('overView').classList.contains('hidden'),
+    question: 'Quit this game? It ends here and won\'t be saved.'
+  });
+
   // ---- boot --------------------------------------------------------------------------------------
   setMode(S.mode);
   renderNames();

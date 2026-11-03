@@ -2330,4 +2330,16 @@ async function boot() {
   if (!S.player && S.profiles.length && !TV) showProfilePicker();
 }
 
+// Back (topbar.js): any other screen goes back to setup, asking first while
+// a round or a marathon is going, and from setup Back goes to the arcade.
+ArcadeBack.setup({
+  atMenu: () => !$('setupScreen').classList.contains('hidden'),
+  back: () => {
+    if (S.creds) api(`/rooms/${S.creds.code}/leave`, { method: 'POST', body: S.creds }).catch(() => {});
+    backToSetup();
+  },
+  busy: () => ['playScreen', 'gateScreen', 'entryScreen'].some(id => !$(id).classList.contains('hidden')) ||
+    (!$('marathonScreen').classList.contains('hidden') && !M.over)
+});
+
 boot();

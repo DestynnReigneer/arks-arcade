@@ -506,3 +506,44 @@ test('Chess against the computer with the remote', async ({ page }) => {
   await expect(page.locator('#board .sq:focus')).toHaveCount(1);
   expect(problems, problems.join('\n')).toEqual([]);
 });
+
+// The remote's Back: the TV app turns it into the browser's Back, so it
+// follows the same one-screen-back rule as a phone (ArcadeBack in topbar.js).
+// A game being played asks first on the TV's own card, which the remote can
+// answer; from the game's menu, Back leaves for the arcade.
+test('Back on the remote goes one screen back in Snake', async ({ page }) => {
+  await quietFonts(page);
+  await page.goto('/');
+  await page.waitForLoadState('networkidle');
+  const problems = await openTv(page, '/snake.html');
+  await press(page, '.tv-go');
+  await expect(page.locator('body')).toHaveAttribute('data-state', 'playing');
+  await page.goBack();
+  const card = page.locator('.tv-confirm');
+  await expect(card).toContainText('Leave this game?');
+  // "Keep playing" has the highlight, so OK stays.
+  await expect(card.getByRole('button', { name: 'Keep playing' })).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(card).toHaveCount(0);
+  expect(new URL(page.url()).pathname).toBe('/snake.html');
+  await page.goBack();
+  await expect(card.getByRole('button', { name: 'Keep playing' })).toBeFocused();
+  await page.keyboard.press('ArrowRight');
+  await expect(card.getByRole('button', { name: 'Leave' })).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('body')).toHaveAttribute('data-state', 'ready');
+  await expect(page.locator('.tv-go')).toBeVisible();
+  await page.goBack();
+  await expect.poll(() => new URL(page.url()).pathname).toBe('/');
+  expect(problems, problems.join('\n')).toEqual([]);
+});
+
+test('a Back or Escape key on the TV goes back to Chess\'s setup', async ({ page }) => {
+  const problems = await openTv(page, '/chess.html');
+  await press(page, '#goBtn');
+  await expect(page.locator('#game')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#setup')).toBeVisible();
+  expect(new URL(page.url()).pathname).toBe('/chess.html');
+  expect(problems, problems.join('\n')).toEqual([]);
+});

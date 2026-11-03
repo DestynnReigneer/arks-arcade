@@ -601,6 +601,7 @@
       error = e.message;
       result = null;
     }
+    if (mode !== 'finishing') return;   // gone back to the start meanwhile
     showOver(error);
   }
 
@@ -857,6 +858,23 @@
   $('helpBtn').addEventListener('click', () => {
     if (mode === 'playing') { pausedForHelp = true; pause(); }
     help.open();
+  });
+
+  // Back: a run (or its results) goes back to the start, asking first while
+  // balls are left, and from there to the arcade.
+  ArcadeBack.setup({
+    atMenu: () => mode === 'idle' || mode === 'starting',
+    back: () => {
+      mode = 'idle';
+      sim = null; run = null; result = null; pressAt = null; holdSource = null; landed = 0;
+      effects.length = 0;
+      $('rollBtn').classList.remove('down');
+      $('over').classList.add('hidden');
+      document.body.dataset.state = 'ready';
+      msg(TvPlay.on ? 'Ready?' : 'Press to play', TvPlay.on ? 'Press OK on Play to start a run of 9 balls.' : 'Tap the lane, or press Space, to start a run of 9 balls.');
+    },
+    busy: () => ['playing', 'paused', 'resuming', 'finishing'].includes(mode),
+    pause: () => pause()
   });
 
   // ---- on the TV ----------------------------------------------------------------------------
