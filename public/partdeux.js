@@ -617,6 +617,15 @@
     { emoji: '🍺', title: 'Grown-up decks', html: '<p>Cheeky, Spicy and Filthy decks have naughtier card names, behind the adult PIN.</p><p><b>🍺 Drinking</b>: drink a sip for every card you\'re forced to draw, drink when you\'re caught, and when someone wins, everyone else drinks.</p><div class="tut-tip">Tap <b>?</b> at the top any time to see this again.</div>' }
   ]);
 
+  // Back: from a game, its results or a room's lobby to the setup screen
+  // (asking first while the game's going), and from there to the arcade.
+  ArcadeBack.setup({
+    atMenu: () => !$('setup').classList.contains('hidden'),
+    back: leave,
+    busy: () => !$('game').classList.contains('hidden') && $('overView').classList.contains('hidden'),
+    question: () => (S.snap && S.snap.isScreen ? 'End this game for everyone?' : 'Leave this game?')
+  });
+
   // ---- wiring ---------------------------------------------------------------------------------
 
   for (const b of $('modeSeg').children) b.onclick = () => setMode(b.dataset.mode);

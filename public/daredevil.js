@@ -449,6 +449,15 @@
     { emoji: '🔞', title: 'How wild?', html: '<p><b>Family</b> is silly dares for everyone. <b>Cheeky</b>, <b>Spicy</b> and <b>Filthy</b> unlock with the adult PIN and get spicier as you go, from flirty to steamy.</p><p>Hosting an adult game? You\'ll make a lobby password for your guests.</p><div class="tut-tip">Tap <b>?</b> at the top any time to see this again.</div>' }
   ]);
 
+  // Back: from a game, its results or a room's lobby to the setup screen
+  // (asking first while the game's going), and from there to the arcade.
+  ArcadeBack.setup({
+    atMenu: () => !$('setup').classList.contains('hidden'),
+    back: leave,
+    busy: () => !$('game').classList.contains('hidden') && $('overView').classList.contains('hidden'),
+    question: () => (S.snap && S.snap.isScreen ? 'End this game for everyone?' : 'Leave this game?')
+  });
+
   // ---- wiring -------------------------------------------------------------------------------
   for (const b of $('modeSeg').children) b.onclick = () => setMode(b.dataset.mode);
   for (const b of $('lengthSeg').children) b.onclick = () => { S.length = b.dataset.v; for (const x of $('lengthSeg').children) x.setAttribute('aria-pressed', String(x === b)); };

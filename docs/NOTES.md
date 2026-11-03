@@ -7,6 +7,48 @@ to-do list as checkboxes (the rule is in the maintainer's global CLAUDE.md
 and `arks-internal/conventions/sessions.md`): do the checked items in the
 order they were clicked, and keep the rest pinned here.
 
+## Back goes one screen back (2026-11-02)
+
+The maintainer asked for a Back that backs out of a screen: inside a game, Back used to
+leave for the arcade instead of going back to that game's menu.
+
+- **`ArcadeBack` in `public/topbar.js`** (every game page loads it). A game calls
+  `ArcadeBack.setup({ atMenu, back, busy, pause, question })` at the end of its script:
+  `atMenu()` says it's on its first screen (its menu or setup), `back()` goes one screen
+  back, `busy()` says leaving would end a game in progress, `pause()` (optional) holds the
+  game while the question is up. The comment at the top of the module has the details.
+- **How it works:** while a game isn't on its menu there's one extra entry in the
+  browser's history for the page (`history.pushState`). The phone's or browser's Back
+  uses it up (`popstate`) and the game goes one screen back; if it's still not on its
+  menu, the entry goes back in. When a game returns to its menu by itself (its own "Back
+  to setup" button), the entry is taken away again (`history.back()`), so one Back from
+  the menu always leaves for the arcade. A reload in the middle of a game steps off the
+  leftover entry. The screen is checked after every change on the page (a
+  MutationObserver) and every 400ms. Criss Cross's `setUrl` keeps the history entry's
+  state when it changes the address.
+- **The top bar's back arrow** does the same while a game isn't on its menu (it reads
+  "Back" there, "Arcade" on the menu); on the menu it's still the plain link home.
+- **Leaving a game in progress asks first** on the page: on a TV, `ArcadeTV.confirm()`
+  (Keep playing / Leave); elsewhere a card in the top bar's colors (`.ab-confirm`), never
+  the browser's own confirm box. A second Back while it's up answers "Keep playing".
+- **The TV:** the TV app turns the remote's Back into the browser's Back
+  (`web.goBack()`), so it follows the same rule. A `GoBack` or `BrowserBack` key, and
+  Escape on a TV when the game didn't use it (Snake and Block Drop pause on Escape), go
+  back too.
+- **Game by game:** the classics and the cabinet games go back to their start (Snake,
+  Block Drop, Brick Breaker, Tower Defense, Dino Dash, Disco Drop, Moonshot, Roll Royale,
+  Tumbler Rumble); Sudoku and Clueless pause the puzzle (progress is kept, so nothing is
+  asked) and Back from there leaves; Chess, Know-It-All, Dare Devil, Uh-Oh: Part Deux,
+  Spin & Solve, Shuffle Scuffle and Rambler go back to their setup (leaving a room on the
+  way); Criss Cross goes back to your games (games are kept, nothing is asked). Wordless
+  has no menu screen, so Back there still goes to the arcade. Disco Drop, Roll Royale and
+  Tumbler Rumble don't show a run's results if Back took them to the start while the
+  server was still counting.
+- **Tests:** `test/browser/back.spec.js` (Snake asks first, then the menu, then the arcade;
+  Chess, Criss Cross and Know-It-All step back through their screens; a reload mid-game)
+  and two TV tests at the end of `test/browser/tv-games.spec.js` (the remote's Back in
+  Snake with the TV's card, and Escape in Chess).
+
 ## "Your games" on the home page move slowly (2026-11-02)
 
 The maintainer found that a game played once jumped up the home page's list, and the

@@ -664,6 +664,11 @@
     help.open();
   });
 
+  // Back: the puzzle being worked on is paused (the clock stops and your
+  // progress is kept, so nothing needs asking), and from the paused puzzle,
+  // or one that's done, Back goes to the arcade.
+  ArcadeBack.setup({ atMenu: () => !run || !!run.paused || !!run.finished, back: () => setPaused(true) });
+
   // ---- start -----------------------------------------------------------------------------------------
   setPencil(false);
   paintLevels();

@@ -111,7 +111,8 @@
   const possessive = n => (/s$/i.test(n) ? `${n}'` : `${n}'s`);
   function setUrl(params) {
     const q = new URLSearchParams(params).toString();
-    history.replaceState(null, '', location.pathname + (q ? `?${q}` : ''));
+    // Keeps the history entry's state, which Back (topbar.js) uses.
+    history.replaceState(history.state, '', location.pathname + (q ? `?${q}` : ''));
   }
   function seg(box, current, onPick) {
     for (const b of box.children) {
@@ -922,6 +923,10 @@
   Blip.muteButton($('muteBtn'));
   Blip.musicButton($('musicBtn'));
   Blip.music('crisscross');
+
+  // Back: every other screen goes back to your games. Games are kept, so
+  // nothing needs asking. From your games, Back goes to the arcade.
+  ArcadeBack.setup({ atMenu: () => !$('home').classList.contains('hidden'), back: home });
 
   // ---- how to play ---------------------------------------------------------------------------------------------------
   const help = Tutorial.create('crisscross', [

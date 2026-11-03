@@ -391,6 +391,10 @@
     hint: 'The arrows on the remote steer the snake, and OK pauses and carries on. On a game controller, the D-pad or the left stick steers, and X or Start pauses.'
   });
 
+  // Back: a run being played goes back to the start (asking first), and
+  // from there to the arcade.
+  ArcadeBack.setup({ atMenu: () => state === 'ready', back: reset, busy: () => state === 'playing' || state === 'paused', pause: () => pause(true) });
+
   reset();
   requestAnimationFrame(frame);
   help.autoOpen();
