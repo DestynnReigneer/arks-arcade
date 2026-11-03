@@ -1,7 +1,12 @@
 'use strict';
 
-// Clueless: the daily crosswords and their fastest-time boards
-// (/api/clueless), plus the admin side of clue packs.
+// Clueless Crosswords: the daily crosswords and their fastest-time boards
+// (/api/clueless), free play, plus the admin side of clue packs.
+//
+// Free play is a crossword picked at random instead of from the date. It
+// works like the daily one (the server keeps the letters and the clock), but
+// it never goes on a board, because everyone gets a different one. "New
+// board" on the page just starts another free run.
 //
 // The server decides every time. Opening a puzzle starts a "run" here, with
 // the moment it started written down on the server. The page gets a long
@@ -66,6 +71,12 @@ db.db.exec(`
   CREATE INDEX IF NOT EXISTS clueless_scores_day ON clueless_scores (level, day, time_ms);
   CREATE INDEX IF NOT EXISTS clueless_scores_all ON clueless_scores (level, time_ms);
 `);
+// Added with free play (2026-11-02): which puzzle a free run is on. Empty for
+// the daily crosswords, which are found by their day.
+{
+  const cols = db.db.prepare('PRAGMA table_info(clueless_runs)').all().map(c => c.name);
+  if (!cols.includes('puzzle_key')) db.db.exec('ALTER TABLE clueless_runs ADD COLUMN puzzle_key TEXT');
+}
 
 const fail = (message, status = 400, extra = {}) => Object.assign(new Error(message), { status, ...extra });
 const profiles = () => require('../arcade/profiles');
@@ -94,11 +105,13 @@ function nextMidnight(now = new Date()) {
   return d;
 }
 
+const puzzleOf = run => puzzles.puzzleFor(run.puzzle_key || run.day, run.level);
+
 function view(run, now = Date.now()) {
-  const p = puzzles.puzzleFor(run.day, run.level);
+  const p = puzzleOf(run);
   const revealed = revealedOf(run);
   return {
-    runId: run.id, day: run.day, level: run.level, label: maker.LEVELS[run.level].label,
+    runId: run.id, day: run.day, level: run.level, label: maker.LEVELS[run.level].label, free: !!run.puzzle_key,
     puzzle: maker.publicView(p),
     // Squares that were revealed come back with their letters, so a reload
     // shows them again. Only these, never the rest.
@@ -110,15 +123,26 @@ function view(run, now = Date.now()) {
   };
 }
 
-function start({ level, profileToken }, now = Date.now()) {
+function start({ level, profileToken, free }, now = Date.now()) {
   levelOf(level);
   db.db.prepare('DELETE FROM clueless_runs WHERE started_at < ? AND saved = 0').run(now - KEEP_RUNS_MS);
   const day = today(new Date(now));
+  if (free) {
+    // A random seed instead of the date. The puzzle is saved like a daily
+    // one, so a reload (or a server restart) finds the same grid.
+    const key = `free-${crypto.randomBytes(8).toString('hex')}`;
+    puzzles.puzzleFor(key, level);
+    const id = crypto.randomBytes(16).toString('hex');
+    db.db.prepare('INSERT INTO clueless_runs (id, day, level, profile_id, started_at, puzzle_key) VALUES (?, ?, ?, NULL, ?, ?)')
+      .run(id, day, level, now, key);
+    puzzles.sweep(day);
+    return view(getRun(id), now);
+  }
   const profile = profileToken ? profiles().verify(profileToken) : null;
   // A profile has one clock per puzzle: opening it again (on any device)
   // carries on with the run it already has.
   if (profile) {
-    const had = db.db.prepare('SELECT * FROM clueless_runs WHERE day = ? AND level = ? AND profile_id = ? ORDER BY started_at LIMIT 1')
+    const had = db.db.prepare('SELECT * FROM clueless_runs WHERE day = ? AND level = ? AND profile_id = ? AND puzzle_key IS NULL ORDER BY started_at LIMIT 1')
       .get(day, level, profile.id);
     if (had) return view(had, now);
   }
@@ -172,7 +196,7 @@ function target(p, { scope, index, dir }) {
 function check(id, body, now = Date.now()) {
   const run = needRun(id);
   playing(run);
-  const p = puzzles.puzzleFor(run.day, run.level);
+  const p = puzzleOf(run);
   const scope = body.scope;
   const cells = target(p, body);
   const g = readGrid(p, body.grid);
@@ -188,7 +212,7 @@ function reveal(id, body, now = Date.now()) {
   const run = needRun(id);
   playing(run);
   if (body.scope === 'puzzle') throw fail('You can reveal a square or a word, but not the whole puzzle.');
-  const p = puzzles.puzzleFor(run.day, run.level);
+  const p = puzzleOf(run);
   const cells = target(p, body);
   const had = new Set(revealedOf(run));
   const fresh = cells.filter(i => !had.has(i));
@@ -198,11 +222,48 @@ function reveal(id, body, now = Date.now()) {
   return { letters: Object.fromEntries(cells.map(i => [i, p.letters[i]])), cost: fresh.length * PENALTY.reveal, ...view(getRun(run.id), now) };
 }
 
+// Which clues to cross off in the lists. The rule depends on the level, and
+// How to play explains both:
+//  - the family mini crosses a clue off as soon as its word is right;
+//  - the grown-ups' crossword waits until the whole line is right: an across
+//    clue once every square in its row is right, a down clue once every
+//    square in its column is. So a crossed-off clue there gives away less.
+// Only filled squares can be right, and nothing is said about which letters
+// are wrong.
+const LINE_RULE = { mini: 'word', big: 'line' };
+function solvedClues(run, g) {
+  const p = puzzleOf(run);
+  const right = i => !!g[i] && g[i] === p.letters[i];
+  const rule = LINE_RULE[run.level] || 'word';
+  const line = e => {
+    const out = [];
+    for (let k = 0; k < p.size; k++) {
+      const i = e.dir === 'across' ? e.row * p.size + k : k * p.size + e.col;
+      if (p.letters[i] !== '#') out.push(i);
+    }
+    return out;
+  };
+  const done = { across: [], down: [] };
+  for (const e of p.entries) {
+    if ((rule === 'line' ? line(e) : e.cells).every(right)) done[e.dir].push(e.num);
+  }
+  return { rule, ...done };
+}
+function solved(id, grid) {
+  const run = needRun(id);
+  const p = puzzleOf(run);
+  if (run.finished_at) return solvedClues(run, [...p.letters]);
+  if (run.paused_at) throw fail('The puzzle is paused. Tap Keep going first.', 409);
+  const g = readGrid(p, grid);
+  for (const i of revealedOf(run)) g[i] = p.letters[i];
+  return solvedClues(run, g);
+}
+
 function finish(id, grid, now = Date.now()) {
   const run = needRun(id);
   if (run.finished_at) return view(run, now);
   if (run.paused_at) throw fail('The puzzle is paused. Tap Keep going first.', 409);
-  const p = puzzles.puzzleFor(run.day, run.level);
+  const p = puzzleOf(run);
   const g = readGrid(p, grid);
   const whites = [...p.letters].map((ch, i) => i).filter(i => p.letters[i] !== '#');
   if (whites.some(i => !g[i])) throw fail('Fill every square first.');
@@ -226,6 +287,7 @@ function clock(ms) {
 function save(id, { initials, profileToken }) {
   const run = needRun(id);
   if (!run.finished_at) throw fail('Finish the puzzle first.', 409);
+  if (run.puzzle_key) throw fail('Free play crosswords don\'t go on the board, because everyone gets a different one. Today\'s puzzle is the one to race on.', 409);
   if (run.saved) throw fail('This time is already on the board.', 409);
   const profile = profileToken ? profiles().verify(profileToken) : null;
   const ini = profile ? profile.initials || initialsOf(profile.name) : String(initials || '').toUpperCase().trim();
@@ -250,7 +312,7 @@ function save(id, { initials, profileToken }) {
     const shout = profile ? (profiles().boardName(profile.id) || {}).label || profile.name : ini;
     comm.safePost({
       kind: 'highscore', emoji: '📰', game: 'clueless',
-      title: `${shout} set the fastest Clueless ${label} time ever`,
+      title: `${shout} set the fastest Clueless Crosswords ${label} time ever`,
       body: `${shout} solved the ${label} crossword in ${clock(run.time_ms)}, the quickest anyone has done it. Today's puzzle is waiting if you want a go.`
     });
   }
@@ -281,6 +343,9 @@ module.exports = function cluelessRoutes({ requireAdmin }) {
     message: { error: 'That\'s a lot of taps in a short time. Take a breather and try again in a few minutes.' }
   });
   const startLimit = limiter(120), playLimit = limiter(1500), saveLimit = limiter(30);
+  // Each free board is made on the spot (up to about half a second), so
+  // pressing New board over and over has its own, smaller allowance.
+  const freeLimit = limiter(80);
   const body = req => req.body || {};
   const wrap = fn => (req, res, next) => { try { res.json(fn(req)); } catch (e) { next(e); } };
 
@@ -288,7 +353,8 @@ module.exports = function cluelessRoutes({ requireAdmin }) {
     day: today(), resetsAt: nextMidnight().toISOString(), penalties: PENALTY,
     levels: maker.LEVEL_IDS.map(id => ({ id, label: maker.LEVELS[id].label, size: maker.LEVELS[id].size }))
   })));
-  router.post('/start', startLimit, wrap(req => start(body(req))));
+  router.post('/start', startLimit, (req, res, next) => (body(req).free ? freeLimit(req, res, next) : next()), wrap(req => start(body(req))));
+  router.post('/run/:id/solved', playLimit, wrap(req => solved(req.params.id, body(req).grid)));
   router.get('/run/:id', wrap(req => view(needRun(req.params.id))));
   router.post('/run/:id/pause', playLimit, wrap(req => pause(req.params.id, true)));
   router.post('/run/:id/resume', playLimit, wrap(req => pause(req.params.id, false)));
@@ -305,7 +371,7 @@ module.exports = function cluelessRoutes({ requireAdmin }) {
   if (process.env.NODE_ENV === 'test') {
     router.get('/test/answer/:id', wrap(req => {
       const run = needRun(req.params.id);
-      return { letters: puzzles.puzzleFor(run.day, run.level).letters };
+      return { letters: puzzleOf(run).letters };
     }));
   }
 
@@ -333,4 +399,4 @@ module.exports = function cluelessRoutes({ requireAdmin }) {
   return router;
 };
 
-Object.assign(module.exports, { start, pause, check, reveal, finish, save, board, PENALTY, MIN_MS_PER_SQUARE });
+Object.assign(module.exports, { start, pause, check, reveal, finish, solved, save, board, PENALTY, MIN_MS_PER_SQUARE, LINE_RULE });

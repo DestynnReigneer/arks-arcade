@@ -1,7 +1,8 @@
 'use strict';
 
-// Clueless: the page. The server (clueless/routes.js) makes the day's
-// crosswords, keeps the letters, runs the clock and decides the time; this
+// Clueless Crosswords: the page. The server (clueless/routes.js) makes the day's
+// crosswords (and free play's random ones), keeps the letters, runs the clock,
+// decides the time and says which clues to cross off; this
 // page draws the grid and the clues, takes taps and keys, and remembers your
 // progress on this device. It never has the answers until you've finished
 // (or until it asks the server to reveal a square, which costs time).
@@ -14,13 +15,16 @@
 (() => {
   const { $, toast, api } = ArcadeKit;
   const TV = !!(window.ArcadeTV && ArcadeTV.on);
-  const LEVELS = [['mini', 'Family mini · 5×5'], ['big', 'Grown-ups · 7×7']];
+  // [id, name, the shorter name a phone shows]
+  const LEVELS = [['mini', 'Family mini · 5×5', '👪 Mini 5×5'], ['big', 'Grown-ups · 7×7', '🧠 Big 7×7']];
+  const MODES = [['daily', '📅 Today\'s puzzle', '📅 Today'], ['free', '🎲 Free play', '🎲 Free play']];
   const LABEL = { mini: 'Family mini', big: 'Grown-ups' };
   const store = (k, v) => { try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch { /* private mode */ } };
   const recall = (k, d = null) => { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch { return d; } };
   const token = () => (typeof ArcadeProfile !== 'undefined' ? ArcadeProfile.token() : null);
 
   let level = LABEL[recall('clueless.level')] ? recall('clueless.level') : 'mini';
+  let mode = recall('clueless.mode') === 'free' ? 'free' : 'daily';
   let today = null;               // the server's date, from /levels
   let penalties = null;           // what help costs, from /levels
   let run = null;                 // what the server said about this puzzle (see view() in routes.js)
@@ -29,6 +33,7 @@
   let letters = [];               // what's typed in each square ('' for empty)
   let pencil = [];                // true where a letter was typed in pencil
   let marks = {};                 // index -> 'wrong' | 'right' | 'revealed'
+  let solved = new Set();         // clues the server said to cross off, like '3across'
   let words = [];                 // every clue: { dir, num, cells, clue, el }
   let wordAt = { across: [], down: [] };   // square -> index into words
   let sel = -1;
@@ -110,7 +115,13 @@
       x.el.classList.toggle('on', x === w);
       x.el.classList.toggle('cross', x === other);
       x.el.classList.toggle('done', x.cells.every(c => letters[c]));
+      const crossed = solved.has(x.num + x.dir);
+      x.el.classList.toggle('solved', crossed);
+      x.el.lastChild.setAttribute('aria-label', crossed ? `${x.clue} (solved)` : x.clue);
     }
+    document.body.dataset.dir = dir;
+    // New board is offered in free play until the first letter goes in.
+    $('freeBar').classList.toggle('hidden', !(run && run.free && !run.finished && untouched()));
     if (w) {
       $('clueTag').textContent = `${w.num}${w.dir === 'across' ? 'A' : 'D'}`;
       $('clueText').textContent = w.clue;
@@ -124,6 +135,7 @@
       $('clueText').textContent = 'Tap a square to see its clue.';
     }
     $('dirBtn').querySelector('small').textContent = dir === 'across' ? 'Across' : 'Down';
+    $('dirBtn').querySelector('span').textContent = dir === 'across' ? '→' : '↓';
   }
 
   // ---- moving around -------------------------------------------------------------------
@@ -211,9 +223,15 @@
     changed();
   }
 
+  const untouched = () => letters.every(l => !l) && !Object.keys(marks).length;
+
   function changed() {
+    // A clue with an empty square can't be solved, so it comes off at once;
+    // anything else waits for the server's word.
+    for (const x of words) if (x.cells.some(c => !letters[c])) solved.delete(x.num + x.dir);
     save();
     paint();
+    askSolved();
     const full = letters.every((l, i) => !white(i) || l);
     const g = gridText();
     if (full && g !== lastTried) finish();
@@ -223,9 +241,10 @@
   // ---- this device's copy of your progress --------------------------------------------------
   const progressKey = id => `clueless.progress.${id}`;
   const currentKey = (day, lv) => `clueless.current.${day}.${lv}`;
+  const freeKey = lv => `clueless.current.free.${lv}`;
   function save() {
     if (!run) return;
-    store(progressKey(run.runId), JSON.stringify({ letters, pencil, marks }));
+    store(progressKey(run.runId), JSON.stringify({ letters, pencil, marks, solved: [...solved] }));
   }
   function load(state) {
     P = state.puzzle;
@@ -233,12 +252,14 @@
     letters = new Array(n).fill('');
     pencil = new Array(n).fill(false);
     marks = {};
+    solved = new Set();
     try {
       const saved = JSON.parse(recall(progressKey(state.runId), 'null'));
       if (saved && Array.isArray(saved.letters) && saved.letters.length === n) {
         letters = saved.letters.map((l, i) => (white(i) && /^[A-Z]$/.test(l) ? l : ''));
         if (Array.isArray(saved.pencil)) pencil = saved.pencil.map(Boolean);
         if (saved.marks && typeof saved.marks === 'object') marks = saved.marks;
+        if (Array.isArray(saved.solved)) solved = new Set(saved.solved.map(String));
       }
     } catch { /* start clean */ }
     applyRevealed(state.revealed);
@@ -250,7 +271,7 @@
         if (m && m[1] < state.day) { store(progressKey(recall(key)), null); store(key, null); }
       }
     } catch { /* unavailable */ }
-    store(currentKey(state.day, state.level), state.runId);
+    store(state.free ? freeKey(state.level) : currentKey(state.day, state.level), state.runId);
     lastTried = '';
     build();
     sel = -1;
@@ -259,6 +280,33 @@
   }
   function applyRevealed(map) {
     for (const [i, l] of Object.entries(map || {})) { letters[i] = l; pencil[i] = false; marks[i] = 'revealed'; }
+  }
+
+  // ---- crossing off solved clues ------------------------------------------------------------
+  // The page doesn't know the answers, so it asks the server which clues are
+  // solved whenever a word (or, on the grown-ups' crossword, a whole row or
+  // column) is full. It waits a moment so typing fast doesn't ask every time.
+  let solvedTimer = 0;
+  function askSolved() {
+    clearTimeout(solvedTimer);
+    if (!playing()) return;
+    const full = words.some(x => x.cells.every(c => letters[c]));
+    if (!full) { if (solved.size) { solved.clear(); save(); paint(); } return; }
+    const id = run.runId;
+    solvedTimer = setTimeout(async () => {
+      if (!run || run.runId !== id || !playing()) return;
+      const sent = gridText();
+      try {
+        const r = await runApi('/solved', { grid: sent });
+        if (!run || run.runId !== id || gridText() !== sent) return;
+        const now = new Set([...r.across.map(n => n + 'across'), ...r.down.map(n => n + 'down')]);
+        const fresh = [...now].some(k => !solved.has(k));
+        solved = now;
+        if (fresh) Blip.tone(880, 0.06, { type: 'triangle', volume: 0.04 });
+        save();
+        paint();
+      } catch { /* the lists just stay as they were */ }
+    }, 350);
   }
 
   // ---- talking to the server ----------------------------------------------------------------
@@ -271,41 +319,70 @@
   }
   const playing = () => !!run && !run.paused && !run.finished && !busy;
 
-  async function openLevel(lv) {
-    level = lv;
+  let opening = 0;
+  async function openLevel(lv, md = mode) {
+    const ticket = ++opening;
+    level = lv; mode = md;
     store('clueless.level', lv);
+    store('clueless.mode', md);
     paintLevels();
     $('over').classList.add('hidden');
     document.body.dataset.state = 'ready';
-    run = null; P = null; letters = []; marks = {}; sel = -1;
+    run = null; P = null; letters = []; marks = {}; solved = new Set(); sel = -1;
     build();
+    paint();
+    $('freeBar').classList.add('hidden');
     $('clueTag').textContent = '';
     $('clueText').textContent = 'Tap Start to see the first clue.';
     tick();
-    // Picking up where you left off on this device, if this one was started today.
-    const had = today && recall(currentKey(today, lv));
+    // Picking up where you left off on this device: today's puzzle if it was
+    // started today, or the free play crossword you were on.
+    const key = md === 'free' ? freeKey(lv) : today && currentKey(today, lv);
+    const had = key && recall(key);
     if (had) {
       try {
         const state = await api(`/api/clueless/run/${had}`);
-        if (lv !== level) return;
-        load(state);
-        took(state);
-        showState();
-        return;
-      } catch { store(currentKey(today, lv), null); }
+        if (ticket !== opening) return;
+        if (!(md === 'free' && state.finished)) {
+          load(state);
+          took(state);
+          showState();
+          return;
+        }
+      } catch { /* gone: start fresh */ }
+      store(key, null);
+    }
+    if (ticket !== opening) return;
+    if (md === 'free') {
+      cover(`Free play: ${LABEL[lv]}`, 'A random crossword at this level, just for fun. Free play times don\'t go on the board, because everyone gets a different one. Once it\'s up, New board picks another one until you type your first letter.', 'Start', begin);
+      return;
     }
     const blurb = lv === 'mini'
       ? 'A quick 5 by 5 crossword with family-friendly clues. Everyone gets the same one today, so you can race each other.'
       : 'A bigger 7 by 7 crossword with trickier clues. Everyone gets the same one today, so you can race each other.';
-    cover(`Today's ${LABEL[lv]}`, `${blurb} The clock starts when you tap Start, and you can pause it whenever you need to.`, 'Start', begin);
+    cover(`Today's ${LABEL[lv]}`, `${blurb} It stays the same all day; for a different one, pick Free play. The clock starts when you tap Start, and you can pause it whenever you need to.`, 'Start', begin);
   }
+
+  // Free play's New board: drop the crossword you haven't touched yet and
+  // start another at the same level.
+  async function newBoard() {
+    if (!run || !run.free || run.finished || !untouched() || busy) return;
+    const old = run.runId;
+    await begin();
+    if (run && run.runId !== old) {
+      store(progressKey(old), null);
+      toast('Here\'s a new one.', 1500);
+    }
+  }
+  $('newBoardBtn').addEventListener('click', newBoard);
 
   async function begin() {
     if (busy) return;
     busy = true;
+    const ticket = opening;
     try {
-      const state = await api('/api/clueless/start', { level, profileToken: token() });
-      if (state.level !== level) return;
+      const state = await api('/api/clueless/start', mode === 'free' ? { level, free: true } : { level, profileToken: token() });
+      if (state.level !== level || ticket !== opening) return;
       today = state.day;
       load(state);
       took(state);
@@ -327,6 +404,7 @@
     } else {
       $('cover').classList.add('hidden');
       document.body.dataset.state = 'playing';
+      askSolved();
       // On a TV the highlight starts on your square, and a puzzle counts as a game being played.
       if (TV) {
         ArcadeTV.played();
@@ -408,6 +486,7 @@
       took(r);
       busy = false;
       if (r.answers) letters = letters.map((l, i) => (white(i) ? r.answers[i] : ''));
+      solved = new Set(words.map(x => x.num + x.dir));
       pencil = pencil.map(() => false);
       Blip.tune([[523, 0.1], [659, 0.1], [784, 0.1], [1047, 0.25]], { type: 'triangle', volume: 0.06 });
       if (window.Fx) { Fx.burst({ count: 160, coins: 20 }); Fx.banner('Solved!', clock(r.timeMs)); }
@@ -432,7 +511,8 @@
     }
     $('clock').textContent = clock(play + pen);
     $('penalty').textContent = pen ? `+${clock(pen)}` : '0:00';
-    $('dayLabel').textContent = run ? new Date(`${run.day}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Today';
+    $('dayLabel').textContent = run && run.free ? 'Free play' : run ? new Date(`${run.day}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      : mode === 'free' ? 'Free play' : 'Today';
     Blip.musicPlaying(!!run && !run.paused && !run.finished);
   }
   setInterval(tick, 500);
@@ -454,7 +534,8 @@
     sel = -1;
     marks = Object.fromEntries(Object.entries(marks).filter(([, m]) => m === 'revealed'));
     paint();
-    $('overTitle').textContent = `${LABEL[run.level]} solved! 🎉`;
+    $('overTitle').textContent = `${run.free ? 'Free play ' : ''}${LABEL[run.level]} solved! 🎉`;
+    $('otherLevelBtn').textContent = run.free ? '🔀 Another free one' : 'Try the other one';
     $('overTime').textContent = clock(run.timeMs);
     const help = helpLine(run);
     $('overDetail').textContent = help
@@ -463,14 +544,15 @@
     const p = profile();
     // A TV has no keyboard for initials: the time goes on the board from your own phone.
     const noBoard = TV && !p;
-    $('savePart').classList.toggle('hidden', run.saved);
+    $('savePart').classList.toggle('hidden', run.saved || run.free);
     $('iniRow').classList.toggle('hidden', !!p || noBoard);
     $('saveBtn').classList.toggle('hidden', noBoard);
     $('saveHint').textContent = noBoard ? 'Times solved on the TV don\'t go on the board, because there\'s no keyboard for initials. Solve it on your own phone to get on it.'
       : p ? `Saving as ${p.name}.` : 'Type your initials to put your time on today\'s board and see where you stack up.';
     $('saveMsg').textContent = '';
     $('saveBtn').disabled = false;
-    $('rankLine').textContent = run.saved ? 'Your time is on the board.' : '';
+    $('rankLine').textContent = run.saved ? 'Your time is on the board.'
+      : run.free ? 'Free play times don\'t go on the board, because everyone gets a different crossword. Today\'s puzzle is the one to race on.' : '';
     if (!p && !run.saved) initials.reset();
     $('over').classList.remove('hidden');
     setTimeout(() => $('over').scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
@@ -496,7 +578,14 @@
     }
   }
   $('saveBtn').addEventListener('click', saveTime);
-  $('otherLevelBtn').addEventListener('click', () => {
+  $('otherLevelBtn').addEventListener('click', async () => {
+    if (run && run.free) {
+      store(freeKey(level), null);
+      await openLevel(level, 'free');
+      begin();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
     openLevel(level === 'mini' ? 'big' : 'mini');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   });
@@ -505,9 +594,15 @@
   let boardLevel = level, boardScope = 'day';
   function tabs(box, items, now, onPick) {
     box.innerHTML = '';
-    for (const [id, label] of items) {
+    for (const [id, label, short] of items) {
       const b = document.createElement('button');
-      b.textContent = label;
+      if (short) {
+        const l = document.createElement('span'), s = document.createElement('span');
+        l.className = 'long'; l.textContent = label;
+        s.className = 'short'; s.textContent = short;
+        b.append(l, s);
+        b.setAttribute('aria-label', label);
+      } else b.textContent = label;
       b.setAttribute('aria-pressed', String(id === now));
       b.onclick = () => onPick(id);
       box.appendChild(b);
@@ -541,7 +636,8 @@
 
   // ---- levels, tools and the keyboard ------------------------------------------------------------
   function paintLevels() {
-    tabs($('levelSeg'), LEVELS, level, id => { if (id !== level) openLevel(id); });
+    tabs($('levelSeg'), LEVELS, level, id => { if (id !== level) openLevel(id, mode); });
+    tabs($('modeSeg'), MODES, mode, id => { if (id !== mode) openLevel(level, id); });
   }
   function setPencil(on) {
     pencilMode = on;
@@ -634,11 +730,25 @@
         <p>New ones arrive at midnight.</p>`
     },
     {
+      emoji: '🎲', title: 'Free play',
+      html: `<p>Want more? Pick <b>🎲 Free play</b> at the top for a random crossword at either level. Today's puzzle stays the same all day, but free play gives you a different one every time.</p>
+        <p>Don't like the look of it? Tap <b>🔀 New board</b> for another, as often as you like, until you type your first letter. Free play times don't go on the board, because everyone gets a different crossword.</p>`
+    },
+    {
       emoji: '👆', title: 'Filling it in',
       html: `<p>Tap a square and type. The word you're on is highlighted, and its clue shows in the bar above the grid. <b>Tap the same square again</b> (or the clue bar) to switch between across and down.</p>
+        <p>Across words light up in <b style="color: var(--across)">blue (→)</b> and down words in <b style="color: var(--down)">pink (↓)</b>, in the grid, the clue bar and the lists, so you can always tell which way you're typing.</p>
         <p>On a phone, use the keyboard under the grid; the ⌫ key erases. The ‹ and › arrows beside the clue jump to the previous or next clue, and you can tap any clue in the lists at the bottom too.</p>
         <table>
           <tr><td>⌨️ Keyboard</td><td>Type letters, <b>arrows</b> to move, <b>Space</b> to switch direction, <b>Tab</b> for the next clue, <b>Backspace</b> to erase.</td></tr>
+        </table>`
+    },
+    {
+      emoji: '✅', title: 'Crossing off clues',
+      html: `<p>When you get a word right, its clue is crossed off in the lists under the grid, with a ✓. The arcade decides, not your phone, and it never says which letter is wrong.</p>
+        <table>
+          <tr><td>👪 Family mini</td><td>A clue is crossed off as soon as its word is right.</td></tr>
+          <tr><td>🧠 Grown-ups</td><td>A clue waits until its <b>whole line</b> is right: an across clue once every square in its row is right, and a down clue once every square in its column is. So a crossed-off clue gives away a bit less.</td></tr>
         </table>`
     },
     {
@@ -648,7 +758,7 @@
     {
       emoji: '⏱️', title: 'The clock and the boards',
       html: `<p>The clock starts when you tap <b>Start</b>, and the arcade keeps the time, not your phone. <b>Pause</b> (or leaving the page) stops it and hides the grid until you come back.</p>
-        <p>As soon as every square is filled, the arcade checks it. If it's all right, you're done and your time can go on the 🏆 board for today and for all time. Only your <b>first finish of the day</b> counts, because a second go at the same puzzle would be easy.</p>`
+        <p>As soon as every square is filled, the arcade checks it. If it's all right, you're done and your time can go on the 🏆 board for today and for all time. Only your <b>first finish of the day</b> counts, because a second go at the same puzzle would be easy. Free play crosswords don't go on the board.</p>`
     },
     {
       emoji: '💡', title: 'Getting help costs time',

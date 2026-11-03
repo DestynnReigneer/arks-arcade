@@ -316,7 +316,7 @@ const Blip = (() => {
       chords: [[0, 4, 7], [5, 9, 12], [-5, -1, 2], [0, 4, 7]],
       tune: [0, _, 4, _, 7, _, 12, _,  9, _, 12, _, 7, _, _, _,  7, _, 5, 4, _, 2, _, 4,  0, _, _, _, _, _, _, _]
     },
-    // Clueless: light and thoughtful, for puzzling over a clue.
+    // Clueless Crosswords: light and thoughtful, for puzzling over a clue.
     clueless: {
       bpm: 80, root: 55, wave: 'triangle', hat: false, arp: [0, 2, 1, 2, 0, 1, 2, 1],
       chords: [[0, 4, 7], [-5, -1, 2], [-3, 0, 4], [-7, -3, 0]],

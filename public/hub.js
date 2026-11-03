@@ -21,7 +21,7 @@
     sudoku: { label: 'Sudoku', href: 'sudoku.html' },
     scuffle: { label: 'Shuffle Scuffle', href: 'scuffle.html' },
     crisscross: { label: 'Words with Family', href: 'crisscross.html' },
-    clueless: { label: 'Clueless', href: 'clueless.html' },
+    clueless: { label: 'Clueless Crosswords', href: 'clueless.html' },
     tumbler: { label: 'Tumbler Rumble', href: 'tumbler.html' },
     discodrop: { label: 'Disco Drop', href: 'discodrop.html' },
     royale: { label: 'Roll Royale', href: 'royale.html' },

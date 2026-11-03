@@ -1,12 +1,31 @@
-/* Clueless: the grid, the clue bar, the tools, the keyboard and the clue
+/* Clueless Crosswords: the grid, the clue bar, the tools, the keyboard and the clue
    lists. The shared look comes from arcade-ui.css, game-shell.css and
    look.css. */
 :root {
   --accent: #9d8cff; --on-accent: #0c0624; --mine: #f4ecd0; --wrong: #ff5e5e; --revealed: #ffd23f; --ok: #3ddc84;
   --pencil: #9a93b8;
+  /* Across and down each have their own color, in the grid, the clue bar and
+     the lists, always next to an arrow (→ or ↓) so color isn't the only clue.
+     Neither is a status color (red, green) or the gold of revealed letters. */
+  --across: #38c6ff; --down: #ff6ec7;
+  --dir: var(--across);
+}
+body[data-dir="down"] { --dir: var(--down); }
+
+.cl-picks { display: grid; gap: 6px; margin: 0 0 8px; }
+.cl-picks .seg { margin: 0; flex-wrap: nowrap; }
+.cl-picks .seg button { flex: 1 1 0; min-width: 0; padding-left: 6px; padding-right: 6px; }
+.cl-picks .short { display: none; }
+/* On a phone the two choices sit side by side with shorter names, to leave
+   room for the grid and the keyboard. */
+@media (max-width: 520px) {
+  .cl-picks { grid-template-columns: 1fr 1fr; }
+  .cl-picks .seg { gap: 4px; }
+  .cl-picks .seg button { padding: 9px 2px; font-size: 12.5px; white-space: nowrap; }
+  .cl-picks .long { display: none; }
+  .cl-picks .short { display: inline; }
 }
 
-.level-seg { margin: 0 0 8px; }
 .level-seg button { min-width: 0; }
 .hud { margin-bottom: 8px; }
 .hud b#dayLabel { font-size: 15px; }
@@ -24,36 +43,45 @@
 }
 .cl-current {
   display: flex; align-items: center; gap: 8px; min-height: 52px; padding: 6px 12px; text-align: left;
-  border-radius: 12px; border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--card));
-  background: color-mix(in srgb, var(--accent) 16%, var(--card)); color: var(--text); cursor: pointer;
+  border-radius: 12px; border: 1px solid color-mix(in srgb, var(--dir) 60%, var(--card));
+  background: color-mix(in srgb, var(--dir) 16%, var(--card)); color: var(--text); cursor: pointer;
   font: 600 15px/1.3 var(--font); -webkit-tap-highlight-color: transparent;
 }
-.cl-current b { flex: none; color: var(--accent); font-size: 14px; letter-spacing: 0.5px; }
+.cl-current b { flex: none; color: var(--dir); font-size: 14px; letter-spacing: 0.5px; }
 .cl-current span { min-width: 0; overflow-wrap: anywhere; }
 
 /* The grid. Square, never wider than the page, and on a phone short enough
-   to leave room for the keyboard under it. */
+   to leave room for the keyboard under it. Every row and column is an equal
+   share of a square box, and each square is square too, so typing a letter
+   (or a number in the corner) never stretches a row or a column. */
 .cl-wrap {
   position: relative; margin: 0 auto; container-type: inline-size;
-  width: min(100%, 440px, max(250px, calc(100svh - 330px)));
+  width: min(100%, 440px, max(240px, calc(100svh - 330px)));
+}
+/* With the keyboard on the page (phones, tablets, the TV) there's less room. */
+@media (max-width: 700px), (hover: none) and (pointer: coarse) {
+  .cl-wrap { width: min(100%, 440px, max(240px, calc(100svh - 500px))); }
 }
 .cl-grid {
-  display: grid; grid-template-columns: repeat(var(--n, 5), 1fr); aspect-ratio: 1; width: 100%;
+  display: grid; grid-template-columns: repeat(var(--n, 5), minmax(0, 1fr)); grid-template-rows: repeat(var(--n, 5), minmax(0, 1fr));
+  aspect-ratio: 1; width: 100%;
   background: var(--plate, #0a0416); border: 3px solid var(--accent); border-radius: 10px; overflow: hidden; gap: 1px;
   user-select: none; -webkit-user-select: none; touch-action: manipulation;
 }
 .cl-cell {
   position: relative; display: flex; align-items: center; justify-content: center; min-width: 0; min-height: 0;
+  width: 100%; height: 100%; aspect-ratio: 1; overflow: hidden; box-sizing: border-box;
   padding: 0; margin: 0; border: 0; background: var(--card); color: var(--mine); cursor: pointer;
   font: 800 calc(100cqw / var(--n, 5) * 0.5)/1 var(--font); text-transform: uppercase;
   -webkit-tap-highlight-color: transparent;
 }
+.cl-cell .ltr { display: block; line-height: 1; height: 1em; }
 .cl-cell.block { background: #05030c; cursor: default; }
 .cl-cell .num {
   position: absolute; top: 2px; left: 3px; font: 700 calc(100cqw / var(--n, 5) * 0.2)/1 var(--font); color: var(--muted);
 }
-.cl-cell.word { background: color-mix(in srgb, var(--accent) 22%, var(--card)); }
-.cl-cell.sel { background: color-mix(in srgb, var(--accent) 55%, var(--card)); box-shadow: inset 0 0 0 2px var(--accent); }
+.cl-cell.word { background: color-mix(in srgb, var(--dir) 26%, var(--card)); }
+.cl-cell.sel { background: color-mix(in srgb, var(--dir) 50%, var(--card)); box-shadow: inset 0 0 0 2px var(--dir); }
 .cl-cell.pencil { color: var(--pencil); font-weight: 500; font-style: italic; }
 /* A wrong letter is red and gets a slash, so it doesn't rely on color alone. */
 .cl-cell.wrong { color: var(--wrong); }
@@ -79,6 +107,21 @@
 .cl-cover b { font-size: 20px; letter-spacing: 0.5px; }
 .cl-cover p { color: var(--muted); font-size: 14px; line-height: 1.5; margin: 8px 0 4px; }
 
+/* Free play's New board, shown until the first letter is typed. */
+.cl-free {
+  display: flex; align-items: center; gap: 10px; max-width: 480px; margin: 0 auto 8px; padding: 6px 6px 6px 12px;
+  border-radius: 12px; border: 1px dashed color-mix(in srgb, var(--accent) 60%, var(--card)); background: var(--card);
+}
+.cl-free.hidden { display: none; }
+.cl-free p { flex: 1; margin: 0; font-size: 12.5px; line-height: 1.35; color: var(--muted); }
+.cl-free button { flex: none; white-space: nowrap; }
+
+/* The little key under the grid: what the two colors and a crossed-off clue mean. */
+.cl-legend { display: flex; justify-content: center; gap: 14px; margin: 5px auto 0; font-size: 12px; font-weight: 700; line-height: 1.2; }
+.cl-legend .lg-across { color: var(--across); }
+.cl-legend .lg-down { color: var(--down); }
+.cl-legend .lg-done { color: var(--dim); }
+
 /* Check, Reveal, Pencil and the direction switch. */
 .cl-tools { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; max-width: 480px; margin: 8px auto 0; }
 .cl-menu-wrap { position: relative; min-width: 0; display: grid; }
@@ -91,6 +134,8 @@
 .cl-tool small { font-size: 12px; font-weight: 700; color: var(--muted); white-space: nowrap; }
 .cl-tool[aria-pressed="true"] { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 22%, var(--card)); }
 .cl-tool[aria-pressed="true"] small { color: var(--accent); }
+#dirBtn { border-color: color-mix(in srgb, var(--dir) 60%, var(--card)); }
+#dirBtn span, #dirBtn small { color: var(--dir); font-weight: 800; }
 .cl-menu {
   position: absolute; bottom: calc(100% + 6px); left: 0; z-index: 30; min-width: 190px; padding: 6px;
   border-radius: 12px; border: 1px solid var(--accent); background: var(--card); box-shadow: 0 14px 30px -12px #000;
@@ -121,16 +166,21 @@
 
 /* The clue lists. */
 .cl-lists { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; max-width: 720px; margin: 16px auto 0; }
-.cl-lists h2 { font-size: 14px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--accent); margin: 0 0 6px; }
+.cl-lists h2 { font-size: 14px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--c); margin: 0 0 6px; }
+.cl-lists .across { --c: var(--across); }
+.cl-lists .down { --c: var(--down); }
 .cl-lists ol { list-style: none; margin: 0; padding: 0; }
 .cl-lists li {
   display: flex; gap: 8px; padding: 7px 8px; border-radius: 8px; cursor: pointer; font-size: 14px; line-height: 1.35;
   border-left: 3px solid transparent;
 }
 .cl-lists li b { flex: none; min-width: 20px; color: var(--muted); }
-.cl-lists li.cross { background: color-mix(in srgb, var(--accent) 10%, transparent); }
-.cl-lists li.on { background: color-mix(in srgb, var(--accent) 24%, var(--card)); border-left-color: var(--accent); }
-.cl-lists li.done span { color: var(--dim); }
+.cl-lists li.cross { background: color-mix(in srgb, var(--c) 10%, transparent); }
+.cl-lists li.on { background: color-mix(in srgb, var(--c) 24%, var(--card)); border-left-color: var(--c); }
+.cl-lists li.done span { color: var(--muted); }
+/* A solved clue is crossed off, with a check mark, so it doesn't rely on the line alone. */
+.cl-lists li.solved span { color: var(--dim); text-decoration: line-through; text-decoration-thickness: 2px; text-decoration-color: color-mix(in srgb, var(--c) 70%, transparent); }
+.cl-lists li.solved b::after { content: ' ✓'; color: var(--c); }
 @media (max-width: 520px) {
   .cl-lists { grid-template-columns: 1fr; }
 }
@@ -139,7 +189,7 @@
 #scoreScope { margin-top: -2px; }
 .board-tabs button { min-width: 0; }
 #fxCanvas { position: fixed; inset: 0; pointer-events: none; z-index: 90; }
-body[data-state="over"] .cl-tools, body[data-state="over"] .cl-keys, body[data-state="over"] .cl-bar { display: none; }
+body[data-state="over"] .cl-tools, body[data-state="over"] .cl-keys, body[data-state="over"] .cl-bar, body[data-state="over"] .cl-legend { display: none; }
 
 @media (max-width: 420px) {
   .top { padding: 8px 0 6px; }

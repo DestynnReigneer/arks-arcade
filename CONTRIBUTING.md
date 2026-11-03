@@ -44,7 +44,7 @@ ends up in the Docker image (CI checks that too).
 - `rambler/housekeeping.js` — once a minute, rolls the Rambler season over when it's due and re-applies the theme pack
 - `scuffle/` — Shuffle Scuffle's letters, points, solo games, daily board and rooms
 - `crisscross/` — Words with Family (called Criss Cross until November 2026, so the files kept that name): the rules (`engine.js`), the computer player (`bot.js`) and the games kept in the database (`games.js`)
-- `clueless/` — Clueless, the daily crossword: the grid shapes and filler (`grid.js`), the clue checks (`clues.js`), the built-in clues, the day's puzzles and clue packs (`maker.js`, `puzzles.js`) and the routes
+- `clueless/` — Clueless Crosswords (called Clueless until November 2026), the daily crossword and free play: the grid shapes and filler (`grid.js`), the clue checks (`clues.js`), the built-in clues, the day's puzzles and clue packs (`maker.js`, `puzzles.js`) and the routes
 - `tumbler/` — Tumbler Rumble's runs, the replay that works out each score, and the boards; the rules themselves are `public/tumbler-engine.js`, which the page and the server both load
 - `discodrop/` — Disco Drop's runs and boards. The motion and the scoring rules are in `public/discodrop-engine.js`, which the page and the server both load, so they always agree
 - `royale/` — Roll Royale's runs, the replay that works out each score, and the boards; the rules themselves are `public/royale-engine.js`, which the page and the server both load
