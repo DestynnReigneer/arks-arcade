@@ -1,6 +1,6 @@
 'use strict';
 
-// /api/crisscross: Criss Cross, the crossword tile game.
+// /api/crisscross: Words with Family (once called Criss Cross), the crossword tile game.
 //
 // Who's asking comes from headers, never the address: X-Profile-Token (the
 // profile's signed token) for online games, X-Game-Key for a pass-and-play

@@ -20,7 +20,7 @@
     towers: { label: 'Tower Defense', href: 'towers.html' },
     sudoku: { label: 'Sudoku', href: 'sudoku.html' },
     scuffle: { label: 'Shuffle Scuffle', href: 'scuffle.html' },
-    crisscross: { label: 'Criss Cross', href: 'crisscross.html' },
+    crisscross: { label: 'Words with Family', href: 'crisscross.html' },
     clueless: { label: 'Clueless', href: 'clueless.html' },
     tumbler: { label: 'Tumbler Rumble', href: 'tumbler.html' },
     discodrop: { label: 'Disco Drop', href: 'discodrop.html' },
@@ -49,8 +49,8 @@
   // page asks even without ARKS ID.
   ArcadeProfile.askIfNobody({ always: true, delay: 600 });
 
-  // ---- Criss Cross turns waiting on you ---------------------------------------
-  // A Criss Cross game can wait days for a turn, so its card says when some
+  // ---- Words with Family turns waiting on you ---------------------------------------
+  // A Words with Family game can wait days for a turn, so its card says when some
   // are waiting on whoever is playing on this phone.
   async function paintTurns() {
     const card = document.querySelector('.game.crisscross');
