@@ -41,21 +41,6 @@
   <div><small>Streak</small><b id="hudStreak">0</b></div>
 </div>
 
-<!-- The whole lock and the POP button under it are one big place to tap. -->
-<div class="tr-zone" id="zone">
-  <div class="stage tr-stage" id="stage" role="button" tabindex="0"
-    aria-label="The lock. Tap, or press Space or Enter, when the light is on the glowing pin.">
-    <canvas id="lock"></canvas>
-    <div class="stage-msg" id="msg">
-      <b id="msgTitle">Tap to play</b>
-      <span id="msgText">Tap anywhere on the lock, or press Space, to start.</span>
-    </div>
-  </div>
-  <button class="tr-pop" id="popBtn" type="button" aria-label="Start" data-state="start">START</button>
-</div>
-<p class="hint center keys-hint">Keyboard: <b>Space</b> or <b>Enter</b> to pop. A game controller's <b>A</b>, <b>X</b>, <b>R1</b> or right trigger works too.</p>
-<div class="sr-only" id="say" aria-live="polite"></div>
-
 <div class="panel center hidden over-panel" id="over" role="dialog" aria-live="polite">
   <div class="over-top"><button class="primary" id="againBtn">Play again</button></div>
   <h2 class="over-title" id="overTitle">The lock held!</h2>
@@ -73,6 +58,21 @@
   <p class="hint" id="rankLine"></p>
   <div class="stack"><button class="ghost" id="overScoresBtn">🏆 High scores</button></div>
 </div>
+
+<!-- The whole lock and the POP button under it are one big place to tap. -->
+<div class="tr-zone" id="zone">
+  <div class="stage tr-stage" id="stage" role="button" tabindex="0"
+    aria-label="The lock. Tap, or press Space or Enter, when the light is on the glowing pin.">
+    <canvas id="lock"></canvas>
+    <div class="stage-msg" id="msg">
+      <b id="msgTitle">Tap to play</b>
+      <span id="msgText">Tap anywhere on the lock, or press Space, to start.</span>
+    </div>
+  </div>
+  <button class="tr-pop" id="popBtn" type="button" aria-label="Start" data-state="start">START</button>
+</div>
+<p class="hint center keys-hint">Keyboard: <b>Space</b> or <b>Enter</b> to pop. A game controller's <b>A</b>, <b>X</b>, <b>R1</b> or right trigger works too.</p>
+<div class="sr-only" id="say" aria-live="polite"></div>
 
 <div class="overlay hidden" id="scores" role="dialog" aria-label="High scores">
   <div class="card-panel">

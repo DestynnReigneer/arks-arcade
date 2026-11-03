@@ -428,7 +428,7 @@
     $('rankLine').textContent = run.saved ? 'Your time is on the board.' : '';
     if (!p && !run.saved) initials.reset();
     $('over').classList.remove('hidden');
-    setTimeout(() => $('over').scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 60);
+    setTimeout(() => $('over').scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
   }
   async function saveTime() {
     if (!run || !run.finished || run.saved) return;

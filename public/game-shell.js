@@ -7,7 +7,7 @@
 //
 //   const shell = GameShell.create({
 //     game: 'snake', boards: { classic: 'Classic', wrap: 'Wrap' },
-//     mount: $('stage'),              // the over panel goes right after this
+//     mount: $('stage'),              // the over panel goes right above this
 //     onAgain: reset,
 //   });
 //   shell.over({ score, board: 'classic', detail: '42 apples', title: 'Game over' });
@@ -47,7 +47,7 @@ const GameShell = (() => {
           <button class="ghost scores-btn">🏆 High scores</button>
         </div>
       </div>`);
-    mount.after(over);
+    mount.before(over);
     const q = sel => over.querySelector(sel);
     q('.again-btn').textContent = againLabel;
     // On a TV the arcade is signed in as the TV, not as whoever has the
@@ -100,7 +100,7 @@ const GameShell = (() => {
       q('.msg').textContent = '';
       over.classList.remove('hidden');
       document.body.dataset.state = 'over';
-      setTimeout(() => over.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
+      setTimeout(() => over.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
     }
     function hideOver() { over.classList.add('hidden'); }
 
