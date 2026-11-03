@@ -3,7 +3,7 @@
 // The puzzles and Spin & Solve on a TV, at 1920 by 1080 with the ARKS TV
 // app's user agent, played with only the arrow keys and Enter (the remote's
 // arrows and OK): typing on the keyboard on the screen in Wordless, moving
-// around the Clueless grid, putting a word down in Criss Cross against the
+// around the Clueless grid, putting a word down in Words with Family against the
 // computer, and spinning and solving in Spin & Solve.
 
 const path = require('node:path');
@@ -84,7 +84,7 @@ test('each puzzle page fits the TV, and How to play waits for the ? button', asy
     await expect.poll(() => page.evaluate(() => document.activeElement && document.activeElement !== document.body)).toBe(true);
     await fitsTheScreen(page);
   }
-  // Criss Cross keeps the games on everyone's own phone off the TV.
+  // Words with Family keeps the games on everyone's own phone off the TV.
   await expect(page.locator('#newOnlineBtn')).toBeHidden();
   expect(problems, problems.join('\n')).toEqual([]);
 });
@@ -145,7 +145,7 @@ test('Clueless: the highlight is the cursor, and the keyboard types', async ({ p
   expect(problems, problems.join('\n')).toEqual([]);
 });
 
-test('Criss Cross: a first word against the computer, with the remote', async ({ page }) => {
+test('Words with Family: a first word against the computer, with the remote', async ({ page }) => {
   const problems = watchProblems(page);
   await pairTv(page, '/crisscross.html');
   await press(page, '#newLocalBtn');

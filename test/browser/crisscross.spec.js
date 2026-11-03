@@ -1,6 +1,6 @@
 'use strict';
 
-// Criss Cross in a real browser: a guest starts a game against the computer
+// Words with Family (once Criss Cross) in a real browser: a guest starts a game against the computer
 // on one phone, puts a first word on the board by tapping tiles and squares,
 // sees the score before playing, plays it, and the computer answers.
 //
@@ -20,7 +20,7 @@ const { quietFonts, watchProblems, openPage } = require('./helpers');
 const E = require(path.join(__dirname, '..', '..', 'crisscross', 'engine.js'));
 const bot = require(path.join(__dirname, '..', '..', 'crisscross', 'bot.js'));
 
-test('placing a first word in Criss Cross', async ({ page }) => {
+test('placing a first word in Words with Family', async ({ page }) => {
   await quietFonts(page);
   const problems = watchProblems(page);
   await page.clock.install();
@@ -29,6 +29,13 @@ test('placing a first word in Criss Cross', async ({ page }) => {
   await page.getByRole('button', { name: 'Play', exact: true }).click();
   const close = page.locator('.tut-x');
   if (await close.isVisible().catch(() => false)) await close.click();
+
+  // The new name and the wooden-tile logo (the page keeps its old address).
+  await expect(page).toHaveTitle('Words with Family');
+  await expect(page.locator('header.top h1')).toContainText('WORDS WITH FAMILY');
+  const logo = page.locator('#home .cc-logo');
+  await expect(logo).toBeVisible();
+  expect(await logo.evaluate(img => img.naturalWidth)).toBeGreaterThan(0);
 
   await page.locator('#newLocalBtn').click();
   await page.locator('#localPlayers input').first().fill('Tester');

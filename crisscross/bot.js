@@ -1,6 +1,6 @@
 'use strict';
 
-// The computer player for Criss Cross. It isn't clever: it finds every word
+// The computer player for Words with Family. It isn't clever: it finds every word
 // it can make along each row and column with its rack, scores each one with
 // the same rules as everyone else (engine.evaluate), and plays the best. It
 // doesn't use blanks, and its main word is always three letters or more

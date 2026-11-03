@@ -1,6 +1,6 @@
 'use strict';
 
-// Criss Cross: the rules on their own (no server needed), then the API
+// Words with Family (once Criss Cross): the rules on their own (no server needed), then the API
 // against the real server: games on one phone, online games between
 // profiles, racks kept private, turns, the bag, the end and the adult rules.
 

@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 203 107"><title>Words with Family</title>
+  <defs>
+    <linearGradient id="face" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6dfae"/><stop offset="1" stop-color="#dcae68"/></linearGradient>
+  </defs>
+  <g transform="rotate(-3 35.5 19)">
+    <rect x="20.5" y="6.5" width="30" height="30" rx="4" fill="#7a4b1e"/>
+    <rect x="20.5" y="4" width="30" height="30" rx="4" fill="url(#face)" stroke="#a8743a" stroke-width="1"/>
+    <path d="M24.5 13q11 -3 22 1M25.5 25q10 2 20 -1" fill="none" stroke="#c99a5a" stroke-width=".8" opacity=".55"/>
+    <text x="34" y="25.5" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-weight="700" font-size="19" fill="#3b2410">W</text>
+    <text x="47.5" y="30.5" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="7.5" fill="#3b2410">4</text>
+  </g>
+  <g transform="rotate(2 68.5 19)">
+    <rect x="53.5" y="6.5" width="30" height="30" rx="4" fill="#7a4b1e"/>
+    <rect x="53.5" y="4" width="30" height="30" rx="4" fill="url(#face)" stroke="#a8743a" stroke-width="1"/>
+    <path d="M57.5 13q11 -3 22 1M58.5 25q10 2 20 -1" fill="none" stroke="#c99a5a" stroke-width=".8" opacity=".55"/>
+    <text x="67" y="25.5" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-weight="700" font-size="19" fill="#3b2410">O</text>
+    <text x="80.5" y="30.5" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="7.5" fill="#3b2410">1</text>
+  </g>
+  <g transform="rotate(-1.5 101.5 19)">
+    <rect x="86.5" y="6.5" width="30" height="30" rx="4" fill="#7a4b1e"/>
+    <rect x="86.5" y="4" width="30" height="30" rx="4" fill="url(#face)" stroke="#a8743a" stroke-width="1"/>
+    <path d="M90.5 13q11 -3 22 1M91.5 25q10 2 20 -1" fill="none" stroke="#c99a5a" stroke-width=".8" opacity=".55"/>
+    <text x="100" y="25.5" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-weight="700" font-size="19" fill="#3b2410">R</text>
+    <text x="113.5" y="30.5" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="7.5" fill="#3b2410">1</text>
+  </g>
+  <g transform="rotate(2.5 134.5 19)">
+    <rect x="119.5" y="6.5" width="30" height="30" rx="4" fill="#7a4b1e"/>
+    <rect x="119.5" y="4" width="30" height="30" rx="4" fill="url(#face)" stroke="#a8743a" stroke-width="1"/>
+    <path d="M123.5 13q11 -3 22 1M124.5 25q10 2 20 -1" fill="none" stroke="#c99a5a" stroke-width=".8" opacity=".55"/>
+    <text x="133" y="25.5" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-weight="700" font-size="19" fill="#3b2410">D</text>
+    <text x="146.5" y="30.5" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="7.5" fill="#3b2410">2</text>
+  </g>
+  <g transform="rotate(-2 167.5 19)">
+    <rect x="152.5" y="6.5" width="30" height="30" rx="4" fill="#7a4b1e"/>
+    <rect x="152.5" y="4" width="30" height="30" rx="4" fill="url(#face)" stroke="#a8743a" stroke-width="1"/>
+    <path d="M156.5 13q11 -3 22 1M157.5 25q10 2 20 -1" fill="none" stroke="#c99a5a" stroke-width=".8" opacity=".55"/>
+    <text x="166" y="25.5" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-weight="700" font-size="19" fill="#3b2410">S</text>
+    <text x="179.5" y="30.5" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="7.5" fill="#3b2410">1</text>
+  </g>
+  <g transform="rotate(1.5 52 52)">
+    <rect x="37" y="39.5" width="30" height="30" rx="4" fill="#7a4b1e"/>
+    <rect x="37" y="37" width="30" height="30" rx="4" fill="url(#face)" stroke="#a8743a" stroke-width="1"/>
+    <path d="M41 46q11 -3 22 1M42 58q10 2 20 -1" fill="none" stroke="#c99a5a" stroke-width=".8" opacity=".55"/>
+    <text x="50.5" y="58.5" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-weight="700" font-size="19" fill="#3b2410">W</text>
+    <text x="64" y="63.5" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="7.5" fill="#3b2410">4</text>
+  </g>
+  <g transform="rotate(-3 85 52)">
+    <rect x="70" y="39.5" width="30" height="30" rx="4" fill="#7a4b1e"/>
+    <rect x="70" y="37" width="30" height="30" rx="4" fill="url(#face)" stroke="#a8743a" stroke-width="1"/>
+    <path d="M74 46q11 -3 22 1M75 58q10 2 20 -1" fill="none" stroke="#c99a5a" stroke-width=".8" opacity=".55"/>
+    <text x="83.5" y="58.5" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-weight="700" font-size="19" fill="#3b2410">I</text>
+    <text x="97" y="63.5" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="7.5" fill="#3b2410">1</text>
+  </g>
+  <g transform="rotate(2 118 52)">
+    <rect x="103" y="39.5" width="30" height="30" rx="4" fill="#7a4b1e"/>
+    <rect x="103" y="37" width="30" height="30" rx="4" fill="url(#face)" stroke="#a8743a" stroke-width="1"/>
+    <path d="M107 46q11 -3 22 1M108 58q10 2 20 -1" fill="none" stroke="#c99a5a" stroke-width=".8" opacity=".55"/>
+    <text x="116.5" y="58.5" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-weight="700" font-size="19" fill="#3b2410">T</text>
+    <text x="130" y="63.5" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="7.5" fill="#3b2410">1</text>
+  </g>
+  <g transform="rotate(-1.5 151 52)">
+    <rect x="136" y="39.5" width="30" height="30" rx="4" fill="#7a4b1e"/>
+    <rect x="136" y="37" width="30" height="30" rx="4" fill="url(#face)" stroke="#a8743a" stroke-width="1"/>
+    <path d="M140 46q11 -3 22 1M141 58q10 2 20 -1" fill="none" stroke="#c99a5a" stroke-width=".8" opacity=".55"/>
+    <text x="149.5" y="58.5" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-weight="700" font-size="19" fill="#3b2410">H</text>
+    <text x="163" y="63.5" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="7.5" fill="#3b2410">4</text>
+  </g>
+  <g transform="rotate(2.5 19 85)">
+    <rect x="4" y="72.5" width="30" height="30" rx="4" fill="#7a4b1e"/>
+    <rect x="4" y="70" width="30" height="30" rx="4" fill="url(#face)" stroke="#a8743a" stroke-width="1"/>
+    <path d="M8 79q11 -3 22 1M9 91q10 2 20 -1" fill="none" stroke="#c99a5a" stroke-width=".8" opacity=".55"/>
+    <text x="17.5" y="91.5" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-weight="700" font-size="19" fill="#3b2410">F</text>
+    <text x="31" y="96.5" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="7.5" fill="#3b2410">4</text>
+  </g>
+  <g transform="rotate(-2 52 85)">
+    <rect x="37" y="72.5" width="30" height="30" rx="4" fill="#7a4b1e"/>
+    <rect x="37" y="70" width="30" height="30" rx="4" fill="url(#face)" stroke="#a8743a" stroke-width="1"/>
+    <path d="M41 79q11 -3 22 1M42 91q10 2 20 -1" fill="none" stroke="#c99a5a" stroke-width=".8" opacity=".55"/>
+    <text x="50.5" y="91.5" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-weight="700" font-size="19" fill="#3b2410">A</text>
+    <text x="64" y="96.5" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="7.5" fill="#3b2410">1</text>
+  </g>
+  <g transform="rotate(1.5 85 85)">
+    <rect x="70" y="72.5" width="30" height="30" rx="4" fill="#7a4b1e"/>
+    <rect x="70" y="70" width="30" height="30" rx="4" fill="url(#face)" stroke="#a8743a" stroke-width="1"/>
+    <path d="M74 79q11 -3 22 1M75 91q10 2 20 -1" fill="none" stroke="#c99a5a" stroke-width=".8" opacity=".55"/>
+    <text x="83.5" y="91.5" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-weight="700" font-size="19" fill="#3b2410">M</text>
+    <text x="97" y="96.5" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="7.5" fill="#3b2410">3</text>
+  </g>
+  <g transform="rotate(-3 118 85)">
+    <rect x="103" y="72.5" width="30" height="30" rx="4" fill="#7a4b1e"/>
+    <rect x="103" y="70" width="30" height="30" rx="4" fill="url(#face)" stroke="#a8743a" stroke-width="1"/>
+    <path d="M107 79q11 -3 22 1M108 91q10 2 20 -1" fill="none" stroke="#c99a5a" stroke-width=".8" opacity=".55"/>
+    <text x="116.5" y="91.5" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-weight="700" font-size="19" fill="#3b2410">I</text>
+    <text x="130" y="96.5" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="7.5" fill="#3b2410">1</text>
+  </g>
+  <g transform="rotate(2 151 85)">
+    <rect x="136" y="72.5" width="30" height="30" rx="4" fill="#7a4b1e"/>
+    <rect x="136" y="70" width="30" height="30" rx="4" fill="url(#face)" stroke="#a8743a" stroke-width="1"/>
+    <path d="M140 79q11 -3 22 1M141 91q10 2 20 -1" fill="none" stroke="#c99a5a" stroke-width=".8" opacity=".55"/>
+    <text x="149.5" y="91.5" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-weight="700" font-size="19" fill="#3b2410">L</text>
+    <text x="163" y="96.5" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="7.5" fill="#3b2410">1</text>
+  </g>
+  <g transform="rotate(-1.5 184 85)">
+    <rect x="169" y="72.5" width="30" height="30" rx="4" fill="#7a4b1e"/>
+    <rect x="169" y="70" width="30" height="30" rx="4" fill="url(#face)" stroke="#a8743a" stroke-width="1"/>
+    <path d="M173 79q11 -3 22 1M174 91q10 2 20 -1" fill="none" stroke="#c99a5a" stroke-width=".8" opacity=".55"/>
+    <text x="182.5" y="91.5" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-weight="700" font-size="19" fill="#3b2410">Y</text>
+    <text x="196" y="96.5" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="7.5" fill="#3b2410">4</text>
+  </g>
+</svg>
