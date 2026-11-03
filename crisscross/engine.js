@@ -1,6 +1,6 @@
 'use strict';
 
-// Criss Cross: the board, the tiles and the rules. No database here, so the
+// Words with Family (once called Criss Cross): the board, the tiles and the rules. No database here, so the
 // tests (and the computer player) can use it on its own.
 //
 // The game keeps everything in one plain object (see newGame). The server

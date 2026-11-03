@@ -1,6 +1,6 @@
 'use strict';
 
-// Criss Cross games, kept in the database because a game can last days.
+// Words with Family games, kept in the database because a game can last days.
 //
 // Two kinds:
 //   - online: each player on their own phone, signed in with a profile. The
