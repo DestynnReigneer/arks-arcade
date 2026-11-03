@@ -35,7 +35,7 @@
     revealed: new Set(), used: new Set(), strikes: 0, wedge: null, busy: false,
     rotation: 0, usedPuzzles: new Set(),
     config: null, level: 'kids', pack: 'all', pool: [], banter: null,
-    turnSecs: 45, timeLeft: 0, idleSince: 0, jokedThisTurn: false, heckledThisRound: false, heckling: false,
+    turnSecs: 45, timeLeft: 0, clock: null, idleSince: 0, jokedThisTurn: false, heckledThisRound: false, heckling: false,
     pin: TV ? '' : (() => { try { return sessionStorage.getItem('spin.adultPin') || ''; } catch { return ''; } })(),
     adultOk: !TV && (() => { try { return sessionStorage.getItem('spin.adultOk') === 'yes'; } catch { return false; } })()
   };
@@ -380,15 +380,15 @@
     timeup: ['Time\'s up!', 'Tick tock… too slow!', 'Buzzer! Out of time!']
   };
 
-  // Lights up every hidden copy of a letter, one at a time, with Vee touching each.
+  // Lights up every hidden copy of a letter, one at a time, with Vee touching
+  // each: a ding for every one, and the tile glows as it turns over.
   async function revealLetter(ch) {
     const tiles = [...$('puzzleBoard').querySelectorAll(`.tile.covered[data-ch="${ch}"]`)];
-    for (const tile of tiles) {
+    for (const [i, tile] of tiles.entries()) {
       await Host.walkTo(tile);
       Host.pose('touch');
       tile.classList.add('lit');
-      Blip.tone(1046, 0.12, { type: 'triangle' });
-      Blip.tone(1568, 0.08, { type: 'sine', volume: 0.06, delay: 0.05 });
+      Blip.ding(i);
       await wait(320);
       tile.classList.remove('covered', 'lit');
       tile.classList.add('shown', 'flip');
@@ -536,7 +536,8 @@
       const w = wedgeAt(S.rotation);
       if (w !== lastWedge) {
         lastWedge = w;
-        Blip.tone(1400, 0.015, { type: 'square', volume: 0.05 });
+        // The click of a peg passing the pointer, and the pointer kicking.
+        Blip.tick();
         flapper.classList.remove('kick');
         void flapper.offsetWidth;
         flapper.classList.add('kick');
@@ -553,11 +554,26 @@
     requestAnimationFrame(frame);
   }
 
-  function showLanded(text, bad = false) {
+  // The big word over the wheel. Every sound in the game has one of these
+  // (or a glow on the board) too, so it all works with the sound off. A
+  // passing note (`ms`) clears itself.
+  let landedTimer = null;
+  function showLanded(text, bad = false, ms = 0) {
+    clearTimeout(landedTimer);
     $('landed').innerHTML = '<span></span>';
     $('landed').firstChild.textContent = text;
     $('landed').classList.toggle('bad', bad);
     $('landed').classList.remove('hidden');
+    if (ms) landedTimer = setTimeout(() => $('landed').classList.add('hidden'), ms);
+  }
+  // The board flashes red for the buzzer.
+  function buzz(text) {
+    Blip.buzzer();
+    showLanded(text, true, 2200);
+    const board = $('puzzleBoard');
+    board.classList.remove('buzz');
+    void board.offsetWidth;
+    board.classList.add('buzz');
   }
 
   function landed(w) {
@@ -566,7 +582,7 @@
       showLanded('💸 BANKRUPT', true);
       Host.pose('oops', 1800);
       Host.talk(Host.line('bankrupt'));
-      Blip.tune([[300, 0.15], [200, 0.15], [120, 0.4]], { type: 'sawtooth', volume: 0.08 });
+      Blip.sting();
       p.round = 0;
       S.busy = false;
       return endTurn(`${p.name} went bankrupt!`);
@@ -606,16 +622,18 @@
       grid.appendChild(b);
     }
     $('letterView').classList.remove('hidden');
+    startClock(mode === 'vowel' ? 'vowel' : 'letter');
   }
 
   async function callLetter(ch) {
     const p = S.players[S.cur];
+    stopClock();
     S.used.add(ch);
     const count = letters(S.puzzle.answer).split('').filter(c => c === ch).length;
     if (letterMode === 'vowel') { p.round -= VOWEL_COST; Host.talk(Host.line('vowel'), 1200); }
     $('landed').classList.add('hidden');
     if (!count) {
-      Blip.tone([220, 140], 0.35, { type: 'sawtooth', volume: 0.08 });
+      buzz(`✕ NO ${ch}`);
       Host.pose('oops', 1500);
       Host.talk(`${Host.line('miss')} No ${ch}.`);
       return endTurn(`No ${ch}. ${solo() ? 'Strike!' : 'Next player.'}`);
@@ -655,17 +673,31 @@
   }
 
   // ---- the turn clock ---------------------------------------------------------------------
-  // Starts the moment a turn begins and runs while the player decides. It
-  // pauses only while the wheel spins or the host lights up letters (so
-  // nobody loses time to an animation) and behind a results screen. Jokes
-  // and hecklers never stop it: they're just entertainment while you think.
+  // Like the TV show, there's no clock while you decide what to do (spin, buy
+  // a vowel or solve), so nothing runs before your first spin. The clock runs
+  // only when you owe an answer: once the wheel stops you have that long to
+  // call a consonant, and the same to pick a vowel you're buying or to type
+  // your answer when you solve. Running out passes the turn. It pauses while
+  // the host lights up letters and behind a results screen. Jokes and
+  // hecklers never stop it: they're just entertainment while you think.
 
   const thinking = Blip.thinker();
   function resetTurn() {
-    S.timeLeft = S.turnSecs * 1000;
-    thinking.reset();
+    stopClock();
     S.idleSince = Date.now();
     S.jokedThisTurn = false;
+  }
+  // which: 'letter' (after a spin), 'vowel' or 'solve'.
+  function startClock(which) {
+    S.clock = which;
+    S.timeLeft = S.turnSecs * 1000;
+    thinking.reset();
+    paintClock();
+  }
+  function stopClock() {
+    S.clock = null;
+    S.timeLeft = S.turnSecs * 1000;
+    thinking.reset();
     $('turnTimer').classList.toggle('hidden', !S.turnSecs);
     paintClock();
   }
@@ -676,13 +708,17 @@
       overlayOpen('roundView') || overlayOpen('overView') || overlayOpen('scoresView');
   }
 
+  const CLOCK_FOR = { letter: 'to call a letter', vowel: 'to pick a vowel', solve: 'to solve' };
   function paintClock(paused = false) {
     if (!S.turnSecs) return;
+    const who = S.players[S.cur] ? S.players[S.cur].name : '';
     const secs = Math.ceil(S.timeLeft / 1000);
     $('ttFill').style.transform = `scaleX(${Math.max(0, S.timeLeft / (S.turnSecs * 1000))})`;
-    $('ttText').textContent = `${paused ? '⏸' : '⏱'} ${secs}s · ${S.players[S.cur] ? S.players[S.cur].name : ''}`;
-    $('turnTimer').classList.toggle('paused', paused);
-    $('turnTimer').classList.toggle('warn', secs <= 10);
+    $('ttText').textContent = S.clock
+      ? `${paused ? '⏸' : '⏱'} ${secs}s ${CLOCK_FOR[S.clock]} · ${who}`
+      : `${who}: spin, buy a vowel or solve`;
+    $('turnTimer').classList.toggle('paused', paused || !S.clock);
+    $('turnTimer').classList.toggle('warn', !!S.clock && secs <= 10);
   }
 
   let lastTick = Date.now();
@@ -692,10 +728,10 @@
     lastTick = now;
     if (!S.puzzle || clockPaused()) {
       S.idleSince += step;
-      if (S.puzzle && S.busy) paintClock(true);
+      if (S.puzzle && S.busy && S.clock) paintClock(true);
       return;
     }
-    if (S.turnSecs) {
+    if (S.turnSecs && S.clock) {
       const before = Math.ceil(S.timeLeft / 1000);
       S.timeLeft -= step;
       const after = Math.ceil(S.timeLeft / 1000);
@@ -716,11 +752,11 @@
 
   function timeUp() {
     S.timeLeft = 0;
+    S.clock = null;
     $('letterView').classList.add('hidden');
     $('solveView').classList.add('hidden');
-    $('landed').classList.add('hidden');
     S.wedge = null;
-    Blip.tune([[440, 0.15], [330, 0.15], [220, 0.3]], { type: 'square', volume: 0.06 });
+    buzz('⏰ TIME\'S UP');
     Host.pose('oops', 1500);
     Host.talk(Host.line('timeup'));
     endTurn('⏰ Time\'s up!');
@@ -817,6 +853,7 @@
     $('solveInput').value = '';
     $('solveMsg').textContent = '';
     $('solveView').classList.remove('hidden');
+    startClock('solve');
     // On a TV the answer is typed on the keyboard on the screen, with the remote.
     if (TV) { const first = $('solveKeys').querySelector('button'); if (first) first.focus(); } else $('solveInput').focus();
   }
@@ -847,8 +884,9 @@
     const guess = letters($('solveInput').value.toUpperCase());
     if (!guess) { $('solveMsg').textContent = 'Type your answer first.'; return; }
     $('solveView').classList.add('hidden');
+    stopClock();
     if (guess === letters(S.puzzle.answer)) return solved();
-    Blip.tone([220, 140], 0.4, { type: 'sawtooth', volume: 0.08 });
+    buzz('✕ NOT QUITE');
     Host.pose('oops', 1500);
     Host.talk(Host.line('wrong'));
     endTurn('Not quite!');
@@ -862,7 +900,8 @@
     S.busy = true;
     renderPlayers();
     Host.talk(Host.line('solved'), 2600);
-    Blip.tune([[523, 0.12], [659, 0.12], [784, 0.12], [1047, 0.35]], { type: 'triangle' });
+    Blip.fanfare();
+    showLanded('🎉 SOLVED!', false, 2600);
     await revealAll();
     for (const ch of letters(S.puzzle.answer)) S.revealed.add(ch);
     S.busy = false;
@@ -980,7 +1019,7 @@
       emoji: '🎡', title: 'Spin, then call a letter',
       html: `<p>Tap <b>Spin</b>. Where the wheel stops is what each letter is worth.</p>
         <p>Pick a <b>consonant</b> (not A E I O U). Every time it's in the puzzle, you earn that much, and you go again.</p>
-        <p>If it isn't there, your turn ends.</p>`
+        <p>If it isn't there, you hear the buzzer and your turn ends. On your turn you can spin, buy a vowel or solve, in any order, as long as you keep finding letters.</p>`
     },
     {
       emoji: '💸', title: 'Watch out',
@@ -991,14 +1030,15 @@
     },
     {
       emoji: '🅰️', title: 'Vowels and solving',
-      html: `<p><b>Buy a vowel</b> for $250 of this round's money. It shows every A, E, I, O or U you pick.</p>
+      html: `<p><b>Buy a vowel</b> for $250 of this round's money. It shows every A, E, I, O or U you pick, but earns nothing, and if the vowel isn't there your turn ends.</p>
         <p>Think you know it? Tap <b>Solve</b> and type the whole answer. Get it right and you bank this round's money (at least $1,000). Get it wrong and your turn ends.</p>`
     },
     {
       emoji: '🎮', title: 'Solo or together',
       html: `<p><b>Solo:</b> you get 3 strikes a round: a missing letter, a wrong answer, Bankrupt or Lose a Turn each cost one. Your total goes on the 🏆 board.</p>
         <p><b>2–4 players:</b> pass the phone. Only whoever solves keeps that round's money.</p>
-        <p><b>Turn timer:</b> pick 30 to 90 seconds (or Off) in setup. Run out and your turn passes.</p>
+        <p><b>Turn timer:</b> pick 30 to 90 seconds (or Off) in setup. Like on the TV show, nothing ticks while you decide whether to spin, buy a vowel or solve. The clock starts once the wheel stops (to call a letter), when you buy a vowel, and when you tap Solve. Run out and your turn passes.</p>
+        <p><b>Sound off?</b> Everything you'd hear also shows: letters light up, a wrong letter flashes the board red with a big ✕, and Bankrupt, Lose a Turn and Solved show up over the wheel.</p>
         <p><b>Puzzles:</b> play everything, or pick one theme pack from the list. 💡 Suggest a theme to ask for a new one. Grown-ups can turn up the heat with Cheeky, Spicy or Filthy.</p>
         <div class="tut-tip">Tap <b>?</b> at the top any time to see this again.</div>`
     }
@@ -1028,10 +1068,10 @@
   $('spinBtn').addEventListener('click', spin);
   $('vowelBtn').addEventListener('click', () => openLetters('vowel'));
   $('solveBtn').addEventListener('click', openSolve);
-  $('letterCancel').addEventListener('click', () => $('letterView').classList.add('hidden'));
+  $('letterCancel').addEventListener('click', () => { $('letterView').classList.add('hidden'); stopClock(); });
   $('solveOk').addEventListener('click', trySolve);
   $('solveInput').addEventListener('keydown', e => { if (e.key === 'Enter') trySolve(); });
-  $('solveCancel').addEventListener('click', () => $('solveView').classList.add('hidden'));
+  $('solveCancel').addEventListener('click', () => { $('solveView').classList.add('hidden'); stopClock(); });
   $('nextRoundBtn').addEventListener('click', nextRound);
   $('againBtn').addEventListener('click', startGame);
   $('menuBtn').addEventListener('click', backToSetup);

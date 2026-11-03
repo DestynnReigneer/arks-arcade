@@ -1,15 +1,16 @@
 'use strict';
 
-// Tumbler Rumble in a real browser: start a run, pop every pin on the first
-// lock through the page (a tap on the POP button on a phone, Space on a
-// laptop), let the run end, and save the score the server worked out. When
+// Tumbler Rumble in a real browser: start a run, watch the 3, 2, 1
+// countdown with the POP button dimmed, pop three pins through the page (a
+// tap on the POP button on a phone, Space on a laptop), let the run end, and
+// save the score the server worked out. When
 // to tap comes from a helper the page only has under the test suites (the
 // server turns it on only when NODE_ENV=test).
 
 const { test, expect } = require('@playwright/test');
 const { quietFonts, watchProblems, openPage } = require('./helpers');
 
-test('popping the first lock in Tumbler Rumble', async ({ page, isMobile }) => {
+test('a countdown, then three pops in Tumbler Rumble', async ({ page, isMobile }) => {
   await quietFonts(page);
   const problems = watchProblems(page);
   await openPage(page, '/tumbler.html');
@@ -34,7 +35,17 @@ test('popping the first lock in Tumbler Rumble', async ({ page, isMobile }) => {
     await expect.poll(() => page.evaluate(() => !!window.TumblerTest), { timeout: 1500 }).toBe(true);
   }).toPass({ timeout: 10000 });
 
+  // The countdown: the button is dimmed, can't be pressed and counts down,
+  // then lights up as POP! when the light starts moving.
+  const pop = page.locator('#popBtn');
+  await expect(pop).toBeDisabled();
+  await expect(pop).toHaveText(/^[123]$/);
+  await expect(pop).toHaveText('POP!', { timeout: 5000 });
+  await expect(pop).toBeEnabled();
+
   for (let pin = 0; pin < 3; pin++) {
+    await expect(page.locator('#hudPops')).toHaveText(String(pin));
+    if (pin === 1) await expect(page.locator('#hudPace')).toHaveText('Harder');
     // Wait in the page until the marker is on the pin, then tap there and
     // then, through the page's own handlers (a pointer press on the POP
     // button on a phone, Space on a laptop). Doing it from inside the page
@@ -50,15 +61,14 @@ test('popping the first lock in Tumbler Rumble', async ({ page, isMobile }) => {
       go();
     }), isMobile);
   }
-  await expect(page.locator('#hudLevel')).toHaveText('2');
-  await expect(page.locator('#hudPins')).toHaveText('4');
+  await expect(page.locator('#hudPops')).toHaveText('3');
 
-  // Nobody taps on lock 2, so the marker slips past its first pin.
+  // Nobody taps the fourth pin, so the marker slips past it and the run ends.
   await expect(page.locator('#over')).toBeVisible({ timeout: 10000 });
   await expect(page.locator('#overTitle')).toContainText('slipped past');
-  await expect(page.locator('#overDetail')).toContainText('reached lock 2, popped 3 pins');
-  const score = Number((await page.locator('#hudScore').textContent()).replace(/,/g, ''));
-  expect(score).toBeGreaterThanOrEqual(80);
+  await expect(page.locator('#overDetail')).toContainText('popped 3 pins in a row and made it to wave 1');
+  await expect(page.locator('#overScore')).toHaveText('3');
+  await expect(pop).toBeDisabled();
 
   const boxes = page.locator('#iniRow .ini');
   await boxes.nth(0).fill('T');

@@ -31,6 +31,48 @@ games they actually play a lot got pushed around. The order is now damped
   it on the tenth day, and the per-day cap and half-life. `test/api.test.js`
   checks the endpoint end to end.
 
+## Tumbler Rumble goes endless, and Spin & Solve follows the show (2026-11-02)
+
+Fixes from the maintainer playing both games, with the sound off.
+
+- **Tumbler Rumble is one endless run** (`public/tumbler-engine.js`). There are no more locks that
+  open and start over: every pop turns the light around and lights the next pin at once, the run
+  goes on until the first miss or slip, and the score is the number of pins popped. Difficulty
+  comes in waves of 10 (`difficulty(pops)`, 0 to 1): 7 pins harder, 3 easing off, each wave starting
+  and peaking 0.08 harder than the last (peak `0.16 + 0.08 x wave`, start 0.2 below the peak). It
+  sets both the speed (130 to 320 degrees a second) and the pin's half-width (16 to 9 degrees); a
+  bullseye is the middle third. From about pin 110 the waves swing between 0.8 and 1. The server's
+  replay is the same engine, so `/finish` returns `score` (pins), `wave`, `bullseyes` and
+  `bestStreak`; `tumbler_runs.level` and `tumbler_scores.level` hold the wave and `pins` the pops.
+- **Old scores are kept but off the boards:** both tables gained `rules` (1 for the old points
+  scores, 2 now). The boards and ranks only read rules 2, and a run started before the change can't
+  be finished or saved. The admin page's Boards tab still lists every row (it doesn't know about
+  `rules`), so the old scores show there and can be removed by hand if wanted.
+- **A real 3, 2, 1 countdown** (`LEAD_MS` 3000, `COUNT_MS` 1000) on the lock and on the POP!
+  button, which says Start before a run, is dimmed and disabled through the countdown, and lights
+  up at Go. A press during the countdown does nothing.
+- **Sound off:** every Tumbler sound has a visual: the lock glows on a pop, a bullseye, Go and a new
+  wave, turns red on a miss, wave news ("WAVE 3", "EASING OFF") shows across the top of the lock,
+  and the HUD has a Pace box (Harder or Easier).
+- **Spin & Solve's clock follows the show:** it no longer runs while a player decides what to do,
+  so nothing ticks before the first spin. It runs only when an answer is owed: after the wheel
+  stops (call a letter), when buying a vowel, and when solving; backing out of the vowel or solve
+  box stops it. The rest of the turn flow already matched the show (a wrong letter, a wrong answer,
+  Bankrupt and Lose a Turn pass the turn; a vowel costs $250 and earns nothing; only the solver
+  banks, at least $1,000).
+- **Spin & Solve sounds, our own** (new in `public/blip.js`: `ding`, `buzzer`, `tick`, `sting`,
+  `fanfare`, all synthesized): a bell-like ding per letter, a low two-tone buzzer for a miss, a wrong
+  answer or time running out, a noise click per peg, a falling Bankrupt sting and a brassy solved
+  fanfare. None of the show's recordings or music are used. Each has a visual too: the board flashes
+  red with a big ✕ over the wheel for the buzzer, and Time's up and Solved show over the wheel.
+- **Tests:** `test/tumbler.test.js` rewritten for the endless rules and the waves,
+  `test/browser/tumbler.spec.js` checks the dimmed countdown and three pops, the TV test checks the
+  pop count, and the new `test/browser/spinsolve.spec.js` checks the clock waits for the first spin.
+- **Left for later:** Spin & Solve's score is still sent by the page (the older shared board,
+  `/api/scores/spinsolve`), so it isn't decided by the server the way the newer games' are. Making
+  it server-decided needs the game to run on the server, which is the same work as the TV rooms
+  noted under "The puzzles and Spin & Solve on the TV".
+
 ## The cabinet games and the classics on the TV, with controllers (2026-11-02, contract v14)
 
 Tumbler Rumble, Disco Drop, Roll Royale, Moonshot, Snake, Dino Dash, Block Drop, Brick Breaker, Tower
@@ -295,6 +337,9 @@ the ball, and "royale" is the casino-floor glamour the arcade's look goes for.
   the seed could play perfectly; the server only makes sure the times could have happened.
 
 ## Tumbler Rumble (2026-11-01)
+
+Since 2026-11-02 a run is endless and scored in pins popped (see the section at the top); the
+rules below are how it was first built.
 
 A cabinet-style timing game like the ticket-redemption lock games at arcades, with our own name,
 rules and look. Its id is `tumbler` (page `public/tumbler.*`, rules

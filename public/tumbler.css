@@ -35,7 +35,30 @@
   touch-action: manipulation; -webkit-tap-highlight-color: transparent;
 }
 .tr-pop.down { transform: translateY(4px); box-shadow: 0 2px 0 color-mix(in srgb, var(--accent) 45%, #000), 0 0 30px var(--accent); }
-body[data-state="over"] .tr-pop { opacity: 0.45; }
+/* Only lit up while the light is moving. Before a run it's a plain Start
+   button; during the countdown (and after a miss) it's dimmed and can't be
+   pressed, and shows the countdown's numbers. */
+.tr-pop[data-state="start"] {
+  color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent);
+  box-shadow: 0 6px 0 color-mix(in srgb, var(--accent) 25%, #000);
+}
+.tr-pop[data-state="wait"], .tr-pop:disabled {
+  cursor: default; color: var(--dim, #9483ae); background: #1a1230; border-color: #2b2245;
+  box-shadow: 0 6px 0 #0d0819; opacity: 0.7;
+}
+
+/* A glow around the lock for every sound, so nothing is missed with the
+   sound off: a pop, a bullseye, the miss, Go and a new wave. */
+.tr-stage.flash-pop { animation: tr-glow-pop 0.3s ease-out; }
+.tr-stage.flash-bull { animation: tr-glow-bull 0.4s ease-out; }
+.tr-stage.flash-go { animation: tr-glow-bull 0.6s ease-out; }
+.tr-stage.flash-wave { animation: tr-glow-bull 0.9s ease-out; }
+.tr-stage.flash-miss { animation: tr-glow-miss 0.9s ease-out; }
+.tr-stage.flash-miss.shake { animation: tr-shake 0.35s linear, tr-glow-miss 0.9s ease-out; }
+@keyframes tr-glow-pop { from { box-shadow: 0 0 0 3px var(--accent), 0 0 36px var(--accent); } }
+@keyframes tr-glow-bull { from { box-shadow: 0 0 0 4px var(--pin), 0 0 48px var(--pin); } }
+@keyframes tr-glow-miss { from { box-shadow: 0 0 0 5px var(--miss), 0 0 60px var(--miss); border-color: var(--miss); } }
+.hud .easing b { color: var(--accent); }
 
 /* The real gap to the next score up on today's board. */
 .tr-chase { margin: 6px 0 2px; font-size: 14px; line-height: 1.5; color: var(--pin); font-weight: 600; }
@@ -56,6 +79,7 @@ body[data-state="over"] .tr-pop { opacity: 0.45; }
 
 @media (prefers-reduced-motion: reduce) {
   .tr-stage.shake { animation: none; }
+  .tr-stage.flash-miss.shake { animation: tr-glow-miss 0.9s ease-out; }
   .fx-banner-inner { transition: none !important; }
   .fx-title { animation: none !important; }
 }
