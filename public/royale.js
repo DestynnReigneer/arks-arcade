@@ -655,7 +655,7 @@
     }
     $('over').classList.remove('hidden');
     msg(null);
-    setTimeout(() => $('over').scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'nearest' }), 60);
+    setTimeout(() => $('over').scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' }), 60);
     say(`That's all 9 balls. You scored ${fmt(r.score)}.`);
   }
 

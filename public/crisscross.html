@@ -129,6 +129,15 @@
 
 <!-- ============ the game ============ -->
 <section id="game" class="hidden">
+  <div class="panel center hidden over-panel" id="overPanel">
+    <div class="over-top">
+      <button class="ghost" id="overBackBtn">Back to my games</button>
+      <button class="primary" id="againBtn">Play again</button>
+    </div>
+    <h2 id="overTitle">Game over</h2>
+    <ol class="cc-final" id="finalList"></ol>
+    <p class="hint" id="overNote"></p>
+  </div>
   <ul class="cc-scores" id="scoreStrip" aria-label="Scores"></ul>
   <div class="cc-status" id="status" aria-live="polite"></div>
   <div class="cc-board-box" id="boardBox">
@@ -153,12 +162,6 @@
       <button class="ghost" id="swapCancel">Cancel</button>
       <button class="primary" id="swapGo">Swap them</button>
     </div>
-  </div>
-  <div class="panel center hidden over-panel" id="overPanel">
-    <div class="over-top"><button class="primary" id="againBtn">Play again</button></div>
-    <h2 id="overTitle">Game over</h2>
-    <ol class="cc-final" id="finalList"></ol>
-    <p class="hint" id="overNote"></p>
   </div>
   <div class="panel">
     <h2>Words played</h2>

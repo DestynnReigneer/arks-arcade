@@ -40,21 +40,6 @@
   <div><small>Points</small><b id="mult">Normal</b></div>
 </div>
 
-<div class="dd-stage" id="stage">
-  <canvas id="canvas" aria-label="Disco Drop. A disco ball hangs over a row of moving cups. Tap anywhere here, or press Space, to drop it."></canvas>
-  <div class="dd-cover" id="cover">
-    <div class="dd-cover-box">
-      <b id="coverTitle">Ready to drop?</b>
-      <p id="coverText">You get 10 disco balls. Tap to let each one go and land it in the best cup you can. The tiny gold cup is the jackpot.</p>
-      <button class="primary big" id="coverBtn">Start</button>
-    </div>
-  </div>
-  <div class="dd-live" id="live" aria-live="polite"></div>
-</div>
-
-<button class="dd-drop" id="dropBtn" type="button" disabled>DROP!</button>
-<p class="hint center keys-hint">Tap the stage or the button. Keyboard: <b>Space</b> or <b>Enter</b>. A game controller's <b>A</b>, <b>X</b>, <b>R1</b> or right trigger works too.</p>
-
 <div class="panel center hidden over-panel" id="over" role="dialog" aria-live="polite">
   <div class="over-top"><button class="primary" id="againBtn">Play again</button></div>
   <h2 class="over-title" id="overTitle">That's the last ball!</h2>
@@ -72,6 +57,21 @@
   <p class="hint" id="rankLine"></p>
   <div class="stack"><button class="ghost" id="overScoresBtn">🏆 High scores</button></div>
 </div>
+
+<div class="dd-stage" id="stage">
+  <canvas id="canvas" aria-label="Disco Drop. A disco ball hangs over a row of moving cups. Tap anywhere here, or press Space, to drop it."></canvas>
+  <div class="dd-cover" id="cover">
+    <div class="dd-cover-box">
+      <b id="coverTitle">Ready to drop?</b>
+      <p id="coverText">You get 10 disco balls. Tap to let each one go and land it in the best cup you can. The tiny gold cup is the jackpot.</p>
+      <button class="primary big" id="coverBtn">Start</button>
+    </div>
+  </div>
+  <div class="dd-live" id="live" aria-live="polite"></div>
+</div>
+
+<button class="dd-drop" id="dropBtn" type="button" disabled>DROP!</button>
+<p class="hint center keys-hint">Tap the stage or the button. Keyboard: <b>Space</b> or <b>Enter</b>. A game controller's <b>A</b>, <b>X</b>, <b>R1</b> or right trigger works too.</p>
 
 <div class="overlay hidden" id="scores" role="dialog" aria-label="High scores">
   <div class="card-panel">

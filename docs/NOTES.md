@@ -7,6 +7,33 @@ to-do list as checkboxes (the rule is in the maintainer's global CLAUDE.md
 and `arks-internal/conventions/sessions.md`): do the checked items in the
 order they were clicked, and keep the rest pinned here.
 
+## Play again and Back to setup above the board (2026-11-02)
+
+The maintainer asked for the end-of-game buttons to sit above the board instead of at the
+bottom, in every game.
+
+- **The end panel comes before the board** in the page: GameShell puts its panel right
+  above the `mount` (Snake, Block Drop, Brick Breaker, and Tower Defense, which now
+  mounts on the map), and Dino Dash, Disco Drop, Moonshot, Roll Royale, Tumbler Rumble,
+  Sudoku, Clueless and Criss Cross have their panel moved above the stage in their HTML.
+  When it opens, it scrolls to just under the top bar (`scroll-margin-top` in
+  `arcade-ui.css`, `block: 'start'`).
+- **The buttons share one row at the top right** (`.over-top`, which now wraps and has a
+  gap): Back to setup sits beside Play again in Chess, Know-It-All, Dare Devil, Uh-Oh:
+  Part Deux and Spin & Solve; Criss Cross's game-over panel has its own Back to my games
+  (`#overBackBtn`); Shuffle Scuffle's Back to the menu and Next round moved up next to
+  Play again, with the save-your-score panel right under them; Rambler's "Put your
+  initials up" and the marathon's Done (now "Back to setup") moved up beside Play again
+  and Run again. Chess keeps "Look at the board" under the results.
+- **The TV:** Criss Cross's panel sits at the top of the right-hand column there
+  (`grid-row: 3` in `crisscross.css`); the cabinet games' stages are on the right on a
+  TV anyway.
+- Wordless already had New Game above the board, and its score box is a small card, so it
+  didn't change.
+- **Tests:** `test/browser/end-buttons.spec.js` ends a run in Snake, Dino Dash and Tumbler
+  Rumble and resigns a Chess game, and checks the buttons are on the screen, under the
+  top bar and above the board, on a phone and a laptop.
+
 ## Back goes one screen back (2026-11-02)
 
 The maintainer asked for a Back that backs out of a screen: inside a game, Back used to
