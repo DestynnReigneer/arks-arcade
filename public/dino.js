@@ -483,6 +483,18 @@
     hint: 'Press OK or up on the remote to jump (hold it for a big jump), and down to duck. On a game controller, A, X, R1 or the right trigger jumps too, and the D-pad or left stick ducks.'
   });
 
+  // Back: a run (or its game-over panel) goes back to the start, asking
+  // first while the dino's still running, and from there to the arcade.
+  ArcadeBack.setup({
+    atMenu: () => S.mode === 'ready',
+    back: () => {
+      Object.assign(S, { mode: 'ready', y: 0, vy: 0, ducking: false, dist: 0, speed: START_SPEED, obstacles: [], nextGap: 380, groundShift: 0, time: 0, night: 0, flash: 0, lastMilestone: 0 });
+      $('overPanel').classList.add('hidden');
+      document.body.dataset.state = 'ready';
+    },
+    busy: () => S.mode === 'running'
+  });
+
   document.body.dataset.state = 'ready';
   S.clouds = [{ x: 420, y: 40 }, { x: 160, y: 66 }];
   requestAnimationFrame(frame);

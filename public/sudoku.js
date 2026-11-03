@@ -691,6 +691,11 @@
     hint: 'The arrows on the remote move around the board, and OK opens the numbers for the square you\'re on, with Erase, Notes, Undo, Hint and Check. On a game controller, X erases, Y turns notes on and off, and Start pauses.'
   });
 
+  // Back: the puzzle being worked on is paused (the clock stops and your
+  // progress is kept, so nothing needs asking), and from the paused puzzle,
+  // or one that's done, Back goes to the arcade.
+  ArcadeBack.setup({ atMenu: () => !run || !!run.paused || !!run.finished, back: () => setPaused(true) });
+
   // ---- start -----------------------------------------------------------------------------------------
   setNotes(false);
   paintLevels();

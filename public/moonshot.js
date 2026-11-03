@@ -887,6 +887,24 @@
   document.body.dataset.state = 'ready';
   paintHud();
 
+  // Back: a run (or its results) goes back to the Start cover, asking first
+  // while pitches are left, and from there to the arcade.
+  ArcadeBack.setup({
+    atMenu: () => mode === 'idle',
+    back: () => {
+      mode = 'idle';
+      run = null; plan = null; outcome = []; total = 0;
+      document.body.dataset.state = 'ready';
+      $('over').classList.add('hidden');
+      $('pauseCover').classList.add('hidden');
+      $('cover').classList.remove('hidden');
+      Blip.musicPlaying(false);
+      paintHud();
+    },
+    busy: () => ['playing', 'paused', 'resuming', 'ending'].includes(mode),
+    pause: () => pause()
+  });
+
   // ---- on the TV ----------------------------------------------------------------------------
   // The batting cage on the right, big, with its own Start and Keep playing
   // buttons. OK swings; a controller's X, R1 and right trigger swing too (A

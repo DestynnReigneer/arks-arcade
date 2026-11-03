@@ -384,7 +384,7 @@
     if (r.near) setTimeout(() => toast('So close! That ball landed right next to the jackpot cup.', 2600), 300);
     paintHud();
     if (f.server.finished) {
-      setTimeout(() => endRun(), r.jackpot ? 1700 : 900);
+      setTimeout(() => { if (state === 'playing') endRun(); }, r.jackpot ? 1700 : 900);
       return;
     }
     // What changes for the next ball.
@@ -599,6 +599,22 @@
     hint: 'Press OK to let the disco ball go. On a game controller, A, X, R1 or the right trigger drops it too.'
   });
   if (TvPlay.on) $('coverText').textContent = 'You get 10 disco balls. Press OK to let each one go and land it in the best cup you can. The tiny gold cup is the jackpot.';
+
+  // Back: a run (or its results) goes back to the cabinet's Start cover,
+  // asking first while balls are left, and from there to the arcade.
+  ArcadeBack.setup({
+    atMenu: () => state === 'ready',
+    back: () => {
+      state = 'ready';
+      run = null; plan = null; falling = null; next = null; results = []; total = 0;
+      document.body.dataset.state = 'ready';
+      $('over').classList.add('hidden');
+      $('cover').classList.remove('hidden');
+      Blip.musicPlaying(false);
+      paintHud();
+    },
+    busy: () => state === 'playing'
+  });
 
   // ---- start ---------------------------------------------------------------------------------
   document.body.dataset.state = 'ready';

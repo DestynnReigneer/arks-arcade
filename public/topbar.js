@@ -97,3 +97,164 @@
   window.addEventListener('scroll', () => { if (!queued) { queued = true; requestAnimationFrame(frame); } }, { passive: true });
   frame();
 })();
+
+// Back, one screen at a time (2026-11-02). Inside a game, the top bar's back
+// arrow and the phone's or browser's own Back (and the TV remote's Back, which
+// the TV app turns into the browser's Back) go one screen back: from a game
+// being played to that game's menu, and from the menu to the arcade. Leaving
+// a game that's still going asks first.
+//
+// Each game says where it is once its script has loaded:
+//
+//   ArcadeBack.setup({
+//     atMenu: () => true while on the game's first screen (its menu or setup),
+//     back:   () => go one screen back (usually to the menu),
+//     busy:   () => true if going back would end a game in progress,
+//     pause:  () => optional, called before asking, so the game waits,
+//     question: 'Leave this game?'   // optional, what to ask (or a function)
+//   });
+//
+// How it works: whenever the game isn't on its menu, there's one extra entry
+// in the browser's history for this page. Back uses that entry up, and this
+// takes the game one screen back. If it's still not on the menu after that,
+// the entry is put back, so the next Back works the same way. When the game
+// goes back to its menu by itself (a "Back to setup" button), the entry is
+// taken away again, so Back from the menu leaves for the arcade.
+window.ArcadeBack = (() => {
+  let cfg = null;
+  let pushed = false;     // our extra history entry is there
+  let skipPops = 0;       // history.back() calls we made ourselves
+  let asking = false;
+  const MARK = 'arcadeBack';
+  const ours = s => !!(s && s[MARK]);
+  const atMenu = () => { try { return !cfg || !!cfg.atMenu(); } catch { return true; } };
+
+  function label() {
+    const link = document.querySelector('.ah-back');
+    if (!link) return;
+    const inside = cfg && !atMenu();
+    const span = link.querySelector('span');
+    const text = inside ? 'Back' : 'Arcade';
+    if (span && span.textContent !== text) span.textContent = text;
+    const title = inside ? 'Back to this game\'s menu' : 'Back to the arcade';
+    if (link.title !== title) { link.title = title; link.setAttribute('aria-label', title); }
+  }
+
+  // Keeps the extra history entry in step with the screen.
+  function sync() {
+    if (!cfg) return;
+    const menu = atMenu();
+    if (!menu && !pushed) {
+      history.pushState({ ...(history.state || {}), [MARK]: 1 }, '');
+      pushed = true;
+    } else if (menu && pushed && !asking) {
+      pushed = false;
+      if (ours(history.state)) { skipPops++; history.back(); }
+    }
+    label();
+  }
+
+  // A yes-or-no question on the page itself. On a TV, the TV's own card
+  // (the remote can answer it); elsewhere a card in the arcade's colors.
+  function ask(text) {
+    if (window.ArcadeTV && window.ArcadeTV.on) return window.ArcadeTV.confirm(text, { yes: 'Leave', no: 'Keep playing' });
+    return new Promise(resolve => {
+      const root = document.createElement('div');
+      root.className = 'ab-confirm';
+      root.setAttribute('role', 'dialog');
+      root.setAttribute('aria-modal', 'true');
+      root.style.cssText = 'position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(5,4,10,.78);backdrop-filter:blur(3px)';
+      root.innerHTML = `
+        <div style="width:100%;max-width:360px;background:#1e0e39;color:#f5eaff;border:2px solid #ff2ec4;border-radius:16px;padding:20px;box-shadow:0 0 30px rgba(255,46,196,.3);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;text-align:center">
+          <h2 data-q style="margin:0 0 14px;font-size:18px;line-height:1.35"></h2>
+          <button data-stay style="display:block;width:100%;padding:12px;border:0;border-radius:10px;background:#00ffc2;color:#14082b;font-weight:800;font-size:15px;cursor:pointer">Keep playing</button>
+          <button data-leave style="display:block;width:100%;margin-top:8px;padding:11px;border:1px solid #ff2ec4;border-radius:10px;background:transparent;color:#f5eaff;font-size:14px;font-weight:700;cursor:pointer">Leave</button>
+        </div>`;
+      root.querySelector('[data-q]').textContent = text;
+      const key = e => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); done(false); } };
+      const done = ok => { root.remove(); document.removeEventListener('keydown', key, true); resolve(ok); };
+      root.querySelector('[data-stay]').onclick = () => done(false);
+      root.querySelector('[data-leave]').onclick = () => done(true);
+      root.addEventListener('click', e => { if (e.target === root) done(false); });
+      document.addEventListener('keydown', key, true);
+      document.body.appendChild(root);
+      root.querySelector('[data-stay]').focus();
+    });
+  }
+
+  // One screen back. Our history entry has already been used up by now.
+  async function stepBack() {
+    if (asking || !cfg) return;
+    let busy = false;
+    try { busy = !!(cfg.busy && cfg.busy()); } catch { busy = false; }
+    if (busy) {
+      // Stay put while asking: the entry goes back, so a second Back while
+      // the question is up doesn't leave the page.
+      if (!pushed) { history.pushState({ ...(history.state || {}), [MARK]: 1 }, ''); pushed = true; }
+      asking = true;
+      try { if (cfg.pause) cfg.pause(); } catch { /* the question still comes up */ }
+      let ok = false;
+      const q = typeof cfg.question === 'function' ? cfg.question() : cfg.question;
+      try { ok = await ask(q || 'Leave this game? It ends here and won\'t be saved.'); } finally { asking = false; }
+      if (!ok) { label(); return; }
+    }
+    try { cfg.back(); } catch (e) { console.error(e); }
+    // The screen may change a moment later (a fade, a server reply).
+    sync();
+    setTimeout(sync, 60);
+  }
+
+  // Back from here: use our history entry up if it's there (popstate then
+  // calls stepBack), otherwise go back a screen straight away.
+  function back() {
+    if (!cfg || atMenu()) { location.href = '/'; return; }
+    if (pushed && ours(history.state)) history.back();
+    else stepBack();
+  }
+
+  window.addEventListener('popstate', () => {
+    if (skipPops) { skipPops--; return; }
+    if (!cfg || !pushed) return;
+    pushed = false;
+    // A Back while the question is up just answers it "keep playing".
+    if (asking) { const stay = document.querySelector('.ab-confirm [data-stay], .tv-confirm .tv-btn'); if (stay) stay.click(); return; }
+    stepBack();
+  });
+
+  // The top bar's back arrow: one screen back inside a game, the arcade from
+  // its menu (the link's own address).
+  document.addEventListener('click', e => {
+    const link = e.target.closest && e.target.closest('.ah-back');
+    if (!link || !cfg || atMenu() || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey) return;
+    e.preventDefault();
+    back();
+  });
+
+  // A remote or keyboard Back key that reaches the page. Escape counts only
+  // on a TV, and only when the game didn't use it (to pause) and no dialog is up.
+  window.addEventListener('keydown', e => {
+    if (!cfg || e.defaultPrevented || e.repeat) return;
+    const tv = document.documentElement.classList.contains('tv');
+    if (!(e.key === 'GoBack' || e.key === 'BrowserBack' || (tv && e.key === 'Escape'))) return;
+    if (document.querySelector('.ab-confirm, .tv-overlay') || atMenu()) return;
+    e.preventDefault();
+    back();
+  });
+
+  function setup(options) {
+    cfg = options;
+    // A reload while in a game leaves our old entry behind; step off it so a
+    // single Back from the menu still leaves for the arcade.
+    if (ours(history.state)) {
+      if (atMenu()) { skipPops++; history.back(); } else pushed = true;
+    }
+    sync();
+    // Screens change in many ways (buttons, timers, a friend's move), so
+    // check after anything on the page changes, and now and then. (Checking
+    // is cheap: a few class names. The history only changes when the screen does.)
+    new MutationObserver(() => sync()).observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['class', 'hidden', 'data-state'] });
+    setInterval(sync, 400);
+  }
+
+  return { setup, sync, back, get inside() { return !!cfg && !atMenu(); } };
+})();

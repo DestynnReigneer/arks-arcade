@@ -859,6 +859,10 @@
     }, true);
   }
 
+  // Back: a game with towers built or waves going goes back to picking a map
+  // (asking first, while the waves are going), and from there to the arcade.
+  ArcadeBack.setup({ atMenu: () => state === 'ready' && !g.towers.length, back: reset, busy: () => state === 'playing', pause: () => pause(true) });
+
   reset();
   requestAnimationFrame(frame);
   help.autoOpen();
