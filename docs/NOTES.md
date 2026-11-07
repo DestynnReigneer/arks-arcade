@@ -7,6 +7,18 @@ to-do list as checkboxes (the rule is in the maintainer's global CLAUDE.md
 and `arks-internal/conventions/sessions.md`): do the checked items in the
 order they were clicked, and keep the rest pinned here.
 
+## ARKS Launcher, the third 3D cabinet game (2026-11-07)
+
+Its id is `launcher` (page `public/launcher.*`, game `public/cab-launcher.js`, accent lane blue `#2f8bff`, emoji 🚀),
+built from the approved mockup with all 20 levels, the roll-back setting and the power bar inside the game.
+
+- **Scores:** one Points board, capped at 50,000. A Super Bonus refills balls and the levels loop, so a game has no
+  natural end for a perfect player; the cap is generous on purpose. A game started at a later level says so in the
+  score's detail ("Level 7, started at 5").
+- The Super Bonus jackpot is per game (it starts at 200 on each level), so it needs nothing on the server.
+- **Tests:** `test/cabinet.test.js` (the board's ceiling) and `test/browser/launcher.spec.js` (launches balls with
+  random pulls until they run out, then saves the points).
+
 ## Bucket Drop, the second 3D cabinet game (2026-11-07)
 
 Its id is `bucketdrop` (page `public/bucketdrop.*`, game `public/cab-bucket.js`, accent cabinet red `#ff3040`,
