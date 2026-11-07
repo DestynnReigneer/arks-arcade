@@ -7,6 +7,25 @@ to-do list as checkboxes (the rule is in the maintainer's global CLAUDE.md
 and `arks-internal/conventions/sessions.md`): do the checked items in the
 order they were clicked, and keep the rest pinned here.
 
+## Big Swing, the first 3D cabinet game (2026-11-07)
+
+Built from the approved mockup on the shared engine below. Its id is `bigswing` (page `public/bigswing.*`, game
+`public/cab-swing.js`, accent gold `#ffd23f`, emoji ⚾).
+
+- **The game** is the mockup's, unchanged except for what the arcade needs: `final()` gives the runs for the board,
+  and `tvHint` says what the remote does. The bat is spring-loaded (it speeds up through the plate, with a whoosh and
+  a motion blur), the swing is checked against the ball in small steps so it can't skip past it, and banners stay
+  small at the top so they never cover the pitch.
+- **The page** uses GameShell for the game-over panel and the one Runs board, and How to play has three pages.
+  `/api/scores/bigswing` refuses anything over 300 runs.
+- Registered everywhere a game is listed: the home card and QR picker, the admin's game list, stats and Comm Center
+  game picker, `NAMES` in `arcade/switches.js`, feedback, the dust sign and the browser test page list.
+  `test/api.test.js` now counts the home page's games from `arcade/home-games.js` instead of a fixed number.
+- **Tests:** `test/cabinet.test.js` checks the board (an honest score saves, 300 is the most, 301 and 0 are refused),
+  and `test/browser/bigswing.spec.js` swings at a real pitch, ends a game with three outs and saves the runs.
+- **Moonshot is still in the arcade.** The roadmap had Moonshot being remade as this game; whether Moonshot stays,
+  goes, or is hidden from the home page is the maintainer's call.
+
 ## The 3D cabinet games: the shared engine (2026-11-07)
 
 The maintainer approved five 3D cabinet games through a playable mockup (Big Swing, Bucket Drop, the Launcher, the

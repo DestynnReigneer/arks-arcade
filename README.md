@@ -213,6 +213,19 @@ Everything is under `/api/moonshot`.
 | `POST /run/:id/save` `{ initials?, profileToken? }` | Puts a finished run on the boards. Returns today's and all-time rank, and how far behind the next score up today it is. |
 | `GET /board?scope=day|all&day=` | The best runs, highest first. |
 
+### Big Swing (`/bigswing.html`)
+
+A 3D batting cabinet, in the spirit of the ones where a ball rolls down a track to a real bat at home plate. Hold
+(the game, the big button, Space, or a controller's A, X, R1 or right trigger) to pull the bat back, and let go to
+swing: the bat is spring-loaded, so it starts slow and snaps through the plate. Early sends the ball left and late
+sends it right, into the slots at the back wall (single, double, triple and out, shuffled before every pitch), and a
+full-power swing right over the plate flies into the home-run target. Runners go around the bases, three strikes or
+an out slot is an out, and three outs end the game. The score is the runs; ten is the Big Win. It's the first game on
+the shared 3D cabinet engine (`public/cab-*.js`), and the game itself is `public/cab-swing.js`.
+
+The page sends the runs to the shared board (`/api/scores/bigswing`, one Runs board), which refuses anything over
+300. That's the 3D cabinet games' deliberate exception to the server deciding every score (see CLAUDE.md).
+
 ### Sudoku (`/sudoku.html`)
 
 The classic 9x9 number puzzle: fill every empty square with 1 to 9 so no row, column or 3x3 box has the same number twice. There's a new puzzle at midnight on each of four levels, and it's the same puzzle for everyone that day (it's made from the date alone), so the family can race each other.
@@ -635,7 +648,8 @@ public/tumbler.*          Tumbler Rumble (the rules, shared with the server, in 
 public/discodrop*         Disco Drop (discodrop-engine.js is shared with the server)
 public/royale.*           Roll Royale (the rules, shared with the server, in royale-engine.js)
 public/moonshot*          Moonshot (moonshot-engine.js is shared with the server)
-public/game-shell.*       Shared game-over panel and high scores for those four
+public/game-shell.*       Shared game-over panel and high scores for those four, and the 3D cabinet games
+public/bigswing.*, cab-swing.js   Big Swing (the page, and the game on the 3D cabinet engine)
 public/cab-engine.js      The 3D cabinet games' shared look: renderer, glow, reflections, shapes (three.js)
 public/cab-sound.js       Their music and sound effects, made in code; follows the arcade's sound and music switches
 public/cab-frame.js, cab.css   The frame each 3D cabinet game runs in: Start, settings, the stage, input, the loop

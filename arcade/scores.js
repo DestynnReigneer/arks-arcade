@@ -21,6 +21,9 @@ const GAMES = {
   snake: { label: 'Snake', boards: { classic: 'Classic', wrap: 'Wrap-around' }, max: 200000 },
   bricks: { label: 'Brick Breaker', boards: { classic: 'Classic' }, max: 9999999 },
   blocks: { label: 'Block Drop', boards: { marathon: 'Marathon', rush: '2-Minute Rush' }, max: 99999999 },
+  // The 3D cabinet games send their own score (the deliberate exception to "the server decides"); the max is the
+  // highest score a real game could reach, so anything above it is refused.
+  bigswing: { label: 'Big Swing', boards: { runs: 'Runs' }, max: 300 },
   towers: { label: 'Tower Defense', boards: { meadow: 'Meadow', lake: 'Frozen Lake', canyon: 'Canyon', swamp: 'Swamp', castle: 'Castle', volcano: 'Volcano' }, max: 9999999 }
 };
 

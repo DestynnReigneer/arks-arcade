@@ -25,7 +25,8 @@
     tumbler: { label: 'Tumbler Rumble', href: 'tumbler.html' },
     discodrop: { label: 'Disco Drop', href: 'discodrop.html' },
     royale: { label: 'Roll Royale', href: 'royale.html' },
-    moonshot: { label: 'Moonshot', href: 'moonshot.html' }
+    moonshot: { label: 'Moonshot', href: 'moonshot.html' },
+    bigswing: { label: 'Big Swing', href: 'bigswing.html' }
   };
 
   // ---- who's playing ---------------------------------------------------------
