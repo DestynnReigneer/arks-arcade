@@ -174,11 +174,8 @@ app.use('/api/daredevil', require('./daredevil/routes'));
 app.use('/api/sudoku', require('./sudoku/routes').router);
 app.use('/api/scuffle', require('./scuffle/routes'));
 app.use('/api/crisscross', require('./crisscross/routes'));
-app.use('/api/discodrop', require('./discodrop/routes').router);
-app.use('/api/moonshot', require('./moonshot/routes').router);
 app.use('/api/clueless', require('./clueless/routes')({ requireAdmin }));
 app.use('/api/tumbler', require('./tumbler/routes').router);
-app.use('/api/royale', require('./royale/routes').router);
 // Taking a single score off any game's board, and putting it back (the admin
 // page's Boards tab). "Removed by" is the ARKS ID name when the admin is
 // signed in there too, otherwise where the request came from.

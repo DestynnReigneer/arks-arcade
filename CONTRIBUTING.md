@@ -46,9 +46,6 @@ ends up in the Docker image (CI checks that too).
 - `crisscross/` — Words with Family (called Criss Cross until November 2026, so the files kept that name): the rules (`engine.js`), the computer player (`bot.js`) and the games kept in the database (`games.js`)
 - `clueless/` — Clueless Crosswords (called Clueless until November 2026), the daily crossword and free play: the grid shapes and filler (`grid.js`), the clue checks (`clues.js`), the built-in clues, the day's puzzles and clue packs (`maker.js`, `puzzles.js`) and the routes
 - `tumbler/` — Tumbler Rumble's runs, the replay that works out each score, and the boards; the rules themselves are `public/tumbler-engine.js`, which the page and the server both load
-- `discodrop/` — Disco Drop's runs and boards. The motion and the scoring rules are in `public/discodrop-engine.js`, which the page and the server both load, so they always agree
-- `royale/` — Roll Royale's runs, the replay that works out each score, and the boards; the rules themselves are `public/royale-engine.js`, which the page and the server both load
-- `moonshot/` — Moonshot's runs, swings, pauses and boards. The pitches and the scoring rules are in `public/moonshot-engine.js`, which the page and the server both load, so they always agree
 - `public/cab-*.js`, `public/cab.css` and `public/vendor/three/` — the 3D cabinet games' shared engine, sound and frame,
   on three.js 0.128 copied into the arcade (nothing loads from outside). A game is one `cab-<name>.js` file plus a page;
   `CabFrame.run` in `cab-frame.js` says what a game has to provide. `window.CabTest` steps a game by hand for the

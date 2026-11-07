@@ -34,8 +34,9 @@ db.db.exec(`
 const fail = (message, status = 400) => Object.assign(new Error(message), { status });
 const TABLE_RE = /^[a-z][a-z0-9_]*_scores$/;
 // Rambler's boards have their own Remove buttons on the Rambler tab (and its
-// seasons turn scores into badges), so they're left to that tab.
-const SKIP = new Set(['rambler_scores']);
+// seasons turn scores into badges), so they're left to that tab. Disco Drop, Roll Royale and Moonshot
+// were taken out of the arcade on 2026-11-07; their old scores stay in the database but get no board.
+const SKIP = new Set(['rambler_scores', 'discodrop_scores', 'royale_scores', 'moonshot_scores']);
 
 const columnsOf = table => db.db.prepare(`PRAGMA table_info(${table})`).all().map(c => c.name);
 const tableExists = table => !!db.db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?").get(table);
@@ -53,8 +54,6 @@ function known() {
   add({ id: 'clueless', label: 'Clueless Crosswords', table: 'clueless_scores', boardCol: 'level', unit: 'time', daily: true,
     boards: levels(require('../clueless/maker').LEVELS) });
   add({ id: 'tumbler', label: 'Tumbler Rumble', table: 'tumbler_scores', unit: 'points', daily: true, boards: one });
-  add({ id: 'discodrop', label: 'Disco Drop', table: 'discodrop_scores', unit: 'points', daily: true, boards: one });
-  add({ id: 'royale', label: 'Roll Royale', table: 'royale_scores', unit: 'points', daily: true, boards: one });
   add({ id: 'scuffle', label: 'Shuffle Scuffle', table: 'scuffle_scores', boardCol: 'dictionary', unit: 'points', daily: true,
     boards: [{ id: 'kids', label: 'Family daily' }, { id: 'adult', label: 'Unfiltered daily' }] });
   add({ id: 'wordless', label: 'Wordless', table: 'scores', boardCol: 'difficulty', unit: 'points', daily: false,
