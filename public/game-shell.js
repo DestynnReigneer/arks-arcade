@@ -23,7 +23,9 @@ const GameShell = (() => {
     return t.content.firstElementChild;
   }
 
-  function create({ game, boards, mount, onAgain, againLabel = 'Play again' }) {
+  // format: how a score reads (a time, say); lowerIsBetter: the best score is the smallest (a race time).
+  function create({ game, boards, mount, onAgain, againLabel = 'Play again', format, lowerIsBetter = false }) {
+    const fmt = format || (n => n.toLocaleString('en-US'));
     const boardIds = Object.keys(boards);
     const bestKey = board => `${game}.best.${board}`;
     const best = board => { try { return Number(localStorage.getItem(bestKey(board))) || 0; } catch { return 0; } };
@@ -86,10 +88,10 @@ const GameShell = (() => {
 
     function showOver({ score, board = boardIds[0], detail = '', title }) {
       score = Math.max(0, Math.round(score));
-      const isBest = score > best(board);
+      const was = best(board), isBest = lowerIsBetter ? score > 0 && (!was || score < was) : score > was;
       if (isBest) { try { localStorage.setItem(bestKey(board), String(score)); } catch { /* private mode */ } }
       q('.over-title').textContent = title || (isBest && score > 0 ? 'New personal best! 🎉' : 'Game over');
-      q('.final-score').textContent = score.toLocaleString('en-US');
+      q('.final-score').textContent = fmt(score);
       q('.over-detail').textContent = detail;
       pending = score > 0 ? { score, board, detail } : null;
       const p = profile();
@@ -128,8 +130,8 @@ const GameShell = (() => {
         tabs.appendChild(b);
       }
       const mine = best(board);
-      scores.querySelector('.my-best').textContent = mine ? `Your best on this device: ${mine.toLocaleString('en-US')}` : '';
-      ArcadeKit.loadScores(game, board, scores.querySelector('.scores'), highlightId);
+      scores.querySelector('.my-best').textContent = mine ? `Your best on this device: ${fmt(mine)}` : '';
+      ArcadeKit.loadScores(game, board, scores.querySelector('.scores'), highlightId, undefined, fmt);
       scores.classList.remove('hidden');
     }
     scores.querySelector('.close-btn').addEventListener('click', () => scores.classList.add('hidden'));

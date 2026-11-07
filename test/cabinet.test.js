@@ -72,6 +72,20 @@ async function run({ base, root }) {
   ok('the same win can only be saved once', again.status === 400, String(again.status));
   ok('a game with no jackpot says so', (await fetch(`${base}/api/cab-jackpot/bigswing`)).status === 404);
 
+  console.log('\n-- cabinet games: the Racer\'s times (fastest first) --');
+  const race = (score, board = 'neon') => post('racer', { initials: 'RCR', score, board, detail: 'test' });
+  const slow = await race(62000), fast = await race(45000);
+  ok('a finishing time goes on its track\'s board', slow.status === 201 && fast.status === 201, `${slow.status} ${fast.status}`);
+  ok('the faster time ranks #1', (await fast.json()).rank === 1);
+  const mid = await (await race(50000)).json();
+  ok('a time between them ranks #2', mid.rank === 2, JSON.stringify(mid));
+  const times = await (await fetch(`${base}/api/scores/racer?board=neon`)).json();
+  ok('the board lists the fastest first', times.map(r => r.score).slice(0, 3).join() === '45000,50000,62000', JSON.stringify(times.map(r => r.score)));
+  ok('a time faster than any real race is refused', (await race(29999)).status === 400);
+  ok('a time longer than the clock allows is refused', (await race(85001)).status === 400);
+  const other = await (await fetch(`${base}/api/scores/racer?board=star`)).json();
+  ok('each track has its own board', !other.some(r => r.initials === 'RCR'));
+
   console.log("\n-- cabinet games: the Train Station's cars --");
   const cars = await (await fetch(`${base}/api/train-cars`)).json();
   ok('the train has 8 cars with made-up names until the admin names them', cars.cars.length === 8 && cars.cars[0].name === 'Comet', JSON.stringify(cars.cars[0]));

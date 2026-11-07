@@ -274,6 +274,22 @@ code only has made-up names (Comet, Blaze, Pixel and so on), so nobody's real na
 The page sends the points to the shared board (`/api/scores/train`, one Points board), which refuses anything over
 100,000; All Aboard refills the balls, so a game's length is open-ended and the ceiling is generous.
 
+### ARKS Racer (`/racer.html`)
+
+A 3D synthwave time-trial racer, in the spirit of the classic arcade stock-car cabinets. Three laps against the clock:
+you start with 32 seconds and each finished lap adds 24. Eight tracks, each its own place with its own music (some
+with speed pads); there's no brake, so you let off the gas for the turns, and driving off Star Road drops you into
+space until you're beamed back. Steering: on a phone, Touch is **Tap like the keys** (tap or hold the left or right
+half of the game; taps add up and letting go straightens out) or **Slide** (slide a finger), with a dead zone, a
+gentle curve for small corrections and a limit on how fast the wheel turns, and a steering bar along the bottom;
+the keys work like a wheel too. Gas is held or always on. The game is `public/cab-racer.js`.
+
+The score is the finishing time, kept in thousandths of a second on the shared board (`/api/scores/racer`) with one
+board per track, fastest first; a race that runs out of time isn't saved. The board refuses a time under 30 seconds
+(three laps take about 38 at best) or over 85 (the clock never gives more than 80). The shared board learned times
+for this: a game in `arcade/scores.js` can be `lowerIsBetter` with a `min`, and GameShell and
+`ArcadeKit.renderScores` take a `format` (the Racer shows "1:02.35").
+
 ### Sudoku (`/sudoku.html`)
 
 The classic 9x9 number puzzle: fill every empty square with 1 to 9 so no row, column or 3x3 box has the same number twice. There's a new puzzle at midnight on each of four levels, and it's the same puzzle for everyone that day (it's made from the date alone), so the family can race each other.
@@ -701,6 +717,7 @@ public/bigswing.*, cab-swing.js   Big Swing (the page, and the game on the 3D ca
 public/bucketdrop.*, cab-bucket.js   Bucket Drop (its jackpot is arcade/cab-jackpot.js)
 public/launcher.*, cab-launcher.js   ARKS Launcher
 public/train.*, cab-train.js, cab-cast.js   ARKS Train Station and its cast of bots (the cars' names: arcade/train-cars.js)
+public/racer.*, cab-racer.js   ARKS Racer
 public/cab-engine.js      The 3D cabinet games' shared look: renderer, glow, reflections, shapes (three.js)
 public/cab-sound.js       Their music and sound effects, made in code; follows the arcade's sound and music switches
 public/cab-frame.js, cab.css   The frame each 3D cabinet game runs in: Start, settings, the stage, input, the loop
