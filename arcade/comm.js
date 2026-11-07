@@ -30,7 +30,7 @@ db.db.exec(`CREATE TABLE IF NOT EXISTS comm_feedback_replies (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 )`);
 
-const GAMES = ['wordless', 'rambler', 'spinsolve', 'chess', 'dino', 'trivia', 'partdeux', 'daredevil', 'snake', 'bricks', 'blocks', 'towers', 'sudoku', 'scuffle', 'crisscross', 'clueless', 'tumbler', 'discodrop', 'royale', 'moonshot', 'bigswing', 'bucketdrop', 'launcher'];
+const GAMES = ['wordless', 'rambler', 'spinsolve', 'chess', 'dino', 'trivia', 'partdeux', 'daredevil', 'snake', 'bricks', 'blocks', 'towers', 'sudoku', 'scuffle', 'crisscross', 'clueless', 'tumbler', 'discodrop', 'royale', 'moonshot', 'bigswing', 'bucketdrop', 'launcher', 'train'];
 const FEEDBACK_KINDS = ['feature', 'issue', 'message'];
 const STATUSES = ['new', 'pending', 'in-progress', 'completed', 'canceled'];
 // Done ones (Fixed, Won't fix) move to the Archive, for the admin and the sender.
@@ -392,6 +392,13 @@ function adminRouter(requireAdmin) {
       switches.changed();
       res.json({ ...saved, ...switches.adminNote() });
     } catch (e) { next(e); }
+  });
+
+  // ARKS Train Station's eight cars: their names and how hard each is.
+  const trainCars = require('./train-cars');
+  admin.get('/train-cars', (req, res) => res.json({ cars: trainCars.get(), defaults: trainCars.DEFAULTS }));
+  admin.post('/train-cars', (req, res, next) => {
+    try { res.json({ cars: trainCars.set((req.body || {}).cars) }); } catch (e) { next(e); }
   });
 
   // The adult PIN lives here rather than under one game: it guards adult
