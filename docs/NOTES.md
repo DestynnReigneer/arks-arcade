@@ -7,6 +7,24 @@ to-do list as checkboxes (the rule is in the maintainer's global CLAUDE.md
 and `arks-internal/conventions/sessions.md`): do the checked items in the
 order they were clicked, and keep the rest pinned here.
 
+## Bucket Drop, the second 3D cabinet game (2026-11-07)
+
+Its id is `bucketdrop` (page `public/bucketdrop.*`, game `public/cab-bucket.js`, accent cabinet red `#ff3040`,
+emoji 🪣). Built from the approved mockup, including the maintainer's LED jackpot plate.
+
+- **The jackpot is the arcade's, not the device's.** In the mockup each device kept its own; here
+  `arcade/cab-jackpot.js` keeps it in the settings table (`cab_jackpot_bucketdrop`): it starts at 1,000, each finished
+  game adds 10 (`POST /api/cab-jackpot/bucketdrop/played`), and a win (`{ won: true }`) records the amount and starts
+  it over. The page reads it on load and after every game.
+- **Checking a score:** a perfect game without the jackpot is exactly 750 (50 catches, and catching all 50 means the
+  streak never broke, so all ten 25-point bonuses). The board takes up to 750; above that, only 750 plus a jackpot won
+  in the last 15 minutes, once per win. `arcade/scores.js` gained an optional per-game `check` for this.
+- **One Points board** for every Cups and Speed setting, with the settings in each score's detail. Separate boards per
+  setting would be fairer; that's the maintainer's call.
+- **Tests:** `test/cabinet.test.js` (750 is the most without a jackpot, a jackpot nobody won is refused, a real win
+  saves once, the jackpot grows and starts over) and `test/browser/bucketdrop.spec.js` (drops 20 balls, lets the time
+  run out, sees the jackpot grow and saves the points).
+
 ## Big Swing, the first 3D cabinet game (2026-11-07)
 
 Built from the approved mockup on the shared engine below. Its id is `bigswing` (page `public/bigswing.*`, game
