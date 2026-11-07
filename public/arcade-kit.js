@@ -103,7 +103,8 @@ const ArcadeKit = (() => {
     };
   }
 
-  function renderScores(list, rows, highlightId) {
+  // fmt turns a score into text (a game whose score is a time shows it as a time)
+  function renderScores(list, rows, highlightId, fmt) {
     list.innerHTML = '';
     if (!rows.length) {
       list.innerHTML = '<li class="empty">No scores yet. Be the first!</li>';
@@ -120,14 +121,14 @@ const ArcadeKit = (() => {
         who.append(ArcadeProfile.avatarEl(r.profileAvatar, 22), r.profileName);
       } else who.textContent = r.initials;
       li.querySelector('.det').textContent = r.detail || '';
-      li.querySelector('.pts').textContent = r.score.toLocaleString('en-US');
+      li.querySelector('.pts').textContent = fmt ? fmt(r.score) : r.score.toLocaleString('en-US');
       list.appendChild(li);
     });
   }
 
-  async function loadScores(game, board, list, highlightId, headers) {
+  async function loadScores(game, board, list, highlightId, headers, fmt) {
     try {
-      renderScores(list, await api(`/api/scores/${game}?board=${encodeURIComponent(board || '')}&limit=20`, undefined, headers), highlightId);
+      renderScores(list, await api(`/api/scores/${game}?board=${encodeURIComponent(board || '')}&limit=20`, undefined, headers), highlightId, fmt);
     } catch (e) {
       list.innerHTML = `<li class="empty"></li>`;
       list.firstChild.textContent = e.message;

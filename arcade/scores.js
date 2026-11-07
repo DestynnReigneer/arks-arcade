@@ -28,10 +28,15 @@ const GAMES = {
   bucketdrop: { label: 'Bucket Drop', boards: { points: 'Points' }, max: 1000000, check: points => require('./cab-jackpot').check('bucketdrop', points) },
   launcher: { label: 'ARKS Launcher', boards: { points: 'Points' }, max: 50000 },
   train: { label: 'ARKS Train Station', boards: { points: 'Points' }, max: 100000 },
+  // ARKS Racer keeps finishing times in thousandths of a second, fastest first, one board per track. Three laps take
+  // at least about 38 seconds even on speed pads the whole way, and the clock never gives more than 80.
+  racer: { label: 'ARKS Racer', boards: { sunset: 'Sunset Strip', neon: 'Neon Night', ocean: 'Ocean Drive', midnight: 'Midnight Run', golden: 'Golden Coast', teal: 'Crystal Cove', star: 'Star Road', forest: 'Laser Forest' }, lowerIsBetter: true, min: 30000, max: 85000 },
   towers: { label: 'Tower Defense', boards: { meadow: 'Meadow', lake: 'Frozen Lake', canyon: 'Canyon', swamp: 'Swamp', castle: 'Castle', volcano: 'Volcano' }, max: 9999999 }
 };
 
 const INITIALS_RE = /^[A-Z0-9]{1,3}$/;
+// A game whose score is a time (lower is better) keeps it in thousandths of a second.
+const shown = (g, points) => (g.lowerIsBetter ? `${(points / 1000).toFixed(2)} seconds` : points.toLocaleString('en-US'));
 
 db.db.exec(`
   CREATE TABLE IF NOT EXISTS arcade_scores (
@@ -65,8 +70,9 @@ function boardOf(game, board) {
 function list(game, board, limit = 25) {
   const { key } = boardOf(game, board);
   const cap = Math.min(Math.max(parseInt(limit, 10) || 25, 1), 100);
+  const order = GAMES[game].lowerIsBetter ? 'ASC' : 'DESC';
   return db.db.prepare(`
-    SELECT * FROM arcade_scores WHERE game = ? AND board = ? ORDER BY score DESC, created_at ASC LIMIT ?
+    SELECT * FROM arcade_scores WHERE game = ? AND board = ? ORDER BY score ${order}, created_at ASC LIMIT ?
   `).all(game, key, cap).map(r => {
     // A profile's current choice (name or initials) wins over what was saved.
     const now = r.profile_id ? require('./profiles').boardName(r.profile_id) : null;
@@ -84,14 +90,14 @@ function save(game, { initials, score, board, detail, profileToken }) {
   const who = profile ? profile.initials || initialsOf(profile.name) : String(initials || '').toUpperCase().trim();
   if (!INITIALS_RE.test(who)) throw fail('Initials must be 1-3 letters or numbers.', 400);
   const points = Math.round(Number(score));
-  if (!Number.isFinite(points) || points < 1 || points > g.max) throw fail('That score does not look right.', 400);
+  if (!Number.isFinite(points) || points < (g.min || 1) || points > g.max) throw fail('That score does not look right.', 400);
   // a game with its own check (a jackpot that must really have been won here)
   if (g.check && !g.check(points)) throw fail('That score does not look right.', 400);
   const info = db.db.prepare(`
     INSERT INTO arcade_scores (game, board, initials, score, detail, profile_id, profile_name, profile_avatar) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `).run(game, key, who, points, String(detail || '').slice(0, 80), profile ? profile.id : null, profile ? profile.name : null, profile ? profile.avatar : null);
   const rank = db.db.prepare(`
-    SELECT COUNT(*) AS c FROM arcade_scores WHERE game = ? AND board = ? AND score > ?
+    SELECT COUNT(*) AS c FROM arcade_scores WHERE game = ? AND board = ? AND score ${g.lowerIsBetter ? '<' : '>'} ?
   `).get(game, key, points).c + 1;
   if (rank === 1 && !(g.adultBoards || []).includes(key)) {
     const where = Object.keys(g.boards).length > 1 ? ` (${g.boards[key]})` : '';
@@ -99,7 +105,7 @@ function save(game, { initials, score, board, detail, profileToken }) {
     comm.safePost({
       kind: 'highscore', emoji: '🏆', game,
       title: `${shout} took #1 on ${g.label}${where}`,
-      body: `${shout} just set the top score on ${g.label}${where} with ${points.toLocaleString('en-US')}. Think you can beat it?`
+      body: `${shout} just set the top score on ${g.label}${where} with ${shown(g, points)}. Think you can beat it?`
     });
   }
   return { id: Number(info.lastInsertRowid), score: points, rank, board: key };

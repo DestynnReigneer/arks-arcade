@@ -21,7 +21,7 @@
     hub: ['🏠', 'Home page'], wordless: ['🔤', 'Wordless'], rambler: ['🔠', 'Rambler'], spinsolve: ['🎡', 'Spin & Solve'],
     chess: ['♞', 'Chess'], dino: ['🦖', 'Dino Dash'], trivia: ['🧠', 'Know-It-All'], partdeux: ['🚨', 'Uh-Oh: Part Deux'],
     daredevil: ['😈', 'Dare Devil'], snake: ['🐍', 'Snake'], bricks: ['🧱', 'Brick Breaker'], blocks: ['🟪', 'Block Drop'],
-    towers: ['🏰', 'Tower Defense'], sudoku: ['🧩', 'Sudoku'], scuffle: ['🔀', 'Shuffle Scuffle'], crisscross: ['🔡', 'Words with Family'], clueless: ['📰', 'Clueless Crosswords'], tumbler: ['🔓', 'Tumbler Rumble'], discodrop: ['🪩', 'Disco Drop'], royale: ['🎳', 'Roll Royale'], moonshot: ['⚾', 'Moonshot'], train: ['🚂', 'ARKS Train Station'], launcher: ['🚀', 'ARKS Launcher'], bucketdrop: ['🪣', 'Bucket Drop'], bigswing: ['⚾', 'Big Swing'], admin: ['🛠️', 'Admin']
+    towers: ['🏰', 'Tower Defense'], sudoku: ['🧩', 'Sudoku'], scuffle: ['🔀', 'Shuffle Scuffle'], crisscross: ['🔡', 'Words with Family'], clueless: ['📰', 'Clueless Crosswords'], tumbler: ['🔓', 'Tumbler Rumble'], discodrop: ['🪩', 'Disco Drop'], royale: ['🎳', 'Roll Royale'], moonshot: ['⚾', 'Moonshot'], racer: ['🏎️', 'ARKS Racer'], train: ['🚂', 'ARKS Train Station'], launcher: ['🚀', 'ARKS Launcher'], bucketdrop: ['🪣', 'Bucket Drop'], bigswing: ['⚾', 'Big Swing'], admin: ['🛠️', 'Admin']
   };
   const gameName = id => (GAMES[id] ? `${GAMES[id][0]} ${GAMES[id][1]}` : id || 'The arcade');
   const DEVICE_EMOJI = { phone: '📱', tablet: '📲', desktop: '🖥️' };
