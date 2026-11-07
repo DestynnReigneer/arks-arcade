@@ -24,6 +24,8 @@ const GAMES = {
   // The 3D cabinet games send their own score (the deliberate exception to "the server decides"); the max is the
   // highest score a real game could reach, so anything above it is refused.
   bigswing: { label: 'Big Swing', boards: { runs: 'Runs' }, max: 300 },
+  // Bucket Drop's best normal game is 750; above that, the score must be 750 plus a jackpot really won here.
+  bucketdrop: { label: 'Bucket Drop', boards: { points: 'Points' }, max: 1000000, check: points => require('./cab-jackpot').check('bucketdrop', points) },
   towers: { label: 'Tower Defense', boards: { meadow: 'Meadow', lake: 'Frozen Lake', canyon: 'Canyon', swamp: 'Swamp', castle: 'Castle', volcano: 'Volcano' }, max: 9999999 }
 };
 
@@ -81,6 +83,8 @@ function save(game, { initials, score, board, detail, profileToken }) {
   if (!INITIALS_RE.test(who)) throw fail('Initials must be 1-3 letters or numbers.', 400);
   const points = Math.round(Number(score));
   if (!Number.isFinite(points) || points < 1 || points > g.max) throw fail('That score does not look right.', 400);
+  // a game with its own check (a jackpot that must really have been won here)
+  if (g.check && !g.check(points)) throw fail('That score does not look right.', 400);
   const info = db.db.prepare(`
     INSERT INTO arcade_scores (game, board, initials, score, detail, profile_id, profile_name, profile_avatar) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `).run(game, key, who, points, String(detail || '').slice(0, 80), profile ? profile.id : null, profile ? profile.name : null, profile ? profile.avatar : null);
