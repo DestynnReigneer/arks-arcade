@@ -12,7 +12,8 @@ const fs = require('node:fs');
 const CABINETS = [
   { game: 'bigswing', board: 'runs', max: 300 },
   // 750 is a perfect game without the jackpot; a jackpot score is checked below
-  { game: 'bucketdrop', board: 'points', max: 750 }
+  { game: 'bucketdrop', board: 'points', max: 750 },
+  { game: 'launcher', board: 'points', max: 50000 }
 ];
 
 async function run({ base, root }) {
