@@ -49,6 +49,10 @@ ends up in the Docker image (CI checks that too).
 - `discodrop/` — Disco Drop's runs and boards. The motion and the scoring rules are in `public/discodrop-engine.js`, which the page and the server both load, so they always agree
 - `royale/` — Roll Royale's runs, the replay that works out each score, and the boards; the rules themselves are `public/royale-engine.js`, which the page and the server both load
 - `moonshot/` — Moonshot's runs, swings, pauses and boards. The pitches and the scoring rules are in `public/moonshot-engine.js`, which the page and the server both load, so they always agree
+- `public/cab-*.js`, `public/cab.css` and `public/vendor/three/` — the 3D cabinet games' shared engine, sound and frame,
+  on three.js 0.128 copied into the arcade (nothing loads from outside). A game is one `cab-<name>.js` file plus a page;
+  `CabFrame.run` in `cab-frame.js` says what a game has to provide. `window.CabTest` steps a game by hand for the
+  browser tests (`step` doesn't draw, which matters because the test browser draws 3D in software, slowly)
 - `words/` — the dictionaries, plain text, edit by hand
 - `test/` — `unit.test.js` needs no server, `api.test.js` needs the one the
   runner starts

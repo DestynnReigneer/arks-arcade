@@ -1,11 +1,36 @@
 # Status and to-dos
 
-Last updated 2026-11-02. Update this file whenever a piece of work lands or
+Last updated 2026-11-07. Update this file whenever a piece of work lands or
 a plan changes, so the next session can pick up from here. When the
 maintainer says "I'm back", start from "Last session" below, then show the
 to-do list as checkboxes (the rule is in the maintainer's global CLAUDE.md
 and `arks-internal/conventions/sessions.md`): do the checked items in the
 order they were clicked, and keep the rest pinned here.
+
+## The 3D cabinet games: the shared engine (2026-11-07)
+
+The maintainer approved five 3D cabinet games through a playable mockup (Big Swing, Bucket Drop, the Launcher, the
+Train Station and the Racer). They're built one PR each on a shared base, and they'll be released together once all
+five are in.
+
+- **three.js 0.128** is copied into `public/vendor/three/` with its MIT license (the build plus the bloom,
+  post-processing and rounded-box add-ons). Nothing loads from outside the arcade, so the CSP didn't change.
+- **`public/cab-engine.js`**: the shared look (renderer, glow, reflections, materials, the room, bulbs, labels,
+  sparks, the floating "+15" numbers). `CAB.attach(stage)` sets it up once. The mockup's Retro look and palettes were
+  left out, since the maintainer removed Retro.
+- **`public/cab-sound.js`**: the music and sound effects, all made in code. It reads the arcade's own switches
+  (`arcade.muted` and `arcade.music`, kept by blip.js), so the top bar's 🔊 and 🎵 buttons control it.
+- **`public/cab-frame.js` and `public/cab.css`**: what every game runs in. Start and Pause, the score row, the
+  settings (a list with more than six choices becomes a drop-down), the stage with its callouts and speech bubbles,
+  the power bar and steering bar, the big buttons under the game (110px tall on a phone), touch, keys, the countdown,
+  and a loop in steps of at most 1/240 of a second. It hooks into ArcadeBack, TvPlay and ArcadeStats, and a browser
+  without WebGL gets a plain message instead of a broken page. Every class is prefixed `cab-`.
+- **Scores:** these games send their own score to the shared board (`/api/scores/<game>`), and `arcade/scores.js`
+  refuses anything above the game's `max`. That's the maintainer's deliberate exception to "the server decides every
+  score" (in CLAUDE.md and `arks-internal/ROADMAP.md`).
+- **Tests:** `test/cabinet.test.js` (the copied three.js and its license, the shared scripts, no page loading a script
+  from outside, and each game's board). In the browser tests, `CabTest.manual(true)` stops the page's own animation
+  and `CabTest.step(sec)` moves the game without drawing, because the test browser draws 3D slowly in software.
 
 ## Shuffle Scuffle: a family daily and an unfiltered daily (2026-11-02)
 

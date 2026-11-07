@@ -69,7 +69,11 @@ storage) lives in `arcade/security.js`, `arcade/feedback.js` and `arcade/comm.js
   come from a "copy prompt, paste into any chatbot, paste the answer back"
   flow. Automatic AI generation was considered and turned down: it costs money
   and opens an abuse surface on an internet-facing server.
-- **The server decides every score.** Clients never send their own score.
+- **The server decides every score.** Clients never send their own score. **One exception, decided by the
+  maintainer on 2026-11-07:** the 3D cabinet games (Big Swing and the ones built after it on `cab-engine.js`) run
+  their physics in the browser, so the page sends its score and the server refuses anything no real game could
+  reach (the per-game `max` in `arcade/scores.js`). Rebuilding each game's physics on the server was weighed and
+  turned down. Every other game still has the server decide.
 - **The adult word list is deliberately uncensored.** Don't soften it.
   `words/blocklist-kids.txt` is what protects the kids list.
 - **Celebrations, yes; fake near-misses, no.** The look we want is
