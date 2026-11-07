@@ -636,6 +636,10 @@ public/discodrop*         Disco Drop (discodrop-engine.js is shared with the ser
 public/royale.*           Roll Royale (the rules, shared with the server, in royale-engine.js)
 public/moonshot*          Moonshot (moonshot-engine.js is shared with the server)
 public/game-shell.*       Shared game-over panel and high scores for those four
+public/cab-engine.js      The 3D cabinet games' shared look: renderer, glow, reflections, shapes (three.js)
+public/cab-sound.js       Their music and sound effects, made in code; follows the arcade's sound and music switches
+public/cab-frame.js, cab.css   The frame each 3D cabinet game runs in: Start, settings, the stage, input, the loop
+public/vendor/three/      three.js 0.128 and the add-ons the 3D games use, copied in so nothing loads from outside
 public/arcade-ui.css      Shared look for the newer games, with arcade-kit.js and blip.js
 public/admin.html/.js     Admin panel
 
@@ -647,3 +651,6 @@ docker-compose.yml
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+The 3D cabinet games use [three.js](https://threejs.org) 0.128, which is also MIT licensed; its license is kept
+next to it in `public/vendor/three/LICENSE`.
