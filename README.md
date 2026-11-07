@@ -241,6 +241,21 @@ above that, the score must be exactly 750 plus a jackpot won here in the last 15
 once (`arcade/cab-jackpot.js`, which also serves `GET /api/cab-jackpot/bucketdrop` and
 `POST /api/cab-jackpot/bucketdrop/played` with `{ won }`, 12 a minute from one address).
 
+### ARKS Launcher (`/launcher.html`)
+
+A 3D ball-launching cabinet, in the spirit of the ones where you pull a lever and launch a ball up a long lane. Hold to
+pull the plunger back (the power bar stands inside the game on the right, with a line at your last pull) and let go
+to launch. Clear gates let the ball through on the way up but not back down, and the last gate it passed when it stops
+is what you win. The green Super Bonus gate, with tight gates on both sides and a jackpot that grows every miss, moves
+you up a level: the first five levels refill all 8 balls, and from level 6 on a refill is 4. Twenty levels mix the
+jackpot's distance with a ramp, bead curtains, potholes (too slow and the ball drops in), a gusting headwind and a
+jackpot zone that slides while you aim; after level 20 it starts over. Settings: Start at (any level, noted on the
+score), After a roll (the ball rolls back to you, or disappears) and View. The game is `public/cab-launcher.js`; Roll
+Royale is a different game and stays.
+
+The page sends the points to the shared board (`/api/scores/launcher`, one Points board), which refuses anything over
+50,000. Refills make a game's length open-ended, so that's a generous ceiling rather than an exact one.
+
 ### Sudoku (`/sudoku.html`)
 
 The classic 9x9 number puzzle: fill every empty square with 1 to 9 so no row, column or 3x3 box has the same number twice. There's a new puzzle at midnight on each of four levels, and it's the same puzzle for everyone that day (it's made from the date alone), so the family can race each other.
@@ -666,6 +681,7 @@ public/moonshot*          Moonshot (moonshot-engine.js is shared with the server
 public/game-shell.*       Shared game-over panel and high scores for those four, and the 3D cabinet games
 public/bigswing.*, cab-swing.js   Big Swing (the page, and the game on the 3D cabinet engine)
 public/bucketdrop.*, cab-bucket.js   Bucket Drop (its jackpot is arcade/cab-jackpot.js)
+public/launcher.*, cab-launcher.js   ARKS Launcher
 public/cab-engine.js      The 3D cabinet games' shared look: renderer, glow, reflections, shapes (three.js)
 public/cab-sound.js       Their music and sound effects, made in code; follows the arcade's sound and music switches
 public/cab-frame.js, cab.css   The frame each 3D cabinet game runs in: Start, settings, the stage, input, the loop
