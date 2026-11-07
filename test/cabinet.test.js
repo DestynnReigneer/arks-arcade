@@ -9,7 +9,9 @@ const path = require('node:path');
 const fs = require('node:fs');
 
 // Each cabinet game, its board and the highest score it can save (arcade/scores.js).
-const CABINETS = [];
+const CABINETS = [
+  { game: 'bigswing', board: 'runs', max: 300 }
+];
 
 async function run({ base, root }) {
   let pass = 0, fail = 0;
