@@ -15,7 +15,7 @@
     completed: '✅ Fixed', canceled: '🚫 Won\'t fix'
   };
   const KIND_LABELS = { feature: '💡 Feature idea', issue: '🐛 Issue', message: '💬 Message' };
-  const GAME_LABELS = { wordless: 'Wordless', rambler: 'Rambler', spinsolve: 'Spin & Solve', chess: 'Chess', dino: 'Dino Dash', trivia: 'Know-It-All', partdeux: 'Uh-Oh: Part Deux', daredevil: 'Dare Devil', snake: 'Snake', bricks: 'Brick Breaker', blocks: 'Block Drop', towers: 'Tower Defense', sudoku: 'Sudoku', scuffle: 'Shuffle Scuffle', crisscross: 'Words with Family', clueless: 'Clueless Crosswords', tumbler: 'Tumbler Rumble', discodrop: 'Disco Drop', royale: 'Roll Royale', moonshot: 'Moonshot', launcher: 'ARKS Launcher', bucketdrop: 'Bucket Drop', bigswing: 'Big Swing' };
+  const GAME_LABELS = { wordless: 'Wordless', rambler: 'Rambler', spinsolve: 'Spin & Solve', chess: 'Chess', dino: 'Dino Dash', trivia: 'Know-It-All', partdeux: 'Uh-Oh: Part Deux', daredevil: 'Dare Devil', snake: 'Snake', bricks: 'Brick Breaker', blocks: 'Block Drop', towers: 'Tower Defense', sudoku: 'Sudoku', scuffle: 'Shuffle Scuffle', crisscross: 'Words with Family', clueless: 'Clueless Crosswords', tumbler: 'Tumbler Rumble', discodrop: 'Disco Drop', royale: 'Roll Royale', moonshot: 'Moonshot', train: 'ARKS Train Station', launcher: 'ARKS Launcher', bucketdrop: 'Bucket Drop', bigswing: 'Big Swing' };
 
   // One-tap posts. Gaming culture is half the fun of the board.
   const QUICK_POSTS = [
@@ -530,7 +530,7 @@
 
   // ---- home page games -------------------------------------------------------
 
-  const GAME_EMOJI = { wordless: '🔤', rambler: '🔠', spinsolve: '🎡', chess: '♞', dino: '🦖', trivia: '🧠', partdeux: '🚨', daredevil: '😈', snake: '🐍', bricks: '🧱', blocks: '🟪', towers: '🏰', sudoku: '🧩', scuffle: '🔀', crisscross: '🔡', clueless: '📰', tumbler: '🔓', discodrop: '🪩', royale: '🎳', moonshot: '⚾', launcher: '🚀', bucketdrop: '🪣', bigswing: '⚾' };
+  const GAME_EMOJI = { wordless: '🔤', rambler: '🔠', spinsolve: '🎡', chess: '♞', dino: '🦖', trivia: '🧠', partdeux: '🚨', daredevil: '😈', snake: '🐍', bricks: '🧱', blocks: '🟪', towers: '🏰', sudoku: '🧩', scuffle: '🔀', crisscross: '🔡', clueless: '📰', tumbler: '🔓', discodrop: '🪩', royale: '🎳', moonshot: '⚾', train: '🚂', launcher: '🚀', bucketdrop: '🪣', bigswing: '⚾' };
   let home = null;
 
   async function loadHomeGames() {
@@ -605,12 +605,43 @@
     saveHomeGames({ ...home, hidden });
   }
 
+  // ---- ARKS Train Station's cars ---------------------------------------------
+
+  const CAR_KINDS = [['easy', 'Easy (5)'], ['med', 'Medium (15)'], ['hard', 'Hard (40)']];
+  async function loadTrainCars() {
+    try { renderTrainCars((await api('/train-cars')).cars); } catch (e) { $('trainCars').textContent = e.message; }
+  }
+  function renderTrainCars(cars) {
+    const box = $('trainCars');
+    box.innerHTML = '';
+    cars.forEach((c, i) => {
+      const row = document.createElement('div');
+      row.className = 'theme-row';
+      row.style.justifyContent = 'flex-start';
+      row.style.gap = '8px';
+      const n = document.createElement('span'); n.textContent = `Car ${i + 1}`; n.style.minWidth = '48px';
+      const name = document.createElement('input'); name.maxLength = 12; name.value = c.name; name.className = 'train-name'; name.setAttribute('aria-label', `Car ${i + 1}'s name`);
+      const kind = document.createElement('select'); kind.className = 'train-kind'; kind.setAttribute('aria-label', `How hard car ${i + 1} is`);
+      CAR_KINDS.forEach(([v, label]) => { const o = document.createElement('option'); o.value = v; o.textContent = label; o.selected = v === c.kind; kind.appendChild(o); });
+      row.append(n, name, kind);
+      box.appendChild(row);
+    });
+  }
+  async function saveTrainCars() {
+    const cars = [...$('trainCars').children].map(row => ({ name: row.querySelector('.train-name').value.trim(), kind: row.querySelector('.train-kind').value }));
+    try {
+      renderTrainCars((await api('/train-cars', { method: 'POST', body: { cars } })).cars);
+      say($('trainCarsMsg'), 'Saved. The next game on the train uses these.');
+    } catch (e) { say($('trainCarsMsg'), e.message, false); }
+  }
+
   // ---- wiring --------------------------------------------------------------
 
   function refresh() {
     loadFeedback();
     loadPosts();
     loadHomeGames();
+    loadTrainCars();
     loadClips();
     loadPin();
   }
@@ -618,6 +649,7 @@
   document.addEventListener('DOMContentLoaded', () => {
     renderQuickPosts();
     $('postBtn').onclick = postAnnouncement;
+    $('trainCarsSave').onclick = saveTrainCars;
     $('clipSendBtn').onclick = sendClip;
     $('savePinBtn').onclick = () => {
       const pin = $('pinInput').value.trim();
