@@ -226,6 +226,21 @@ the shared 3D cabinet engine (`public/cab-*.js`), and the game itself is `public
 The page sends the runs to the shared board (`/api/scores/bigswing`, one Runs board), which refuses anything over
 300. That's the 3D cabinet games' deliberate exception to the server deciding every score (see CLAUDE.md).
 
+### Bucket Drop (`/bucketdrop.html`)
+
+A 3D drop cabinet, in the spirit of the ones where clear cups ride a spinning turntable. You get 50 balls and 30
+seconds (the clock starts on the first tap), and each tap drops a ball from the clear tube above the cups. The
+turntable speeds up as the time runs down. A catch is 10 points and every 5 in a row adds 25, so a perfect game
+without the jackpot is 750. Catching all 50 wins **the arcade's jackpot**, shown in red LED letters on the big screen:
+it starts at 1,000 and grows by 10 after every game anyone plays, until somebody wins it. Cups (big, normal, small)
+and Speed (chill to wild) are settings, saved on the device and written into the score's detail. The game is
+`public/cab-bucket.js`; Disco Drop is a different game and stays.
+
+The page sends the points to the shared board (`/api/scores/bucketdrop`, one Points board). Up to 750 is accepted;
+above that, the score must be exactly 750 plus a jackpot won here in the last 15 minutes, and each win can be saved
+once (`arcade/cab-jackpot.js`, which also serves `GET /api/cab-jackpot/bucketdrop` and
+`POST /api/cab-jackpot/bucketdrop/played` with `{ won }`, 12 a minute from one address).
+
 ### Sudoku (`/sudoku.html`)
 
 The classic 9x9 number puzzle: fill every empty square with 1 to 9 so no row, column or 3x3 box has the same number twice. There's a new puzzle at midnight on each of four levels, and it's the same puzzle for everyone that day (it's made from the date alone), so the family can race each other.
@@ -650,6 +665,7 @@ public/royale.*           Roll Royale (the rules, shared with the server, in roy
 public/moonshot*          Moonshot (moonshot-engine.js is shared with the server)
 public/game-shell.*       Shared game-over panel and high scores for those four, and the 3D cabinet games
 public/bigswing.*, cab-swing.js   Big Swing (the page, and the game on the 3D cabinet engine)
+public/bucketdrop.*, cab-bucket.js   Bucket Drop (its jackpot is arcade/cab-jackpot.js)
 public/cab-engine.js      The 3D cabinet games' shared look: renderer, glow, reflections, shapes (three.js)
 public/cab-sound.js       Their music and sound effects, made in code; follows the arcade's sound and music switches
 public/cab-frame.js, cab.css   The frame each 3D cabinet game runs in: Start, settings, the stage, input, the loop
