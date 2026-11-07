@@ -22,6 +22,13 @@
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     stage.insertBefore(renderer.domElement, stage.firstChild);
+    // A device with no graphics chip draws 3D in software (SwiftShader, llvmpipe), which is slow and hogs the processor.
+    // There the games draw at a lower resolution, without shadows, and about 30 times a second (cab-frame.js).
+    try {
+      var gl = renderer.getContext(), info = gl.getExtension('WEBGL_debug_renderer_info');
+      CAB.software = /swiftshader|llvmpipe|software|basic render/i.test(String(info ? gl.getParameter(info.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER)));
+    } catch (e) { CAB.software = false; }
+    if (CAB.software) renderer.shadowMap.enabled = false;
 
     var pmrem = new THREE.PMREMGenerator(renderer);
     // What shiny things reflect: a dark arcade room with a soft light overhead and neon panels around it.
@@ -69,7 +76,7 @@
 
   CAB.size = function (cams) {
     var w = stage.clientWidth, h = stage.clientHeight; if (!w || !h) return;
-    var pr = Math.min(window.devicePixelRatio || 1, 1.75);
+    var pr = CAB.software ? 0.5 : Math.min(window.devicePixelRatio || 1, 1.75);
     renderer.setPixelRatio(pr); renderer.setSize(w, h, false);
     composer.setPixelRatio(pr); composer.setSize(w, h);
     bloom.strength = 0.8;

@@ -125,7 +125,7 @@ const CabFrame = (() => {
     const size = () => CAB.size([g.cam]);
     if (window.ResizeObserver) new ResizeObserver(size).observe(stage); else window.addEventListener('resize', size);
     g.reset(); size(); CAB.warm(g.scene, g.cam);
-    CAB.renderer.shadowMap.enabled = !g.noShadow;
+    CAB.renderer.shadowMap.enabled = !g.noShadow && !CAB.software;
     g.pad.forEach(p => { const b = el('button'); b.type = 'button'; b.textContent = p[0]; b.dataset.act = p[1]; b.disabled = true; padEl.appendChild(b); });
 
     let phase = 'idle', count = 0, lastCount = 0, goFlash = 0, held = false, hintT = 0;
@@ -248,9 +248,13 @@ const CabFrame = (() => {
 
     // ---------- the loop ----------
     let last = performance.now(), manual = false;
+    // With software 3D (cab-engine.js), about 30 frames a second, so the game doesn't take over the whole processor.
+    const minGap = CAB.software ? 1000 / 31 : 0;
     function frame(now) {
-      const dt = Math.min(0.05, (now - last) / 1000); last = now;
-      if (!manual) tick(dt);
+      if (now - last >= minGap) {
+        const dt = Math.min(0.05, (now - last) / 1000); last = now;
+        if (!manual) tick(dt);
+      }
       requestAnimationFrame(frame);
     }
     // quiet: step the game without drawing it (the browser tests fast-forward this way)
