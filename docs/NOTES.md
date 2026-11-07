@@ -7,6 +7,22 @@ to-do list as checkboxes (the rule is in the maintainer's global CLAUDE.md
 and `arks-internal/conventions/sessions.md`): do the checked items in the
 order they were clicked, and keep the rest pinned here.
 
+## Disco Drop, Roll Royale and Moonshot taken out (2026-11-07)
+
+The maintainer asked for all three to go, now that the 3D cabinet games took their places (Bucket Drop for Disco Drop,
+the Launcher for Roll Royale, Big Swing for Moonshot). Their pages, rules, server routes, music, TV styles, tests and
+docs are gone, and so is every place a game is listed (the home page and QR picker, `arcade/home-games.js`, the Comm
+Center's game list, `NAMES` in `arcade/switches.js`, feedback, the dust sign, the hub's Play links and the admin's
+post picker). Git history still has every file.
+
+- **Old scores stay in the database.** The server no longer touches `discodrop_*`, `royale_*` or `moonshot_*`
+  tables, and `arcade/score-admin.js` skips their `_scores` tables so they don't come back on the Boards tab as
+  "a game added later" (`test/boards.test.js` checks this).
+- **Labels kept on purpose:** `public/admin-arcade.js` and `public/admin-stats.js` still know the three names, so
+  old feedback and old visits in the stats read properly.
+- **Bucket Drop:** "PRESS" on the time dial was wider than the ring and its P ran off the edge; it's now drawn
+  smaller than the countdown numbers so the whole word fits.
+
 ## ARKS Racer, the fifth 3D cabinet game (2026-11-07)
 
 Its id is `racer` (page `public/racer.*`, game `public/cab-racer.js`, accent hot pink `#ff2ec4`, emoji 🏎️), built from
@@ -94,8 +110,7 @@ Built from the approved mockup on the shared engine below. Its id is `bigswing` 
   `test/api.test.js` now counts the home page's games from `arcade/home-games.js` instead of a fixed number.
 - **Tests:** `test/cabinet.test.js` checks the board (an honest score saves, 300 is the most, 301 and 0 are refused),
   and `test/browser/bigswing.spec.js` swings at a real pitch, ends a game with three outs and saves the runs.
-- **Moonshot is still in the arcade.** The roadmap had Moonshot being remade as this game; whether Moonshot stays,
-  goes, or is hidden from the home page is the maintainer's call.
+- **Moonshot** was taken out of the arcade later the same day (see the top of this file).
 
 ## The 3D cabinet games: the shared engine (2026-11-07)
 

@@ -304,29 +304,11 @@ const Blip = (() => {
       chords: [[0, 3, 7], [-4, 0, 3], [-2, 2, 5], [-5, -2, 2]],
       tune: [12, _, 10, 12, _, 7, _, 3,  5, _, 7, _, 10, _, 7, _,  12, _, 15, _, 14, 12, 10, _,  7, _, 5, _, 7, _, _, _]
     },
-    // Roll Royale: a bright, bouncy lounge groove, like a casino floor at night.
-    royale: {
-      bpm: 116, root: 50, wave: 'square', hat: true, arp: [0, 1, 2, 1, 0, 2, 1, 2],
-      chords: [[0, 4, 7], [2, 5, 9], [-3, 0, 4], [-5, -1, 2]],
-      tune: [7, _, 9, 7, _, 4, _, 2,  4, _, 5, _, 9, _, _, _,  12, _, 11, 9, _, 7, _, 4,  5, _, 4, _, 2, _, _, _]
-    },
-    // Moonshot: a bouncy ballpark organ, for a night game under the lights.
-    moonshot: {
-      bpm: 124, root: 48, wave: 'triangle', hat: true, arp: [0, 1, 2, 1, 0, 2, 1, 2],
-      chords: [[0, 4, 7], [5, 9, 12], [-5, -1, 2], [0, 4, 7]],
-      tune: [0, _, 4, _, 7, _, 12, _,  9, _, 12, _, 7, _, _, _,  7, _, 5, 4, _, 2, _, 4,  0, _, _, _, _, _, _, _]
-    },
     // Clueless Crosswords: light and thoughtful, for puzzling over a clue.
     clueless: {
       bpm: 80, root: 55, wave: 'triangle', hat: false, arp: [0, 2, 1, 2, 0, 1, 2, 1],
       chords: [[0, 4, 7], [-5, -1, 2], [-3, 0, 4], [-7, -3, 0]],
       tune: [4, _, 7, _, _, 5, 4, _,  2, _, _, _, 4, _, _, _,  0, _, 2, _, 4, _, 5, _,  4, _, _, 2, _, _, _, _]
-    },
-    // Disco Drop: four on the floor, for a night at the disco.
-    discodrop: {
-      bpm: 118, root: 45, wave: 'square', hat: true, arp: [0, 2, 1, 2, 0, 2, 1, 2],
-      chords: [[0, 3, 7], [-2, 2, 5], [-4, 0, 3], [-5, -2, 2]],
-      tune: [12, _, 12, 10, _, 7, _, 10,  12, _, _, 15, _, 12, _, _,  10, _, 10, 8, _, 7, _, 5,  7, _, _, _, _, _, _, _]
     },
     // Shuffle Scuffle: bouncy and a bit urgent, for a race against the clock.
     scuffle: {

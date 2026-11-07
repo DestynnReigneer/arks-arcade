@@ -2,7 +2,7 @@
 
 // Playing a game on the TV itself, with the remote or a game controller
 // (2026-11-01). Loaded after tv.js by the games played on the screen: the
-// cabinet games (Tumbler Rumble, Disco Drop, Roll Royale, Moonshot) and the
+// cabinet game (Tumbler Rumble) and the
 // classics (Snake, Dino Dash, Block Drop, Brick Breaker, Tower Defense,
 // Sudoku, Chess). On a phone or a computer it only adds controller play.
 //
