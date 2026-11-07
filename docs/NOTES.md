@@ -7,6 +7,23 @@ to-do list as checkboxes (the rule is in the maintainer's global CLAUDE.md
 and `arks-internal/conventions/sessions.md`): do the checked items in the
 order they were clicked, and keep the rest pinned here.
 
+## ARKS Racer, the fifth 3D cabinet game (2026-11-07)
+
+Its id is `racer` (page `public/racer.*`, game `public/cab-racer.js`, accent hot pink `#ff2ec4`, emoji 🏎️), built from
+the approved mockup with all eight tracks, Tap and Slide steering, the steering bar and the soft underglow.
+
+- **Times on the shared board:** `arcade/scores.js` games can be `lowerIsBetter` (sorted fastest first, ranked by
+  how many are faster, and the Comm Center's #1 post says "62.35 seconds") and have a `min`. GameShell takes `format`
+  and `lowerIsBetter` (the panel, the device's best and the list show the time), and `ArcadeKit.renderScores` and
+  `loadScores` take a `format`. Every other game is unchanged.
+- **Boards:** one per track, keyed by the track's id. Times are thousandths of a second; under 30 s or over 85 s is
+  refused (see the README for why). A race that runs out of time shows no score and can't be saved.
+- **On a TV,** OK is the gas (`tvEnter` in the game, which cab-frame.js passes to TvPlay), and a controller's A and
+  right trigger are the gas too.
+- **Tests:** `test/cabinet.test.js` (fastest first, ranks, the min and max, one board per track) and
+  `test/browser/racer.spec.js` (the gas moves the car, a held tap on the right steers right with the bar showing,
+  and a finished time reads "0:55.12" and saves to that track's board, shown as a time).
+
 ## ARKS Train Station, the fourth 3D cabinet game (2026-11-07)
 
 Its id is `train` (page `public/train.*`, game `public/cab-train.js`, cast `public/cab-cast.js`, accent purple
