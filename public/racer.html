@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>ARKS Racer</title>
+<link rel="icon" href="/custom/brand/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/custom/brand/app-icon-180.png">
+<link rel="stylesheet" href="arcade-ui.css">
+<link rel="stylesheet" href="game-shell.css">
+<link rel="stylesheet" href="tutorial.css">
+<link rel="stylesheet" href="cab.css">
+<link rel="stylesheet" href="look.css">
+<link rel="stylesheet" href="topbar.css">
+<link rel="stylesheet" href="tv.css">
+<link rel="stylesheet" href="tv-play.css">
+<!-- On a TV: the TV layout, the remote and a game controller (tv.js, tv-play.js). -->
+<script src="tv-core.js"></script>
+<script src="tv.js"></script>
+<script src="tv-play.js"></script>
+<style>:root { --accent: #ff2ec4; --on-accent: #ffffff; }</style>
+</head>
+<body>
+<script src="topbar.js"></script>
+
+<header class="top">
+  <a href="/" class="icon-btn" title="Back to the arcade">←</a>
+  <h1><i class="t-emoji">🏎️ </i>ARKS <span>RACER</span></h1>
+  <div class="btns">
+    <button class="icon-btn" id="muteBtn" title="Sound">🔊</button>
+    <button class="icon-btn music-btn" id="musicBtn" title="Music">🎵</button>
+    <button class="icon-btn" id="scoresBtn" title="High scores">🏆</button>
+    <button class="icon-btn" id="helpBtn" title="How to play">?</button>
+  </div>
+</header>
+
+<!-- The game-over panel goes right above this; cab-frame.js builds the game inside. -->
+<div class="cab" id="cab"></div>
+<p class="hint center keys-hint">Keyboard: <b>↑</b> or <b>W</b> is the gas, <b>←</b> <b>→</b> or <b>A</b> <b>D</b> steer, and <b>P</b> pauses. A game controller steers with the D-pad or the left stick, <b>A</b> or the right trigger is the gas, and <b>Start</b> pauses.</p>
+
+<script src="feedback.js"></script>
+<script src="avatars.js"></script>
+<script src="avatar-photo.js"></script>
+<script src="pin-pad.js"></script>
+<script src="profile.js"></script>
+<script src="custom-media.js"></script>
+<script src="stats.js"></script>
+<script src="dust-sign.js"></script>
+<script src="tutorial.js"></script>
+<script src="blip.js"></script>
+<script src="fx.js"></script>
+<script src="arcade-kit.js"></script>
+<script src="game-shell.js"></script>
+<script src="vendor/three/three.min.js"></script>
+<script src="vendor/three/CopyShader.js"></script>
+<script src="vendor/three/LuminosityHighPassShader.js"></script>
+<script src="vendor/three/EffectComposer.js"></script>
+<script src="vendor/three/RenderPass.js"></script>
+<script src="vendor/three/ShaderPass.js"></script>
+<script src="vendor/three/UnrealBloomPass.js"></script>
+<script src="vendor/three/RoundedBoxGeometry.js"></script>
+<script src="cab-engine.js"></script>
+<script src="cab-sound.js"></script>
+<script src="cab-frame.js"></script>
+<script src="cab-racer.js"></script>
+<script src="racer.js"></script>
+<script src="banner.js" defer></script>
+</body>
+</html>

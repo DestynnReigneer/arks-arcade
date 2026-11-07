@@ -306,7 +306,8 @@ const CabFrame = (() => {
         steering: () => phase === 'play' || phase === 'count',
         active: () => phase === 'play' || phase === 'count',
         start: () => (phase === 'paused' ? pauseBtn : goBtn),
-        enter: g.steer ? undefined : ' ',
+        // what OK means while playing: the game's own choice (the Racer's gas), or Space
+        enter: g.tvEnter || (g.steer ? undefined : ' '),
         buttons: g.tvButtons || { 2: ' ', 5: ' ', 7: ' ', 9: 'p' },
         navButtons: { 9: 'p' },
         dirs: !!g.steer,
