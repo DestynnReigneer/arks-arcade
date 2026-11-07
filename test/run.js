@@ -58,6 +58,7 @@ const SUITES = [
   ['discodrop', require('./discodrop.test.js')],
   ['royale', require('./royale.test.js')],
   ['moonshot', require('./moonshot.test.js')],
+  ['cabinet', require('./cabinet.test.js')],
   ['housekeeping', require('./housekeeping.test.js')],
   ['boards', require('./boards.test.js')],
   ['tv', require('./tv.test.js')],
