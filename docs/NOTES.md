@@ -22,6 +22,11 @@ look and the cast's run-overs, balloons, ghosts and knock-overs.
 - **Scores:** one Points board, capped at 100,000 (All Aboard refills the balls, so there's no natural end).
 - **The board's save limit** (30 in 10 minutes from one address) is 300 under `NODE_ENV=test` only, because the
   cabinet tests save several scores per game.
+- **Software 3D:** with four 3D games, CI's browser tests started timing out, because the test browser draws 3D in
+  software (no graphics chip) and the games' animation used up the machine. `cab-engine.js` now notices software
+  drawing (SwiftShader, llvmpipe) and sets `CAB.software`: half resolution, no shadows, and about 30 frames a second
+  (`cab-frame.js`). Real devices without a graphics chip get the same lighter load. `pages.spec.js` marks the 3D pages
+  slow (triple time).
 - **Tests:** `test/cabinet.test.js` (the board, the made-up names in the code, only the admin can name the cars, and
   bad names are refused) and `test/browser/train.spec.js` (the cars carry the server's names, all 15 balls drop, and
   the points save).

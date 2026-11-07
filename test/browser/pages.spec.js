@@ -8,6 +8,8 @@ const { PAGES, quietFonts, watchProblems, openPage } = require('./helpers');
 
 for (const path of PAGES) {
   test(`${path} loads with no errors and no sideways scrolling`, async ({ page }) => {
+    // The 3D cabinet games build their shaders as they open, which is slow in the test browser's software 3D.
+    if (/^\/(bigswing|bucketdrop|launcher|train|racer)\.html$/.test(path)) test.slow();
     await quietFonts(page);
     const problems = watchProblems(page);
     await openPage(page, path);
