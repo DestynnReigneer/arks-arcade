@@ -193,6 +193,7 @@ app.use('/api/admin/scores', requireAdmin, require('./arcade/score-admin').route
 app.use('/api', require('./arcade/lobby').router);
 app.use('/api/profiles', require('./arcade/profiles')({ requireAdmin, notify: notifyDiscord }));
 app.use('/api/scores', require('./arcade/scores').router);
+app.use('/api/cab-jackpot', require('./arcade/cab-jackpot').router);
 app.use('/api/stats', stats.routes({ requireAdmin }));
 
 // ---- the owner's own logos, characters, sounds and clips (optional) ----

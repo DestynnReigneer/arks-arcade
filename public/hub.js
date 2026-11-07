@@ -26,6 +26,7 @@
     discodrop: { label: 'Disco Drop', href: 'discodrop.html' },
     royale: { label: 'Roll Royale', href: 'royale.html' },
     moonshot: { label: 'Moonshot', href: 'moonshot.html' },
+    bucketdrop: { label: 'Bucket Drop', href: 'bucketdrop.html' },
     bigswing: { label: 'Big Swing', href: 'bigswing.html' }
   };
 
