@@ -27,6 +27,7 @@ const GAMES = {
   // Bucket Drop's best normal game is 750; above that, the score must be 750 plus a jackpot really won here.
   bucketdrop: { label: 'Bucket Drop', boards: { points: 'Points' }, max: 1000000, check: points => require('./cab-jackpot').check('bucketdrop', points) },
   launcher: { label: 'ARKS Launcher', boards: { points: 'Points' }, max: 50000 },
+  train: { label: 'ARKS Train Station', boards: { points: 'Points' }, max: 100000 },
   towers: { label: 'Tower Defense', boards: { meadow: 'Meadow', lake: 'Frozen Lake', canyon: 'Canyon', swamp: 'Swamp', castle: 'Castle', volcano: 'Volcano' }, max: 9999999 }
 };
 
@@ -106,7 +107,8 @@ function save(game, { initials, score, board, detail, profileToken }) {
 
 const router = express.Router();
 const saveLimiter = rateLimit({
-  windowMs: 10 * 60 * 1000, limit: 30, standardHeaders: true, legacyHeaders: false,
+  // the test suite saves many scores from one address, so it gets more (never in production)
+  windowMs: 10 * 60 * 1000, limit: process.env.NODE_ENV === 'test' ? 300 : 30, standardHeaders: true, legacyHeaders: false,
   message: { error: 'Too many scores at once. Take a breather.' }
 });
 
