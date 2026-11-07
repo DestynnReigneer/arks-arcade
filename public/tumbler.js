@@ -60,7 +60,7 @@
 
   function draw() {
     const t = sim ? gameTime() : 0;
-    const R = W * 0.27, cx = W / 2, cy = W * 0.6;
+    const R = W * 0.32, cx = W / 2, cy = W * 0.57;
     ctx.clearRect(0, 0, W, W);
 
     // Scanlines, for the cabinet glass.
@@ -72,7 +72,7 @@
     const counting = sim && !over && t < E.RULES.LEAD_MS;
 
     // The shackle. This lock never opens: the run goes on until a miss.
-    const legX = R * 0.6, legTop = cy - R * 1.22;
+    const legX = R * 0.55, legTop = cy - R * 1.05;
     ctx.save();
     ctx.lineCap = 'round';
     ctx.lineWidth = R * 0.2;
@@ -209,17 +209,17 @@
         ctx.stroke();
       }
       if (f.text && f.top) {
-        // Wave news goes along the top of the lock.
+        // Wave news goes in the opening of the shackle, above the lock.
         ctx.fillStyle = f.color;
         ctx.textAlign = 'center';
         ctx.font = `800 ${f.size || 15}px Orbitron, system-ui, sans-serif`;
-        ctx.fillText(f.text, cx, W * 0.08);
+        ctx.fillText(f.text, cx, cy - R * 0.8);
       } else if (f.text) {
         const [tx, ty] = at(cx, cy, R + 40, f.angle);
         ctx.fillStyle = f.color;
         ctx.textAlign = 'center';
         ctx.font = `800 ${f.size || 15}px Orbitron, system-ui, sans-serif`;
-        ctx.fillText(f.text, Math.min(W - 40, Math.max(40, tx)), Math.max(18, ty - (reduced ? 0 : ease(k) * 18)));
+        ctx.fillText(f.text, Math.min(W - 40, Math.max(40, tx)), Math.min(W - 8, Math.max(18, ty - (reduced ? 0 : ease(k) * 18))));
       }
       ctx.restore();
     }
@@ -377,16 +377,11 @@
     Blip.tone(440 * Math.pow(2, step / 12), 0.06, { type: 'square', volume: 0.06 });
     if (r.bullseye) Blip.tone(1320 + 60 * Math.min(r.streak, 5), 0.09, { type: 'sine', volume: 0.07, delay: 0.04 });
     if (r.newWave) {
-      // A new wave: a little fanfare, coins, and the wave's number on the lock.
-      const box = $('stage').getBoundingClientRect();
+      // A new wave: a little fanfare and the wave's number on the lock. The
+      // confetti waits for the end of the run, so nothing covers the lock mid-game.
       Blip.tune([[523, 0.08], [659, 0.08], [784, 0.08], [1047, 0.22]], { type: 'square', volume: 0.06 });
       flash('wave');
       effects.push({ angle: 0, born: now(), ms: 1500, color: COLORS.pin, text: `WAVE ${r.wave}`, size: 18, top: true });
-      if (window.Fx) {
-        Fx.burst({ count: 50, coins: Math.min(40, 4 + 3 * r.wave), origin: { x: box.left + box.width / 2, y: box.top + box.height * 0.45 } });
-        // Every fifty pops gets the big banner.
-        if (r.pops % 50 === 0) Fx.banner(`${r.pops} POPS!`, 'and still going', { ms: 1500 });
-      }
       say(`${r.pops} pops. Wave ${r.wave}.`);
     } else if (r.easing && !E.easingAt(r.pops - 1)) {
       // The wave eases off for its last few pins.
@@ -467,6 +462,8 @@
     }
     $('over').classList.remove('hidden');
     msg(null);
+    // The run's celebration, saved for the end: more coins for every wave reached.
+    if (window.Fx && r.score > 0) Fx.burst({ count: Math.min(200, 40 + 4 * r.score), coins: Math.min(40, 4 + 3 * r.wave) });
     setTimeout(() => $('over').scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' }), 60);
     say(`Game over. You popped ${plural(r.score, 'pin')} and reached wave ${r.wave}.`);
   }
