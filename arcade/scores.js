@@ -26,6 +26,7 @@ const GAMES = {
   bigswing: { label: 'Big Swing', boards: { runs: 'Runs' }, max: 300 },
   // Bucket Drop's best normal game is 750; above that, the score must be 750 plus a jackpot really won here.
   bucketdrop: { label: 'Bucket Drop', boards: { points: 'Points' }, max: 1000000, check: points => require('./cab-jackpot').check('bucketdrop', points) },
+  launcher: { label: 'ARKS Launcher', boards: { points: 'Points' }, max: 50000 },
   towers: { label: 'Tower Defense', boards: { meadow: 'Meadow', lake: 'Frozen Lake', canyon: 'Canyon', swamp: 'Swamp', castle: 'Castle', volcano: 'Volcano' }, max: 9999999 }
 };
 
