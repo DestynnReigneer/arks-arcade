@@ -256,6 +256,24 @@ Royale is a different game and stays.
 The page sends the points to the shared board (`/api/scores/launcher`, one Points board), which refuses anything over
 50,000. Refills make a game's length open-ended, so that's a generous ceiling rather than an exact one.
 
+### ARKS Train Station (`/train.html`)
+
+A 3D ball-drop cabinet, in the spirit of the ones where a ball runs down a spiral and drops into a train of cars
+circling a track. Each tap lets a ball go; it takes about three and a half seconds to reach the drop spot, so you aim
+for the car that's coming. Long cars are easy and worth 5, medium ones 15 and short ones 40, and landing in a car
+lights its letter on the board over the station. Light all eight for All Aboard (250 more, the board clears, 15 new
+balls) and the next of ten levels starts: Express, Rush Hour (random surges), The Tunnel (it hides the cars you're
+aiming for), All Change (the cars swap places after every landing), Wrong Way, Compact Cars, Lights Out, Express
+Tunnel and Grand Central, then back to the start. Settings: Look (Normal, or Blacklight for the whole game) and Start
+at. A cast of bots hangs around the station and comments (`public/cab-cast.js`). The game is `public/cab-train.js`.
+
+**The cars' names** are set on the admin page's Arcade tab (ARKS Train Station cars: eight names and how hard each
+is) and stored in the settings table (`arcade/train-cars.js`). The page reads them from `GET /api/train-cars`; the
+code only has made-up names (Comet, Blaze, Pixel and so on), so nobody's real names are in the repo.
+
+The page sends the points to the shared board (`/api/scores/train`, one Points board), which refuses anything over
+100,000; All Aboard refills the balls, so a game's length is open-ended and the ceiling is generous.
+
 ### Sudoku (`/sudoku.html`)
 
 The classic 9x9 number puzzle: fill every empty square with 1 to 9 so no row, column or 3x3 box has the same number twice. There's a new puzzle at midnight on each of four levels, and it's the same puzzle for everyone that day (it's made from the date alone), so the family can race each other.
@@ -682,6 +700,7 @@ public/game-shell.*       Shared game-over panel and high scores for those four,
 public/bigswing.*, cab-swing.js   Big Swing (the page, and the game on the 3D cabinet engine)
 public/bucketdrop.*, cab-bucket.js   Bucket Drop (its jackpot is arcade/cab-jackpot.js)
 public/launcher.*, cab-launcher.js   ARKS Launcher
+public/train.*, cab-train.js, cab-cast.js   ARKS Train Station and its cast of bots (the cars' names: arcade/train-cars.js)
 public/cab-engine.js      The 3D cabinet games' shared look: renderer, glow, reflections, shapes (three.js)
 public/cab-sound.js       Their music and sound effects, made in code; follows the arcade's sound and music switches
 public/cab-frame.js, cab.css   The frame each 3D cabinet game runs in: Start, settings, the stage, input, the loop

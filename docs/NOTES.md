@@ -7,6 +7,25 @@ to-do list as checkboxes (the rule is in the maintainer's global CLAUDE.md
 and `arks-internal/conventions/sessions.md`): do the checked items in the
 order they were clicked, and keep the rest pinned here.
 
+## ARKS Train Station, the fourth 3D cabinet game (2026-11-07)
+
+Its id is `train` (page `public/train.*`, game `public/cab-train.js`, cast `public/cab-cast.js`, accent purple
+`#8a5cff`, emoji 🚂), built from the approved mockup with its 10 levels, the tunnel on the top right, the Blacklight
+look and the cast's run-overs, balloons, ghosts and knock-overs.
+
+- **The cars' names are each arcade's own, so they never go in this public repo.** The admin page's
+  Arcade tab has an "ARKS Train Station cars" section (eight names, 1 to 12 letters, numbers or spaces, and easy,
+  medium or hard each), saved in the settings table by `arcade/train-cars.js` through
+  `GET/POST /api/comm/admin/train-cars`. Players' pages read `GET /api/train-cars`. Until names are saved, the train
+  uses made-up ones. **Pictures** for each car (the roadmap mentioned them) aren't built yet; the board shows each
+  name's first letter, as in the mockup.
+- **Scores:** one Points board, capped at 100,000 (All Aboard refills the balls, so there's no natural end).
+- **The board's save limit** (30 in 10 minutes from one address) is 300 under `NODE_ENV=test` only, because the
+  cabinet tests save several scores per game.
+- **Tests:** `test/cabinet.test.js` (the board, the made-up names in the code, only the admin can name the cars, and
+  bad names are refused) and `test/browser/train.spec.js` (the cars carry the server's names, all 15 balls drop, and
+  the points save).
+
 ## ARKS Launcher, the third 3D cabinet game (2026-11-07)
 
 Its id is `launcher` (page `public/launcher.*`, game `public/cab-launcher.js`, accent lane blue `#2f8bff`, emoji 🚀),

@@ -13,7 +13,8 @@ const CABINETS = [
   { game: 'bigswing', board: 'runs', max: 300 },
   // 750 is a perfect game without the jackpot; a jackpot score is checked below
   { game: 'bucketdrop', board: 'points', max: 750 },
-  { game: 'launcher', board: 'points', max: 50000 }
+  { game: 'launcher', board: 'points', max: 50000 },
+  { game: 'train', board: 'points', max: 100000 }
 ];
 
 async function run({ base, root }) {
@@ -70,6 +71,22 @@ async function run({ base, root }) {
   const again = await post('bucketdrop', { initials: 'WIN', score: 750 + grown, board: 'points' });
   ok('the same win can only be saved once', again.status === 400, String(again.status));
   ok('a game with no jackpot says so', (await fetch(`${base}/api/cab-jackpot/bigswing`)).status === 404);
+
+  console.log("\n-- cabinet games: the Train Station's cars --");
+  const cars = await (await fetch(`${base}/api/train-cars`)).json();
+  ok('the train has 8 cars with made-up names until the admin names them', cars.cars.length === 8 && cars.cars[0].name === 'Comet', JSON.stringify(cars.cars[0]));
+  const asAdmin = (method, body, token = 'test-admin-token') => fetch(`${base}/api/comm/admin/train-cars`, { method, headers: { 'Content-Type': 'application/json', 'X-Admin-Token': token }, body: body ? JSON.stringify(body) : undefined });
+  const mine = cars.cars.map((c, i) => ({ name: `Car ${i + 1}`, kind: c.kind }));
+  ok('only the admin can name the cars', (await asAdmin('POST', { cars: mine }, 'wrong')).status === 401);
+  ok('names that are too long are refused', (await asAdmin('POST', { cars: mine.map((c, i) => (i ? c : { ...c, name: 'A name far too long' })) })).status === 400);
+  ok('the train needs exactly 8 cars', (await asAdmin('POST', { cars: mine.slice(1) })).status === 400);
+  ok('a car must be easy, medium or hard', (await asAdmin('POST', { cars: mine.map((c, i) => (i ? c : { ...c, kind: 'impossible' })) })).status === 400);
+  const saved = await asAdmin('POST', { cars: mine });
+  ok('the admin can name the cars', saved.status === 200, String(saved.status));
+  const now = await (await fetch(`${base}/api/train-cars`)).json();
+  ok("the game gets the admin's names", now.cars.map(c => c.name).join() === mine.map(c => c.name).join(), JSON.stringify(now.cars.map(c => c.name)));
+  const repo = fs.readFileSync(path.join(root, 'public/cab-train.js'), 'utf8');
+  ok('the repo only has the made-up names', /\['Comet', 'easy'\]/.test(repo));
 
   console.log(`
   ${pass} passed, ${fail} failed`);
