@@ -106,7 +106,8 @@
         var t = self.time == null ? 30 : self.time, f = t / 30;
         x.lineWidth = 38; x.strokeStyle = 'rgba(255,255,255,.2)'; x.beginPath(); x.arc(cx, cy, r, 0, 7); x.stroke();
         x.strokeStyle = f > 0.5 ? '#3ee05a' : f > 0.2 ? '#ffc21f' : '#ff3040'; x.beginPath(); x.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * f); x.stroke();
-        x.font = '900 116px Orbitron, sans-serif'; x.fillStyle = '#fff'; x.fillText(self.started ? Math.ceil(t) : 'PRESS', cx, cy + (self.started ? 6 : -18));
+        // PRESS is set smaller than the countdown so the whole word fits inside the ring
+        x.font = self.started ? '900 116px Orbitron, sans-serif' : '900 66px Orbitron, sans-serif'; x.fillStyle = '#fff'; x.fillText(self.started ? Math.ceil(t) : 'PRESS', cx, cy + (self.started ? 6 : -18));
         if (!self.started) { x.font = '800 36px Orbitron, sans-serif'; x.fillText('TO START', cx, cy + 60); }
       }
       function ballsLeft(x, cx, cy) {

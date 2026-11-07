@@ -164,55 +164,6 @@ Six maps from easy to hard (Meadow, Frozen Lake, Canyon, Swamp, Castle, Volcano;
 
 The four share `public/game-shell.js` (game-over panel, saving scores, high-score boards, personal bests) and `public/game-shell.css`. Each has its own soft background music, generated in the browser like the sound effects (`public/blip.js`): the 🎵 button turns it off and on, the browser remembers the choice, and 🔊/🔇 mutes everything. It stops while the game is paused or over.
 
-### Disco Drop (`/discodrop.html`)
-
-An arcade cabinet game for one player. A disco ball hangs from an arm at the top of the cabinet, and a row of cups slides past underneath it, each worth a different number of points. Tap to let go, and the ball falls straight down into whichever cup is under it when it gets there. The narrower the cup, the more it's worth: wide ones give 10 or 25, narrower ones 50 or 100, two dark BUST cups give nothing, and one tiny gold cup is the 500-point jackpot.
-
-- **Ten balls a run, and it gets harder as you go.** The cups speed up after every ball and can change direction from the fourth ball on, the arm starts sliding back and forth on the fourth ball, the cups shuffle into a new order after balls 2, 5 and 7, and the last three balls score double (so the jackpot is worth 1,000 there). The number on each cup is always what it gives right now.
-- **The server decides every score.** Starting a run picks a random seed on the server and writes down the moment it started. Everything that moves comes from that seed and the moments the balls were dropped, using whole-number math in one shared file (`public/discodrop-engine.js`), so the page and the server always agree. For each ball the page sends only *when* it let go, in milliseconds since the run started. The server replays the whole run from the seed to find where every ball landed and adds up the score itself. It turns away a drop that couldn't have happened: one before the last ball had landed and the next was back on the arm (a ball takes 0.65 seconds to fall and 0.35 to come back), one later than the server's own clock says the run has been going, or one that arrives more than ten seconds after it happened. A score sent by the page is ignored.
-- **Celebrations are earned.** A jackpot gets a banner, a coin shower and a jingle, but only when the server says the ball landed in it. "So close!" only shows when the server measured the ball landing right next to the jackpot cup.
-- **Boards** for today and for all time. Every run you save counts. Profiles show their name or initials (their own choice), and guests type initials. A new best-ever run posts to the Comm Center.
-- **Phones first, and TV-ready:** the whole cabinet is the tap area, with a big DROP button under it, and it fits a phone screen with no sideways scrolling. **Space** or **Enter** drops on a keyboard, and a game controller's **A**, **X**, **R1** or right trigger works through the browser's Gamepad API. The animation runs on `requestAnimationFrame`, and with reduced motion turned on the lights, spotlights and sparkle hold still (the cups still move, since that's the game).
-
-#### The Disco Drop API
-
-Everything is under `/api/discodrop`.
-
-| Call | What it does |
-|---|---|
-| `GET /rules` | The number of balls, how long a ball takes to fall and reload, when double points start, and what each cup is worth. |
-| `POST /start` `{ profileToken? }` | Starts a run. Returns its id and seed. |
-| `GET /run/:id` | Where a run stands: the drop times so far, where each ball landed, the total. |
-| `POST /run/:id/drop` `{ t }` | Drops the next ball `t` milliseconds after the run started. Returns where it landed, its points and the new total. |
-| `POST /run/:id/save` `{ initials?, profileToken? }` | Puts a finished run on the boards. Returns today's and all-time rank, and how far behind the next score up today it is. |
-| `GET /board?scope=day\|all&day=` | The best runs, highest first. |
-
-### Moonshot (`/moonshot.html`)
-
-An arcade batting cage for one player. You stand at the plate under the stadium lights, and a pitching machine throws twelve pitches at you, one at a time. Tap to swing just as the ball reaches the glowing ring over the plate. The closer your timing, the bigger the hit, and a perfect swing sends the ball over the wall and up to the moon for a home run.
-
-- **Timing is everything.** The cage measures how far your swing was from the moment the ball reached the ring, in milliseconds (thousandths of a second). Within 25 either way is a home run (100 points), then a triple (60) within 50, a double (40) within 80, a single (25) within 120, a grounder (5) within 160 and a foul ball (2) within 210. Anything further off, or no swing at all, is a strike. Early swings go to the left and late ones to the right, and after every swing the cage says how many milliseconds early or late it was.
-- **Three pitches, and they speed up.** A fastball is quick and straight, a changeup leaves the machine the same way but comes in slower, and a curveball swings out to one side and bends back over the plate. The lights around the machine fill up during its windup, so you can see each pitch coming. Pitches 1 to 4 score normal points, 5 to 8 come faster and score double, and 9 to 12 come faster still and score triple. Home runs in a row earn a streak bonus of 50 points for each one before it (up to 200 extra, before the double or triple). A run takes about a minute, and the most it can score is 6,700.
-- **The server decides every score.** Starting a run picks a random seed on the server and writes down the moment it started. Every pitch comes from that seed alone, using whole-number math in one shared file (`public/moonshot-engine.js`), so the page and the server always agree. For each swing the page sends only *when* it happened, in milliseconds since the run started. The server replays the whole run from the seed to work out every hit and adds up the score itself. It turns away a swing that couldn't have happened: between pitches, a second one at the same pitch, one later than the server's own clock says the run has been going, or one that arrives more than ten seconds after it happened. A score sent by the page is ignored.
-- **Pausing is fair.** Opening How to play, the high scores or another tab pauses the run, on the page and on the server, so the clocks stay together. Coming back gives you a short countdown before the next ball.
-- **Celebrations are earned.** A home run gets a banner, a coin shower, fireworks over the moon and a jingle, but only when the server says it was one. "So close!" only shows when the server measured a swing within 15 milliseconds of the home-run window, and it says by how much.
-- **Boards** for today and for all time. Every run you save counts. Profiles show their name or initials (their own choice), and guests type initials. A new best-ever run posts to the Comm Center.
-- **Phones first, and TV-ready:** the whole cage is the tap area, with a big SWING button under it, and it fits a phone screen with no sideways scrolling. **Space** or **Enter** swings on a keyboard (**P** or **Esc** pauses), and a game controller's **A**, **X**, **R1** or right trigger swings through the browser's Gamepad API (**Start** pauses). The animation runs on `requestAnimationFrame`, and with reduced motion turned on the stars, lights and fireworks hold still (the pitches still move, since that's the game).
-
-#### The Moonshot API
-
-Everything is under `/api/moonshot`.
-
-| Call | What it does |
-|---|---|
-| `GET /rules` | The number of pitches, the timing for each kind of hit and its points, the three pitches and the streak bonus. |
-| `POST /start` `{ profileToken? }` | Starts a run. Returns its id and seed. |
-| `GET /run/:id` | Where a run stands: the swing times so far, what each pitch did, the total, and whether it's over. |
-| `POST /run/:id/swing` `{ t }` | A swing `t` milliseconds after the run started. Returns what it did, any pitches let go by since the last swing, and the new total. |
-| `POST /run/:id/pause`, `POST /run/:id/resume` | Stops and restarts the run's clock. |
-| `POST /run/:id/save` `{ initials?, profileToken? }` | Puts a finished run on the boards. Returns today's and all-time rank, and how far behind the next score up today it is. |
-| `GET /board?scope=day|all&day=` | The best runs, highest first. |
-
 ### Big Swing (`/bigswing.html`)
 
 A 3D batting cabinet, in the spirit of the ones where a ball rolls down a track to a real bat at home plate. Hold
@@ -234,7 +185,7 @@ turntable speeds up as the time runs down. A catch is 10 points and every 5 in a
 without the jackpot is 750. Catching all 50 wins **the arcade's jackpot**, shown in red LED letters on the big screen:
 it starts at 1,000 and grows by 10 after every game anyone plays, until somebody wins it. Cups (big, normal, small)
 and Speed (chill to wild) are settings, saved on the device and written into the score's detail. The game is
-`public/cab-bucket.js`; Disco Drop is a different game and stays.
+`public/cab-bucket.js`.
 
 The page sends the points to the shared board (`/api/scores/bucketdrop`, one Points board). Up to 750 is accepted;
 above that, the score must be exactly 750 plus a jackpot won here in the last 15 minutes, and each win can be saved
@@ -250,8 +201,7 @@ is what you win. The green Super Bonus gate, with tight gates on both sides and 
 you up a level: the first five levels refill all 8 balls, and from level 6 on a refill is 4. Twenty levels mix the
 jackpot's distance with a ramp, bead curtains, potholes (too slow and the ball drops in), a gusting headwind and a
 jackpot zone that slides while you aim; after level 20 it starts over. Settings: Start at (any level, noted on the
-score), After a roll (the ball rolls back to you, or disappears) and View. The game is `public/cab-launcher.js`; Roll
-Royale is a different game and stays.
+score), After a roll (the ball rolls back to you, or disappears) and View. The game is `public/cab-launcher.js`.
 
 The page sends the points to the shared board (`/api/scores/launcher`, one Points board), which refuses anything over
 50,000. Refills make a game's length open-ended, so that's a generous ceiling rather than an exact one.
@@ -448,28 +398,6 @@ Everything is under `/api/tumbler`.
 | `POST /run/:id/save` `{ initials?, profileToken? }` | Puts a finished run's score on the boards. Returns today's and all-time rank. |
 | `GET /board?scope=day\|all&day=` | The best scores, highest first. |
 
-### Roll Royale (`/royale.html`)
-
-A ball-rolling game in the style of a coin-op cabinet, like skee-ball with a power meter. You get **9 balls**, and each one rolls up a neon lane, hops off a lip and drops into a target board at the top. The board has five rings: **10, 20, 30 and 40** from the outside in, and **50** for the small one in the middle. Above the rings is a little gold **jackpot cup** worth 100. A ball that misses every ring scores nothing.
-
-- **Aim, then power.** Before each ball an arrow sways left and right, with a dashed line showing exactly where the ball would go across the board. Pressing locks the aim. While you hold, the power meter climbs for a second, then comes back down if you keep holding, and letting go rolls the ball with the power the meter shows. The meter has a pink band for the power that reaches the middle ring and a gold band for the jackpot cup's row. A tap shorter than 80 milliseconds isn't a roll, and a ball held for 4 seconds rolls by itself.
-- **Bonus balls:** the last three balls have a star on them. On those, the jackpot cup slides from side to side and is worth 200, and the arrow sways faster on later balls (a trip there and back takes 2.6 seconds on balls 1 to 3, 2.1 on balls 4 to 6 and 1.7 on balls 7 to 9). A perfect run is 1,200 points.
-- **Controls:** press and hold anywhere on the lane or the big HOLD · ROLL button on a phone (letting go anywhere counts, so a flick up the lane works), hold Space or Enter on a keyboard, or hold a game controller's A, X, R1 or right trigger (through the browser's Gamepad API; Start pauses). The lane is drawn on a canvas at the screen's frame rate. With reduced motion turned on, the glow, the shake and the moving lights are left out, and the game plays the same.
-- **The server works out every score.** Starting a run writes down the moment on the server's clock and hands the page a random seed, which decides where each ball's arrow starts its sway and where the bonus cup starts sliding. The page and the server run the same small simulation (`public/royale-engine.js`), with simple sums instead of a physics engine: the aim at the moment you pressed and the power at the moment you let go give the spot where the ball lands. When the ninth ball is done the page sends only the press and release times, in whole milliseconds since the run started, and the server replays them to find every landing spot and the score itself. It refuses times that couldn't have come from a real run: anything but exactly 9 balls, a ball pressed before it was ready, a press and release closer together than 80 milliseconds or further apart than 4 seconds, or times later than the run has really lasted by the server's clock. Opening How to play or leaving the page pauses the run (a ball you were holding goes back), and there's a countdown before it carries on.
-- **High-score boards** for today and for all time. Every run you save counts, profiles show their name or initials the way they chose, and guests type initials. After a run the game says how many more points would have passed the next real score on today's board. A new best score ever posts to the Comm Center.
-
-#### The Roll Royale API
-
-Everything is under `/api/royale`.
-
-| Call | What it does |
-|---|---|
-| `POST /start` `{ profileToken? }` | Starts a run. Returns the run id, the seed and the rules. |
-| `GET /run/:id` | Where a run stands, and its score and each ball's points once it's finished. |
-| `POST /run/:id/finish` `{ balls }` | Replays the 9 `[press, release]` pairs (whole milliseconds since the run started) and keeps the score the server worked out. Impossible times are refused. |
-| `POST /run/:id/save` `{ initials?, profileToken? }` | Puts a finished run's score on the boards. Returns today's and all-time rank. |
-| `GET /board?scope=day\|all&day=` | The best scores, highest first, with each run's points per ball and jackpots. |
-
 ### Know-It-All (`/trivia.html`)
 
 Multiple-choice trivia. Solo (high-score board), take turns on one phone, or a room where everyone answers on their own phone at the same time and faster right answers score more. Pick genres, difficulty, how many questions and how long to answer.
@@ -522,12 +450,11 @@ Initials can't be typed on a TV, so a solo score made there only goes on a board
 
 #### The cabinet games and the classics on a TV
 
-Tumbler Rumble, Disco Drop, Roll Royale, Moonshot, Snake, Dino Dash, Block Drop, Brick Breaker, Tower Defense, Sudoku and Chess are played right on the TV, with the remote or a game controller. The game fills the right side of the screen, as big as it fits, and everything else (the score, the options, a big Play button, and the game-over panel) sits in a column on the left. In the menus the remote's arrows move the highlight and OK presses; once a game is going, the arrows and OK belong to the game until it's over. When a run ends, the initials are picked like an arcade cabinet: up and down change a letter, left and right move between the three, and OK saves. On a TV the score goes on the board under those initials, not under the TV's own name.
+Tumbler Rumble, Snake, Dino Dash, Block Drop, Brick Breaker, Tower Defense, Sudoku and Chess are played right on the TV, with the remote or a game controller. The game fills the right side of the screen, as big as it fits, and everything else (the score, the options, a big Play button, and the game-over panel) sits in a column on the left. In the menus the remote's arrows move the highlight and OK presses; once a game is going, the arrows and OK belong to the game until it's over. When a run ends, the initials are picked like an arcade cabinet: up and down change a letter, left and right move between the three, and OK saves. On a TV the score goes on the board under those initials, not under the TV's own name.
 
 | Game | With the remote | Extra on a game controller |
 |---|---|---|
-| Tumbler Rumble, Disco Drop, Moonshot | OK pops, drops or swings. | A, X, R1 or the right trigger does the same, and Start pauses (Tumbler Rumble and Moonshot). |
-| Roll Royale | Hold OK to aim and fill the power meter, and let go to roll. | Hold A, X, R1 or the right trigger the same way; Start pauses. |
+| Tumbler Rumble | OK pops. | A, X, R1 or the right trigger does the same, and Start pauses. |
 | Snake | The arrows steer, and OK pauses and carries on. | The D-pad or left stick steers; X or Start pauses. |
 | Dino Dash | OK or up jumps (hold it for a big jump), down ducks. | A, X, R1 or the right trigger jumps; the D-pad or left stick ducks. |
 | Block Drop | Left and right move, up turns, down speeds the piece up (hold it to drop), OK drops it the rest of the way. | A or the right trigger drops, X or R1 turns, L1 turns back, Y or the left trigger holds the piece, Start pauses. |
@@ -645,7 +572,7 @@ Visit `/admin.html` and enter your `ADMIN_PASSWORD`.
 - Comm Center: the feedback inbox (with screenshots, the page and device each message came from, and a Copy for chat button), announcements, high-score boards, Spin & Solve and Know-It-All packs and requests
 
 **Boards:**
-- Take a single score off any game's board (Sudoku, Clueless Crosswords, Tumbler Rumble, Disco Drop, Roll Royale, Moonshot, Shuffle Scuffle, Wordless, and the games that share the older high-score board). Pick the game and board, then tap Remove twice. It leaves the board and everyone's ranks straight away but isn't deleted: it's kept in a list under the board with when it was taken off and by whom, and Put back returns it exactly as it was. A game added later shows up here by itself, as long as its scores live in a table named `<game>_scores`. Rambler's boards keep their own tools on the Rambler tab.
+- Take a single score off any game's board (Sudoku, Clueless Crosswords, Tumbler Rumble, Shuffle Scuffle, Wordless, and the games that share the older high-score board). Pick the game and board, then tap Remove twice. It leaves the board and everyone's ranks straight away but isn't deleted: it's kept in a list under the board with when it was taken off and by whom, and Put back returns it exactly as it was. A game added later shows up here by itself, as long as its scores live in a table named `<game>_scores`. Rambler's boards keep their own tools on the Rambler tab.
 
 **Rambler:**
 - See the current season, how long is left, and rename it ("Spooky Season")
@@ -686,11 +613,8 @@ chess/                    Two-phone chess rooms (/api/chess)
 sudoku/                   Sudoku's puzzle maker (generator.js) and its runs and boards (/api/sudoku)
 scuffle/                  Shuffle Scuffle: letters and points (game.js), solo games and the two daily boards (solo.js), rooms (rooms.js), /api/scuffle
 crisscross/               Words with Family: the rules (engine.js), the computer player (bot.js), games in the database (games.js), /api/crisscross
-discodrop/                Disco Drop: runs, the replayed drops and the boards (/api/discodrop); the motion is public/discodrop-engine.js
 clueless/                 Clueless Crosswords: shapes and the filler (grid.js), clue checks (clues.js), the day's puzzles (maker.js, puzzles.js), the built-in clues, /api/clueless
 tumbler/                  Tumbler Rumble's runs, the replay check and the boards (/api/tumbler; the rules are public/tumbler-engine.js)
-royale/                   Roll Royale's runs, the replay check and the boards (/api/royale; the rules are public/royale-engine.js)
-moonshot/                 Moonshot: runs, the replayed swings and the boards (/api/moonshot); the pitches are public/moonshot-engine.js
 spinsolve/                Spin & Solve levels, adult banks, packs and requests (/api/spinsolve)
 trivia/                   Know-It-All questions, packs, Open Trivia DB download, rooms (/api/trivia)
 arcade/                   Arcade-wide pieces: Comm Center, adult PIN, high scores, profiles, stats and the error log, Wordless hints
@@ -709,10 +633,7 @@ public/scuffle.*          Shuffle Scuffle
 public/crisscross.*       Words with Family (and words-with-family-logo.svg)
 public/clueless.*         Clueless Crosswords (admin side in admin-clueless.js)
 public/tumbler.*          Tumbler Rumble (the rules, shared with the server, in tumbler-engine.js)
-public/discodrop*         Disco Drop (discodrop-engine.js is shared with the server)
-public/royale.*           Roll Royale (the rules, shared with the server, in royale-engine.js)
-public/moonshot*          Moonshot (moonshot-engine.js is shared with the server)
-public/game-shell.*       Shared game-over panel and high scores for those four, and the 3D cabinet games
+public/game-shell.*       Shared game-over panel and high scores for Tumbler Rumble and the 3D cabinet games
 public/bigswing.*, cab-swing.js   Big Swing (the page, and the game on the 3D cabinet engine)
 public/bucketdrop.*, cab-bucket.js   Bucket Drop (its jackpot is arcade/cab-jackpot.js)
 public/launcher.*, cab-launcher.js   ARKS Launcher
