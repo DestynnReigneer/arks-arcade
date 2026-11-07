@@ -55,9 +55,6 @@ const SUITES = [
   ['crisscross', require('./crisscross.test.js')],
   ['clueless', require('./clueless.test.js')],
   ['tumbler', require('./tumbler.test.js')],
-  ['discodrop', require('./discodrop.test.js')],
-  ['royale', require('./royale.test.js')],
-  ['moonshot', require('./moonshot.test.js')],
   ['cabinet', require('./cabinet.test.js')],
   ['housekeeping', require('./housekeeping.test.js')],
   ['boards', require('./boards.test.js')],
@@ -108,10 +105,6 @@ function startServer(port, extraEnv = {}) {
         // Tumbler Rumble refuses taps later than the run has really lasted;
         // this lets the suite send a whole run without playing it in real time.
         TUMBLER_SLACK_MS: '60000',
-        // The same for Roll Royale's press and release times.
-        ROYALE_SLACK_MS: '60000',
-        // The same for Moonshot's swings.
-        MOONSHOT_SLACK_MS: '60000',
         // Rambler's once-a-minute housekeeping, slowed to once an hour, so the
         // check that /healthz no longer rolls a season over can't be beaten
         // to it by the timer.

@@ -65,32 +65,14 @@ html.tv.tv-play .tv-stage > .stage {
   border-width: 3px;
 }
 
-/* ---- Tumbler Rumble and Roll Royale: the stage and its big button ------------ */
-html.tv.tv-play .tv-stage > .tr-zone,
-html.tv.tv-play .tv-stage > .rr-zone {
+/* ---- Tumbler Rumble: the stage and its big button ------------------------------ */
+html.tv.tv-play .tv-stage > .tr-zone {
   max-width: none; width: 100cqw; height: 100cqh; margin: 0;
   display: flex; align-items: center; justify-content: center;
 }
-html.tv.tv-play .tr-pop,
-html.tv.tv-play .rr-roll,
-html.tv.tv-play .dd-drop,
-html.tv.tv-play .ms-swing { display: none !important; }
+html.tv.tv-play .tr-pop { display: none !important; }
 html.tv.tv-play .tv-stage .tr-stage { width: min(100cqw, 100cqh); height: auto; aspect-ratio: 1; }
-html.tv.tv-play .tv-stage .rr-stage { width: min(100cqw, 100cqh * 5 / 6); height: auto; max-height: none; margin: 0; }
-html.tv.tv-play .tv-stage .tr-stage .stage-msg span,
-html.tv.tv-play .tv-stage .rr-stage .stage-msg span { max-width: 560px; }
-
-/* ---- Disco Drop and Moonshot: a 4 by 5 cabinet ---------------------------------- */
-html.tv.tv-play .tv-stage > .dd-stage,
-html.tv.tv-play .tv-stage > .ms-stage { width: min(100cqw, 100cqh * 4 / 5); max-width: none; height: auto; margin: 0; }
-html.tv.tv-play .dd-cover-box,
-html.tv.tv-play .ms-cover-box { max-width: 520px; font-size: 22px; }
-html.tv.tv-play .dd-cover-box b,
-html.tv.tv-play .ms-cover-box b { font-size: 40px; }
-html.tv.tv-play .dd-cover-box p,
-html.tv.tv-play .ms-cover-box p { font-size: 22px; line-height: 1.45; }
-html.tv.tv-play .dd-cover-box .primary,
-html.tv.tv-play .ms-cover-box .primary { font-size: 26px; padding: 18px 40px; }
+html.tv.tv-play .tv-stage .tr-stage .stage-msg span { max-width: 560px; }
 
 /* ---- Dino Dash: one wide canvas --------------------------------------------------- */
 html.tv.tv-play .tv-stage > .dino-stage { width: 100cqw; height: auto; max-width: none; margin: 0; }

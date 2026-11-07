@@ -30,15 +30,13 @@ async function run({ base, root }) {
   console.log('\n-- boards: every game with a board is there --');
   const list = await admin('');
   const ids = list.status === 200 ? list.data.games.map(g => g.id) : [];
-  const want = ['sudoku', 'clueless', 'tumbler', 'discodrop', 'royale', 'scuffle', 'wordless', 'spinsolve', 'chess', 'dino', 'trivia', 'snake', 'bricks', 'blocks', 'towers'];
-  ok('Sudoku, Clueless, Tumbler Rumble, Disco Drop, Roll Royale, Shuffle Scuffle, Wordless and the older games are listed',
+  const want = ['sudoku', 'clueless', 'tumbler', 'scuffle', 'wordless', 'spinsolve', 'chess', 'dino', 'trivia', 'snake', 'bricks', 'blocks', 'towers'];
+  ok('Sudoku, Clueless, Tumbler Rumble, Shuffle Scuffle, Wordless and the older games are listed',
     want.every(id => ids.includes(id)), ids.join());
   const sudoku = list.data.games.find(g => g.id === 'sudoku');
   ok('Sudoku has a board per level, timed, by day', sudoku && sudoku.boards.map(b => b.id).join() === 'family,easy,medium,hard' && sudoku.unit === 'time' && sudoku.daily);
   ok('Snake\'s boards are its own (classic and wrap-around)', list.data.games.find(g => g.id === 'snake').boards.map(b => b.id).join() === 'classic,wrap');
   ok('Rambler is left to its own tab', !ids.includes('rambler'));
-  const moon = list.data.games.find(g => g.id === 'moonshot');
-  ok('Moonshot, added after the Boards tab, was found on its own (by day, in points)', !!moon && moon.label === 'Moonshot' && moon.daily && moon.unit === 'points', JSON.stringify(moon));
 
   console.log('\n-- boards: removing and putting back (the older games\' shared board) --');
   const top = (await call('/api/scores/snake', 'POST', { initials: 'TOP', score: 199990, board: 'classic' })).data;
@@ -101,6 +99,11 @@ async function run({ base, root }) {
     ok('…which can be removed', !db.prepare('SELECT 1 FROM laterball_scores WHERE id = ?').get(id) && (await admin('/laterball')).data.removed.some(r => r.id === id));
     await admin(`/laterball/${id}/restore`, 'POST', {});
     ok('…and put back with the same id', db.prepare('SELECT initials, score FROM laterball_scores WHERE id = ?').get(id).score === 4321);
+    // A game taken out of the arcade keeps its old scores in the database, but gets no board.
+    db.exec(`CREATE TABLE IF NOT EXISTS moonshot_scores (id INTEGER PRIMARY KEY AUTOINCREMENT, day TEXT NOT NULL, initials TEXT NOT NULL,
+      profile_name TEXT, score INTEGER NOT NULL, created_at TEXT NOT NULL DEFAULT (datetime('now')))`);
+    ok('a game taken out of the arcade (Moonshot) gets no board, though its old table is still there',
+      !(await admin('')).data.games.some(g => g.id === 'moonshot'));
     db.close();
   }
 

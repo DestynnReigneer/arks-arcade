@@ -1,8 +1,7 @@
 'use strict';
 
 // The games played on the TV itself (public/tv-play.js), at 1920 by 1080 with
-// the ARKS TV app's user agent: the cabinet games (Tumbler Rumble, Disco Drop,
-// Roll Royale, Moonshot) and the classics (Snake, Dino Dash, Block Drop, Brick
+// the ARKS TV app's user agent: the cabinet game (Tumbler Rumble) and the classics (Snake, Dino Dash, Block Drop, Brick
 // Breaker, Tower Defense, Sudoku, Chess). Each one is opened, started and
 // played a little with only the remote's arrows and OK (arrow keys and
 // Enter), and a pretend game controller (navigator.getGamepads, the way the
@@ -210,119 +209,6 @@ test('Tumbler Rumble with the remote and a controller', async ({ page }) => {
   await expect(page.locator('#againBtn')).toBeFocused();
   await page.keyboard.press('Enter');
   await expect.poll(() => page.evaluate(() => window.TumblerTest.state().mode)).toBe('playing');
-  expect(problems, problems.join('\n')).toEqual([]);
-});
-
-test('Disco Drop with the remote and a controller', async ({ page }) => {
-  const problems = await openTv(page, '/discodrop.html');
-  await expectTvLayout(page);
-  // The cabinet's own Start button has the highlight.
-  await expect(page.locator('#coverBtn')).toBeFocused();
-  await page.keyboard.press('Enter');
-  await expect(page.locator('#cover')).toBeHidden();
-  await plugInPad(page);
-  // OK, then X, R1 and the right trigger, then OK for the rest.
-  const ways = ['ok', 2, 5, 7];
-  for (let ball = 1; ball <= 10; ball++) {
-    await expect(page.locator('#ball')).toHaveText(`${ball} of 10`);
-    await expect(page.locator('#dropBtn')).toBeEnabled();
-    const way = ways[ball - 1] || 'ok';
-    if (way === 'ok') await page.keyboard.press('Enter');
-    else await padPress(page, way);
-    if (ball < 10) await expect(page.locator('#ball')).toHaveText(`${ball + 1} of 10`, { timeout: 10000 });
-  }
-  await expect(page.locator('#over')).toBeVisible({ timeout: 10000 });
-  await expect(page.locator('#overChips span')).toHaveCount(10);
-  await pickInitials(page, '#iniRow', 'DJ');
-  await expect(page.locator('#scores')).toBeVisible();
-  await expect(page.locator('#scoreList')).toContainText('DJ');
-  expect(problems, problems.join('\n')).toEqual([]);
-});
-
-test('Roll Royale with a held OK and a held controller button', async ({ page }) => {
-  const problems = await openTv(page, '/royale.html');
-  await expectTvLayout(page);
-  await expect(page.locator('.tv-go')).toBeFocused();
-  await page.keyboard.press('Enter');
-  await expect.poll(() => page.evaluate(() => !!window.RoyaleTest)).toBe(true);
-  const ready = () => expect.poll(() => page.evaluate(() => {
-    const T = window.RoyaleTest, st = T.state();
-    return T.msToReady() <= 0 && st.landed >= st.ball;
-  }), { timeout: 15000 }).toBe(true);
-
-  // The first ball into the middle: OK pressed and held for the planned time,
-  // inside the page so the timing is exact.
-  await ready();
-  await page.evaluate(() => new Promise(resolve => {
-    const T = window.RoyaleTest;
-    const key = type => document.body.dispatchEvent(new KeyboardEvent(type, { key: 'Enter', bubbles: true }));
-    const until = (at, then) => { const go = () => { const ms = at - T.gameTime(); if (ms > 2) { setTimeout(go, Math.min(ms - 1, 40)); return; } then(); }; go(); };
-    const plan = T.plan('bull');
-    until(plan.pressAt, () => { key('keydown'); until(T.gameTime() + plan.holdMs, () => { key('keyup'); resolve(); }); });
-  }));
-  await expect(page.locator('#hudBall')).toHaveText('2', { timeout: 10000 });
-
-  // The second with a controller's X, held and let go.
-  await plugInPad(page);
-  await ready();
-  await padPress(page, 2, 250);
-  await expect(page.locator('#hudBall')).toHaveText('3', { timeout: 10000 });
-
-  // The rest with the remote: hold OK a moment and let go.
-  for (let ball = 3; ball <= 9; ball++) {
-    await ready();
-    await page.keyboard.down('Enter');
-    await page.waitForTimeout(250);
-    await page.keyboard.up('Enter');
-    if (ball < 9) await expect(page.locator('#hudBall')).toHaveText(String(ball + 1), { timeout: 10000 });
-  }
-  await expect(page.locator('#over')).toBeVisible({ timeout: 15000 });
-  await expect(page.locator('#tally li')).toHaveCount(9);
-  await pickInitials(page, '#iniRow', 'ROL');
-  await expect(page.locator('#scores')).toBeVisible();
-  await expect(page.locator('#scoreList li.me')).toContainText('ROL');
-  expect(problems, problems.join('\n')).toEqual([]);
-});
-
-test('Moonshot with the remote and a controller', async ({ page }) => {
-  const problems = await openTv(page, '/moonshot.html');
-  await expectTvLayout(page);
-  await expect(page.locator('#coverBtn')).toBeFocused();
-  await page.keyboard.press('Enter');
-  await expect(page.locator('#cover')).toBeHidden();
-  const swings = [];
-  page.on('request', r => { if (/\/api\/moonshot\/run\/[^/]+\/swing$/.test(r.url())) swings.push(r.url()); });
-
-  // OK swings at the first pitch, right when it reaches the ring.
-  const runId = await page.evaluate(() => window.MoonshotClock.runId());
-  const first = await (await page.request.get(`/api/moonshot/test/homer/${runId}?after=0`)).json();
-  await page.evaluate(at => new Promise(resolve => {
-    const go = () => {
-      const left = at - window.MoonshotClock.elapsed();
-      if (left > 30) { setTimeout(go, Math.min(left - 25, 200)); return; }
-      while (window.MoonshotClock.elapsed() < at) { /* the last few ms */ }
-      document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-      resolve();
-    };
-    go();
-  }), first.perfect);
-  await expect(page.locator('.fx-banner .fx-title')).toHaveText('HOME RUN!');
-  await expect(page.locator('#score')).toHaveText('100');
-
-  // A controller's X swings at the next one.
-  await plugInPad(page);
-  const second = await (await page.request.get(`/api/moonshot/test/homer/${runId}?after=${first.perfect + 500}`)).json();
-  await page.waitForFunction(at => window.MoonshotClock.elapsed() >= at - 40, second.perfect, { timeout: 30000 });
-  await padPress(page, 2, 60);
-  await expect.poll(() => swings.length, { timeout: 5000 }).toBe(2);
-
-  // Start pauses; the highlight lands on Keep playing, and OK carries on.
-  await padPress(page, 9);
-  await expect(page.locator('#pauseCover')).toBeVisible();
-  await expect(page.locator('#resumeBtn')).toBeFocused();
-  await page.keyboard.press('Enter');
-  await expect(page.locator('#pauseCover')).toBeHidden();
-  await expect.poll(() => page.evaluate(() => window.MoonshotClock.mode())).toMatch(/resuming|playing/);
   expect(problems, problems.join('\n')).toEqual([]);
 });
 
