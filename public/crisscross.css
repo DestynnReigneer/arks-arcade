@@ -162,3 +162,7 @@ html.tv .cc-cell:focus { z-index: 3; }
 
 /* The Words with Family logo: wooden tiles spelling the name, over the game lists and on an invite. */
 .cc-logo { display: block; width: min(220px, 62vw); height: auto; margin: 4px auto 14px; filter: drop-shadow(0 6px 14px rgba(0, 0, 0, .35)); }
+
+/* Notifications when it's your turn (push-optin.js) */
+.push-card button { margin-top: 4px; }
+.push-card .push-err:empty { display: none; }
