@@ -94,9 +94,15 @@ if (arks) {
   // The arcade on a TV (contract v14): setting a TV up with a pairing code,
   // and adults' night (arcade/tv.js).
   app.use(require('./arcade/tv').createTv({ arks }).routes());
+  // Notifications on people's phones, sent by ARKS ID (contract v15,
+  // arcade/push.js): Words with Family tells you when it's your turn.
+  const push = require('./arcade/push').createPush({ arks });
+  app.use(push.routes());
+  require('./crisscross/games').setNotifier(push.tell);
 } else {
   app.get('/api/arksid/me', (req, res) => res.set('Cache-Control', 'no-store').json({ on: false }));
   app.use(require('./arcade/tv').offRoutes());
+  app.get('/api/push/key', (req, res) => res.set('Cache-Control', 'no-store').json({ on: false }));
 }
 
 // ---- Rate limiting for public write endpoints ----
@@ -202,13 +208,14 @@ app.use('/custom', customMedia.staticFiles());
 // The install manifest: the name and icon a phone uses when the arcade is
 // added to its home screen. The icons come from the brand folder when it has
 // them (app-icon-192.png and app-icon-512.png); without them the phone uses
-// the page's own icon.
+// the page's own icon. It opens full screen, like an app: an iPhone only lets a
+// Home Screen app have notifications when it does (public/push-optin.js).
 app.get('/manifest.webmanifest', (req, res) => {
   const b = customMedia.brand(), name = String(process.env.ARCADE_NAME || '').trim().slice(0, 30);
   const icons = [['icon192', '192x192'], ['icon512', '512x512']].filter(([k]) => b[k])
     .map(([k, sizes]) => ({ src: b[k], sizes, type: 'image/png', purpose: 'any maskable' }));
   res.type('application/manifest+json').set('Cache-Control', 'no-cache').json({
-    name: name ? `${name} Arcade` : 'Arcade', short_name: 'Arcade', start_url: '/', scope: '/', display: 'browser',
+    name: name ? `${name} Arcade` : 'Arcade', short_name: 'Arcade', start_url: '/', scope: '/', display: 'standalone',
     background_color: '#12111c', theme_color: '#12111c', icons
   });
 });

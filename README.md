@@ -340,6 +340,24 @@ Everything is under `/api/crisscross`. Who's asking goes in headers, never the a
 | `POST /games/:id/start` | The host starts a waiting game with whoever has joined. |
 | `POST /games/:id/hide` | Clears a finished game from your list. |
 
+#### Notifications when it's your turn
+
+When the arcade signs in with ARKS ID, a phone can get a notification when it becomes your turn in a game on
+everyone's own phone, or when someone starts a game with you. The card for it is on Words with Family's first screen
+(`public/push-optin.js`): Turn on notifications makes the phone ask "Allow notifications?", and the card says so
+when they're on, with a button to turn them off. Tapping a notification opens that game (`public/sw.js`, the
+arcade's service worker, which only handles notifications and caches nothing). A newer one for the same game
+replaces the older one, and opening the game clears it. Games against the computer and games on one phone never
+send any, and a word from the unfiltered list never shows on the lock screen ("Kim played a word for 34 points").
+
+ARKS ID does the sending (its contract v15): it keeps each person's phones, shows them on the person's account page
+with a Stop button, and encrypts every message so the push services in between can't read it. The arcade's side is
+`arcade/push.js`: `GET /api/push/key` (the key the page subscribes with; `{ on: false }` without ARKS ID), and
+`POST /api/push/subscribe` `{ subscription }` and `POST /api/push/unsubscribe` `{ endpoint }`, both for someone
+signed in. A notification that can't be sent never holds up a move. On an iPhone or iPad, notifications only work
+once the arcade is on the Home Screen (iOS 16.4 or later), so the card says how to add it; the install manifest
+opens the arcade full screen for that.
+
 ### Clueless Crosswords (`/clueless.html`)
 
 It was called Clueless until November 2026. Only the name changed on screen: the page, the API, the tables and saved times still use `clueless`, so old links and boards keep working.
@@ -617,7 +635,7 @@ clueless/                 Clueless Crosswords: shapes and the filler (grid.js), 
 tumbler/                  Tumbler Rumble's runs, the replay check and the boards (/api/tumbler; the rules are public/tumbler-engine.js)
 spinsolve/                Spin & Solve levels, adult banks, packs and requests (/api/spinsolve)
 trivia/                   Know-It-All questions, packs, Open Trivia DB download, rooms (/api/trivia)
-arcade/                   Arcade-wide pieces: Comm Center, adult PIN, high scores, profiles, stats and the error log, Wordless hints
+arcade/                   Arcade-wide pieces: Comm Center, adult PIN, high scores, profiles, stats and the error log, Wordless hints, notifications (push.js)
 
 words/                    Dictionaries, baked into the image (see above)
 
