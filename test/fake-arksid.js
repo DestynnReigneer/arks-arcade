@@ -197,7 +197,7 @@ function startFakeArksId({ secret, arcadeBase, port = 0 }) {
       const s = fake.sessions.get(b.session);
       if (!s || !s.valid || users[s.key].kind === 'tv') return json(res, 401, { error: "That sign-in isn't one this app holds." });
       const id = users[s.key].id, list = fake.pushSubs[id] = fake.pushSubs[id] || [];
-      if (u.pathname.endsWith('/unsubscribe')) { fake.pushSubs[id] = list.filter(x => x.endpoint !== b.endpoint); return json(res, 200, { ok: true }); }
+      if (u.pathname.endsWith('/unsubscribe')) { fake.pushSubs[id] = b.endpoint ? list.filter(x => x.endpoint !== b.endpoint) : []; return json(res, 200, { ok: true }); }
       if (!b.subscription || !/^https:\/\/fcm\.googleapis\.com\//.test(b.subscription.endpoint || '')) return json(res, 400, { error: "That isn't a push address." });
       if (!list.some(x => x.endpoint === b.subscription.endpoint)) list.push(b.subscription);
       return json(res, 200, { ok: true });

@@ -9,6 +9,7 @@
 // page never offers them.
 
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 const db = require('../db');
 
 const KEY_MS = 60 * 60 * 1000;    // ask for the public key again after an hour
@@ -36,6 +37,11 @@ function createPush({ arks }) {
   function routes() {
     const router = express.Router();
     router.use('/api/push', (req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
+    // Turning them on and off, from one address. The page asks for the key once per visit.
+    router.use(['/api/push/subscribe', '/api/push/unsubscribe'], rateLimit({
+      windowMs: 10 * 60 * 1000, limit: 30, standardHeaders: true, legacyHeaders: false,
+      message: { error: 'That\'s a lot of tries in a short time. Wait a few minutes, then try again.' }
+    }));
     const signedIn = async (req, res) => {
       let me = null;
       try { me = await arks.current(req); } catch { /* treated as signed out */ }
@@ -43,7 +49,7 @@ function createPush({ arks }) {
       return me;
     };
     const fromService = (res, r) => (r.status === 200 ? res.json({ ok: true })
-      : res.status(r.status === 401 ? 401 : 400).json({ error: r.data.error || 'That didn\'t work. Try again in a moment.' }));
+      : res.status([401, 429].includes(r.status) ? r.status : 400).json({ error: r.data.error || 'That didn\'t work. Try again in a moment.' }));
 
     router.get('/api/push/key', async (req, res) => {
       try { res.json({ on: true, publicKey: await publicKey() }); } catch { res.json({ on: false }); }
