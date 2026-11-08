@@ -40,6 +40,8 @@
     <ul class="cc-list" id="mineList"></ul>
     <button class="primary big" id="newOnlineBtn">📱 New game with the family</button>
   </div>
+  <!-- Notifications when it's your turn (push-optin.js): only with ARKS ID sign-in, on a phone that can. -->
+  <div class="panel no-tv hidden push-card" id="pushCard"></div>
   <div class="panel no-tv" id="noProfile">
     <h2>Playing on everyone's own phone</h2>
     <p class="hint">A game can last a few days, with each person taking their turn whenever they're free, so the arcade needs to know who you are. Pick your profile to start one or to see the games you've been invited to.</p>
@@ -217,6 +219,7 @@
 <script src="fx.js"></script>
 <script src="arcade-kit.js"></script>
 <script src="arcade-qr.js"></script>
+<script src="push-optin.js"></script>
 <script src="crisscross.js"></script>
 <script src="banner.js" defer></script>
 </body>

@@ -91,13 +91,50 @@ function load(id) {
   return { row, state: JSON.parse(row.state) };
 }
 
-function save(row, state, now = Date.now()) {
+// actor: the profile whose move this was. When it's given and the turn moves on
+// to someone else in an online game, that person is told (see "Telling people").
+function save(row, state, now = Date.now(), actor) {
   const status = state.waiting ? 'waiting' : state.over ? 'over' : 'playing';
   const p = !state.waiting && !state.over ? state.players[state.turn] : null;
+  const before = row.turn_profile || null, turn = p && p.profileId ? p.profileId : null;
   db.db.prepare('UPDATE crisscross_games SET status = ?, turn_profile = ?, state = ?, updated_at = ?, join_code = ? WHERE id = ?')
-    .run(status, p && p.profileId ? p.profileId : null, JSON.stringify(state), now, status === 'waiting' ? row.join_code : null, row.id);
+    .run(status, turn, JSON.stringify(state), now, status === 'waiting' ? row.join_code : null, row.id);
   row.status = status;
   row.updated_at = now;
+  row.turn_profile = turn;
+  if (actor !== undefined && row.kind === 'online' && turn && turn !== before && turn !== actor) yourTurn(row, state, turn, actor);
+}
+
+// ---- telling people ----------------------------------------------------------------------------------
+// A notification on the phone when it becomes your turn in an online game, or when
+// someone starts a game with you (arcade/push.js, only with the sign-in service on).
+// Games against the computer and pass-and-play games never send any.
+
+let notifier = null;
+function setNotifier(fn) { notifier = fn; }
+const nameOf = (state, profileId) => (state.players.find(p => p.profileId === profileId) || {}).name || 'Someone';
+function tell(row, profileId, body) {
+  if (!notifier) return;
+  try {
+    notifier(profileId, { title: 'Words with Family', body, url: `/crisscross.html?game=${row.id}`, tag: `ww-${row.id}` });
+  } catch { /* a notification never stops a game */ }
+}
+function yourTurn(row, state, to, actor) {
+  const who = actor ? nameOf(state, actor) : null;
+  const last = state.moves && state.moves[state.moves.length - 1];
+  // The words are the maintainer's own (2026-11-07).
+  let body;
+  if (!who || !last) body = 'Everyone\'s ready, the game started. You\'re first!';
+  else if (last.kind === 'play') {
+    const points = `${last.score} point${last.score === 1 ? '' : 's'}`;
+    // The unfiltered list's words stay off the lock screen.
+    body = row.dictionary === 'adult' || !(last.words && last.words[0]) ? `${who} played a word for ${points}. Let's go, loser!`
+      : `${who} played ${String(last.words[0].word).toUpperCase()} for ${points}. You better come to win!`;
+  } else if (last.kind === 'swap') body = `${who} swapped tiles. Your move!`;
+  else if (last.kind === 'pass') body = `${who} passed. Your move!`;
+  else if (last.kind === 'resign') body = `${who} left the game. Your move, I guess!`;
+  else body = `${who} took a turn. Your move!`;
+  tell(row, to, body);
 }
 
 // Which seat the person asking has. Online games know you by your profile;
@@ -145,6 +182,12 @@ function createOnline({ host, invite, openSeats, dictionary, adultOk }, now = Da
   players.forEach((p, seat) => db.db.prepare('INSERT INTO crisscross_seats (game_id, seat, profile_id) VALUES (?, ?, ?)').run(id, seat, p.profileId));
   const row = load(id).row;
   save(row, state, now);
+  for (const p of people) {
+    const yours = !state.waiting && state.players[state.turn].profileId === p.id;
+    tell(row, p.id, state.waiting ? `${host.name} started a game with you. It'll start once everyone joins.`
+      : yours ? `${host.name} started a game with you, you're first!`
+        : `${host.name} started a game with you. ${state.players[state.turn].name} is first, I'll let you know when it's your turn.`);
+  }
   return id;
 }
 
@@ -198,15 +241,16 @@ function join(code, profile, now = Date.now()) {
   const seat = state.players.length;
   state.players.push({ name: profile.name, profileId: profile.id });
   db.db.prepare('INSERT INTO crisscross_seats (game_id, seat, profile_id) VALUES (?, ?, ?)').run(row.id, seat, profile.id);
-  if (state.players.length >= state.seats) return begin(row, state, now);
+  if (state.players.length >= state.seats) return begin(row, state, now, profile.id);
   save(row, state, now);
   return row.id;
 }
 
-function begin(row, state, now = Date.now()) {
+// actor: who made it start (the last to join, or the host pressing Start).
+function begin(row, state, now = Date.now(), actor = null) {
   const game = E.newGame({ players: state.players, dictionary: state.dictionary });
   db.db.prepare('UPDATE crisscross_games SET seats = ? WHERE id = ?').run(game.players.length, row.id);
-  save(row, game, now);
+  save(row, game, now, actor);
   return row.id;
 }
 
@@ -217,7 +261,7 @@ function startNow(id, who, now = Date.now()) {
   if (!state.waiting) throw fail('This game has already started.', 409);
   if (row.host_profile !== who.profile.id) throw fail('Only the person who set up the game can start it.', 403);
   if (state.players.length < 2) throw fail('Wait until at least one more person has joined.', 409);
-  return begin(row, state, now);
+  return begin(row, state, now, who.profile.id);
 }
 
 // ---- taking turns ------------------------------------------------------------------------------------
@@ -237,7 +281,7 @@ function act(id, who, fn, now = Date.now()) {
     if (!state.over && state.players.every((p, s) => p.bot || state.resigned[s])) E.finish(state, 'resigned');
     runBots(state, now);
   }
-  save(row, state, now);
+  save(row, state, now, who.profile ? who.profile.id : null);
   return { result, view: view(row, state, who) };
 }
 
@@ -353,5 +397,5 @@ function turnCount(profileId) {
 
 module.exports = {
   createOnline, createLocal, join, invitePreview, startNow, act, moves, preview, hide, open, mine, turnCount,
-  grownUp, profileRow, load, sweep
+  grownUp, profileRow, load, sweep, setNotifier
 };

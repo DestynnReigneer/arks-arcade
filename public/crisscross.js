@@ -141,7 +141,9 @@
     const p = me();
     $('noProfile').classList.toggle('hidden', !!p);
     $('minepanel').classList.toggle('hidden', !p);
+    if (!p) $('pushCard').classList.add('hidden');
     if (!p || TV) return;
+    ArcadePush.card($('pushCard'));
     await loadMine();
     S.poll = setInterval(() => { if (!document.hidden) loadMine(); }, 30000);
   }
@@ -368,6 +370,8 @@
   // ---- opening a game -----------------------------------------------------------------------------------------
   async function openGame(id, key = null) {
     stopPoll();
+    // A notification for this game that's still showing has done its job.
+    ArcadePush.clear(`ww-${id}`);
     S.key = key || (localGames().find(g => g.id === id) || {}).key || null;
     try {
       showGame(await call(`/games/${encodeURIComponent(id)}`));

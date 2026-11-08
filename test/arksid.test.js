@@ -287,6 +287,49 @@ async function run({ base, root, fake, admin: ADMIN }) {
   ok('a kid holding a grown-up\'s pass still can\'t start one', (await cc('/games', miloCC, { method: 'POST', body: { kind: 'local', players: [{ name: 'A' }, { name: 'B' }], dictionary: 'adult' }, pass: kimPass })).status === 403);
   ok('a kid can start a family-words game with a grown-up', (await cc('/games', miloCC, { method: 'POST', body: { kind: 'online', invite: [kimCC.profile.id] } })).status === 201);
 
+  console.log('\n-- notifications: your turn in Words with Family --');
+  // Notifications go out in the background, so wait for them to land (or for nothing to).
+  const settle = async (want = 1) => { for (let i = 0; i < 40 && fake.pushes.length < want; i++) await new Promise(r => setTimeout(r, 50)); await new Promise(r => setTimeout(r, 150)); };
+  const sub = n => ({ endpoint: `https://fcm.googleapis.com/fcm/send/${n}`, keys: { p256dh: 'x', auth: 'y' } });
+  ok('the page gets the key to turn notifications on with', (await browser().call('/api/push/key')).data.publicKey === 'B' + 'A'.repeat(86));
+  ok("someone signed out can't turn them on", (await browser().call('/api/push/subscribe', { method: 'POST', body: { subscription: sub('nobody') } })).status === 401);
+  ok('a signed-in phone turns them on', (await samCB.call('/api/push/subscribe', { method: 'POST', body: { subscription: sub('sam') } })).status === 200 &&
+    fake.pushSubs[fake.users.sam.id].length === 1);
+  ok("…and something that isn't a push address is turned away", (await samCB.call('/api/push/subscribe', { method: 'POST', body: { subscription: sub('x').endpoint } })).status === 400);
+  await kimCB.call('/api/push/subscribe', { method: 'POST', body: { subscription: sub('kim') } });
+  fake.pushes.length = 0;
+  const ng = await cc('/games', kimCC, { method: 'POST', body: { kind: 'online', invite: [samCC.profile.id] } });
+  await settle();
+  const toSam = fake.pushes.filter(p => p.to === fake.users.sam.id), toKim = () => fake.pushes.filter(p => p.to === fake.users.kim.id);
+  ok('starting a game tells the person invited, with a link straight to it', toSam.length === 1 && /^Kim started a game with you[.,]/.test(toSam[0].body) &&
+    toSam[0].url === `/crisscross.html?game=${ng.data.id}` && toSam[0].tag === `ww-${ng.data.id}`, JSON.stringify(fake.pushes));
+  ok('…and not the one who started it', toKim().length === 0);
+  // Whoever goes first passes; the other one hears about it.
+  let g = (await cc(`/games/${ng.data.id}`, kimCC)).data;
+  const [first, second, secondKey] = g.you === g.turn ? [kimCC, samCC, 'sam'] : [samCC, kimCC, 'kim'];
+  const firstName = first === kimCC ? 'Kim' : 'Sam';
+  fake.pushes.length = 0;
+  ok('a move goes through', (await cc(`/games/${ng.data.id}/pass`, first, { method: 'POST', body: {} })).status === 200);
+  await settle();
+  const told = fake.pushes.filter(p => p.to === fake.users[secondKey].id);
+  ok("…and the next player hears it's their turn, and what was played", fake.pushes.length === 1 && told.length === 1 &&
+    told[0].body === `${firstName} passed. Your move!` && told[0].title === 'Words with Family', JSON.stringify(fake.pushes));
+  fake.pushDown = true;
+  ok("a move still goes through when the notification can't be sent", (await cc(`/games/${ng.data.id}/pass`, second, { method: 'POST', body: {} })).status === 200);
+  await settle();
+  fake.pushDown = false;
+  ok('a game against the computer never sends any', await (async () => {
+    fake.pushes.length = 0;
+    await cc('/games', kimCC, { method: 'POST', body: { kind: 'local', players: [{ name: 'Kim' }, { name: 'Computer', bot: true }] } });
+    await settle();
+    return fake.pushes.length === 0;
+  })());
+  ok('a phone can turn them off again', (await samCB.call('/api/push/unsubscribe', { method: 'POST', body: { endpoint: sub('sam').endpoint } })).status === 200 &&
+    fake.pushSubs[fake.users.sam.id].length === 0);
+  await samCB.call('/api/push/subscribe', { method: 'POST', body: { subscription: sub('sam2') } });
+  await samCB.call('/auth/signout', { method: 'POST' });
+  ok('signing out on a phone stops its notifications', fake.pushSubs[fake.users.sam.id].length === 0, JSON.stringify(fake.pushSubs[fake.users.sam.id]));
+
   console.log('\n-- game switches and the banner from the sign-in service --');
   const wait = ms => new Promise(r => setTimeout(r, ms));
   const guest = browser();
