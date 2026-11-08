@@ -318,7 +318,7 @@ It was called Criss Cross until November 2026. Only the name changed: the page i
 - **The server decides everything** (`crisscross/`): it keeps the bag and every rack, shows each player only their own rack (everyone's leftovers are shown once the game is over), checks every move and finds every new word, and adds up the score. The page only sends where its tiles went; a score in the request is ignored.
 - **The computer** (`crisscross/bot.js`) plays the best-scoring word it can find with its rack along every row and column. It doesn't use blanks, and when it can't find a word it swaps or passes.
 - **Phones first:** tap a tile and then a square, or drag a tile onto the board; tap a placed tile to take it back. Shuffle, Recall, Swap and Pass, a Zoom button that makes the board bigger and lets it slide around inside its own box, the score of your word before you play it, the last move lit up, and a list of every word played. There's no chat between players, on purpose.
-- **No push messages.** ARKS ID doesn't offer a way to send a short "your turn" note, so turns show up on the home page and the game list instead.
+- **Your turn:** turns show up on the home page and the game list, and with ARKS ID a phone can get a notification too (below).
 
 #### The Words with Family API
 
@@ -348,7 +348,7 @@ everyone's own phone, or when someone starts a game with you. The card for it is
 when they're on, with a button to turn them off. Tapping a notification opens that game (`public/sw.js`, the
 arcade's service worker, which only handles notifications and caches nothing). A newer one for the same game
 replaces the older one, and opening the game clears it. Games against the computer and games on one phone never
-send any, and a word from the unfiltered list never shows on the lock screen ("Kim played a word for 34 points").
+send any, and a word from the unfiltered list never shows on the lock screen ("Kim played a word for 34 points. Let's go, loser!").
 
 ARKS ID does the sending (its contract v15): it keeps each person's phones, shows them on the person's account page
 with a Stop button, and encrypts every message so the push services in between can't read it. The arcade's side is

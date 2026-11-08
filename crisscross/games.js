@@ -122,17 +122,19 @@ function tell(row, profileId, body) {
 function yourTurn(row, state, to, actor) {
   const who = actor ? nameOf(state, actor) : null;
   const last = state.moves && state.moves[state.moves.length - 1];
-  let what;
-  if (!who || !last) what = 'The game has started.';
+  // The words are the maintainer's own (2026-11-07).
+  let body;
+  if (!who || !last) body = 'Everyone\'s ready, the game started. You\'re first!';
   else if (last.kind === 'play') {
+    const points = `${last.score} point${last.score === 1 ? '' : 's'}`;
     // The unfiltered list's words stay off the lock screen.
-    const word = row.dictionary !== 'adult' && last.words && last.words[0] ? String(last.words[0].word).toUpperCase() : 'a word';
-    what = `${who} played ${word} for ${last.score} point${last.score === 1 ? '' : 's'}.`;
-  } else if (last.kind === 'swap') what = `${who} swapped some tiles.`;
-  else if (last.kind === 'pass') what = `${who} passed.`;
-  else if (last.kind === 'resign') what = `${who} left the game.`;
-  else what = `${who} took a turn.`;
-  tell(row, to, `${what} It's your turn!`);
+    body = row.dictionary === 'adult' || !(last.words && last.words[0]) ? `${who} played a word for ${points}. Let's go, loser!`
+      : `${who} played ${String(last.words[0].word).toUpperCase()} for ${points}. You better come to win!`;
+  } else if (last.kind === 'swap') body = `${who} swapped tiles. Your move!`;
+  else if (last.kind === 'pass') body = `${who} passed. Your move!`;
+  else if (last.kind === 'resign') body = `${who} left the game. Your move, I guess!`;
+  else body = `${who} took a turn. Your move!`;
+  tell(row, to, body);
 }
 
 // Which seat the person asking has. Online games know you by your profile;
@@ -182,8 +184,9 @@ function createOnline({ host, invite, openSeats, dictionary, adultOk }, now = Da
   save(row, state, now);
   for (const p of people) {
     const yours = !state.waiting && state.players[state.turn].profileId === p.id;
-    tell(row, p.id, `${host.name} started a game with you. ` + (state.waiting ? 'It begins once everyone has joined.'
-      : yours ? 'It\'s your turn first!' : `${state.players[state.turn].name} goes first.`));
+    tell(row, p.id, state.waiting ? `${host.name} started a game with you. It'll start once everyone joins.`
+      : yours ? `${host.name} started a game with you, you're first!`
+        : `${host.name} started a game with you. ${state.players[state.turn].name} is first, I'll let you know when it's your turn.`);
   }
   return id;
 }

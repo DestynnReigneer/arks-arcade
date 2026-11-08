@@ -18,7 +18,7 @@ window.ArcadePush = (() => {
   };
   const same = (a, b) => !!a && !!b && a.byteLength === b.byteLength && new Uint8Array(a).every((x, i) => x === b[i]);
   const post = (path, body) => fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-    .then(async r => { const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || 'That didn\'t work. Try again in a moment.'); return d; });
+    .then(async r => { const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || 'Something went wrong. Give it a moment and try again.'); return d; });
 
   let reg = null;
   const worker = async () => reg || (reg = await navigator.serviceWorker.register('sw.js'));
@@ -56,19 +56,19 @@ window.ArcadePush = (() => {
     const h = document.createElement('h2'), p = document.createElement('p'), err = document.createElement('p');
     p.className = 'hint'; err.className = 'hint push-err'; err.setAttribute('aria-live', 'polite');
     if (error) err.textContent = error;
-    h.textContent = '🔔 Know when it\'s your turn';
+    h.textContent = '🔔 Get a heads-up when it\'s your turn';
     box.append(h, p);
     if (state === 'tip') {
-      p.textContent = 'On an iPhone or iPad, notifications only work once the Arcade is on your Home Screen. Tap the Share button, pick Add to Home Screen, then open the Arcade from there and come back to this page.';
+      p.textContent = 'iPhones and iPads only show notifications for apps on the Home Screen. Tap the Share button, choose Add to Home Screen, then open the Arcade from its new icon.';
       return;
     }
     if (state === 'blocked') {
-      p.textContent = 'Notifications are turned off for the Arcade on this phone. To get them, allow notifications for this site in your browser\'s settings, then come back here.';
+      p.textContent = 'Your phone is blocking notifications from the Arcade. To get them, open your browser\'s settings, allow notifications for this site.';
       return;
     }
     const btn = document.createElement('button');
     if (state === 'on') {
-      p.textContent = 'This phone gets a notification when it\'s your turn, or when someone starts a game with you. Tap it to jump straight into the game.';
+      p.textContent = 'You\'re all set. This phone will let you know when it\'s your turn or when someone starts a game with you.';
       btn.className = 'ghost'; btn.textContent = 'Turn them off';
       btn.addEventListener('click', async () => {
         btn.disabled = true;
@@ -79,7 +79,7 @@ window.ArcadePush = (() => {
         } catch (e) { btn.disabled = false; err.textContent = e.message; }
       });
     } else {
-      p.textContent = 'Get a notification on this phone when someone plays and it\'s your turn. Tap it to jump straight into the game.';
+      p.textContent = 'Want your phone to let you know when it\'s your move?';
       btn.className = 'primary'; btn.textContent = 'Turn on notifications';
       btn.addEventListener('click', async () => {
         btn.disabled = true;
@@ -94,10 +94,10 @@ window.ArcadePush = (() => {
           if (Notification.permission === 'denied') return draw(box, 'blocked');
           btn.disabled = false;
           // A plain Error is the arcade's own message; the browser's own errors get ours.
-          err.textContent = e && e.name === 'NotAllowedError' ? 'Your phone didn\'t allow it that time. Tap the button to try again.'
+          err.textContent = e && e.name === 'NotAllowedError' ? 'Your phone said no that time. Tap the button again and choose Allow.'
             // Said no without asking: a private or incognito window can't get notifications.
-            : e && e.name === 'AbortError' ? 'This browser couldn\'t turn them on here. A private or incognito window can\'t get notifications, so open the Arcade in a normal window and try again.'
-            : e && e.name === 'Error' && e.message ? e.message : 'That didn\'t work. Try again in a moment.';
+            : e && e.name === 'AbortError' ? 'Notifications don\'t work in a private or incognito window. Open the Arcade in a regular window and try again.'
+            : e && e.name === 'Error' && e.message ? e.message : 'Something went wrong. Give it a moment and try again.';
         }
       });
     }

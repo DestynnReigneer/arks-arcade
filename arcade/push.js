@@ -40,16 +40,16 @@ function createPush({ arks }) {
     // Turning them on and off, from one address. The page asks for the key once per visit.
     router.use(['/api/push/subscribe', '/api/push/unsubscribe'], rateLimit({
       windowMs: 10 * 60 * 1000, limit: 30, standardHeaders: true, legacyHeaders: false,
-      message: { error: 'That\'s a lot of tries in a short time. Wait a few minutes, then try again.' }
+      message: { error: 'That\'s a lot of tries in a row. Give it a few minutes and try again.' }
     }));
     const signedIn = async (req, res) => {
       let me = null;
       try { me = await arks.current(req); } catch { /* treated as signed out */ }
-      if (!me || me.tv) { res.status(401).json({ error: 'Sign in on this phone first, so the notifications know who they\'re for.' }); return null; }
+      if (!me || me.tv) { res.status(401).json({ error: 'Sign in on this phone first, so we know whose turns to tell you about.' }); return null; }
       return me;
     };
     const fromService = (res, r) => (r.status === 200 ? res.json({ ok: true })
-      : res.status([401, 429].includes(r.status) ? r.status : 400).json({ error: r.data.error || 'That didn\'t work. Try again in a moment.' }));
+      : res.status([401, 429].includes(r.status) ? r.status : 400).json({ error: r.data.error || 'Something went wrong. Give it a moment and try again.' }));
 
     router.get('/api/push/key', async (req, res) => {
       try { res.json({ on: true, publicKey: await publicKey() }); } catch { res.json({ on: false }); }
@@ -61,13 +61,13 @@ function createPush({ arks }) {
       const sub = (req.body || {}).subscription;
       if (!sub || typeof sub !== 'object') return res.status(400).json({ error: 'There was no subscription to save.' });
       try { fromService(res, await arks.client.appCall('POST', '/push/subscribe', { session: me.sessionId, subscription: sub })); }
-      catch { res.status(503).json({ error: 'Notifications can\'t be turned on right now. Try again in a minute.' }); }
+      catch { res.status(503).json({ error: 'Notifications can\'t be turned on right now. Try again in a minute or two.' }); }
     });
     router.post('/api/push/unsubscribe', async (req, res) => {
       const me = await signedIn(req, res);
       if (!me) return;
       try { fromService(res, await arks.client.appCall('POST', '/push/unsubscribe', { session: me.sessionId, endpoint: String((req.body || {}).endpoint || '') })); }
-      catch { res.status(503).json({ error: 'That didn\'t work. Try again in a minute.' }); }
+      catch { res.status(503).json({ error: 'Something went wrong. Give it a moment and try again.' }); }
     });
     return router;
   }
