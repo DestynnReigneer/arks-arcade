@@ -464,7 +464,8 @@
     msg(null);
     // The run's celebration, saved for the end: more coins for every wave reached.
     if (window.Fx && r.score > 0) Fx.burst({ count: Math.min(200, 40 + 4 * r.score), coins: Math.min(40, 4 + 3 * r.wave) });
-    setTimeout(() => $('over').scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' }), 60);
+    // It pops up over the page (topbar.js), except on a TV, where it sits in the page.
+    if (!$('over').classList.contains('end-pop')) setTimeout(() => $('over').scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' }), 60);
     say(`Game over. You popped ${plural(r.score, 'pin')} and reached wave ${r.wave}.`);
   }
 

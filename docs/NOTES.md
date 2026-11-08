@@ -7,6 +7,29 @@ to-do list as checkboxes (the rule is in the maintainer's global CLAUDE.md
 and `arks-internal/conventions/sessions.md`): do the checked items in the
 order they were clicked, and keep the rest pinned here.
 
+## Setup screens for the cabinet games, and the end of a game pops up (2026-11-08)
+
+The maintainer asked for both after playing.
+
+- **The end of a game pops up over the page** instead of opening above the board and pushing it down. It's done in
+  one place for every game: `ArcadeEnd` at the bottom of `public/topbar.js` lifts any `.over-panel` or `#overPanel`
+  out of the page while it shows (`.end-pop` in `arcade-ui.css`), dims the page behind it, and adds **Look at the
+  game**, which puts it away so the final board can be seen, with a **🏁 Results** button to bring it back (Escape
+  does the same). The games still just show and hide their panel. That covers every GameShell game (Snake, Block
+  Drop, Brick Breaker, Tower Defense and the five 3D cabinet games), Tumbler Rumble, Dino Dash, Sudoku, Clueless
+  Crosswords, Words with Family and Shuffle Scuffle. The party games and Chess already ended in a pop-up. On a TV the
+  panel keeps its place in the TV layout.
+- **The 3D cabinet games open on a setup screen** with their settings and a big Start (`cab-frame.js`,
+  `.cab-setup`), like the arcade's other games, and the settings never show while the game is played. Back, or the
+  new **Back to setup** on the game-over panel (GameShell's `onSetup`), returns there. Big Swing has no settings, so
+  it starts as before. The 3D is set up before the setup screen takes the page, so the stage has a size.
+- **The Launcher's test settings are gone:** after every roll the gates open and the ball rolls back, and the TV
+  camera is the only view (After a roll and View were for testing). Start at stays.
+- **The Racer's gas is Always on to start with** (Touch was already Tap like the keys). A device that picked Hold to
+  go keeps it.
+- **Tests:** `test/browser/end-buttons.spec.js` checks the panel pops up, the board doesn't move, and Look at the game
+  and Results work; the cabinet game tests check the setup screen comes first and goes away on Start.
+
 ## Notifications when it's your turn in Words with Family (2026-11-07, contract v15)
 
 The maintainer asked for a notification on the phone when the other player has moved, that opens the game when

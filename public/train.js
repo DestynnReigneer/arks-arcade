@@ -17,12 +17,14 @@
 
   const shell = GameShell.create({
     game: 'train', boards: { points: 'Points' }, mount: $('cab'),
-    onAgain: () => frame.start()
+    onAgain: () => frame.start(),
+    onSetup: () => frame.setup()
   });
 
   const frame = CabFrame.run({
     game, root: $('cab'), muteBtn: $('muteBtn'), musicBtn: $('musicBtn'),
     onStart: () => shell.hideOver(),
+    onSetup: () => shell.hideOver(),
     onOver: g => {
       const f = g.final();
       setTimeout(() => shell.over({ score: f.score, board: f.board, detail: f.detail, title: `Last stop, level ${g.level || 1}` }), 1600);
