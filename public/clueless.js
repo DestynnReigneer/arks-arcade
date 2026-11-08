@@ -555,7 +555,8 @@
       : run.free ? 'Free play times don\'t go on the board, because everyone gets a different crossword. Today\'s puzzle is the one to race on.' : '';
     if (!p && !run.saved) initials.reset();
     $('over').classList.remove('hidden');
-    setTimeout(() => $('over').scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+    // It pops up over the page (topbar.js), except on a TV, where it sits in the page.
+    if (!$('over').classList.contains('end-pop')) setTimeout(() => $('over').scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
   }
   async function saveTime() {
     if (!run || !run.finished || run.saved) return;

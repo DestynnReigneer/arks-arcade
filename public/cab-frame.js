@@ -1,4 +1,5 @@
-// The frame every 3D cabinet game runs in: the Start and Pause buttons, the score row, the settings, the stage with
+// The frame every 3D cabinet game runs in: the setup screen with the game's settings, the Start and Pause buttons,
+// the score row, the stage with
 // its callouts and speech bubbles, the big buttons under it, the input (touch, keyboard, controller, the TV remote),
 // the 3-2-1 countdown, and the loop. A game page calls it once:
 //
@@ -8,7 +9,11 @@
 //     muteBtn: $('muteBtn'), musicBtn: $('musicBtn'),   // the top bar's buttons, already wired by blip.js
 //     onStart: () => {},           // a run started (stats, closing the game-over panel)
 //     onOver: game => {},          // the run ended: game.final() has the score to save
+//     onSetup: () => {},           // back on the setup screen (closing the game-over panel)
 //   });
+//
+// A game with settings opens on a setup screen (the settings and a big Start) like the arcade's other games, and the
+// settings never show while it's being played. Back, or Back to setup on the game-over panel, returns there.
 //
 // A game is an object with init, reset, update(dt, live), press and release (or steer for the driving game), hud,
 // and over/result once a run ends. See the top of any cab-*.js game for the full list.
@@ -18,7 +23,7 @@ const CabFrame = (() => {
   function el(tag, cls, html) { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
   const store = (k, v) => { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch { return null; } return null; };
 
-  function run({ game: g, root, muteBtn, musicBtn, onStart, onOver }) {
+  function run({ game: g, root, muteBtn, musicBtn, onStart, onOver, onSetup }) {
     const CAB = window.CAB, S = CAB.sound;
 
     // ---------- the page parts ----------
@@ -27,7 +32,10 @@ const CabFrame = (() => {
     const pauseBtn = el('button', 'cab-pause ghost'); pauseBtn.type = 'button'; pauseBtn.textContent = 'Pause'; pauseBtn.hidden = true;
     const hudEl = el('div', 'cab-hud'); hudEl.setAttribute('aria-live', 'off');
     bar.append(goBtn, pauseBtn, hudEl);
+    const hasOpts = !!(g.options || []).length;
+    const setupEl = el('div', 'cab-setup panel'); setupEl.hidden = true;
     const optsEl = el('div', 'cab-opts');
+    setupEl.appendChild(optsEl);
     const wrap = el('div', 'cab-wrap');
     const stage = el('div', 'cab-stage'); stage.id = 'stage'; stage.setAttribute('role', 'application'); stage.setAttribute('aria-label', g.name);
     stage.innerHTML = `
@@ -42,7 +50,7 @@ const CabFrame = (() => {
     const bubblesEl = el('div', 'cab-bubbles');
     wrap.append(stage, bubblesEl);
     const padEl = el('div', 'cab-pad');
-    root.append(bar, optsEl, wrap, padEl);
+    root.append(setupEl, bar, wrap, padEl);
     const q = sel => stage.querySelector(sel);
     const bigEl = q('.cab-big'), msgEl = q('.cab-msg'), callEl = q('.cab-call'), toastEl = q('.cab-toast');
     const hintL = q('.cab-hint.l'), hintR = q('.cab-hint.r'), smeter = q('.cab-smeter'), wheelbar = q('.cab-wheelbar');
@@ -108,7 +116,16 @@ const CabFrame = (() => {
       return box;
     }
     (g.options || []).forEach(o => optsEl.appendChild(seg(o)));
-    optsEl.hidden = !(g.options || []).length;
+
+    // The setup screen and the game take turns on the page. goBtn moves between them: the big Start on the setup
+    // screen, Restart in the bar while playing.
+    let setupOn = false;
+    function showSetup(on) {
+      setupOn = hasOpts && on;
+      root.classList.toggle('cab-in-setup', setupOn);
+      setupEl.hidden = !setupOn;
+      if (setupOn) { setupEl.appendChild(goBtn); goBtn.textContent = 'Start'; } else if (goBtn.parentNode !== bar) bar.prepend(goBtn);
+    }
 
     // the top bar's sound and music buttons (blip.js saves them; this follows along)
     const syncSound = () => { S.setSfx(!Blip.muted); S.setMusic(!Blip.muted && Blip.musicOn); };
@@ -119,7 +136,7 @@ const CabFrame = (() => {
     try { CAB.attach(stage); } catch (e) {
       goBtn.disabled = true; padEl.hidden = true;
       msgEl.textContent = 'This game needs 3D graphics, and this browser has them turned off. Try another browser, or turn on hardware acceleration in this one\'s settings.';
-      return { start() {}, stop() {}, pause() {}, resume() {}, phase: () => 'unsupported' };
+      return { start() {}, stop() {}, setup() {}, pause() {}, resume() {}, phase: () => 'unsupported', hasSetup: false };
     }
     g.init();
     const size = () => CAB.size([g.cam]);
@@ -139,6 +156,7 @@ const CabFrame = (() => {
       S.unlock(); Blip.unlock(); syncSound(); clearBubbles(); callEl.hidden = true;
       if (g.audio) g.audio('stop');
       hintText();
+      showSetup(false);
       g.reset(); phase = 'count'; count = 3; lastCount = 0; msgEl.textContent = ''; goBtn.textContent = 'Restart'; goBtn.blur();
       pauseBtn.hidden = false; pauseBtn.textContent = 'Pause'; hintT = g.steer ? 5 : 0;
       S.music(typeof g.track === 'function' ? g.track() : g.track);
@@ -149,6 +167,12 @@ const CabFrame = (() => {
     function stopGame(text) {
       up(); if (g.steer) g.steer(null, false); if (g.audio) g.audio('stop'); S.stopMusic(0.3);
       phase = 'idle'; g.reset(); goBtn.textContent = 'Start'; pauseBtn.hidden = true; bigEl.textContent = ''; msgEl.textContent = text || 'Press Start';
+    }
+    // Back to the setup screen (Back, or Back to setup on the game-over panel).
+    function setup() {
+      if (phase !== 'idle') stopGame();
+      showSetup(true);
+      if (onSetup) onSetup();
     }
     function pause() {
       if (phase !== 'play' && phase !== 'count') return;
@@ -284,7 +308,7 @@ const CabFrame = (() => {
       const showHint = !!g.steer && (phase === 'count' || (phase === 'play' && hintT > 0));
       if (phase === 'play' && hintT > 0) hintT -= dt;
       if (hintL.hidden === showHint) { hintL.hidden = hintR.hidden = !showHint; }
-      if (quiet) return;
+      if (quiet || setupOn && !wrap.getClientRects().length) return;
       paintHud(); paintBubbles(dt);
       CAB.render(g.scene, g.cam, dt);
     }
@@ -293,8 +317,8 @@ const CabFrame = (() => {
     // ---------- the arcade around it: Back, and the TV ----------
     if (window.ArcadeBack) {
       ArcadeBack.setup({
-        atMenu: () => phase === 'idle' || phase === 'over',
-        back: () => stopGame(),
+        atMenu: () => (hasOpts ? setupOn : phase === 'idle' || phase === 'over'),
+        back: () => (hasOpts ? setup() : stopGame()),
         busy: () => phase === 'play' || phase === 'count' || phase === 'paused',
         pause,
         question: 'Leave this game? Your score won\'t be saved.'
@@ -322,10 +346,12 @@ const CabFrame = (() => {
       step: sec => { for (let t = 0; t < sec; t += 1 / 240) tick(1 / 240, true); },
       // the test steps the game itself, so the page's own animation stops
       manual: on => { manual = !!on; },
-      state: () => ({ phase, hud: g.hud(), over: !!g.over }),
+      state: () => ({ phase, setup: setupOn, hud: g.hud(), over: !!g.over }),
       game: g
     };
-    return { start, stop: stopGame, pause, resume, phase: () => phase };
+    // The 3D is set up while the stage is showing, so it has a size; then the setup screen takes the page.
+    showSetup(true);
+    return { start, stop: stopGame, setup, pause, resume, phase: () => phase, hasSetup: hasOpts };
   }
 
   return { run };
