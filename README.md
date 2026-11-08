@@ -354,7 +354,7 @@ ARKS ID does the sending (its contract v15): it keeps each person's phones, show
 with a Stop button, and encrypts every message so the push services in between can't read it. The arcade's side is
 `arcade/push.js`: `GET /api/push/key` (the key the page subscribes with; `{ on: false }` without ARKS ID), and
 `POST /api/push/subscribe` `{ subscription }` and `POST /api/push/unsubscribe` `{ endpoint }`, both for someone
-signed in. A notification that can't be sent never holds up a move. On an iPhone or iPad, notifications only work
+signed in. A notification that can't be sent never holds up a move, and signing out on a phone stops its notifications. On an iPhone or iPad, notifications only work
 once the arcade is on the Home Screen (iOS 16.4 or later), so the card says how to add it; the install manifest
 opens the arcade full screen for that.
 

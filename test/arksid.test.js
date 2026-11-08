@@ -326,6 +326,9 @@ async function run({ base, root, fake, admin: ADMIN }) {
   })());
   ok('a phone can turn them off again', (await samCB.call('/api/push/unsubscribe', { method: 'POST', body: { endpoint: sub('sam').endpoint } })).status === 200 &&
     fake.pushSubs[fake.users.sam.id].length === 0);
+  await samCB.call('/api/push/subscribe', { method: 'POST', body: { subscription: sub('sam2') } });
+  await samCB.call('/auth/signout', { method: 'POST' });
+  ok('signing out on a phone stops its notifications', fake.pushSubs[fake.users.sam.id].length === 0, JSON.stringify(fake.pushSubs[fake.users.sam.id]));
 
   console.log('\n-- game switches and the banner from the sign-in service --');
   const wait = ms => new Promise(r => setTimeout(r, ms));

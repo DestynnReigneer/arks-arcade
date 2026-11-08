@@ -26,12 +26,16 @@ other apps can use the same thing. The README's Words with Family section has ho
   a game opens) and `public/sw.js` (shows a notification; a tap opens or reuses a window on this arcade only). The
   install manifest's `display` is now `standalone`, because an iPhone only gives a Home Screen app notifications when
   it opens full screen; added to a Home Screen, the arcade now opens without the browser's bar on every phone.
-- **Checked for real** with Chrome and Google's push service: Chrome subscribed with ARKS ID's key, ARKS ID's
-  encrypted, signed message was accepted, and Chrome showed it with the link to the game. A private or incognito
-  window can't get notifications at all (Chrome refuses), and the card says so in plain words.
+- **Signing out stops them:** `/auth/signout` asks ARKS ID to drop this phone's subscriptions for that person
+  (unsubscribe without an address) before the sign-in ends. ARKS ID also drops them on Sign out everywhere, a PIN
+  reset, and when a device is signed out, moved or forgotten. Turning them on and off is limited to 30 times in 10
+  minutes from one address, and ARKS ID limits each person too.
+- A private or incognito window can't get notifications at all (Chrome refuses), and the card says so in plain
+  words.
 - **Tests:** the ARKS ID suite (`test/arksid.test.js`, against the pretend ARKS ID, which gained the push calls):
   turning them on and off, a signed-out phone refused, an invite and a turn telling the right person with the right
-  words and link, a move still working when sending fails, and no notifications for a game against the computer.
+  words and link, a move still working when sending fails, no notifications for a game against the computer, and
+  signing out stopping them.
 
 ## Disco Drop, Roll Royale and Moonshot taken out (2026-11-07)
 
