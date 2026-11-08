@@ -7,6 +7,36 @@ to-do list as checkboxes (the rule is in the maintainer's global CLAUDE.md
 and `arks-internal/conventions/sessions.md`): do the checked items in the
 order they were clicked, and keep the rest pinned here.
 
+## Notifications when it's your turn in Words with Family (2026-11-07, contract v15)
+
+The maintainer asked for a notification on the phone when the other player has moved, that opens the game when
+tapped. It's sent by ARKS ID (its contract v15, which this arcade is now built against), so later games and the
+other apps can use the same thing. The README's Words with Family section has how it works for players.
+
+- **Who's told** (`crisscross/games.js`, "telling people"): `save()` takes the profile whose move it was, and when
+  the turn moves on to someone else in an online game, that person is told what happened ("Kim played QUIZ for 34
+  points. You better come to win!", in the maintainer's own words). Starting a game tells everyone invited. The title is "Words with Family", the link is
+  `/crisscross.html?game=<id>` and the tag is `ww-<id>`. The unfiltered list's words are left off. Nothing is sent
+  for the end of a game (the maintainer picked turns and invites only), and there are no quiet hours (the
+  maintainer's call).
+- **`arcade/push.js`** passes the phone's subscription to ARKS ID with the person's session, and asks it to send to
+  the ARKS ID account linked to a profile. Sending happens in the background, never throws, and a profile without an
+  ARKS ID account is skipped. `games.setNotifier()` is only wired up with ARKS ID on.
+- **The browser:** `public/push-optin.js` (the card, and `ArcadePush.clear(tag)`, which Words with Family calls when
+  a game opens) and `public/sw.js` (shows a notification; a tap opens or reuses a window on this arcade only). The
+  install manifest's `display` is now `standalone`, because an iPhone only gives a Home Screen app notifications when
+  it opens full screen; added to a Home Screen, the arcade now opens without the browser's bar on every phone.
+- **Signing out stops them:** `/auth/signout` asks ARKS ID to drop this phone's subscriptions for that person
+  (unsubscribe without an address) before the sign-in ends. ARKS ID also drops them on Sign out everywhere, a PIN
+  reset, and when a device is signed out, moved or forgotten. Turning them on and off is limited to 30 times in 10
+  minutes from one address, and ARKS ID limits each person too.
+- A private or incognito window can't get notifications at all (Chrome refuses), and the card says so in plain
+  words.
+- **Tests:** the ARKS ID suite (`test/arksid.test.js`, against the pretend ARKS ID, which gained the push calls):
+  turning them on and off, a signed-out phone refused, an invite and a turn telling the right person with the right
+  words and link, a move still working when sending fails, no notifications for a game against the computer, and
+  signing out stopping them.
+
 ## Disco Drop, Roll Royale and Moonshot taken out (2026-11-07)
 
 The maintainer asked for all three to go, now that the 3D cabinet games took their places (Bucket Drop for Disco Drop,
@@ -1100,7 +1130,8 @@ board-name setting and adult PIN are only for copies running without it.
 - **Shared family accounts ("ARKS ID")**: planned and approved. The
   contract is in the private `arks-id` repo (`docs/SPEC.md`); see CLAUDE.md
   for how to use it. The arcade integrates last (after ARKS ID, the Hub's
-  sign-in and passkeys). **Built against ARKS ID contract v14** (2026-11-01): TVs (the pairing
+  sign-in and passkeys). **Built against ARKS ID contract v15** (2026-11-07): notifications when it's your turn in
+  Words with Family (see the top of this file). Before that, v14 (2026-11-01): TVs (the pairing
   code sign-in, adults' night, see the top of this file). Before that, v13 (2026-11-01): game
   switches and the banner from ARKS ID's admin console (see the top of this file). Before
   that, v12 (2026-11-01): status reports for ARKS ID's admin console. Before that, v10

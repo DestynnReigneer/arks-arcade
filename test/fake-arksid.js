@@ -47,6 +47,9 @@ function startFakeArksId({ secret, arcadeBase, port = 0 }) {
     // TVs (v14): pairings waiting for an adult's phone (pollToken -> pairing),
     // adults' night per TV session, unlock codes showing, and every TV call.
     pairs: new Map(), pairInterval: 2, adult: new Map(), unlocks: new Map(), tvCalls: [],
+    // Notifications (v15): each person's phones (user id -> subscriptions), every
+    // send asked for, and pushDown to act like the push service can't be reached.
+    pushSubs: {}, pushes: [], pushDown: false, pushKey: null,
     // An adult approves the code on their phone: the TV signs in as `tv`
     // (or as another TV account, by its key in users).
     approvePair(userCode, as = 'tv') {
@@ -186,6 +189,24 @@ function startFakeArksId({ secret, arcadeBase, port = 0 }) {
       const owner = deviceCodes.get(b.code);
       deviceCodes.delete(b.code);
       return json(res, 200, owner ? { known: true, owner: { id: users[owner].id, name: users[owner].name, role: users[owner].role } } : { known: false, owner: null });
+    }
+    // Notifications (v15).
+    if (req.method === 'GET' && u.pathname === '/api/app/push/key') return json(res, 200, { publicKey: fake.pushKey || 'B' + 'A'.repeat(86) });
+    if (req.method === 'POST' && ['/api/app/push/subscribe', '/api/app/push/unsubscribe'].includes(u.pathname)) {
+      const b = await readBody(req);
+      const s = fake.sessions.get(b.session);
+      if (!s || !s.valid || users[s.key].kind === 'tv') return json(res, 401, { error: "That sign-in isn't one this app holds." });
+      const id = users[s.key].id, list = fake.pushSubs[id] = fake.pushSubs[id] || [];
+      if (u.pathname.endsWith('/unsubscribe')) { fake.pushSubs[id] = b.endpoint ? list.filter(x => x.endpoint !== b.endpoint) : []; return json(res, 200, { ok: true }); }
+      if (!b.subscription || !/^https:\/\/fcm\.googleapis\.com\//.test(b.subscription.endpoint || '')) return json(res, 400, { error: "That isn't a push address." });
+      if (!list.some(x => x.endpoint === b.subscription.endpoint)) list.push(b.subscription);
+      return json(res, 200, { ok: true });
+    }
+    if (req.method === 'POST' && u.pathname === '/api/app/push/send') {
+      const b = await readBody(req);
+      fake.pushes.push(b);
+      if (fake.pushDown) return json(res, 500, { error: 'down' });
+      return json(res, 200, { sent: (fake.pushSubs[b.to] || []).length });
     }
     if (req.method === 'POST' && u.pathname === '/api/clips') {
       const b = await readBody(req);

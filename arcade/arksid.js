@@ -448,9 +448,16 @@ function createArksId({ client, now = Date.now, profiles }) {
       res.redirect(303, back);
     });
 
-    // Signing out of the arcade signs out of ARKS ID too.
-    router.post('/auth/signout', (req, res) => {
-      end(readCookie(req, COOKIE));
+    // Signing out of the arcade signs out of ARKS ID too, and this phone stops
+    // getting that person's notifications (arcade/push.js), first, while the
+    // sign-in still counts.
+    router.post('/auth/signout', async (req, res) => {
+      const token = readCookie(req, COOKIE);
+      const row = token && token.length <= 100 ? db.db.prepare('SELECT session_id FROM arcade_signins WHERE token_hash = ?').get(hash(token)) : null;
+      if (client && row) {
+        try { await client.appCall('POST', '/push/unsubscribe', { session: row.session_id }); } catch { /* ARKS ID away: it drops them when the session ends everywhere */ }
+      }
+      end(token);
       res.clearCookie(COOKIE, { path: '/' }).set('Cache-Control', 'no-store')
         .json({ next: client ? `${client.url}/signout?app=arcade&return=%2F` : '/' });
     });
