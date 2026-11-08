@@ -15,7 +15,7 @@ other apps can use the same thing. The README's Words with Family section has ho
 
 - **Who's told** (`crisscross/games.js`, "telling people"): `save()` takes the profile whose move it was, and when
   the turn moves on to someone else in an online game, that person is told what happened ("Kim played QUIZ for 34
-  points. It's your turn!"). Starting a game tells everyone invited. The title is "Words with Family", the link is
+  points. You better come to win!", in the maintainer's own words). Starting a game tells everyone invited. The title is "Words with Family", the link is
   `/crisscross.html?game=<id>` and the tag is `ww-<id>`. The unfiltered list's words are left off. Nothing is sent
   for the end of a game (the maintainer picked turns and invites only), and there are no quiet hours (the
   maintainer's call).

@@ -301,7 +301,7 @@ async function run({ base, root, fake, admin: ADMIN }) {
   const ng = await cc('/games', kimCC, { method: 'POST', body: { kind: 'online', invite: [samCC.profile.id] } });
   await settle();
   const toSam = fake.pushes.filter(p => p.to === fake.users.sam.id), toKim = () => fake.pushes.filter(p => p.to === fake.users.kim.id);
-  ok('starting a game tells the person invited, with a link straight to it', toSam.length === 1 && /^Kim started a game with you\./.test(toSam[0].body) &&
+  ok('starting a game tells the person invited, with a link straight to it', toSam.length === 1 && /^Kim started a game with you[.,]/.test(toSam[0].body) &&
     toSam[0].url === `/crisscross.html?game=${ng.data.id}` && toSam[0].tag === `ww-${ng.data.id}`, JSON.stringify(fake.pushes));
   ok('…and not the one who started it', toKim().length === 0);
   // Whoever goes first passes; the other one hears about it.
@@ -313,7 +313,7 @@ async function run({ base, root, fake, admin: ADMIN }) {
   await settle();
   const told = fake.pushes.filter(p => p.to === fake.users[secondKey].id);
   ok("…and the next player hears it's their turn, and what was played", fake.pushes.length === 1 && told.length === 1 &&
-    told[0].body === `${firstName} passed. It's your turn!` && told[0].title === 'Words with Family', JSON.stringify(fake.pushes));
+    told[0].body === `${firstName} passed. Your move!` && told[0].title === 'Words with Family', JSON.stringify(fake.pushes));
   fake.pushDown = true;
   ok("a move still goes through when the notification can't be sent", (await cc(`/games/${ng.data.id}/pass`, second, { method: 'POST', body: {} })).status === 200);
   await settle();
