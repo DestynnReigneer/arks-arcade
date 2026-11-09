@@ -9,6 +9,7 @@
 //     game: 'snake', boards: { classic: 'Classic', wrap: 'Wrap' },
 //     mount: $('stage'),              // the over panel goes right above this
 //     onAgain: reset,
+//     onSetup: toSetup,               // optional: a Back to setup button beside Play again
 //   });
 //   shell.over({ score, board: 'classic', detail: '42 apples', title: 'Game over' });
 //   shell.openScores('classic');
@@ -24,7 +25,7 @@ const GameShell = (() => {
   }
 
   // format: how a score reads (a time, say); lowerIsBetter: the best score is the smallest (a race time).
-  function create({ game, boards, mount, onAgain, againLabel = 'Play again', format, lowerIsBetter = false }) {
+  function create({ game, boards, mount, onAgain, onSetup, againLabel = 'Play again', format, lowerIsBetter = false }) {
     const fmt = format || (n => n.toLocaleString('en-US'));
     const boardIds = Object.keys(boards);
     const bestKey = board => `${game}.best.${board}`;
@@ -33,7 +34,7 @@ const GameShell = (() => {
     // ---- game over ---------------------------------------------------------------------
     const over = el(`
       <div class="panel center hidden over-panel" role="dialog" aria-live="polite">
-        <div class="over-top"><button class="primary again-btn"></button></div>
+        <div class="over-top"><button class="ghost setup-btn hidden">Back to setup</button><button class="primary again-btn"></button></div>
         <h2 class="over-title">Game over</h2>
         <div class="final-score"></div>
         <div class="over-detail hint"></div>
@@ -84,6 +85,7 @@ const GameShell = (() => {
     }
     q('.save-btn').addEventListener('click', save);
     q('.again-btn').addEventListener('click', () => { hideOver(); onAgain(); });
+    if (onSetup) { q('.setup-btn').classList.remove('hidden'); q('.setup-btn').addEventListener('click', () => { hideOver(); onSetup(); }); }
     q('.scores-btn').addEventListener('click', () => openScores(pending ? pending.board : boardIds[0]));
 
     function showOver({ score, board = boardIds[0], detail = '', title }) {
@@ -102,7 +104,8 @@ const GameShell = (() => {
       q('.msg').textContent = '';
       over.classList.remove('hidden');
       document.body.dataset.state = 'over';
-      setTimeout(() => over.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+      // It pops up over the page (topbar.js), except on a TV, where it sits in the page.
+      if (!over.classList.contains('end-pop')) setTimeout(() => over.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
     }
     function hideOver() { over.classList.add('hidden'); }
 

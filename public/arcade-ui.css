@@ -137,3 +137,23 @@ button:disabled { opacity: 0.4; cursor: default; }
 .over-panel, #overPanel { scroll-margin-top: 96px; }
 .over-top { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 8px; margin-bottom: 6px; }
 .over-top button { width: auto; flex: 0 0 auto; margin: 0; }
+
+/* The end of a game pops up over the page (topbar.js, ArcadeEnd), so the board
+   doesn't move. Look at the game puts it away, and the Results button brings it
+   back. */
+.end-pop:not(.hidden):not(.end-away) {
+  position: fixed; z-index: 60; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: min(520px, calc(100vw - 32px)); max-height: calc(100svh - 32px); overflow-y: auto; margin: 0;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6); scrollbar-width: none;
+}
+.end-pop:not(.hidden):not(.end-away)::-webkit-scrollbar { display: none; }
+.end-pop.end-away { display: none !important; }
+.end-pop .end-peek { display: block; width: 100%; margin: 10px 0 0; }
+.end-dim { position: fixed; inset: 0; z-index: 59; background: rgba(5, 4, 10, 0.6); }
+.end-dim[hidden], .end-pill[hidden] { display: none; }
+.end-pill {
+  position: fixed; z-index: 60; left: 50%; transform: translateX(-50%);
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px)); width: auto; margin: 0;
+  padding: 12px 22px; border-radius: 999px; font-weight: 800; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  background: var(--accent); color: var(--on-accent, #000); border: 0; cursor: pointer;
+}

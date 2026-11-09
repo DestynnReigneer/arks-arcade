@@ -83,7 +83,7 @@
     tvButtons: { 0: 'ArrowUp', 7: 'ArrowUp', 9: 'p' }, tvEnter: 'ArrowUp',
     pad: [['◀', 'left'], ['▶', 'right'], ['GAS', 'gas']],
     options: [{ id: 'track', label: 'Track', def: 'sunset', choices: ORDER.map(function (k) { return [k, TRACKS[k].name]; }) },
-      { id: 'gas', label: 'Gas', def: 'pedal', choices: [['pedal', 'Hold to go'], ['auto', 'Always on']] },
+      { id: 'gas', label: 'Gas', def: 'auto', choices: [['pedal', 'Hold to go'], ['auto', 'Always on']] },
       { id: 'touch', label: 'Touch', def: 'tap', choices: [['tap', 'Tap like the keys'], ['slide', 'Slide']] }],
     init: function () {
       this.cam = new THREE.PerspectiveCamera(62, 1, 0.1, 1400);

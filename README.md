@@ -184,7 +184,7 @@ seconds (the clock starts on the first tap), and each tap drops a ball from the 
 turntable speeds up as the time runs down. A catch is 10 points and every 5 in a row adds 25, so a perfect game
 without the jackpot is 750. Catching all 50 wins **the arcade's jackpot**, shown in red LED letters on the big screen:
 it starts at 1,000 and grows by 10 after every game anyone plays, until somebody wins it. Cups (big, normal, small)
-and Speed (chill to wild) are settings, saved on the device and written into the score's detail. The game is
+and Speed (chill to wild) are picked on the setup screen before the game, saved on the device and written into the score's detail. The game is
 `public/cab-bucket.js`.
 
 The page sends the points to the shared board (`/api/scores/bucketdrop`, one Points board). Up to 750 is accepted;
@@ -200,8 +200,8 @@ to launch. Clear gates let the ball through on the way up but not back down, and
 is what you win. The green Super Bonus gate, with tight gates on both sides and a jackpot that grows every miss, moves
 you up a level: the first five levels refill all 8 balls, and from level 6 on a refill is 4. Twenty levels mix the
 jackpot's distance with a ramp, bead curtains, potholes (too slow and the ball drops in), a gusting headwind and a
-jackpot zone that slides while you aim; after level 20 it starts over. Settings: Start at (any level, noted on the
-score), After a roll (the ball rolls back to you, or disappears) and View. The game is `public/cab-launcher.js`.
+jackpot zone that slides while you aim; after level 20 it starts over. After every roll the gates open and the ball rolls back
+to the plunger. The one setting is Start at (any level, noted on the score). The game is `public/cab-launcher.js`.
 
 The page sends the points to the shared board (`/api/scores/launcher`, one Points board), which refuses anything over
 50,000. Refills make a game's length open-ended, so that's a generous ceiling rather than an exact one.
@@ -214,7 +214,7 @@ for the car that's coming. Long cars are easy and worth 5, medium ones 15 and sh
 lights its letter on the board over the station. Light all eight for All Aboard (250 more, the board clears, 15 new
 balls) and the next of ten levels starts: Express, Rush Hour (random surges), The Tunnel (it hides the cars you're
 aiming for), All Change (the cars swap places after every landing), Wrong Way, Compact Cars, Lights Out, Express
-Tunnel and Grand Central, then back to the start. Settings: Look (Normal, or Blacklight for the whole game) and Start
+Tunnel and Grand Central, then back to the start. On the setup screen before the game: Look (Normal, or Blacklight for the whole game) and Start
 at. A cast of bots hangs around the station and comments (`public/cab-cast.js`). The game is `public/cab-train.js`.
 
 **The cars' names** are set on the admin page's Arcade tab (ARKS Train Station cars: eight names and how hard each
@@ -232,7 +232,7 @@ with speed pads); there's no brake, so you let off the gas for the turns, and dr
 space until you're beamed back. Steering: on a phone, Touch is **Tap like the keys** (tap or hold the left or right
 half of the game; taps add up and letting go straightens out) or **Slide** (slide a finger), with a dead zone, a
 gentle curve for small corrections and a limit on how fast the wheel turns, and a steering bar along the bottom;
-the keys work like a wheel too. Gas is held or always on. The game is `public/cab-racer.js`.
+the keys work like a wheel too. Gas is always on to start with, or held (on the setup screen). The game is `public/cab-racer.js`.
 
 The score is the finishing time, kept in thousandths of a second on the shared board (`/api/scores/racer`) with one
 board per track, fastest first; a race that runs out of time isn't saved. The board refuses a time under 30 seconds

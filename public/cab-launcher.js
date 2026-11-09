@@ -49,9 +49,7 @@
     id: 'launcher', name: 'ARKS Launcher', track: 'electro',
     tvHint: 'Hold OK to pull back and let go to launch. On a game controller, A, X, R1 or the right trigger works too, and Start pauses.',
     pad: [['HOLD TO PULL, LET GO TO LAUNCH', 'hold']],
-    options: [{ id: 'start', label: 'Start at', def: '0', choices: LEVELS.map(function (l, i) { return [String(i), l.name]; }) },
-      { id: 'after', label: 'After a roll', def: 'back', choices: [['back', 'Gates open, ball rolls back'], ['vanish', 'Ball disappears']] },
-      { id: 'view', label: 'View', def: 'tv', choices: [['tv', 'TV camera'], ['side', 'From the side'], ['close', 'Jackpot close-up']] }],
+    options: [{ id: 'start', label: 'Start at', def: '0', choices: LEVELS.map(function (l, i) { return [String(i), l.name]; }) }],
     init: function () {
       var s = this.scene = CAB.scene({ bg: 0x0b0418, near: 30, far: 80, span: 18, key: 1.0 });
       var cam = this.cam = new THREE.PerspectiveCamera(44, 1, 0.1, 200);
@@ -288,8 +286,8 @@
       if (this.st === 'done' && !this.over) {
         this.wait -= dt;
         if (this.wait <= 0) {
-          // with the roll-back setting, the gates swing open and the ball rolls back down to the plunger
-          if ((this.opt.after || 'back') === 'back' && this.s > 0.05) { this.st = 'back'; this.v = 0; this.sunk = false; S.fx.click(-1); }
+          // the gates swing open and the ball rolls back down to the plunger
+          if (this.s > 0.05) { this.st = 'back'; this.v = 0; this.sunk = false; S.fx.click(-1); }
           else this.next();
         }
       }
@@ -303,23 +301,16 @@
       this.place();
       // The TV camera starts wide on the whole runway, leans in partway after the ball while it rolls,
       // and on a Super Bonus does a fast zoom right onto the ball, then backs out again.
-      // The other views are like walking around the machine: from the side, or right up at the jackpot.
-      var bp = this.worldAt(this.s, 0.4), view = (this.opt && this.opt.view) || 'tv', jp = this.worldAt(this.gateObjs[this.JI].s, 0.4);
+      var bp = this.worldAt(this.s, 0.4);
       this.jackCam = Math.max(0, this.jackCam - dt);
       var want = this.over ? 0 : this.jackCam > 0 ? 1 : this.st === 'roll' ? 0.5 : this.st === 'done' ? 0.4 : this.st === 'back' ? 0.3 : 0;
       this.zf += (want - this.zf) * Math.min(1, dt * (this.jackCam > 0 ? 9 : want > this.zf ? 1.8 : 2.2));
       this.camZ += (bp.z - this.camZ) * Math.min(1, dt * 4); this.camY += (bp.y - this.camY) * Math.min(1, dt * 4);
-      var cv = [];
-      if (view === 'side') cv = [9.5, jp.y + 6, jp.z + 5.5, 0, jp.y + 0.3, jp.z + 1.2];
-      else if (view === 'close') cv = [1.6, jp.y + 3.4, jp.z + 6.2, 0, jp.y + 0.8, jp.z - 0.6];
-      else {
-        var wide = [0, CAMY, Z0 + CAMB, 0, 0, Z0 - CAML], near = [0, this.camY + 4.2, this.camZ + 6.5, 0, this.camY, this.camZ - 3],
-          close = [0, this.camY + 1.6, this.camZ + 4.4, 0, this.camY + 0.7, this.camZ - 2.2];
-        for (var ci = 0; ci < 6; ci++) cv.push(this.zf <= 0.5 ? wide[ci] + (near[ci] - wide[ci]) * this.zf * 2 : near[ci] + (close[ci] - near[ci]) * (this.zf - 0.5) * 2);
-      }
-      // glide between views instead of cutting
+      var cv = [], wide = [0, CAMY, Z0 + CAMB, 0, 0, Z0 - CAML], near = [0, this.camY + 4.2, this.camZ + 6.5, 0, this.camY, this.camZ - 3],
+        close = [0, this.camY + 1.6, this.camZ + 4.4, 0, this.camY + 0.7, this.camZ - 2.2];
+      for (var ci = 0; ci < 6; ci++) cv.push(this.zf <= 0.5 ? wide[ci] + (near[ci] - wide[ci]) * this.zf * 2 : near[ci] + (close[ci] - near[ci]) * (this.zf - 0.5) * 2);
       if (!this.cv || this.snapCam) { this.cv = cv.slice(); this.snapCam = false; }
-      var gk = Math.min(1, dt * (view === 'tv' ? 12 : 4));
+      var gk = Math.min(1, dt * 12);
       for (var cj = 0; cj < 6; cj++) this.cv[cj] += (cv[cj] - this.cv[cj]) * gk;
       this.cam.position.set(this.cv[0], this.cv[1], this.cv[2]);
       this.cam.lookAt(this.cv[3], this.cv[4], this.cv[5]);

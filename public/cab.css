@@ -18,10 +18,14 @@
 .cab-meter i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--cab-teal), var(--cab-gold), var(--cab-pink)); }
 .cab-meter em { position: absolute; top: 0; bottom: 0; width: 2px; background: #fff; opacity: .85; }
 
-/* The settings row: each game's own choices. */
-.cab-opts { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; }
-.cab-opts[hidden] { display: none; }
-.cab-seg { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; max-width: 100%; }
+/* The setup screen: each game's own choices and a big Start, before the game (cab-frame.js). While it shows, the
+   game itself is off the page. */
+.cab-setup { display: grid; gap: 18px; justify-items: center; width: min(560px, 100%); margin: 0 auto; padding: 22px 18px; }
+.cab-setup[hidden] { display: none; }
+.cab-in-setup > .cab-bar, .cab-in-setup > .cab-wrap, .cab-in-setup > .cab-pad { display: none; }
+.cab-opts { display: grid; gap: 16px; justify-items: center; width: 100%; }
+.cab-seg { display: grid; justify-items: center; gap: 8px; max-width: 100%; }
+.cab-setup .cab-go { width: min(320px, 100%); min-height: 56px; font-size: 20px; }
 .cab-seg > span { font-size: 13px; color: var(--cab-muted); text-transform: uppercase; letter-spacing: .08em; }
 .cab-pick { font-weight: 700; font-size: 15px; font-family: inherit; color: var(--cab-text); background: var(--cab-plate); border: 1px solid var(--cab-line); border-radius: 9px; padding: 6px 10px; max-width: 100%; }
 .cab-pills { display: inline-flex; flex-wrap: wrap; background: var(--cab-plate); border: 1px solid var(--cab-line); border-radius: 9px; padding: 2px; }

@@ -8,12 +8,14 @@
 
   const shell = GameShell.create({
     game: 'launcher', boards: { points: 'Points' }, mount: $('cab'),
-    onAgain: () => frame.start()
+    onAgain: () => frame.start(),
+    onSetup: () => frame.setup()
   });
 
   const frame = CabFrame.run({
     game: CAB.games[0], root: $('cab'), muteBtn: $('muteBtn'), musicBtn: $('musicBtn'),
     onStart: () => shell.hideOver(),
+    onSetup: () => shell.hideOver(),
     onOver: g => {
       const f = g.final();
       setTimeout(() => shell.over({ score: f.score, board: f.board, detail: f.detail, title: `Out of balls on level ${g.level || 1}` }), 1600);
@@ -43,7 +45,7 @@
     },
     {
       emoji: '⚙️', title: 'Settings',
-      html: `<p><b>Start at</b> jumps straight to any level (your score says where you started). <b>After a roll</b> picks whether the gates open and the ball rolls back to you, or it just disappears. <b>View</b> is the TV camera, from the side, or a close-up of the jackpot.</p>
+      html: `<p>Before you start, <b>Start at</b> lets you jump straight to any level (your score says where you started). After every roll the gates swing open and the ball rolls back to you.</p>
         <p>The game ends when you're out of balls.</p>`
     }
   ]);

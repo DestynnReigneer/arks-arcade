@@ -16,13 +16,17 @@ test('playing ARKS Launcher and saving the points', async ({ page, isMobile }) =
   const close = page.locator('.tut-x');
   if (await close.isVisible().catch(() => false)) await close.click();
 
+  // The settings are on a setup screen before the game, never beside it while it's played.
+  await expect(page.locator('.cab-setup')).toBeVisible();
+  await expect(page.locator('.cab-stage')).toBeHidden();
+  await page.locator('.cab-go').click();
+  await expect(page.locator('.cab-setup')).toBeHidden();
   await expect(page.locator('.cab-stage canvas')).toBeVisible();
   if (isMobile) {
     const pad = await page.locator('.cab-pad button').first().boundingBox();
     expect(pad.height).toBeGreaterThanOrEqual(100);
   }
 
-  await page.locator('.cab-go').click();
   await page.evaluate(() => CabTest.manual(true));
   // Launch every ball with a medium pull until the balls run out (a Super Bonus refills them, so stop after 40 tries).
   const played = await page.evaluate(() => {
