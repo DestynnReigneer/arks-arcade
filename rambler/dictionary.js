@@ -160,6 +160,9 @@ function buildTrie() {
     insert(word, blocked.has(word) ? ADULT : KIDS | ADULT);
   }
 
+  // Newer words ENABLE1 is missing, for both lists.
+  for (const word of normalize(readList('supplement-all.txt', { optional: true }), 3)) insert(word, KIDS | ADULT);
+
   const supplement = [
     ...normalize(readList('supplement-adult.txt'), 3),
     ...normalize(overlay.adult, 3)
