@@ -65,3 +65,51 @@ test('placing a first word in Words with Family', async ({ page }) => {
   const sizes = await page.evaluate(() => ({ page: document.documentElement.scrollWidth, screen: window.innerWidth }));
   expect(sizes.page).toBeLessThanOrEqual(sizes.screen);
 });
+
+test('moving and switching tiles you put down in Words with Family', async ({ page }) => {
+  await quietFonts(page);
+  const problems = watchProblems(page);
+  await openPage(page, '/crisscross.html');
+  await page.getByRole('button', { name: /Play as a guest/ }).click();
+  await page.getByRole('button', { name: 'Play', exact: true }).click();
+  const close = page.locator('.tut-x');
+  if (await close.isVisible().catch(() => false)) await close.click();
+  await page.locator('#newLocalBtn').click();
+  await page.locator('#localPlayers input').first().fill('Tester');
+  await page.locator('#localGo').click();
+  await expect(page.locator('#rack .cc-tile')).toHaveCount(7);
+
+  const tile = k => page.locator('#rack .cc-tile').nth(k);
+  const cell = i => page.locator(`#board .cc-cell[data-i="${i}"]`);
+  const hold = async (from, to) => {
+    const a = await from.boundingBox(), b = await to.boundingBox();
+    await page.mouse.move(a.x + a.width / 2, a.y + a.height / 2);
+    await page.mouse.down();
+    await page.waitForTimeout(450);
+    await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2, { steps: 6 });
+    await page.mouse.up();
+  };
+
+  // Put the first tile on the star, then press and hold it and drag it one square over.
+  await tile(0).click();
+  await cell(60).click();
+  await expect(cell(60)).toHaveClass(/pending/);
+  await hold(cell(60), cell(61));
+  await expect(cell(61)).toHaveClass(/pending/);
+  await expect(cell(60)).not.toHaveClass(/pending/);
+
+  // Dropping another tile on it switches them: the first one goes back to the rack.
+  await tile(1).click();
+  await cell(61).click();
+  await expect(tile(0)).not.toHaveClass(/used/);
+  await expect(tile(1)).toHaveClass(/used/);
+  await expect(cell(61)).toHaveClass(/pending/);
+
+  // Holding it and dropping it on the rack takes it back.
+  await hold(cell(61), page.locator('#rack'));
+  await expect(page.locator('#board .cc-cell.pending')).toHaveCount(0);
+  await expect(page.locator('#rack .cc-tile.used')).toHaveCount(0);
+  // One tile isn't a word yet, so the score check before playing turns it down; that's expected here.
+  const real = problems.filter(p => !/preview|status of 400/.test(p));
+  expect(real, real.join('\n')).toEqual([]);
+});

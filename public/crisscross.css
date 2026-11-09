@@ -81,6 +81,7 @@
 .cc-cell.filled .v, .cc-tile .v { position: absolute; right: 2px; bottom: 1px; font-size: 0.42em; font-weight: 800; }
 .cc-cell.blank, .cc-tile.blank { color: #8a5a00; }
 .cc-cell.last { background: linear-gradient(180deg, #fff3a8, #ffd34d); box-shadow: inset 0 -2px 0 #c79a12, 0 0 0 2px var(--gold); }
+.cc-cell.pending { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 .cc-cell.pending { background: linear-gradient(180deg, #ffe1d6, #ffb59e); box-shadow: inset 0 -2px 0 #c0583a, 0 0 0 2px var(--accent); }
 
 .cc-board-tools { display: flex; justify-content: space-between; align-items: center; margin: 6px 0 8px; }
