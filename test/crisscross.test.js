@@ -107,12 +107,12 @@ async function run({ base, root }) {
 
   console.log('\n-- criss cross: words that touch other words --');
   // TO goes down through the star, then each check plays against it.
-  s = game(['TOXXXXX', 'XIJOATE']);
+  s = game(['TOXXXXX', 'QIJOATE']);
   E.play(s, 0, col(5, 5, 'TO'));
-  const xi = E.evaluate(s, col(4, 6, 'XI'));
-  ok('a word down whose last letter sits next to a T makes TI too, and both count', xi.words.map(w => w.word).sort().join() === 'TI,XI', JSON.stringify(xi));
-  ok('the bonus under a new tile counts, and the star under the old T doesn\'t count again', xi.score === 8 * 2 + 1 + (1 + 1), JSON.stringify(xi));
-  ok('a word off on its own is refused', throws(() => E.evaluate(s, row(0, 0, 'XI')), /join onto/));
+  const xi = E.evaluate(s, col(4, 6, 'QI'));
+  ok('QI down, with its I next to a T, makes TI too, and both count', xi.words.map(w => w.word).sort().join() === 'QI,TI', JSON.stringify(xi));
+  ok('the bonus under a new tile counts, and the star under the old T doesn\'t count again', xi.score === 10 * 2 + 1 + (1 + 1), JSON.stringify(xi));
+  ok('a word off on its own is refused', throws(() => E.evaluate(s, row(0, 0, 'QI')), /join onto/));
   ok('a move is refused when a word it makes across is not a real word, and the error names it', throws(() => E.evaluate(s, col(5, 6, 'JO')), /TJ/));
   ok('new tiles with an empty square between them are refused', throws(() => E.evaluate(s, [{ index: at(5, 3), letter: 'A' }, { index: at(5, 7), letter: 'E' }]), /gaps/));
   ok('…but a gap filled by a tile already on the board is fine', E.evaluate(s, [{ index: at(5, 4), letter: 'A' }, { index: at(5, 6), letter: 'E' }]).words[0].word === 'ATE');
