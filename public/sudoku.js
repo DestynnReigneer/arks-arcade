@@ -428,7 +428,8 @@
     $('rankLine').textContent = run.saved ? 'Your time is on the board.' : '';
     if (!p && !run.saved) initials.reset();
     $('over').classList.remove('hidden');
-    setTimeout(() => $('over').scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+    // It pops up over the page (topbar.js), except on a TV, where it sits in the page.
+    if (!$('over').classList.contains('end-pop')) setTimeout(() => $('over').scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
   }
   async function saveTime() {
     if (!run || !run.finished || run.saved) return;

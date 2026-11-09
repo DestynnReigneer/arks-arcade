@@ -8,12 +8,14 @@
 
   const shell = GameShell.create({
     game: 'bucketdrop', boards: { points: 'Points' }, mount: $('cab'),
-    onAgain: () => frame.start()
+    onAgain: () => frame.start(),
+    onSetup: () => frame.setup()
   });
 
   const frame = CabFrame.run({
     game: CAB.games[0], root: $('cab'), muteBtn: $('muteBtn'), musicBtn: $('musicBtn'),
     onStart: () => shell.hideOver(),
+    onSetup: () => shell.hideOver(),
     onOver: g => {
       const f = g.final();
       setTimeout(() => shell.over({ score: f.score, board: f.board, detail: f.detail, title: g.caught === 50 ? 'JACKPOT! All 50! 🏆' : `${g.caught} of 50 caught` }), 1600);

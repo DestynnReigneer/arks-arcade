@@ -14,12 +14,14 @@
   const shell = GameShell.create({
     game: 'racer', boards: Object.fromEntries(tracks), mount: $('cab'),
     format: time, lowerIsBetter: true,
-    onAgain: () => frame.start()
+    onAgain: () => frame.start(),
+    onSetup: () => frame.setup()
   });
 
   const frame = CabFrame.run({
     game, root: $('cab'), muteBtn: $('muteBtn'), musicBtn: $('musicBtn'),
     onStart: () => shell.hideOver(),
+    onSetup: () => shell.hideOver(),
     onOver: g => {
       const f = g.final();
       // a race that ran out of time shows no score and isn't saved
