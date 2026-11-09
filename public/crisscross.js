@@ -457,7 +457,8 @@
       b.type = 'button';
       b.dataset.i = i;
       b.dataset.bonus = { T: 'tw', D: 'dw', t: 'tl', d: 'dl', '*': 'star' }[ch] || '';
-      b.addEventListener('click', () => tapCell(i));
+      b.addEventListener('click', () => { if (justDragged) { justDragged = false; return; } tapCell(i); });
+      hookCell(b, i);
       b.setAttribute('role', 'gridcell');
       box.appendChild(b);
       cells.push(b);
@@ -664,9 +665,13 @@
   // ---- placing tiles -------------------------------------------------------------------------------------------------
   function place(i, tile) {
     const g = S.view;
-    if (!g || g.over || g.board[i] || S.pending.has(i)) return;
+    if (!g || g.over || g.board[i]) return;
+    const old = S.pending.get(i);
+    if (old && old.id === tile.id) return;
     const finish = letter => {
       S.lastCell = i;
+      // A tile dropped on one you put down this turn sends that one back to your rack.
+      for (const [k, p] of [...S.pending]) if (p.id === tile.id) S.pending.delete(k);
       S.pending.set(i, { id: tile.id, letter, blank: tile.letter === '?' });
       S.selected = null;
       Blip.tone(520, 0.04, { type: 'triangle', volume: 0.05 });
@@ -691,6 +696,9 @@
     const g = S.view;
     if (!g || g.over || S.swapping) return;
     if (S.pending.has(i)) {
+      const used = new Set([...S.pending.values()].map(p => p.id));
+      const pick = S.rack.find(t => t.id === S.selected && !used.has(t.id));
+      if (pick) { place(i, pick); return; }
       // Tapping your own tile takes it back.
       S.pending.delete(i);
       paintBoard(); paintRack(); preview();
@@ -699,7 +707,7 @@
     if (g.board[i]) return;
     const used = new Set([...S.pending.values()].map(p => p.id));
     const tile = S.rack.find(t => t.id === S.selected && !used.has(t.id));
-    if (!tile) { toast('Tap one of your tiles first, then the square for it. You can drag a tile there too.'); return; }
+    if (!tile) { toast('You can drag your tile to the board, or tap a tile and the position on the board to place it.'); return; }
     place(i, tile);
   }
 
@@ -749,7 +757,73 @@
   function cellAt(x, y) {
     const hit = document.elementFromPoint(x, y);
     const c = hit && hit.closest && hit.closest('.cc-cell');
-    return c && !c.classList.contains('filled') ? c : null;
+    return c && (!c.classList.contains('filled') || c.classList.contains('pending')) ? c : null;
+  }
+
+  // Press and hold a tile you put down this turn to pick it up again, then drop it
+  // on another square (or on another of yours to swap them), or on your rack to
+  // take it back.
+  const HOLD_MS = 300;
+  function hookCell(el, i) {
+    let hold = null;
+    el.addEventListener('contextmenu', e => { if (S.pending.has(i)) e.preventDefault(); });
+    el.addEventListener('pointerdown', e => {
+      if (drag || S.swapping || !S.pending.has(i) || !S.view || S.view.over) return;
+      const start = { x: e.clientX, y: e.clientY, id: e.pointerId };
+      try { el.setPointerCapture(e.pointerId); } catch { /* fine */ }
+      hold = { start, timer: setTimeout(() => {
+        const ghost = el.cloneNode(true);
+        ghost.className = 'cc-tile cc-ghost';
+        ghost.style.left = `${start.x}px`;
+        ghost.style.top = `${start.y}px`;
+        document.body.appendChild(ghost);
+        el.style.opacity = '0.3';
+        hold.ghost = ghost;
+        if (navigator.vibrate) try { navigator.vibrate(15); } catch { /* fine */ }
+      }, HOLD_MS) };
+    });
+    el.addEventListener('pointermove', e => {
+      if (!hold || hold.start.id !== e.pointerId) return;
+      if (!hold.ghost) {
+        // Moving before the hold finishes isn't a pick-up.
+        if (Math.hypot(e.clientX - hold.start.x, e.clientY - hold.start.y) > 10) { clearTimeout(hold.timer); hold = null; }
+        return;
+      }
+      hold.ghost.style.left = `${e.clientX}px`;
+      hold.ghost.style.top = `${e.clientY}px`;
+      const over = cellAt(e.clientX, e.clientY);
+      cells.forEach(c => c.classList.toggle('target', c === over && c !== el));
+    });
+    const end = e => {
+      if (!hold || hold.start.id !== e.pointerId) return;
+      const h = hold;
+      hold = null;
+      clearTimeout(h.timer);
+      cells.forEach(c => c.classList.remove('target'));
+      if (!h.ghost) return;
+      h.ghost.remove();
+      el.style.opacity = '';
+      justDragged = true;
+      setTimeout(() => { justDragged = false; }, 50);
+      if (e.type !== 'pointerup') return;
+      const mine = S.pending.get(i);
+      if (!mine) return;
+      const hit = document.elementFromPoint(e.clientX, e.clientY);
+      if (hit && hit.closest && hit.closest('#rack')) { S.pending.delete(i); paintBoard(); paintRack(); preview(); return; }
+      const over = cellAt(e.clientX, e.clientY);
+      if (!over) return;
+      const to = Number(over.dataset.i);
+      if (to === i) return;
+      const other = S.pending.get(to);
+      S.pending.delete(i);
+      if (other) S.pending.set(i, other);
+      S.pending.set(to, mine);
+      S.lastCell = to;
+      Blip.tone(520, 0.04, { type: 'triangle', volume: 0.05 });
+      paintBoard(); paintRack(); preview();
+    };
+    el.addEventListener('pointerup', end);
+    el.addEventListener('pointercancel', end);
   }
   function tapTile(t) {
     if (S.swapping) {
@@ -943,7 +1017,7 @@
     },
     {
       emoji: '👆', title: 'Placing your tiles',
-      html: `<p>Tap one of your tiles, then tap the square you want it on. You can also drag a tile straight onto the board. Tap a tile you've put down to take it back, or <b>Recall</b> to take them all back.</p>
+      html: `<p>You can drag your tile to the board, or tap a tile and the position on the board to place it. To move a tile you put down, press and hold it, then drag it somewhere else. Drop a tile on one you put down to switch them. Tap a tile you put down to take it back, or <b>Recall</b> to take them all back.</p>
         <p>All the tiles you put down in one turn have to be in one line, across or down, with no gaps. Before you play, the line under your tiles says which words you've made and how many points they're worth.</p>
         <table>
           <tr><td>🔀 Shuffle</td><td>Mixes up the order of your tiles, which can help you spot a word.</td></tr>
