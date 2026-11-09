@@ -60,8 +60,8 @@ const colOf = i => i % SIZE;
 // ---- words ------------------------------------------------------------------------------
 
 // The arcade's dictionary tree only holds words of three letters or more, so
-// two-letter words come from the same big list here, with the same rules:
-// British spellings out, and the kids list without anything blocked.
+// two-letter words come from the same big list (and its extra words) here, with
+// the same rules: British spellings out, and the kids list without anything blocked.
 let twos = null;
 function twoLetterWords() {
   if (twos) return twos;
@@ -71,7 +71,7 @@ function twoLetterWords() {
   };
   const british = new Set(read('british.txt'));
   const blocked = new Set(read('blocklist-kids.txt'));
-  const all = read('enable1.txt').filter(w => /^[A-Z]{2}$/.test(w) && !british.has(w));
+  const all = [...read('enable1.txt'), ...read('supplement-all.txt')].filter(w => /^[A-Z]{2}$/.test(w) && !british.has(w));
   const extra = read('supplement-adult.txt').filter(w => /^[A-Z]{2}$/.test(w));
   twos = { kids: new Set(all.filter(w => !blocked.has(w))), adult: new Set([...all, ...extra]) };
   return twos;
