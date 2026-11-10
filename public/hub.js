@@ -113,7 +113,7 @@
       const open = rooms.filter(r => r.status === 'open').length;
       if (rooms.length && !open) $('lobbyEmpty').classList.remove('hidden');
       $('lobbyEmpty').innerHTML = rooms.length && !open
-        ? 'Those games are full or already going. Pick a game below and choose <b>Host</b> to start your own.'
+        ? 'Those games have already started or are full. Please pick another game to play or choose to <b>Host</b> your own.'
         : 'Nobody\'s hosting right now. Pick a game below and choose <b>Host</b> to start one; it shows up here for everyone.';
     } catch { /* the server's away; try again shortly */ }
   }

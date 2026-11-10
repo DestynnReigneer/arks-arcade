@@ -2271,7 +2271,7 @@ function bind() {
       try { ok = await adultPinOk(pin); } catch (e) { PinPad.clear($('adultPinInput')); return say($('adultMsg'), e.message, 'err'); }
       if (!ok) {
         PinPad.clear($('adultPinInput'));
-        return say($('adultMsg'), "That PIN isn't right. Try again.", 'err');
+        return say($('adultMsg'), 'Incorrect PIN. Try again.', 'err');
       }
       S.adultPin = pin;
       try { sessionStorage.setItem('rambler.adultPin', pin); } catch { /* unavailable */ }
