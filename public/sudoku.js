@@ -18,7 +18,9 @@
   // initials picked on the screen.
   const token = () => (typeof ArcadeProfile !== 'undefined' && !TvPlay.on ? ArcadeProfile.token() : null);
 
-  let level = LABEL[recall('sudoku.level')] ? recall('sudoku.level') : 'easy';
+  // The home page's Continue row links straight to a level (sudoku.html?level=hard).
+  const asked = new URLSearchParams(location.search).get('level');
+  let level = LABEL[asked] ? asked : LABEL[recall('sudoku.level')] ? recall('sudoku.level') : 'easy';
   let today = null;               // the server's date, from /levels
   let run = null;                 // what the server said about this puzzle (see view() in routes.js)
   let syncedAt = 0;               // when `run` arrived, for the ticking clock

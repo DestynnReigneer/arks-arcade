@@ -78,6 +78,40 @@
   paintTurns();
   setInterval(() => { if (!document.hidden) paintTurns(); }, 60 * 1000);
 
+  // ---- continue a game -------------------------------------------------------
+  // The games whoever is playing on this device left unfinished, on any
+  // device. The server works out who's asking from the profile token, so
+  // this only ever lists your own.
+  const CONTINUE_EMOJI = { crisscross: '🔡', sudoku: '🧩', clueless: '📰' };
+  async function paintContinue() {
+    const token = ArcadeProfile.token();
+    let games = [];
+    if (token) {
+      try {
+        const r = await fetch('/api/continue', { headers: { 'X-Profile-Token': token }, cache: 'no-store' });
+        games = r.ok ? (await r.json()).games || [] : [];
+      } catch { /* leave it out */ }
+    }
+    // Someone else may have been picked while that was loading.
+    if (token !== ArcadeProfile.token()) return;
+    const list = $('continueList');
+    list.innerHTML = '';
+    for (const g of games) {
+      const li = document.createElement('li');
+      li.className = g.yourTurn ? 'open' : '';
+      li.innerHTML = '<span class="l-emoji"></span><span class="l-main"><div class="l-title"></div><div class="l-sub"></div></span><a class="l-join">Play</a>';
+      li.querySelector('.l-emoji').textContent = CONTINUE_EMOJI[g.game] || '🎮';
+      li.querySelector('.l-title').textContent = g.title;
+      li.querySelector('.l-sub').textContent = g.detail;
+      li.querySelector('.l-join').href = g.href;
+      list.appendChild(li);
+    }
+    $('continue').classList.toggle('hidden', !games.length);
+  }
+  ArcadeProfile.onChange(paintContinue);
+  paintContinue();
+  setInterval(() => { if (!document.hidden) paintContinue(); }, 60 * 1000);
+
   // ---- join a game -----------------------------------------------------------
   // Every room being hosted anywhere in the arcade, refreshed every few seconds.
   const STATUS = { open: 'Join', playing: 'Playing now', full: 'Full' };

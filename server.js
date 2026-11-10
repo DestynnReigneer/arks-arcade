@@ -182,6 +182,8 @@ app.use('/api/scuffle', require('./scuffle/routes'));
 app.use('/api/crisscross', require('./crisscross/routes'));
 app.use('/api/clueless', require('./clueless/routes')({ requireAdmin }));
 app.use('/api/tumbler', require('./tumbler/routes').router);
+// The home page's Continue row: the games the person asking has in progress.
+app.use('/api/continue', require('./arcade/continue').router);
 // Taking a single score off any game's board, and putting it back (the admin
 // page's Boards tab). "Removed by" is the ARKS ID name when the admin is
 // signed in there too, otherwise where the request came from.

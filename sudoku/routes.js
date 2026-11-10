@@ -362,4 +362,12 @@ router.use((err, req, res, next) => {
   res.status(err.status).json({ error: err.message, ...(err.solved === false ? { solved: false } : {}) });
 });
 
-module.exports = { router, start, pause, saveProgress, check, cell, hint, finish, save, board, puzzleFor, PENALTY, MIN_MS_PER_SQUARE };
+// Today's puzzles a profile has started and not solved, for the home page's
+// Continue row (arcade/continue.js).
+function inProgress(profileId, now = Date.now()) {
+  return db.db.prepare('SELECT * FROM sudoku_runs WHERE profile_id = ? AND day = ? AND finished_at IS NULL ORDER BY started_at')
+    .all(String(profileId), today(new Date(now)))
+    .map(run => ({ level: run.level, label: gen.LEVELS[run.level].label, playMs: playMs(run, now), updatedAt: run.progress_at || run.paused_at || run.started_at }));
+}
+
+module.exports = { router, start, pause, saveProgress, check, cell, hint, finish, save, board, puzzleFor, inProgress, PENALTY, MIN_MS_PER_SQUARE };

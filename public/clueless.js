@@ -23,8 +23,11 @@
   const recall = (k, d = null) => { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch { return d; } };
   const token = () => (typeof ArcadeProfile !== 'undefined' ? ArcadeProfile.token() : null);
 
-  let level = LABEL[recall('clueless.level')] ? recall('clueless.level') : 'mini';
-  let mode = recall('clueless.mode') === 'free' ? 'free' : 'daily';
+  // The home page's Continue row links straight to today's puzzle on a level
+  // (clueless.html?level=big).
+  const asked = new URLSearchParams(location.search).get('level');
+  let level = LABEL[asked] ? asked : LABEL[recall('clueless.level')] ? recall('clueless.level') : 'mini';
+  let mode = !LABEL[asked] && recall('clueless.mode') === 'free' ? 'free' : 'daily';
   let today = null;               // the server's date, from /levels
   let penalties = null;           // what help costs, from /levels
   let run = null;                 // what the server said about this puzzle (see view() in routes.js)

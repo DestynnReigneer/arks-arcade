@@ -399,4 +399,12 @@ module.exports = function cluelessRoutes({ requireAdmin }) {
   return router;
 };
 
-Object.assign(module.exports, { start, pause, check, reveal, finish, solved, save, board, PENALTY, MIN_MS_PER_SQUARE, LINE_RULE });
+// Today's daily crosswords a profile has started and not solved, for the home
+// page's Continue row (arcade/continue.js). Free boards belong to no profile.
+function inProgress(profileId, now = Date.now()) {
+  return db.db.prepare('SELECT * FROM clueless_runs WHERE profile_id = ? AND day = ? AND puzzle_key IS NULL AND finished_at IS NULL ORDER BY started_at')
+    .all(String(profileId), today(new Date(now)))
+    .map(run => ({ level: run.level, label: maker.LEVELS[run.level].label, playMs: playMs(run, now), updatedAt: run.paused_at || run.started_at }));
+}
+
+Object.assign(module.exports, { start, pause, check, reveal, finish, solved, save, board, inProgress, PENALTY, MIN_MS_PER_SQUARE, LINE_RULE });
