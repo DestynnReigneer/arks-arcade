@@ -1,11 +1,40 @@
 # Status and to-dos
 
-Last updated 2026-11-07. Update this file whenever a piece of work lands or
+Last updated 2026-11-10. Update this file whenever a piece of work lands or
 a plan changes, so the next session can pick up from here. When the
 maintainer says "I'm back", start from "Last session" below, then show the
 to-do list as checkboxes (the rule is in the maintainer's global CLAUDE.md
 and `arks-internal/conventions/sessions.md`): do the checked items in the
 order they were clicked, and keep the rest pinned here.
+
+## Last session (2026-11-09)
+
+**Finished**
+- **#107** (setup screens and the end-of-game pop-up, below) was approved and merged.
+- **#109 and #110: Words with Family's word rules were checked.** The word list is ENABLE1 (`words/enable1.txt`,
+  public domain). The move rules were already right: the first word covers the star, later words join the board,
+  one line with no empty gaps, every word made (crosses too) has to be real and the error names it, and bonus squares
+  count only under new tiles. Tests for each now sit in `test/crisscross.test.js` ("words that touch other words").
+  `words/supplement-all.txt` adds words ENABLE1 is missing because it stops around 2000: QI, ZA, KI, OI, EW, OK and
+  about 90 everyday words (emoji, selfie, podcast). They count on both lists in every word game. The official
+  Scrabble lists are licensed, so they're never bundled; the maintainer's rule is to add any real word that gets
+  turned down. The all-seven-tiles bonus stays 40 (the maintainer's call).
+- **#111: tiles you put down can be moved.** Press and hold one (300 ms, `hookCell` in `public/crisscross.js`) to
+  drag it to another square, onto another of yours to switch them, or onto the rack to take it back. Dropping or
+  tapping a new tile on one you put down sends that one back to the rack. Browser test in
+  `test/browser/crisscross.spec.js`. The hint and How to play use the maintainer's wording.
+- **#108:** Dependabot's express-rate-limit patch.
+
+**In progress**
+- The maintainer said a game with AJ refused QI after #110 was live (the server runs it; checked `/healthz`). The
+  likely cause is another word the same move made. Waiting on the exact message or a screenshot.
+- Moving tiles (#111) is published but not tested on a phone by the maintainer yet.
+
+**Next up**
+- The maintainer's rewrites of real Arcade text from the voice practice (ROADMAP), including Tumbler Rumble's
+  "perfect pop" for a bullseye and "locks" for pins.
+- Rethinking how people play together (lobbies, one-on-one, playing the computer; ROADMAP). Design first.
+- Making the repo private once the building slows down (ROADMAP).
 
 ## Setup screens for the cabinet games, and the end of a game pops up (2026-11-08)
 
