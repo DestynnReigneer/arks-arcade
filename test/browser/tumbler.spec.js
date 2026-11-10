@@ -66,7 +66,7 @@ test('a countdown, then three pops in Tumbler Rumble', async ({ page, isMobile }
   // Nobody taps the fourth pin, so the marker slips past it and the run ends.
   await expect(page.locator('#over')).toBeVisible({ timeout: 10000 });
   await expect(page.locator('#overTitle')).toContainText('slipped past');
-  await expect(page.locator('#overDetail')).toContainText('popped 3 pins in a row and made it to wave 1');
+  await expect(page.locator('#overDetail')).toContainText('popped 3 locks in a row and made it to wave 1');
   await expect(page.locator('#overScore')).toHaveText('3');
   await expect(pop).toBeDisabled();
 

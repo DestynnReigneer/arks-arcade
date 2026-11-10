@@ -371,7 +371,7 @@
   // the lock, and a glow around it.
   function popped(r) {
     const color = r.bullseye ? COLORS.pin : COLORS.accent;
-    effects.push({ angle: r.at, born: now(), ms: 650, ring: true, color, text: r.bullseye ? (r.streak > 1 ? `BULLSEYE ×${r.streak}` : 'BULLSEYE') : 'POP!', size: r.bullseye ? 14 : 16 });
+    effects.push({ angle: r.at, born: now(), ms: 650, ring: true, color, text: r.bullseye ? (r.streak > 1 ? `PERFECT ×${r.streak}` : 'PERFECT') : 'POP!', size: r.bullseye ? 14 : 16 });
     flash(r.bullseye ? 'bull' : 'pop');
     const step = sim.pops % 12;
     Blip.tone(440 * Math.pow(2, step / 12), 0.06, { type: 'square', volume: 0.06 });
@@ -440,8 +440,8 @@
     $('overTitle').textContent = local.endedBy === 'slip' ? 'The light slipped past the pin!' : 'Missed! The light wasn\'t on the pin.';
     $('overScore').textContent = '0';
     if (window.Fx) Fx.countUp($('overScore'), 0, r.score, 900); else $('overScore').textContent = r.score.toLocaleString('en-US');
-    $('overDetail').textContent = !r.score ? 'You didn\'t pop any pins this time.' : `You popped ${plural(r.score, 'pin')} in a row and made it to wave ${r.wave}, with ${plural(r.bullseyes, 'bullseye')}` +
-      (r.bestStreak > 1 ? ` and a best streak of ${r.bestStreak} bullseyes in a row.` : '.');
+    $('overDetail').textContent = !r.score ? 'You didn\'t pop any locks this time.' : `You popped ${plural(r.score, 'lock')} in a row and made it to wave ${r.wave}, with ${plural(r.bullseyes, 'perfect pop')}` +
+      (r.bestStreak > 1 ? ` and a best streak of ${r.bestStreak} perfect pops in a row.` : '.');
     $('chaseLine').textContent = '';
     $('rankLine').textContent = '';
     $('saveMsg').textContent = '';
@@ -466,7 +466,7 @@
     if (window.Fx && r.score > 0) Fx.burst({ count: Math.min(200, 40 + 4 * r.score), coins: Math.min(40, 4 + 3 * r.wave) });
     // It pops up over the page (topbar.js), except on a TV, where it sits in the page.
     if (!$('over').classList.contains('end-pop')) setTimeout(() => $('over').scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' }), 60);
-    say(`Game over. You popped ${plural(r.score, 'pin')} and reached wave ${r.wave}.`);
+    say(`Game over. You popped ${plural(r.score, 'lock')} and reached wave ${r.wave}.`);
   }
 
   // How far this score is from the next one up on today's board. Every number
@@ -483,7 +483,7 @@
         const next = above[above.length - 1];
         const gap = next.score - score + 1;
         const who = next.profileName || next.initials;
-        text = `${gap <= Math.max(3, score * 0.25) ? 'Just ' : ''}${plural(gap, 'more pin')} would have passed ${who} for #${above.length} on today's board.`;
+        text = `${gap <= Math.max(3, score * 0.25) ? 'Just ' : ''}${plural(gap, 'more lock')} would have passed ${who} for #${above.length} today.`;
       }
       $('chaseLine').textContent = text;
     } catch { /* the line is a bonus */ }
@@ -505,7 +505,7 @@
       $('savePart').classList.add('hidden');
       $('chaseLine').textContent = '';
       $('rankLine').textContent = r.allRank === 1 ? 'That\'s the best Tumbler Rumble score ever! 🏆'
-        : `You're #${r.dayRank} on today's board, and #${r.allRank} of all time.`;
+        : `You're #${r.dayRank} for today, and #${r.allRank} overall!`;
       if (window.Fx && (r.dayRank === 1 || r.allRank === 1)) {
         Fx.banner(r.allRank === 1 ? 'BEST SCORE EVER' : 'TOP OF TODAY', plural(r.score, 'pop'), { ms: 2400 });
         Fx.burst({ count: 200, coins: 40 });
@@ -609,20 +609,20 @@
   // ---- how to play -------------------------------------------------------------------------
   const help = Tutorial.create('tumbler', [
     {
-      emoji: '🔓', title: 'Pop the pins',
-      html: `<p>A bright light races around the lock, and one spot on the ring glows gold. That's the <b>pin</b>.</p>
-        <p>Tap the moment the light is on the pin to pop it. The light turns around and a new pin lights up somewhere else on the ring, right away, so keep going.</p>
-        <p>Your score is how many pins you pop in a row. The number in the middle of the lock counts them.</p>`
+      emoji: '🔓', title: 'Pop the locks',
+      html: `<p>A bright light races around the ring, and one spot on it glows gold. That's a <b>lock</b>.</p>
+        <p>Tap the moment the light is on the lock to pop it. The light turns around and a new lock lights up somewhere else on the ring, right away, so keep going.</p>
+        <p>Your score is how many locks you pop in a row. The number in the middle of the ring counts them.</p>`
     },
     {
       emoji: '⏱️', title: 'Wait for Go',
-      html: `<p>Every run starts with a countdown on the lock: <b>3</b>, <b>2</b>, <b>1</b>, then <b>Go!</b> The POP! button stays dimmed and counts down too, and it lights up when the light starts moving.</p>
-        <p>Everything you can hear, you can also see, so the game plays the same with the sound off: pops and bullseyes flash on the lock, a miss turns it red, and each new wave shows its number at the top.</p>`
+      html: `<p>Every run starts with a countdown in the middle of the ring: <b>3</b>, <b>2</b>, <b>1</b>, then <b>Go!</b> The POP! button stays dimmed and counts down too, and it lights up when the light starts moving.</p>
+        <p>Everything you can hear, you can also see, so the game plays the same with the sound off: pops and perfect pops flash on the ring, a miss turns it red, and each new wave shows its number at the top.</p>`
     },
     {
       emoji: '👆', title: 'How to tap',
       html: `<table>
-          <tr><td>📱 Phone</td><td>Tap anywhere on the lock, or the big <b>POP!</b> button under it.</td></tr>
+          <tr><td>📱 Phone</td><td>Tap anywhere on the ring, or the big <b>POP!</b> button under it.</td></tr>
           <tr><td>⌨️ Keyboard</td><td><b>Space</b> or <b>Enter</b>.</td></tr>
           <tr><td>🎮 Controller</td><td>The <b>A</b> button pops, and so do <b>X</b>, <b>R1</b> and the right trigger. <b>Start</b> pauses, and starts a new run after a game over.</td></tr>
           <tr><td>📺 TV</td><td>The remote's <b>OK</b> button pops.</td></tr>
@@ -630,22 +630,22 @@
     },
     {
       emoji: '💥', title: 'One slip and it\'s over',
-      html: `<p>The run ends if you tap when the light <b>isn't</b> on the pin, or if the light slides all the way past the pin without a tap.</p>
-        <p>There's no last pin, so a run goes on until that first slip. See how many you can get!</p>`
+      html: `<p>The run ends if you tap when the light <b>isn't</b> on the lock, or if the light slides all the way past the lock without a tap.</p>
+        <p>There's no last lock, so a run goes on until that first slip. See how many you can get!</p>`
     },
     {
       emoji: '🌊', title: 'Waves',
-      html: `<p>The pins come in <b>waves</b> of ${E.RULES.WAVE}. The first pins are wide and the light moves slowly, so you can find the rhythm.</p>
-        <p>In each wave the light speeds up and the pin gets narrower for ${E.RULES.CLIMB} pins, then it eases off for the last ${E.RULES.WAVE - E.RULES.CLIMB} so you can catch your breath. The next wave starts a little harder than the last one did, so it gets tougher, then easier, then tougher again, and keeps getting harder overall.</p>
+      html: `<p>The locks come in <b>waves</b> of ${E.RULES.WAVE}. The first locks are wide and the light moves slowly, so you can find the rhythm.</p>
+        <p>In each wave the light speeds up and the lock gets narrower for ${E.RULES.CLIMB} locks, then it eases off for the last ${E.RULES.WAVE - E.RULES.CLIMB} so you can catch your breath. The next wave starts a little harder than the last one did, so it gets tougher, then easier, then tougher again, and keeps getting harder overall.</p>
         <p>The <b>Pace</b> box at the top says whether the wave is getting harder or easier right now.</p>`
     },
     {
-      emoji: '🎯', title: 'Bullseyes',
-      html: `<p>The pin has a white stripe in its middle. Popping it right on that stripe is a <b>bullseye</b>, and bullseyes in a row build a streak. They don't change your score, which is always the number of pins popped, but your bullseyes and your best streak show at the end of the run.</p>`
+      emoji: '✨', title: 'Perfect pops',
+      html: `<p>Every lock has a white stripe in its middle. Popping it right on that stripe is a <b>perfect pop</b>, and perfect pops in a row build a streak. They don't change your score, which is always the number of locks popped, but your perfect pops and your best streak show at the end of the run.</p>`
     },
     {
       emoji: '🏆', title: 'The high scores',
-      html: `<p>When a run ends, the arcade checks it by playing your taps back through the same lock, and works out the score itself. That's the score that counts, so nobody can fake one.</p>
+      html: `<p>When a run ends, the arcade checks it by playing your taps back through the same game, and works out the score itself. That's the score that counts, so nobody can fake one.</p>
         <p>Save it with your initials (or your profile) to go on today's board and the all-time board. Today's board starts fresh every night at midnight.</p>
         <div class="tut-tip">Opening How to play or leaving the page pauses the run. When you come back you get a short countdown before the light moves again.</div>`
     }
