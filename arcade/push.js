@@ -40,7 +40,7 @@ function createPush({ arks }) {
     // Turning them on and off, from one address. The page asks for the key once per visit.
     router.use(['/api/push/subscribe', '/api/push/unsubscribe'], rateLimit({
       windowMs: 10 * 60 * 1000, limit: 30, standardHeaders: true, legacyHeaders: false,
-      message: { error: 'That\'s a lot of tries in a row. Give it a few minutes and try again.' }
+      message: { error: 'Too many tries, wait a few minutes, then try again.' }
     }));
     const signedIn = async (req, res) => {
       let me = null;

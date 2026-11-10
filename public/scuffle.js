@@ -123,7 +123,7 @@
     $('hostSetup').classList.toggle('hidden', S.mode !== 'host');
     for (const b of $('dictSeg').children) b.setAttribute('aria-pressed', String(b.dataset.v === S.dict));
     $('dictHint').textContent = S.dict === 'adult'
-      ? 'Every word in the big list counts, rude ones included. Rooms on this list get a lobby password so kids can\'t wander in.'
+      ? 'Every word on the list counts, rude ones included. Rooms on this list get a lobby password so kids can\'t wander in.'
       : 'Rude words are left out, so it\'s good for kids. The full word is always an everyday word.';
     adultMode(S.dict === 'adult');
     if (S.config) {
@@ -323,7 +323,7 @@
       st.saved = true;
       $('savePart').classList.add('hidden');
       $('rankLine').textContent = r.allRank === 1 ? 'That\'s the best daily score ever! 🏆'
-        : `You're #${r.dayRank} on today's board, and #${r.allRank} of all time.`;
+        : `You're #${r.dayRank} for today, and #${r.allRank} overall!`;
       // Celebrations are real: the banner only says #1 when the board says so.
       if (r.dayRank === 1 && window.Fx) { Fx.banner(r.allRank === 1 ? 'BEST EVER!' : 'TOP OF TODAY!', 'You\'re #1', { ms: 2200 }); Fx.burst({ count: 200, coins: 30 }); }
       openScores('day', r.id, st.dictionary);
@@ -789,7 +789,7 @@
     },
     {
       emoji: '🔞', title: 'Family words or unfiltered',
-      html: `<p><b>Family words</b> leaves rude words out, so it's good for kids. <b>Unfiltered</b> counts every word in the big list, rude ones included, and needs the adult PIN. A room on the unfiltered list gets a lobby password so kids can't wander in.</p>
+      html: `<p><b>Family words</b> leaves rude words out, so it's good for kids. <b>Unfiltered</b> counts every word on the list, rude ones included, and needs the adult PIN. A room on the unfiltered list gets a lobby password so kids can't wander in.</p>
         <div class="tut-tip">Tap <b>?</b> at the top any time to see this again.</div>`
     }
   ]);

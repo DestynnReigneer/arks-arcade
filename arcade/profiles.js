@@ -172,7 +172,7 @@ module.exports = function profileRoutes({ requireAdmin, notify }) {
           }
           db.db.prepare('UPDATE arcade_profiles SET pin_fails = ? WHERE id = ?').run(fails, r.id);
           const left = PROFILE_FAILS - fails;
-          throw fail(`That PIN isn't right. ${left} more ${left === 1 ? 'try' : 'tries'} before this profile locks for 15 minutes.`, 401);
+          throw fail(`Incorrect PIN. ${left} ${left === 1 ? 'attempt' : 'attempts'} left before profile locks for 15 minutes.`, 401);
         }
         if (r.pin_fails || r.locked_until) db.db.prepare('UPDATE arcade_profiles SET pin_fails = 0, locked_until = NULL WHERE id = ?').run(r.id);
       }

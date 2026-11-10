@@ -149,7 +149,7 @@ function save(id, { initials, profileToken } = {}) {
     comm.safePost({
       kind: 'highscore', emoji: '🔓', game: 'tumbler',
       title: `${shout} set the best Tumbler Rumble score ever`,
-      body: `${shout} popped ${run.score.toLocaleString('en-US')} pins in a row on Tumbler Rumble without a miss, the best anyone has done. Think you can pop more?`
+      body: `${shout} popped ${run.score.toLocaleString('en-US')} locks in a row on Tumbler Rumble without a miss, the best anyone has done. Think you can pop more?`
     });
   }
   return { id: scoreId, dayRank, allRank, score: run.score };
