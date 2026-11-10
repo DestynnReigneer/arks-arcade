@@ -42,8 +42,8 @@ function wordsWithFamily(profile) {
 function daily(game, name, page) {
   return profile => require(`../${game}/routes`).inProgress(profile.id).map(r => ({
     game,
-    title: `${name}, today's ${r.label}`,
-    detail: `${clock(r.playMs)} on the clock`,
+    title: `${name}, today's ${r.label} Challenge`,
+    detail: `${clock(r.playMs)} played so far`,
     href: `${page}?level=${encodeURIComponent(r.level)}`, yourTurn: false, updatedAt: r.updatedAt
   }));
 }
