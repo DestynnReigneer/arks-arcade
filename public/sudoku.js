@@ -278,7 +278,7 @@
     paint();
     if (run.finished) { $('cover').classList.add('hidden'); showOver(); return; }
     if (run.paused) {
-      cover('Paused', 'The clock has stopped, and the board is hidden until you come back.', 'Keep going', () => setPaused(false));
+      cover('Paused', 'The time is paused. Game board will remain hidden until you\'re back.', 'Keep going', () => setPaused(false));
     } else {
       $('cover').classList.add('hidden');
       document.body.dataset.state = 'playing';
@@ -445,7 +445,7 @@
       run.saved = true;
       $('savePart').classList.add('hidden');
       $('rankLine').textContent = r.allRank === 1 ? `That's the fastest ${LABEL[run.level]} time ever! 🏆`
-        : `You're #${r.dayRank} on today's ${LABEL[run.level]} board, and #${r.allRank} of all time.`;
+        : `You're #${r.dayRank} in ${LABEL[run.level]} for today, and #${r.allRank} overall!`;
       toast(r.dayRank === 1 ? '🏆 Fastest today!' : `Saved: #${r.dayRank} today`);
       openScores(run.level, 'day', r.id);
     } catch (e) {

@@ -1127,7 +1127,7 @@ async function run({ base, root }) {
   await wl(`/profiles/${asked.data.id}/pin`, 'POST', { token: mayaNoPin, pin: '432100' });
   const useMaya = pin => wl(`/profiles/${asked.data.id}/use`, 'POST', { pin });
   const firstWrong = await useMaya('000000');
-  ok('a wrong PIN says how many tries are left', firstWrong.status === 401 && /4 more tries/.test(firstWrong.data.error));
+  ok('a wrong PIN says how many tries are left', firstWrong.status === 401 && /4 attempts left/.test(firstWrong.data.error));
   for (let i = 0; i < 3; i++) await useMaya('000000');
   const fifth = await useMaya('000000');
   ok('the fifth wrong PIN locks the profile', fifth.status === 401 && /locked for 15 minutes/.test(fifth.data.error));
@@ -1135,7 +1135,7 @@ async function run({ base, root }) {
   ok('the admin sees it locked', (await asAdmin('/profiles/admin')).data.some(p => p.id === asked.data.id && p.locked));
   await asAdmin(`/profiles/admin/${asked.data.id}/unlock`, 'POST', {});
   ok('…and can unlock it', !!(await useMaya('432100')).data.token);
-  ok('a right PIN starts the count over', /4 more tries/.test((await useMaya('000000')).data.error));
+  ok('a right PIN starts the count over', /4 attempts left/.test((await useMaya('000000')).data.error));
   await asAdmin(`/profiles/admin/${asked.data.id}/clear-pin`, 'POST', {});
   ok('an approved profile becomes a Rambler player with the same id', !!(await wl(`/rambler/players/${asked.data.id}`)).data);
   const g1 = (await wl('/profiles/guest', 'POST', {})).data.name;

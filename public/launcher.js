@@ -30,7 +30,7 @@
   const help = Tutorial.create('launcher', [
     {
       emoji: '🚀', title: 'Pull back and launch',
-      html: `<p><b>Hold</b> the game or the big button to pull the plunger back, and <b>let go</b> to launch the ball up the lane. The longer you hold, the harder it goes; the power bar on the right shows it, and a white line marks your last pull.</p>
+      html: `<p><b>Press and hold</b> to fill the power bar, <b>let it go</b> to launch. A white line marks your last pull.</p>
         <p>The ball pushes through the clear gates on the way up, but they won't let it back down. When it stops, the last gate it passed is what you win.</p>
         <table>
           <tr><td>📱 Phone</td><td>Hold the game or the big button, and let go.</td></tr>
@@ -41,7 +41,7 @@
     {
       emoji: '🎰', title: 'The Super Bonus and the levels',
       html: `<p>The glowing green gate is the <b>Super Bonus</b>. It has tight gates on both sides, so too soft stops short and too hard sails past. Its jackpot grows every time you miss it.</p>
-        <p>Land in it and you move up a level: the first five refill all 8 balls, and from level 6 on a refill is 4. There are 20 levels with ramps, bead curtains, potholes, a headwind and a jackpot that slides back and forth, and after the last one it starts over.</p>`
+        <p>Land the jackpot to level up. You only have 8 balls, level up to refill (from level 6 on, a refill is 4). There are 20 levels with ramps, bead curtains, potholes, a headwind and a jackpot that slides back and forth, and after the last one it starts over.</p>`
     },
     {
       emoji: '⚙️', title: 'Settings',

@@ -318,8 +318,8 @@ const ArcadeProfile = (() => {
       (guest ? '<div class="apf-row"><button class="apf-btn" data-guest>👤 Play as a guest</button><button class="apf-btn" data-join>✨ Make an account</button></div>' : '') +
       closeRow();
     c.querySelector('[data-lead]').textContent = guest
-      ? 'Sign in with your ARKS ID so your scores count, play as a guest, or make an account of your own.'
-      : 'Sign in with your ARKS ID to play. This device belongs to someone in the family, so playing as a guest is turned off here.';
+      ? 'Sign in with your ARKS ID to keep your scores, or play as a guest. If you don\'t have an account, consider creating one.'
+      : 'Sign in with your ARKS ID to play. This device belongs to an ARKS ID account, playing as a guest is turned off here.';
     c.querySelector('[data-in]').onclick = () => { location.href = '/auth/signin?return=' + here(); };
     if (guest) {
       c.querySelector('[data-guest]').onclick = showGuest;
@@ -526,7 +526,7 @@ const ArcadeProfile = (() => {
       '<div class="apf-msg"></div><div class="apf-row"><button class="apf-btn" data-back>Back</button><button class="apf-btn" data-out>Sign out</button></div>';
     c.querySelector('h2').textContent = me.name;
     c.querySelector('[data-pin-note]').textContent = me.hasPin
-      ? 'Your profile has a PIN. To change it or remove it, type your current PIN first.'
+      ? 'Your profile PIN exists. To change it or remove it, type your current PIN.'
       : "Your profile doesn't have a PIN yet. Add a 6-digit one so nobody else can play as you.";
     avatarPicker(c.querySelector('[data-av]'), chosen);
     const msg = t => { c.querySelector('.apf-msg').textContent = t; };
