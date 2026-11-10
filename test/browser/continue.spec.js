@@ -10,7 +10,7 @@ const { quietFonts, openPage, chooser } = require('./helpers');
 
 const GAMES = [
   { game: 'crisscross', title: 'Words with Family with Ben', detail: 'Your move', href: 'crisscross.html?game=abc', yourTurn: true, updatedAt: 2 },
-  { game: 'sudoku', title: 'Sudoku, today\'s Easy', detail: '4:12 on the clock', href: 'sudoku.html?level=easy', yourTurn: false, updatedAt: 1 }
+  { game: 'sudoku', title: 'Sudoku, today\'s Easy Challenge', detail: '4:12 played so far', href: 'sudoku.html?level=easy', yourTurn: false, updatedAt: 1 }
 ];
 
 test.beforeEach(async ({ page }) => { await quietFonts(page); });
@@ -45,7 +45,7 @@ test('the Continue row lists your games and opens the one you tap', async ({ pag
   await expect(items).toHaveCount(2);
   await expect(items.nth(0)).toContainText('Words with Family with Ben');
   await expect(items.nth(0)).toContainText('Your move');
-  await expect(items.nth(1)).toContainText('4:12 on the clock');
+  await expect(items.nth(1)).toContainText('4:12 played so far');
   // Nothing runs off the side of a phone.
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await items.nth(1).getByRole('link', { name: 'Play' }).click();

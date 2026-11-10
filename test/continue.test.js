@@ -52,9 +52,9 @@ async function run({ base }) {
   const sudoku = await api('/api/sudoku/start', 'POST', { level: 'easy', profileToken: Ben.token });
   const benNow = await mine(Ben);
   const row = benNow.find(g => g.game === 'sudoku');
-  ok('a Sudoku that was started shows up', sudoku.status === 200 && !!row && row.title === 'Sudoku, today\'s Easy' && row.href === 'sudoku.html?level=easy',
+  ok('a Sudoku that was started shows up', sudoku.status === 200 && !!row && row.title === 'Sudoku, today\'s Easy Challenge' && row.href === 'sudoku.html?level=easy',
     JSON.stringify(benNow));
-  ok('…with the time on its clock', !!row && /^\d+:\d\d on the clock$/.test(row.detail));
+  ok('…with the time played so far', !!row && /^\d+:\d\d played so far$/.test(row.detail));
   ok('…only for the one who started it', !(await mine(Ana)).some(g => g.game === 'sudoku') && (await mine(Cy)).length === 0);
   // A guest's Sudoku belongs to no profile, so it's in nobody's list.
   await api('/api/sudoku/start', 'POST', { level: 'hard' });
