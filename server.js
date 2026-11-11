@@ -184,6 +184,8 @@ app.use('/api/clueless', require('./clueless/routes')({ requireAdmin }));
 app.use('/api/tumbler', require('./tumbler/routes').router);
 // The home page's Continue row: the games the person asking has in progress.
 app.use('/api/continue', require('./arcade/continue').router);
+// The trophy page: every leaderboard, with the asker's own place on each.
+app.use('/api/trophies', require('./arcade/trophies').router);
 // Taking a single score off any game's board, and putting it back (the admin
 // page's Boards tab). "Removed by" is the ARKS ID name when the admin is
 // signed in there too, otherwise where the request came from.
@@ -506,6 +508,8 @@ app.listen(PORT, err => {
   // From here on, once a minute: roll the season over when it's due and
   // re-apply the theme pack if anything changed (rambler/housekeeping.js).
   require('./rambler/housekeeping').start();
+  // Words with Family games that finished before the trophy page existed.
+  try { require('./crisscross/results').fillIn(); } catch (e) { console.warn('Could not fill in Words with Family results:', e.message); }
 
   // Know-It-All downloads Open Trivia DB's questions in the background the
   // first time (about 8 minutes), then once a month. Set TRIVIA_ONLINE=off
