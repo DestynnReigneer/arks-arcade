@@ -610,19 +610,19 @@
   const help = Tutorial.create('tumbler', [
     {
       emoji: '🔓', title: 'Pop the locks',
-      html: `<p>A bright light races around the ring, and one spot on it glows gold. That's a <b>lock</b>.</p>
-        <p>Tap the moment the light is on the lock to pop it. The light turns around and a new lock lights up somewhere else on the ring, right away, so keep going.</p>
-        <p>Your score is how many locks you pop in a row. The number in the middle of the ring counts them.</p>`
+      html: `<p>A bright light races around the dial, and one spot on it glows gold. That's a <b>lock</b>.</p>
+        <p>Tap the moment the light is on the lock to pop it. The light turns around and a new lock lights up somewhere else on the dial, right away, so keep going.</p>
+        <p>Your score is how many locks you pop in a row. The number in the middle of the dial counts them.</p>`
     },
     {
       emoji: '⏱️', title: 'Wait for Go',
-      html: `<p>Every run starts with a countdown in the middle of the ring: <b>3</b>, <b>2</b>, <b>1</b>, then <b>Go!</b> The POP! button stays dimmed and counts down too, and it lights up when the light starts moving.</p>
-        <p>Everything you can hear, you can also see, so the game plays the same with the sound off: pops and perfect pops flash on the ring, a miss turns it red, and each new wave shows its number at the top.</p>`
+      html: `<p>Every run starts with a countdown in the middle of the dial: <b>3</b>, <b>2</b>, <b>1</b>, then <b>Go!</b> The POP! button stays dimmed and counts down too, and it lights up when the light starts moving.</p>
+        <p>Everything you can hear, you can also see, so the game plays the same with the sound off: pops and perfect pops flash on the dial, a miss turns it red, and each new wave shows its number at the top.</p>`
     },
     {
       emoji: '👆', title: 'How to tap',
       html: `<table>
-          <tr><td>📱 Phone</td><td>Tap anywhere on the ring, or the big <b>POP!</b> button under it.</td></tr>
+          <tr><td>📱 Phone</td><td>Tap anywhere on the dial, or the big <b>POP!</b> button under it.</td></tr>
           <tr><td>⌨️ Keyboard</td><td><b>Space</b> or <b>Enter</b>.</td></tr>
           <tr><td>🎮 Controller</td><td>The <b>A</b> button pops, and so do <b>X</b>, <b>R1</b> and the right trigger. <b>Start</b> pauses, and starts a new run after a game over.</td></tr>
           <tr><td>📺 TV</td><td>The remote's <b>OK</b> button pops.</td></tr>
