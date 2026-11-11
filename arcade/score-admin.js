@@ -10,6 +10,10 @@
 // every board, rank, "fastest ever" and "your best" in every game leaves it
 // out without any game having to know about this file.
 //
+// Words with Family's trophy-page boards come from crisscross_results (one row
+// per player per finished game). Taking a result off removes it from all three
+// of its boards at once, Games won included.
+//
 // Which games have boards: the ones listed in KNOWN below, plus any other
 // table named `<game>_scores` with an `id`, `initials` and a `score` or
 // `time_ms` column, so a new game's board shows up here on its own.
@@ -56,6 +60,12 @@ function known() {
   add({ id: 'tumbler', label: 'Tumbler Rumble', table: 'tumbler_scores', unit: 'points', daily: true, boards: one });
   add({ id: 'scuffle', label: 'Shuffle Scuffle', table: 'scuffle_scores', boardCol: 'dictionary', unit: 'points', daily: true,
     boards: [{ id: 'kids', label: 'Family daily' }, { id: 'adult', label: 'Unfiltered daily' }] });
+  require('../crisscross/results');
+  add({ id: 'crisscross', label: 'Words with Family', table: 'crisscross_results', unit: 'points', daily: false,
+    boards: [
+      { id: 'word', label: 'Best single word', value: 'best_word_score', where: 'best_word_score > 0', keep: r => r.best_word_score > 0 },
+      { id: 'best', label: 'Best game score', value: 'score' }
+    ] });
   add({ id: 'wordless', label: 'Wordless', table: 'scores', boardCol: 'difficulty', unit: 'points', daily: false,
     boards: [['easy', 'Easy'], ['normal', 'Normal'], ['hard', 'Hard'], ['ludicrous', 'Ludicrous']].map(([id, label]) => ({ id, label })) });
   // The older games share one table, split by game and then by board.
@@ -97,7 +107,7 @@ function gameOf(id) {
   if (!g) throw fail('There is no board for that game.', 404);
   return g;
 }
-const orderOf = g => (g.unit === 'time' ? 'time_ms ASC, id ASC' : 'score DESC, id ASC');
+const orderOf = (g, b) => (b && b.value ? `${b.value} DESC, id ASC` : g.unit === 'time' ? 'time_ms ASC, id ASC' : 'score DESC, id ASC');
 
 // Does this row belong to this game (and, given a board, to that board)?
 function belongs(g, row, board) {
@@ -106,15 +116,17 @@ function belongs(g, row, board) {
   return true;
 }
 
-function shape(g, r) {
+function shape(g, r, b) {
+  // Words with Family's results keep only the profile; its current name stands in.
+  const now = !r.initials && r.profile_id ? require('./profiles').boardName(r.profile_id) : null;
   return {
     id: r.id,
-    initials: r.initials,
-    name: r.profile_name || null,
-    value: g.unit === 'time' ? r.time_ms : r.score,
+    initials: r.initials || (now ? now.initials : '?'),
+    name: r.profile_name || (now ? now.label : null),
+    value: b && b.value ? r[b.value] : g.unit === 'time' ? r.time_ms : r.score,
     day: r.day || null,
-    createdAt: r.created_at || null,
-    detail: r.detail || r.theme_label || null
+    createdAt: r.created_at || (r.finished_at ? new Date(r.finished_at).toISOString() : null),
+    detail: r.detail || r.theme_label || (b && b.id === 'word' ? r.best_word : null) || null
   };
 }
 
@@ -125,17 +137,18 @@ function board(gameId, { board: boardId, scope = 'all', day } = {}) {
   const where = [], args = [];
   if (g.gameCol) { where.push(`${g.gameCol} = ?`); args.push(g.id); }
   if (g.boardCol) { where.push(`${g.boardCol} = ?`); args.push(b.id); }
+  if (b.where) where.push(b.where);
   const daily = g.daily && scope === 'day';
   const theDay = /^\d{4}-\d{2}-\d{2}$/.test(String(day || '')) ? String(day) : require('../rambler/progress').today();
   if (daily) { where.push('day = ?'); args.push(theDay); }
-  const rows = db.db.prepare(`SELECT * FROM ${g.table} ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY ${orderOf(g)} LIMIT 100`).all(...args);
+  const rows = db.db.prepare(`SELECT * FROM ${g.table} ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY ${orderOf(g, b)} LIMIT 100`).all(...args);
   const removed = db.db.prepare('SELECT * FROM removed_scores WHERE game = ? AND tbl = ? ORDER BY removed_at DESC, id DESC').all(g.id, g.table)
     .map(r => ({ ...r, data: JSON.parse(r.row) }))
-    .filter(r => belongs(g, r.data, b.id) && (!daily || r.data.day === theDay))
-    .map(r => ({ ...shape(g, r.data), removedAt: r.removed_at, removedBy: r.removed_by }));
+    .filter(r => belongs(g, r.data, b.id) && (!daily || r.data.day === theDay) && (!b.keep || b.keep(r.data)))
+    .map(r => ({ ...shape(g, r.data, b), removedAt: r.removed_at, removedBy: r.removed_by }));
   return {
     game: g.id, board: b.id, scope: daily ? 'day' : 'all', day: daily ? theDay : null, unit: g.unit,
-    rows: rows.map((r, i) => ({ rank: i + 1, ...shape(g, r) })),
+    rows: rows.map((r, i) => ({ rank: i + 1, ...shape(g, r, b) })),
     removed
   };
 }
@@ -179,7 +192,7 @@ function routes({ whoOf = () => 'the admin page' } = {}) {
   const router = express.Router();
   const wrap = fn => async (req, res, next) => { try { res.json(await fn(req)); } catch (e) { next(e); } };
   router.get('/', wrap(() => ({
-    games: games().map(g => ({ id: g.id, label: g.label, unit: g.unit, daily: g.daily, boards: g.boards }))
+    games: games().map(g => ({ id: g.id, label: g.label, unit: g.unit, daily: g.daily, boards: g.boards.map(b => ({ id: b.id, label: b.label })) }))
   })));
   router.get('/:game', wrap(req => board(req.params.game, req.query)));
   router.post('/:game/:id/remove', wrap(async req => remove(req.params.game, req.params.id, await whoOf(req))));

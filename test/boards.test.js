@@ -107,6 +107,36 @@ async function run({ base, root }) {
     db.close();
   }
 
+  console.log('\n-- boards: Words with Family results --');
+  {
+    const people = [];
+    for (const name of ['Fay', 'Gus']) {
+      const asked = await call('/api/profiles', 'POST', { name: `BD ${name}`, avatar: 'shiba:1' });
+      await call(`/api/profiles/admin/${asked.data.id}/approve`, 'POST', {}, ADMIN);
+      const used = await call(`/api/profiles/${asked.data.id}/use`, 'POST', {});
+      people.push({ id: asked.data.id, h: { 'X-Profile-Token': used.data.token } });
+    }
+    const [fay, gus] = people;
+    const game = await call('/api/crisscross/games', 'POST', { kind: 'online', invite: [gus.id] }, fay.h);
+    await call(`/api/crisscross/games/${game.data.id}/resign`, 'POST', {}, gus.h);
+    const wwf = (await admin('')).data.games.find(g => g.id === 'crisscross');
+    ok('Words with Family is on the Boards tab with Best single word and Best game score',
+      wwf && wwf.boards.map(b => b.id).join() === 'word,best', JSON.stringify(wwf));
+    const best = await admin('/crisscross?board=best');
+    const mine = best.data.rows.find(r => r.name === 'BD Fay');
+    ok('…a finished game\'s result shows there with the player\'s name', !!mine && typeof mine.id === 'number', JSON.stringify(best.data.rows.slice(0, 3)));
+    const winsOf = async who => {
+      const b = (await call('/api/trophies', 'GET', null, who.h)).data.games.find(g => g.id === 'crisscross').boards.find(x => x.id === 'wins');
+      return b.you ? b.you.value : 0;
+    };
+    ok('…and it counts as a win on the trophy page', await winsOf(fay) === 1);
+    await admin(`/crisscross/${mine.id}/remove`, 'POST', {});
+    ok('taking the result off removes the win too', await winsOf(fay) === 0);
+    ok('…and lists it under removed', (await admin('/crisscross?board=best')).data.removed.some(r => r.id === mine.id));
+    await admin(`/crisscross/${mine.id}/restore`, 'POST', {});
+    ok('putting it back brings the win back', await winsOf(fay) === 1);
+  }
+
   console.log(`\n  ${pass} passed, ${fail} failed`);
   return { pass, fail };
 }
