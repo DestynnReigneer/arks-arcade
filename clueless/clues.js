@@ -3,8 +3,8 @@
 // Clueless: where the clues come from, and the checks a clue has to pass.
 //
 // There are two kinds of clue. Family clues are written for kids and are the
-// only ones the family mini uses. Grown-up clues are trickier and only show up
-// in the bigger grown-ups' puzzle, which also uses family clues. Clues come
+// only ones the family mini uses. Adult clues are trickier and only show up
+// in the bigger adults' puzzle, which also uses family clues. Clues come
 // from the built-in set in starter-clues.txt, and from clue packs the admin
 // makes by copying a prompt into any chatbot and pasting its answer back.
 // The server never asks an AI for anything itself.
@@ -15,7 +15,7 @@ const dictionary = require('../rambler/dictionary');
 
 const KINDS = {
   kids: { id: 'kids', label: 'Family' },
-  grownup: { id: 'grownup', label: 'Grown-up' }
+  grownup: { id: 'grownup', label: 'Tricky' }
 };
 const MIN_WORD = 3;
 const MAX_WORD = 7;

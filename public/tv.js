@@ -11,7 +11,7 @@
 //     arrows, and Enter (OK) presses the highlighted one, on pages that ask
 //     for it with <html data-tv-nav>;
 //   - with ARKS ID on, sets the TV up the first time ("Set up this TV": a
-//     pairing code and a QR code for a grown-up's phone), shows a small sign
+//     pairing code and a QR code for an adult's phone), shows a small sign
 //     on every screen while adults' night is on, and keeps Back to family
 //     within reach.
 //
@@ -248,7 +248,7 @@ const ArcadeTV = (() => {
     return { status, btns };
   }
 
-  // "Set up this TV": shown until a grown-up approves it on their phone.
+  // "Set up this TV": shown until an adult approves it on their phone.
   async function pairing() {
     const o = overlay('tv-pair');
     let timer = null;
@@ -268,10 +268,10 @@ const ArcadeTV = (() => {
       }
       const ui = codeCard(o, {
         title: 'Set up this TV',
-        line: 'Scan this with a grown-up\'s phone. Their phone asks them to name this TV and type their PIN there, never on the TV.',
+        line: 'Scan this with an adult\'s phone. Their phone asks them to name this TV and type their PIN there, never on the TV.',
         code: started.userCode, qr: started.qr, enterUrl: started.enterUrl
       });
-      ui.status.textContent = 'Waiting for a grown-up\'s phone…';
+      ui.status.textContent = 'Waiting for an adult\'s phone…';
       const fresh = el('button', 'tv-btn', 'Get a new code');
       fresh.onclick = again;
       ui.btns.appendChild(fresh);
@@ -291,7 +291,7 @@ const ArcadeTV = (() => {
     again();
   }
 
-  // Adults' night: a code for a grown-up's phone. Resolves true once it's on.
+  // Adults' night: a code for an adult's phone. Resolves true once it's on.
   let unlocking = null;
   function unlock() {
     if (adultOn()) return Promise.resolve(true);
@@ -319,10 +319,10 @@ const ArcadeTV = (() => {
         if (u.adultMode) { setMode(u.adultMode); finish(true); return; }
         const ui = codeCard(o, {
           title: '🔞 Adults\' night',
-          line: 'A grown-up scans this with their own phone and types their PIN there to unlock adult levels on this TV. It goes back to family by itself after 30 minutes without a game, or at 4 AM.',
+          line: 'An adult scans this with their own phone and types their PIN there to unlock adult levels on this TV. It goes back to family by itself after 30 minutes without a game, or at 4 AM.',
           code: u.userCode, qr: u.qr, enterUrl: u.enterUrl
         });
-        ui.status.textContent = 'Waiting for a grown-up\'s phone…';
+        ui.status.textContent = 'Waiting for an adult\'s phone…';
         const cancel = el('button', 'tv-btn', 'Cancel');
         cancel.dataset.tvStart = '';
         cancel.onclick = () => finish(false);
@@ -343,7 +343,7 @@ const ArcadeTV = (() => {
   }
 
   // The pass that goes wherever an adult check is made: adults' night first (a
-  // QR code for a grown-up's phone), then the arcade hands one out. '' if not.
+  // QR code for an adult's phone), then the arcade hands one out. '' if not.
   async function adultPass() {
     if (!adultOn() && !(await unlock())) return '';
     try {

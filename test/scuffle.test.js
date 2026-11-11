@@ -157,7 +157,7 @@ async function run({ base, root }) {
   const skyAgain = await api('/solo', 'POST', { mode: 'daily', dictionary: 'kids', profileToken: sky });
   ok('starting the finished one again hands back the finished game, not new letters', skyAgain.data.gameId === sd.gameId && skyAgain.data.phase === 'over');
 
-  console.log('\n-- scuffle: grown-up words --');
+  console.log('\n-- scuffle: adult words --');
   const PIN = { 'X-Adult-Pin': '246810' };
   ok('the unfiltered list needs the adult PIN on your own', (await api('/solo', 'POST', { mode: 'free', dictionary: 'adult' })).status === 403);
   ok('…and works with it', (await api('/solo', 'POST', { mode: 'free', dictionary: 'adult' }, PIN)).status === 201);

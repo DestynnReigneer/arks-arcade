@@ -30,7 +30,7 @@ const RoomPassword = (() => {
   function ask({ create = false, message = '' } = {}) {
     if (!root) build();
     const $ = sel => root.querySelector(`[data-${sel}]`);
-    $('title').textContent = create ? 'Make a lobby password' : 'Grown-ups game';
+    $('title').textContent = create ? 'Make a lobby password' : 'Adult game';
     $('hint').textContent = create
       ? 'This is an adult game, so it gets a password. Tell your guests; anyone without it (like a curious kid) can\'t join.'
       : 'The host locked this game with a password. Ask them for it.';

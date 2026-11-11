@@ -19,7 +19,7 @@ const adminRouter = require('./admin');
 const router = express.Router();
 router.use('/admin', adminRouter);
 
-// The unfiltered dictionary needs a grown-up's ARKS ID adult pass (arcade/adult-pin.js).
+// The unfiltered dictionary needs an adult's ARKS ID adult pass (arcade/adult-pin.js).
 const adultPin = require('../arcade/adult-pin');
 const adultJoin = require('../arcade/adult-join');
 const comm = require('../arcade/comm');
@@ -40,7 +40,7 @@ function assertProfileAllowed(profile, req) {
   if (profile !== 'adult') return;
   const supplied = req.get('X-Adult-Pin') || (req.body && req.body.adultPin) || '';
   if (!adultPin.matches(supplied)) {
-    throw fail('Adult levels need a grown-up signed in with ARKS ID.', 403);
+    throw fail('Adult levels need an adult signed in with ARKS ID.', 403);
   }
 }
 

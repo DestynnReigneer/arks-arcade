@@ -15,7 +15,7 @@
   const createFromJsonBtn = document.getElementById('createFromJsonBtn');
   const jsonStatus = document.getElementById('jsonStatus');
 
-  // Same shape, but for grown-ups: the words are the joke.
+  // Same shape, but for adults: the words are the joke.
   function buildAdultPrompt(topic) {
     return buildPrompt(topic)
       .replace('Keep every word family-friendly.',

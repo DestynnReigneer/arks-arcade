@@ -1,6 +1,6 @@
 'use strict';
 
-// Adult levels stay locked for anyone who isn't a signed-in grown-up. A guest
+// Adult levels stay locked for anyone who isn't a signed-in adult. A guest
 // can't host a party game at an adult level, can't switch a game to one
 // afterwards, and can't get the adult pass that would unlock them. The server
 // answers 403 (or 401 for the pass), whatever the page itself shows.
