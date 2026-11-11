@@ -1,81 +1,71 @@
 'use strict';
 
-// One PIN in front of every adult option in the arcade. ADULT_PIN in .env sets
-// it at install; after that the admin page can change or remove it, and the
-// admin's choice wins. Unset everywhere means a confirmation tap is all that
-// guards adult content -- fine on a LAN, not once the server is reachable.
+// What unlocks adult levels: a grown-up's ARKS ID sign-in, nothing else
+// (the maintainer's call, 2026-11-11).
+//
+// With ARKS ID sign-in on (arcade/arksid.js), a signed-in grown-up's page gets
+// a short-lived adult pass, signed by the server so it can't be guessed, and
+// that pass goes wherever an adult check is made (the X-Adult-Pin header or a
+// `pin` field, names kept from when it was a typed PIN). Kids', teens' and
+// guests' pages never get one.
+//
+// Without ARKS ID there is no way to unlock adult levels, so they stay off.
+// The typed 6-digit PIN (ADULT_PIN, or set on the admin page) is gone: it could
+// be guessed, and a role from a real sign-in is a better answer to "is this a
+// grown-up?". An old ADULT_PIN in .env is ignored, with a note at startup.
 
 const rateLimit = require('express-rate-limit');
-const db = require('../db');
-
-const KEY = 'adult_pin';
-const PIN_RE = /^[0-9]{6}$/;
 
 function fail(message, status) {
   return Object.assign(new Error(message), { status });
 }
 
-// With ARKS ID sign-in on (arcade/arksid.js), adult levels follow the person's
-// role instead of a PIN: a signed-in grown-up's page gets a short-lived adult
-// pass, and that pass is what goes wherever the PIN used to. The PIN is off.
 let passCheck = null;
 function usePasses(check) { passCheck = check; }
 
-// null in the settings table means "never changed from the admin page".
-function current() {
-  const saved = db.getSetting(KEY, null);
-  if (saved !== null && saved !== undefined) return String(saved);
-  return String(process.env.ADULT_PIN || '');
-}
+// The test suite runs most games without ARKS ID, so it gets a fixed pass of
+// its own: only when NODE_ENV is test and TEST_ADULT_PASS is set, never in a
+// real install.
+const testPass = () => (process.env.NODE_ENV === 'test' && process.env.TEST_ADULT_PASS) || '';
 
+// `set` stays true so the games show their unlock screen (which says to sign in
+// with ARKS ID, or that adult levels need it); `arksId` says which.
 function status() {
-  if (passCheck) return { set: true, source: 'arksid' };
-  const saved = db.getSetting(KEY, null);
-  const source = saved !== null && saved !== undefined ? 'admin' : process.env.ADULT_PIN ? 'env' : 'none';
-  return { set: !!current(), source };
+  return { set: true, source: passCheck ? 'arksid' : 'off', arksId: !!passCheck };
 }
 
-// An empty pin removes the lock (and overrides any ADULT_PIN in .env).
-function set(pin) {
-  if (passCheck) throw fail('This arcade signs in through ARKS ID, so adult levels follow ARKS ID roles and there is no adult PIN to set.', 400);
-  const value = String(pin == null ? '' : pin).trim();
-  if (value && !PIN_RE.test(value)) throw fail('The PIN must be 6 digits.', 400);
-  db.setSetting(KEY, value);
-  return status();
+function set() {
+  throw fail('Adult levels unlock with a grown-up\'s ARKS ID sign-in, so there is no adult PIN to set.', 400);
 }
 
 function matches(supplied) {
-  if (passCheck) return passCheck(String(supplied || ''));
-  const pin = current();
-  return !pin || String(supplied || '') === pin;
+  const s = String(supplied || '');
+  if (passCheck) return passCheck(s);
+  return !!testPass() && s === testPass();
 }
 
-// The PIN pads take exactly 6 digits, so an old .env PIN of another length
-// could never be typed in. Say so at startup instead of failing silently.
-if (process.env.ADULT_PIN && !PIN_RE.test(String(process.env.ADULT_PIN).trim())) {
-  console.warn('ADULT_PIN in .env must be 6 digits, or the PIN pads cannot enter it. Change it in .env or on the admin page.');
+if (process.env.ADULT_PIN) {
+  console.warn('ADULT_PIN in .env is no longer used: adult levels unlock with a grown-up\'s ARKS ID sign-in. You can remove it.');
 }
 
-// Every place that checks a typed-in adult PIN shares one limiter with the
-// same rule as a device's profile PINs: 20 wrong PINs in 10 minutes from one
-// address, then a wait (or the admin unlocks it). Right PINs don't count.
-// The routes say whether a check was right through res.locals.pinOk.
+// Every place that checks an adult pass from a request body shares one limiter:
+// 20 wrong ones in 10 minutes from one address, then a wait. Right ones don't
+// count. The routes say whether a check was right through res.locals.pinOk.
 const tries = new rateLimit.MemoryStore();
 const limiter = rateLimit({
   windowMs: 10 * 60 * 1000, limit: 20, standardHeaders: true, legacyHeaders: false,
   store: tries,
   skipSuccessfulRequests: true,
   requestWasSuccessful: (req, res) => res.locals.pinOk === true,
-  message: { error: 'Too many wrong PINs from this device. Wait 10 minutes, or ask the admin to unlock it.' }
+  message: { error: 'Too many tries, wait a few minutes, then try again.' }
 });
 const tryLimiter = () => limiter;
 const resetTries = () => tries.resetAll();
 
-// Checks a typed-in PIN for a route, and tells the limiter how it went.
 function check(req, res) {
   const ok = matches((req.body || {}).pin);
   res.locals.pinOk = ok;
   return { ok };
 }
 
-module.exports = { current, status, set, matches, tryLimiter, resetTries, check, usePasses };
+module.exports = { status, set, matches, tryLimiter, resetTries, check, usePasses };

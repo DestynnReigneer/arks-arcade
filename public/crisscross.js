@@ -270,7 +270,7 @@
       S.onlineDict = v; paintDict();
     });
     $('dictHint').textContent = S.onlineDict === 'adult'
-      ? 'Every word on the list counts, rude ones included. Everyone has to be a grown-up, and each of them will need the adult PIN to participate.'
+      ? 'Every word on the list counts, rude ones included. Everyone has to be a grown-up, and each of them will need to be signed in with ARKS ID to participate.'
       : 'Rude words are left out, so it\'s good for kids.';
     adultMode(S.onlineDict === 'adult');
   }
@@ -1051,7 +1051,7 @@
       emoji: '📱', title: 'Playing with the family',
       html: `<p><b>New game with the family</b> lets each person play on their own phone. Choose who to play with, and the game shows up in their list. There's no rush: a turn can wait hours, and the arcade's home page says when it's your turn. You can also leave a seat open and share a link or QR code.</p>
         <p><b>Play on this phone</b> is for passing one phone around, or playing against the computer. The tiles are hidden between turns so nobody peeks.</p>
-        <p><b>Family words</b> leaves rude words out. <b>Unfiltered</b> counts every word on the list, and everyone in the game needs the adult PIN.</p>`
+        <p><b>Family words</b> leaves rude words out. <b>Unfiltered</b> counts every word on the list, and everyone in the game has to be a grown-up signed in with ARKS ID.</p>`
     }
   ]);
   $('helpBtn').addEventListener('click', () => help.open());

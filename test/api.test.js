@@ -17,10 +17,13 @@ async function run({ base, root }) {
     else { fail++; console.log('  FAIL  ' + label + (extra ? '  ' + extra : '')); }
   };
 
-  async function api(p, method = 'GET', body) {
+  // ADULT: the test-only adult pass (TEST_ADULT_PASS in test/run.js), standing in
+  // for a grown-up's ARKS ID adult pass on this arcade without ARKS ID.
+  const ADULT = { 'X-Adult-Pin': '246810' };
+  async function api(p, method = 'GET', body, extra = {}) {
     const res = await fetch(API + p, {
       method,
-      headers: body ? { 'Content-Type': 'application/json' } : undefined,
+      headers: { ...(body ? { 'Content-Type': 'application/json' } : {}), ...extra },
       body: body ? JSON.stringify(body) : undefined
     });
     const text = await res.text();
@@ -222,7 +225,7 @@ async function run({ base, root }) {
   // The whole point of the daily. The board used to be seeded with the
   // dictionary as well as the date, which quietly compared a kid and an adult
   // in the same house on two different boards.
-  const dailyAdult = await api('/daily?profile=adult');
+  const dailyAdult = await api('/daily?profile=adult', 'GET', undefined, ADULT);
   ok('kids and adults get the same sixteen letters',
     dailyAdult.data.board.join('') === daily.data.board.join(''));
 
@@ -527,8 +530,8 @@ async function run({ base, root }) {
     fart.data.valid === false, JSON.stringify(fart.data));
 
   await admin('/dictionary', 'POST', { word: 'SKIBIDI', list: 'adult' });
-  const adultBoard = await api('/board', 'POST', { size: 4, profile: 'adult' });
-  const skib = await api('/check', 'POST', { boardId: adultBoard.data.boardId, word: 'SKIBIDI' });
+  const adultBoard = await api('/board', 'POST', { size: 4, profile: 'adult' }, ADULT);
+  const skib = await api('/check', 'POST', { boardId: adultBoard.data.boardId, word: 'SKIBIDI' }, ADULT);
   ok('a word added from the browser is a real word now',
     skib.data.reason !== 'not a word', JSON.stringify(skib.data));
 
@@ -755,18 +758,17 @@ async function run({ base, root }) {
   await asAdmin(`/comm/admin/posts/${ann.data.id}`, 'DELETE');
   ok('the admin can take a post down', !(await wl('/comm/posts')).data.some(p => p.id === ann.data.id));
 
-  // ---- adult PIN from the admin page -------------------------------------------
-  ok('a PIN must be 6 digits', (await asAdmin('/comm/admin/adult-pin', 'POST', { pin: '12' })).status === 400);
-  ok('…not 4', (await asAdmin('/comm/admin/adult-pin', 'POST', { pin: '1234' })).status === 400);
-  await asAdmin('/comm/admin/adult-pin', 'POST', { pin: '246810' });
-  ok('the admin can set the adult PIN', (await asAdmin('/comm/admin/adult-pin')).data.source === 'admin');
+  // ---- adult levels need ARKS ID (2026-11-11) ---------------------------------------
+  ok('there is no adult PIN to set', (await asAdmin('/comm/admin/adult-pin', 'POST', { pin: '135790' })).status === 400);
+  const adultStatus = (await asAdmin('/comm/admin/adult-pin')).data;
+  ok('without ARKS ID, adult levels are off', adultStatus.arksId === false && adultStatus.source === 'off');
   const lockedOut = await api('/board', 'POST', { size: 4, profile: 'adult' });
   const pinned = await fetch(API + '/board', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-Adult-Pin': '246810' },
     body: JSON.stringify({ size: 4, profile: 'adult' })
   });
-  ok('the new PIN guards adult boards', lockedOut.status === 403 && pinned.status === 201);
+  ok('adult boards need the adult pass', lockedOut.status === 403 && pinned.status === 201);
   // ---- Wordless hints -------------------------------------------------------------
   const hintRes = await wl('/wordless/hints?theme=classic&word=apple');
   ok('the hints endpoint answers for Classic', hintRes.status === 200 && !!hintRes.data.clue && !!hintRes.data.category);
@@ -1249,8 +1251,7 @@ async function run({ base, root }) {
   await asAdmin('/stats/admin/visits', 'DELETE');
   ok('the admin can reset the visit stats', (await asAdmin('/stats/admin/summary')).data.visits.length === 0);
 
-  await asAdmin('/comm/admin/adult-pin', 'POST', { pin: '' });
-  ok('the PIN can be removed', (await api('/board', 'POST', { size: 4, profile: 'adult' })).status === 201);
+  ok('an adult board still needs the pass at the end', (await api('/board', 'POST', { size: 4, profile: 'adult' })).status === 403);
 
   // ---- admin sign-in cookie --------------------------------------------------------------
   const login = password => fetch(base + '/api/admin/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password }) });

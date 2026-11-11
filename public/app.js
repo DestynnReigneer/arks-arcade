@@ -226,7 +226,7 @@
     PinPad.show(pinInput, adult.requiresPin);
     document.getElementById('adultError').textContent = '';
     document.getElementById('adultHint').textContent = adult.requiresPin
-      ? 'Naughty themes for grown-ups. Enter the adult PIN.'
+      ? 'Naughty themes for grown-ups signed in with ARKS ID.'
       : 'Naughty themes for grown-ups. Are you 18 or older?';
     // With a PIN the pad checks it on the 6th digit, so there's no button.
     document.getElementById('adultOkBtn').classList.toggle('hidden', adult.requiresPin);

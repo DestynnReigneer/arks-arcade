@@ -477,26 +477,15 @@
     } catch (e) { say($('postMsg'), e.message, false); }
   }
 
-  // ---- adult PIN -----------------------------------------------------------
+  // ---- adult levels ----------------------------------------------------------
 
   async function loadPin() {
     try {
       const s = await api('/adult-pin');
-      $('pinStatus').textContent = s.source === 'arksid'
-        ? 'This arcade signs in through ARKS ID, so adult levels open for grown-ups’ ARKS ID accounts (adult or admin) and there is no adult PIN.'
-        : !s.set
-        ? 'No PIN set: anyone can switch on adult content with a confirmation tap.'
-        : s.source === 'env' ? 'A PIN is set (from ADULT_PIN in .env).' : 'A PIN is set (from this page).';
+      $('pinStatus').textContent = s.arksId
+        ? 'Adult levels are on. They open for grown-ups signed in with ARKS ID (adult or admin accounts).'
+        : 'Adult levels are off, because this arcade doesn’t sign in through ARKS ID. Set it up (see docs/SETUP.md) to turn them on.';
     } catch (e) { $('pinStatus').textContent = e.message; }
-  }
-
-  async function savePin(pin) {
-    try {
-      await api('/adult-pin', { method: 'POST', body: { pin } });
-      $('pinInput').value = '';
-      say($('pinMsg'), pin ? 'PIN saved.' : 'PIN removed.');
-      loadPin();
-    } catch (e) { say($('pinMsg'), e.message, false); }
   }
 
   // ---- send a clip ----------------------------------------------------------
@@ -651,14 +640,6 @@
     $('postBtn').onclick = postAnnouncement;
     $('trainCarsSave').onclick = saveTrainCars;
     $('clipSendBtn').onclick = sendClip;
-    $('savePinBtn').onclick = () => {
-      const pin = $('pinInput').value.trim();
-      if (!pin) return say($('pinMsg'), 'Type a PIN first, or use Remove PIN.', false);
-      savePin(pin);
-    };
-    $('clearPinBtn').onclick = () => {
-      if (confirm('Remove the adult PIN? Anyone could then turn on adult content with one tap.')) savePin('');
-    };
     document.addEventListener('admin-tab', e => { if (e.detail === 'tabArcade') refresh(); });
 
     // admin.js reveals #adminContent once the password is accepted.

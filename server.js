@@ -539,7 +539,7 @@ app.listen(PORT, err => {
   }
   if (arks) {
     console.log('Signing in through ARKS ID is on: profiles and adult levels follow ARKS ID.');
-  } else if (adultPin.status().set) {
-    console.log('Adult PIN is set — adult content requires it.');
+  } else {
+    console.log('ARKS ID sign-in is off, so adult levels are off.');
   }
 });
