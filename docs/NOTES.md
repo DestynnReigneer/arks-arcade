@@ -7,9 +7,50 @@ to-do list as checkboxes (the rule is in the maintainer's global CLAUDE.md
 and `arks-internal/conventions/sessions.md`): do the checked items in the
 order they were clicked, and keep the rest pinned here.
 
-## Last session (2026-11-09)
+## Last session (2026-11-10)
 
 **Finished**
+- **#113: the maintainer's wording** went into the rank lines ("You're #1 for today, and #3 overall!"), the profile
+  PIN errors ("Incorrect PIN. 3 attempts left before profile locks for 15 minutes."), Words with Family ("Choose",
+  not "Tick"), the pause cover in Sudoku and Clueless Crosswords, the Join a game note, the sign-in card and the
+  Launcher's How to play. In Tumbler Rumble the gold spot is a **lock** and a pop on its stripe is a **perfect pop**.
+  The code keeps its old names (`pins`, `bullseyes` in the engine, the API and the tables); only the words
+  players read changed.
+- **#115: Tumbler Rumble's dial.** The thing the light races around is a dial (the maintainer's word), in How to
+  play, the home card and the README.
+- **#114: the Continue row on the home page.** `arcade/continue.js` lists a profile's unfinished games: Words with
+  Family games (the ones waiting on your move first) and today's Sudoku and Clueless Crosswords puzzles that were
+  started, each with a Play button. The server works out who is asking from the profile token, so it only ever shows
+  your own. The row hides when there's nothing in progress. Sudoku and Clueless Crosswords open straight to a level
+  from a link (`sudoku.html?level=hard`). The wording is the maintainer's: "Sudoku, today's Easy Challenge" and
+  "4:12 played so far" (a time always says whether it's played or left). Tests in `test/continue.test.js` and
+  `test/browser/continue.spec.js`.
+- **QI in Words with Family was the rule working.** The message was that a word has to join onto tiles already on
+  the board. QI counts on both lists, and `test/crisscross.test.js` covers both cases. Nothing changed.
+
+**In progress**
+- **Games that save.** The Continue row was step 1 of the plan, which waits for the maintainer's markup. Decided so
+  far: every game saves, the row shows only your own games, an unfinished game is kept for 30 days, a guest's save
+  stays on the device, Know-It-All starts an interrupted question over, and a game picked up from a save counts on
+  the boards like any other. The steps after this one: Chess, then the other room games, the solo word games, and
+  the action games.
+- **The trophy page** (a trophy in the top bar that opens every leaderboard, with a Trophy Shelf): the mockup is
+  approved and nothing is built yet. Three questions are open: whether kids see that adult boards exist, which
+  boards Words with Family gets (it has none today), and how Today and Overall switch when only the daily games
+  have a Today board.
+- Moving tiles (#111) is published but not tested on a phone by the maintainer yet.
+- A flaky test: Clueless Crosswords' "New board (another free start) gives a different crossword, not today's"
+  failed once in CI and once locally, and passes on a rerun (two random crosswords can match by chance).
+
+**Next up**
+- A design for how people play together: a lobby where joiners wait, and a chat. Design first, nothing built.
+- A mockup of the layout with no scrolling to reach the board or the buttons.
+- A batch of better jokes for the maintainer to read, and a preview of the home page without the cheat-code section.
+- Building the trophy page, and Clueless Crosswords keeping its letters on the server so they follow you to another
+  device the way Sudoku's squares do.
+
+## Words with Family's word rules and moving tiles (2026-11-09)
+
 - **#107** (setup screens and the end-of-game pop-up, below) was approved and merged.
 - **#109 and #110: Words with Family's word rules were checked.** The word list is ENABLE1 (`words/enable1.txt`,
   public domain). The move rules were already right: the first word covers the star, later words join the board,
@@ -24,17 +65,6 @@ order they were clicked, and keep the rest pinned here.
   tapping a new tile on one you put down sends that one back to the rack. Browser test in
   `test/browser/crisscross.spec.js`. The hint and How to play use the maintainer's wording.
 - **#108:** Dependabot's express-rate-limit patch.
-
-**In progress**
-- The maintainer said a game with AJ refused QI after #110 was live (the server runs it; checked `/healthz`). The
-  likely cause is another word the same move made. Waiting on the exact message or a screenshot.
-- Moving tiles (#111) is published but not tested on a phone by the maintainer yet.
-
-**Next up**
-- The maintainer's rewrites of real Arcade text from the voice practice (ROADMAP), including Tumbler Rumble's
-  "perfect pop" for a bullseye and "locks" for pins.
-- Rethinking how people play together (lobbies, one-on-one, playing the computer; ROADMAP). Design first.
-- Making the repo private once the building slows down (ROADMAP).
 
 ## Setup screens for the cabinet games, and the end of a game pops up (2026-11-08)
 
