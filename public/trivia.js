@@ -613,7 +613,8 @@
   }
 
   function openScores(highlightId, board = isAdult() ? 'adult' : 'solo') {
-    $('scoreBoardSeg').classList.toggle('hidden', !unlocked());
+    // Both boards are open to everyone; only playing the adult level needs the PIN.
+    $('scoreBoardSeg').classList.remove('hidden');
     for (const b of $('scoreBoardSeg').children) b.setAttribute('aria-pressed', String(b.dataset.board === board));
     ArcadeKit.loadScores('trivia', board, $('scoreList'), highlightId, pinHeaders());
     $('scoresView').classList.remove('hidden');

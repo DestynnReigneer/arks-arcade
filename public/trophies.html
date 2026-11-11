@@ -35,32 +35,13 @@
 
   <div class="tr-filters" id="filters" role="group" aria-label="Which games"></div>
 
-  <div class="tr-unlock" id="unlockRow" hidden>
-    <span>🔞 Adult leaderboards are locked.</span>
-    <button class="tr-btn" type="button" id="unlockBtn">Unlock</button>
-  </div>
-
   <p class="tr-note" id="loadMsg">Loading the leaderboards…</p>
   <div class="tr-games" id="games"></div>
 </main>
 
-<div class="tr-pin hidden" id="pinView" role="dialog" aria-modal="true" aria-labelledby="pinTitle">
-  <div class="tr-pin-card">
-    <h2 id="pinTitle">Adult Leaderboards</h2>
-    <p id="pinText">Type the adult PIN to see them.</p>
-    <input id="pinInput" inputmode="numeric" autocomplete="off" aria-label="Adult PIN">
-    <p class="tr-err" id="pinMsg" role="alert"></p>
-    <div class="tr-pin-btns">
-      <button class="tr-btn" type="button" id="pinYes" hidden>I'm 18+</button>
-      <button class="tr-btn ghost" type="button" id="pinCancel">Cancel</button>
-    </div>
-  </div>
-</div>
-
 <script src="feedback.js"></script>
 <script src="avatars.js"></script>
 <script src="avatar-photo.js"></script>
-<script src="pin-pad.js"></script>
 <script src="profile.js"></script>
 <script src="trophies.js"></script>
 <script src="banner.js" defer></script>

@@ -35,9 +35,6 @@ async function run({ base }) {
     people[name] = { id: asked.data.id, token: used.data.token, h: { 'X-Profile-Token': used.data.token } };
   }
   const { Dee, Eli } = people;
-  // Earlier suites change the adult PIN, so set it here and put back what was there.
-  const pinBefore = (await api('/api/comm/admin/adult-pin', 'GET', null, ADMIN)).data;
-  await api('/api/comm/admin/adult-pin', 'POST', { pin: '246810' }, ADMIN);
 
   const guest = await trophies();
   ok('anyone can open the trophy page', guest.status === 200 && Array.isArray(guest.data.games) && guest.data.you === null, guest.text.slice(0, 200));
@@ -48,21 +45,9 @@ async function run({ base }) {
   ok('Words with Family has its three boards', wwf && wwf.boards.map(b => b.id).join() === 'wins,best,word');
   ok('…and none of them is locked', wwf && wwf.boards.every(b => !b.locked && !b.adult));
 
-  const lockedTrivia = boardOf(guest.data, 'trivia', 'adult');
-  ok('an adult board is listed but locked without the PIN', lockedTrivia && lockedTrivia.locked && lockedTrivia.rows.length === 0);
-  const wrongPin = boardOf((await trophies(null, { 'X-Adult-Pin': '000000' })).data, 'trivia', 'adult');
-  ok('…a wrong PIN keeps it locked', wrongPin && wrongPin.locked);
-  const rightPin = await trophies(null, { 'X-Adult-Pin': '246810' });
-  ok('…the right PIN opens it', !boardOf(rightPin.data, 'trivia', 'adult').locked && rightPin.data.adultOpen === true);
-  ok('the family board was never locked', !boardOf(guest.data, 'trivia', 'solo').locked);
-
-  ok('typing the PIN on the page: a wrong one is refused', (await api('/api/trophies/unlock', 'POST', { pin: '000000' })).data.ok === false);
-  ok('…and the right one works', (await api('/api/trophies/unlock', 'POST', { pin: '246810' })).data.ok === true);
-
-  await api('/api/comm/admin/adult-pin', 'POST', { pin: '' }, ADMIN);
-  ok("with no PIN set, an adult board still waits for a grown-up's tap", boardOf((await trophies()).data, 'trivia', 'adult').locked
-    && !boardOf((await trophies(null, { 'X-Adult-Ok': 'yes' })).data, 'trivia', 'adult').locked);
-  if (pinBefore && pinBefore.source !== 'none') await api('/api/comm/admin/adult-pin', 'POST', { pin: '246810' }, ADMIN);
+  const trivia = boardOf(guest.data, 'trivia', 'adult');
+  ok('an adult board is open to everyone, with no PIN', trivia && !trivia.locked && Array.isArray(trivia.rows));
+  ok('…and there is no unlock to call', (await api('/api/trophies/unlock', 'POST', { pin: '246810' })).status === 404);
 
   const sudoku = boardOf(guest.data, 'sudoku', 'easy');
   ok('daily games\' boards come with a Today list', sudoku && sudoku.daily && sudoku.today && Array.isArray(sudoku.today.rows));
