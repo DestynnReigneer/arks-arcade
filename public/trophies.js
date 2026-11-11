@@ -8,7 +8,7 @@
 (() => {
   const $ = id => document.getElementById(id);
   const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined) n.textContent = text; return n; };
-  const GROUPS = [['all', 'Every game'], ['mine', 'Only mine'], ['word', 'Word and puzzle'], ['cabinet', 'Cabinet'], ['classic', 'Classic'], ['party', 'Party']];
+  const GROUPS = [['all', 'All Games'], ['mine', 'Only My Games'], ['word', 'Word and Puzzle Games'], ['cabinet', 'Cabinet Games'], ['classic', 'Classic Games'], ['party', 'Party Games']];
   const PIN_KEY = 'trophies.adultPin', OK_KEY = 'trophies.adultOk';
   const store = {
     get: k => { try { return sessionStorage.getItem(k) || ''; } catch { return ''; } },
@@ -34,10 +34,10 @@
     return String(gap);
   };
   const toPass = (gap, unit, name) => {
-    if (unit === 'time') return `${secs(gap)} faster to pass ${name}.`;
-    if (unit === 'lap') return `${(gap / 1000).toFixed(2)} seconds faster to pass ${name}.`;
-    if (unit === 'points') return `${(gap + 1).toLocaleString('en-US')} more points to pass ${name}.`;
-    return `${gap + 1} more to pass ${name}.`;
+    if (unit === 'time') return `${secs(gap)} faster to beat ${name}.`;
+    if (unit === 'lap') return `${(gap / 1000).toFixed(2)} seconds faster to beat ${name}.`;
+    if (unit === 'points') return `${(gap + 1).toLocaleString('en-US')} more points to beat ${name}.`;
+    return `${gap + 1} more to beat ${name}.`;
   };
   const when = at => {
     if (!at) return '';
@@ -90,9 +90,9 @@
     if (data.closest) {
       const x = data.closest;
       const txt = el('div');
-      txt.append(el('div', 'tr-label', 'Your closest climb'),
+      txt.append(el('div', 'tr-label', 'Your next goal to beat'),
         el('div', '', `${behind(x.gap, x.unit)} behind ${x.name} in ${x.gameLabel}, ${x.boardLabel}.`));
-      const a = el('a', 'tr-btn', 'Go get it');
+      const a = el('a', 'tr-btn', 'Challenge their score?');
       a.href = x.href;
       c.append(el('span', 'big', '🎯'), txt, a);
     }
@@ -124,12 +124,12 @@
         head.append(seg);
       }
       const best = mine.map(b => (day && b.today ? b.today.you : b.you)).filter(Boolean).sort((a, b) => a.rank - b.rank)[0];
-      head.append(el('span', 'mine', best ? `your best: #${best.rank}` : you ? 'not on a board yet' : ''));
+      head.append(el('span', 'mine', best ? `your best rank: #${best.rank}` : you ? 'not on the board yet' : ''));
       card.append(head);
       for (const b of g.boards) card.append(boardRow(g, b, day));
       host.append(card);
     }
-    if (!host.children.length) host.append(el('p', 'tr-note', group === 'mine' ? 'You\'re not on any boards yet. Play a game and get your first score!' : 'No boards match that.'));
+    if (!host.children.length) host.append(el('p', 'tr-note', group === 'mine' ? 'You\'re not on any leaderboards yet. Time to full send. Whatchu waitin\' on?' : 'No boards here.'));
   }
 
   function boardRow(g, b, day) {
@@ -141,12 +141,12 @@
     btn.type = 'button';
     const name = el('span', 'bn', b.label);
     const top = view.rows[0];
-    const empty = day ? 'Nobody has a score here today. Be first!' : 'Nobody has a score here yet. Be first!';
-    const leader = b.locked ? 'For grown-ups. Unlock it with the adult PIN.'
+    const empty = day ? 'No score today. Be the first!' : 'No score yet. Be the first!';
+    const leader = b.locked ? 'For adults. Unlock it with your PIN.'
       : top ? `${top.name} leads with ${show(top.value, b.unit)}` : empty;
     name.append(el('small', b.locked ? 'locked' : '', leader));
     const r = view.you;
-    const rank = el('span', 'tr-rank' + (r && r.rank <= 3 ? ` r${r.rank}` : ''), b.locked ? '🔞' : r ? `You #${r.rank}` : 'Not yet');
+    const rank = el('span', 'tr-rank' + (r && r.rank <= 3 ? ` r${r.rank}` : ''), b.locked ? '🔞' : r ? `You #${r.rank}` : 'Nothing to see here...');
     btn.append(name, rank, el('span', 'tr-caret', '▸'));
     const isOpen = open.has(key);
     btn.setAttribute('aria-expanded', String(isOpen));
@@ -172,8 +172,8 @@
       }
       t.append(ol);
       const foot = el('div', 'foot');
-      const line = !data.you ? '' : r && r.rank === 1 ? 'You hold this one!'
-        : r && r.ahead ? toPass(Math.abs(r.ahead.value - r.value), b.unit, r.ahead.name) : 'Play a round to get on this board.';
+      const line = !data.you ? '' : r && r.rank === 1 ? 'You a winna, ha! ha! ha!'
+        : r && r.ahead ? toPass(Math.abs(r.ahead.value - r.value), b.unit, r.ahead.name) : 'Play, and see where you stack up!';
       foot.append(el('span', '', line));
       const play = el('a', 'tr-btn', `▶ Play ${g.label}`);
       play.href = g.href;
@@ -191,7 +191,7 @@
     const needsPin = data.adultRequiresPin;
     $('pinInput').hidden = !needsPin;
     $('pinYes').hidden = needsPin;
-    $('pinText').textContent = needsPin ? 'Type the adult PIN to see them.' : 'These boards are for grown-ups (18+).';
+    $('pinText').textContent = needsPin ? 'Type the adult PIN to see them.' : 'These boards are for 18+.';
     view.classList.remove('hidden');
     const done = () => { view.classList.add('hidden'); load(); };
     if (needsPin) {

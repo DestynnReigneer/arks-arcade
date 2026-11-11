@@ -59,7 +59,7 @@ test('the filters pick games, and daily games switch to Today', async ({ page })
   await openPage(page, '/trophies.html');
   await asGuest(page);
   await expect(page.locator('.tr-game').first()).toBeVisible();
-  await page.getByRole('button', { name: 'Cabinet' }).click();
+  await page.getByRole('button', { name: 'Cabinet Games' }).click();
   await expect(page.locator('.tr-game[data-game="snake"]')).toHaveCount(0);
   await expect(page.locator('.tr-game[data-game="racer"]')).toHaveCount(1);
   // Only daily games have the switch.
@@ -67,6 +67,6 @@ test('the filters pick games, and daily games switch to Today', async ({ page })
   const tumbler = page.locator('.tr-game[data-game="tumbler"]');
   await tumbler.getByRole('button', { name: 'Today', exact: true }).click();
   await expect(tumbler.getByRole('button', { name: 'Today', exact: true })).toHaveAttribute('aria-pressed', 'true');
-  await page.getByRole('button', { name: 'Every game' }).click();
+  await page.getByRole('button', { name: 'All Games' }).click();
   await expect(page.locator('.tr-game[data-game="snake"]')).toHaveCount(1);
 });
