@@ -189,7 +189,7 @@ function resetTestDb() {
     const tvResult = await require('./tv-arksid.test.js').run({ base: ID_BASE, root: ROOT, fake });
     total += tvResult.pass + tvResult.fail;
     failed += tvResult.fail;
-    // The party and word games on a TV with ARKS ID: grown-ups rooms, kids' phones.
+    // The party and word games on a TV with ARKS ID: adults rooms, kids' phones.
     console.log(`
 ${'='.repeat(60)}
   tv-party-arksid

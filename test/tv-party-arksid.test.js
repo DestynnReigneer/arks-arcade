@@ -1,9 +1,9 @@
 'use strict';
 
 // The party and word games on a TV with ARKS ID, against the pretend ARKS ID
-// (fake-arksid.js): the TV hosts a grown-ups room only during an adults'
+// (fake-arksid.js): the TV hosts a adults room only during an adults'
 // night (with its adult pass, never a PIN), and a phone signed in as a kid
-// is turned away from a grown-ups room in Uh-Oh: Part Deux, Dare Devil,
+// is turned away from a adults room in Uh-Oh: Part Deux, Dare Devil,
 // Shuffle Scuffle and Rambler, whatever it types. Guests with the lobby
 // password still get in, as before.
 
@@ -51,7 +51,7 @@ async function run({ base, fake }) {
   await kid.call(back.pathname + back.search);
   ok('a kid is signed in on their own phone', (await kid.call('/api/arksid/me')).data.signedIn === true);
 
-  console.log('\n-- family mode: no grown-ups rooms on the TV --');
+  console.log('\n-- family mode: no adults rooms on the TV --');
   ok('Part Deux turns an adult deck away', (await tv.post('/api/partdeux/rooms', { name: 'TV', screen: true, level: 'spicy', password: 'tacos42' })).status === 403);
   ok('so does Shuffle Scuffle\'s unfiltered list', (await tv.post('/api/scuffle/rooms', { name: 'TV', screen: true, password: 'tacos42', settings: { dictionary: 'adult' } })).status === 403);
   const family = (await tv.post('/api/partdeux/rooms', { name: 'TV', screen: true, level: 'kids' })).data;
@@ -59,7 +59,7 @@ async function run({ base, fake }) {
   ok('and a kid\'s phone joins it as always', (await kid.post(`/api/partdeux/rooms/${family.code}/join`, { name: 'Milo' })).status === 201);
   await tv.post(`/api/partdeux/rooms/${family.code}/leave`, family);
 
-  console.log('\n-- adults\' night: the TV hosts grown-ups rooms --');
+  console.log('\n-- adults\' night: the TV hosts adults rooms --');
   const unlock = (await tv.post('/api/tv/unlock')).data;
   fake.approveUnlock(unlock.userCode, 'kim');
   await sleep(1600);
@@ -73,21 +73,21 @@ async function run({ base, fake }) {
     scuffle: (await tv.post('/api/scuffle/rooms', { name: 'TV', screen: true, password: 'tacos42', settings: { dictionary: 'adult' } }, pin)).data,
     rambler: (await tv.post('/api/rambler/rooms', { name: 'TV', screen: true, profile: 'adult', password: 'tacos42' }, pin)).data
   };
-  ok('with the pass, the TV hosts a grown-ups room in every one of them', Object.values(rooms).every(r => r && /^[A-Z2-9]{4}$/.test(r.code)), JSON.stringify(rooms));
+  ok('with the pass, the TV hosts a adults room in every one of them', Object.values(rooms).every(r => r && /^[A-Z2-9]{4}$/.test(r.code)), JSON.stringify(rooms));
   for (const [game, r] of Object.entries(rooms)) {
     const kidJoin = await kid.post(`/api/${game}/rooms/${r.code}/join`, { name: 'Milo', password: 'tacos42' });
-    ok(`${game}: a kid's phone is turned away, even with the password`, kidJoin.status === 403 && /grown-ups/.test(kidJoin.data.error), JSON.stringify(kidJoin.data));
+    ok(`${game}: a kid's phone is turned away, even with the password`, kidJoin.status === 403 && /adult accounts/.test(kidJoin.data.error), JSON.stringify(kidJoin.data));
     const guest = await browser().post(`/api/${game}/rooms/${r.code}/join`, { name: 'Guest', password: 'tacos42' });
     ok(`${game}: a guest with the lobby password gets in`, [200, 201].includes(guest.status), JSON.stringify(guest.data));
     const tvJoin = await browser().post(`/api/${game}/rooms/${r.code}/join`, { name: 'Guest 2' });
     ok(`${game}: without the password, nobody does`, tvJoin.status >= 400);
   }
-  ok('the TV itself can\'t join a grown-ups room as a player', (await tv.post(`/api/partdeux/rooms/${rooms.partdeux.code}/join`, { name: 'TV', password: 'tacos42' })).status === 403);
+  ok('the TV itself can\'t join a adults room as a player', (await tv.post(`/api/partdeux/rooms/${rooms.partdeux.code}/join`, { name: 'TV', password: 'tacos42' })).status === 403);
   for (const [game, r] of Object.entries(rooms)) await tv.post(`/api/${game}/rooms/${r.code}/leave`, { playerId: r.playerId, token: r.token });
 
   console.log('\n-- Back to family --');
   await tv.post('/api/tv/lock');
-  ok('the pass stops working, so no new grown-ups room', (await tv.post('/api/partdeux/rooms', { name: 'TV', screen: true, level: 'spicy', password: 'tacos42' }, pin)).status === 403);
+  ok('the pass stops working, so no new adults room', (await tv.post('/api/partdeux/rooms', { name: 'TV', screen: true, level: 'spicy', password: 'tacos42' }, pin)).status === 403);
 
   return { pass, fail };
 }

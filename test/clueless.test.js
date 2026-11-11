@@ -66,10 +66,10 @@ async function run({ base, root }) {
       }
     }
   }
-  ok('the built-in clues fill a mini and a grown-ups\' grid on every day tried', valid && made === 40, why.slice(0, 3).join('; '));
+  ok('the built-in clues fill a mini and a adults\' grid on every day tried', valid && made === 40, why.slice(0, 3).join('; '));
   ok('every across and down entry is a word with a clue', clued);
   ok('no word appears twice in one grid', unique, why.slice(0, 3).join('; '));
-  ok('the mini is 5 by 5 and the grown-ups\' one 7 by 7', sizes && kidsOnly);
+  ok('the mini is 5 by 5 and the adults\' one 7 by 7', sizes && kidsOnly);
   const a1 = maker.makePuzzle('2026-12-25', 'big', starter), a2 = maker.makePuzzle('2026-12-25', 'big', starter);
   ok('the same day and level always make the same grid and clues', JSON.stringify(a1) === JSON.stringify(a2));
   ok('different days make different grids', maker.makePuzzle('2026-12-26', 'big', starter).letters !== a1.letters);
@@ -115,7 +115,7 @@ async function run({ base, root }) {
 
   console.log('\n-- clueless: the API --');
   const lv = await api('/levels');
-  ok('levels lists the mini and the grown-ups\' crossword, and what help costs', lv.status === 200 &&
+  ok('levels lists the mini and the adults\' crossword, and what help costs', lv.status === 200 &&
     lv.data.levels.map(l => `${l.id}:${l.size}`).join() === 'mini:5,big:7' && lv.data.penalties.reveal === 15000);
   ok('an unknown level is refused', (await api('/start', 'POST', { level: 'huge' })).status === 400);
 
@@ -191,9 +191,9 @@ async function run({ base, root }) {
   ok('the all-time board works', (await api('/board?level=mini&scope=all')).data.length >= 2);
   ok('the run id is long and random, and a made-up one is refused', (await api('/run/0123456789abcdef0123456789abcdef')).status === 404);
 
-  console.log('\n-- clueless: the grown-ups\' crossword --');
+  console.log('\n-- clueless: the adults\' crossword --');
   const big = await api('/start', 'POST', { level: 'big' });
-  ok('the grown-ups\' crossword is 7 by 7', big.status === 200 && big.data.puzzle.size === 7 && big.data.puzzle.blocks.length === 49);
+  ok('the adults\' crossword is 7 by 7', big.status === 200 && big.data.puzzle.size === 7 && big.data.puzzle.blocks.length === 49);
   const bigAns = (await api(`/test/answer/${big.data.runId}`)).data.letters;
   ok('…and different from the mini', bigAns !== ans);
 
@@ -213,11 +213,11 @@ async function run({ base, root }) {
   ok('an empty grid has nothing crossed off', (await api(`/run/${c.data.runId}/solved`, 'POST', { grid: blank })).data.across.length === 0);
 
   const bp = big.data.puzzle, n7 = bp.size;
-  // An across word sharing its row with another word: on the grown-ups' crossword it waits for the whole row.
+  // An across word sharing its row with another word: on the adults' crossword it waits for the whole row.
   const rowOf = e => [...Array(n7).keys()].map(k => e.row * n7 + k).filter(i => bigAns[i] !== '#');
   const shared = bp.across.find(e => rowOf(e).length > e.cells.length) || bp.across[0];
   const s3 = await api(`/run/${big.data.runId}/solved`, 'POST', { grid: only(bigAns, shared.cells) });
-  ok('on the grown-ups\' crossword the rule is the whole line', s3.data.rule === 'line');
+  ok('on the adults\' crossword the rule is the whole line', s3.data.rule === 'line');
   if (rowOf(shared).length > shared.cells.length) {
     ok('…so a right word alone isn\'t crossed off while its row has another word to fill', !s3.data.across.includes(shared.num), JSON.stringify(s3.data));
   }
@@ -242,7 +242,7 @@ async function run({ base, root }) {
   const fSave = await api(`/run/${f1.data.runId}/save`, 'POST', { initials: 'FRE' });
   ok('…but its time doesn\'t go on the board', fSave.status === 409 && /Free play/.test(fSave.data.error));
   const fBig = await api('/start', 'POST', { level: 'big', free: true });
-  ok('free play works for the grown-ups\' crossword too', fBig.status === 200 && fBig.data.free && fBig.data.puzzle.size === 7);
+  ok('free play works for the adults\' crossword too', fBig.status === 200 && fBig.data.free && fBig.data.puzzle.size === 7);
 
   console.log('\n-- clueless: clue packs in admin --');
   ok('the clue pack pages need the admin', (await api('/admin/batch?kind=kids')).status === 401 &&

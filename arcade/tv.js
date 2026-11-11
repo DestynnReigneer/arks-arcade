@@ -12,7 +12,7 @@
 //
 // Adults' night: the TV asks for an unlock code, an adult approves it on
 // their phone, and while ARKS ID says the TV's session has adultMode set the
-// TV counts as a grown-up for adult levels (arcade/arksid.js). Back to family
+// TV counts as an adult for adult levels (arcade/arksid.js). Back to family
 // ends it at once. The TV reports games being played, at most once a minute,
 // so adults' night doesn't run out mid-game.
 
@@ -132,7 +132,7 @@ function createTv({ arks, now = Date.now }) {
       });
     });
 
-    // Adults' night: a code and QR code for a grown-up's phone.
+    // Adults' night: a code and QR code for an adult's phone.
     router.post('/api/tv/unlock', async (req, res) => {
       const me = await tvOf(req);
       if (!me) return res.status(403).json({ error: 'Only a TV that\'s set up can have an adults\' night.' });

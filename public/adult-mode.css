@@ -1,7 +1,7 @@
 /* One adult look for every game in the arcade. Any game switches it on by
    putting .adult-mode on <html>. It's the same in Wordless, Rambler and Short
    Fuse on purpose: a deep plum screen with a hot-pink frame and an
-   "ADULTS ONLY" tab means "grown-ups only" from across the room, whichever
+   "ADULTS ONLY" tab means "adults only" from across the room, whichever
    game it is. The !important rules win over a theme's own background. */
 html.adult-mode {
   --adult-bg: #1a0626;

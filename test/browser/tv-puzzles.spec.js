@@ -24,7 +24,7 @@ test.beforeEach(({}, info) => {
 
 const fake = (p, body) => fetch(FAKE + p, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then(r => r.json());
 
-// The first time, the TV shows a code; a grown-up's phone approves it. This
+// The first time, the TV shows a code; an adult's phone approves it. This
 // file sets up the kitchen's TV, so it can run alongside the other TV test
 // files (setting a TV up again signs its old sign-in out).
 async function pairTv(page, p) {

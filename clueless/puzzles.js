@@ -124,7 +124,7 @@ function batch(kind, count = 40) {
 function addPack({ label, kind, text }) {
   const name = String(label || '').replace(/\s+/g, ' ').trim().slice(0, 40);
   if (!name) throw Object.assign(new Error('Give the pack a name, so you can find it later.'), { status: 400 });
-  if (!clues.KINDS[kind]) throw Object.assign(new Error('Pick Family or Grown-up clues.'), { status: 400 });
+  if (!clues.KINDS[kind]) throw Object.assign(new Error('Pick Family or Tricky clues.'), { status: 400 });
   const { keep, skipped, error } = clues.checkPaste(text);
   if (error) throw Object.assign(new Error(error), { status: 400 });
   const fresh = keep.filter(k => {

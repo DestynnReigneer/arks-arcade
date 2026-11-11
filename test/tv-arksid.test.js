@@ -55,7 +55,7 @@ async function run({ base, fake }) {
   st = (await tv.call('/api/tv/state')).data;
   ok('…in family mode', st.signedIn && st.tv.name === 'Living room TV' && st.adultMode === null);
   let me = (await tv.call('/api/arksid/me')).data;
-  ok('the arcade sees a TV with the kid role, not a grown-up', me.signedIn && me.tv === true && me.role === 'kid' && me.adult === false);
+  ok('the arcade sees a TV with the kid role, not an adult', me.signedIn && me.tv === true && me.role === 'kid' && me.adult === false);
   ok('the pairing can\'t be picked up twice', (await tv.call('/api/tv/pair')).data.status === 'expired');
   ok('a code nobody answers runs out and starts again', (await (async () => {
     const b = browser();
@@ -81,7 +81,7 @@ async function run({ base, fake }) {
   st = (await tv.call('/api/tv/state?waiting=1')).data;
   ok('the TV sees adults\' night within a couple of seconds, and who unlocked it', !!st.adultMode && st.adultMode.by.name === 'Kim' && st.adultMode.until > Date.now(), JSON.stringify(st));
   me = (await tv.call('/api/arksid/me')).data;
-  ok('the TV now counts as a grown-up for adult levels', me.adult === true && !!me.adultMode);
+  ok('the TV now counts as an adult for adult levels', me.adult === true && !!me.adultMode);
   const adultPass = (await tv.post('/api/arksid/adult-pass')).data.pass;
   ok('it gets an adult pass', typeof adultPass === 'string' && adultPass.startsWith('ap.'));
   ok('…which opens the adult questions', (await tv.call('/api/trivia/questions?level=spicy&count=5', { headers: { 'X-Adult-Pin': adultPass } })).status === 200);
