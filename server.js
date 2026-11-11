@@ -50,8 +50,8 @@ const HEX_COLOR_RE = /^#[0-9a-fA-F]{3,8}$/;
 const INITIALS_RE = /^[A-Z0-9]{1,3}$/;
 
 // ---- Admin auth ----
-// One shared password for a solo/family admin, not a full account system.
-// Signing in sets a session cookie; see arcade/admin-session.js.
+// An ARKS ID admin is straight in; the PIN and password in .env are for
+// recovery (and the only way in without ARKS ID). See arcade/admin-session.js.
 const adminSession = require('./arcade/admin-session');
 const { requireAdmin } = adminSession;
 app.use('/api/admin', adminSession.routes());
@@ -62,7 +62,7 @@ app.get('/api/admin/version', requireAdmin, (req, res) => res.json(version()));
 // ---- Optional: signing in through ARKS ID (arcade/arksid.js) ----
 // Off unless ARKS_ID_URL and ARKS_ID_SECRET are set. With it on, profiles,
 // names, the boards choice and adult levels follow ARKS ID instead of the
-// arcade's own profiles, and adult levels are off.
+// arcade's own profiles. Without it, adult levels are off.
 const arksid = require('./arcade/arksid');
 {
   const problem = arksid.problem();
@@ -88,6 +88,8 @@ if (arks) {
   // (arcade/switches.js): the list of games goes now, and again when it changes.
   require('./arcade/switches').createArcadeSwitches({ client: arks.client }).start();
   adultPin.usePasses(arks.passOk);
+  // Signed in with an ARKS ID admin account = straight into the admin page (arcade/admin-session.js).
+  adminSession.useArksId(async req => { const me = await arks.current(req); return !!(me && !me.tv && me.account && me.account.role === 'admin'); });
   // A kid's, a teen's or a TV's phone can't join a adults room (arcade/adult-join.js).
   require('./arcade/adult-join').use(req => arks.current(req));
   app.use(arks.routes());

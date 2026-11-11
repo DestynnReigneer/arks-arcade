@@ -305,22 +305,79 @@ ${theme.words.join(', ')}`;
     }
   }
 
+  // ---- the way in (2026-11-11, the same in every ARKS app) ----
+  // Signed in with an ARKS ID admin account: straight in, and the button in the
+  // side menu is Exit (back to the arcade). Anyone else: the not-the-admin card,
+  // whose link leads to recovery (the admin PIN, then the password, then where
+  // to look). Without ARKS ID, recovery is the way in, so it shows right away.
+  let ways = { arksId: false, hasPin: false, hasPassword: true, signedIn: false };
+  const card = id => {
+    lockScreen.classList.remove('hidden');
+    for (const x of ['gateNope', 'gatePin', 'gatePw', 'gateHelp']) document.getElementById(x).hidden = x !== id;
+  };
+
   async function showAdmin() {
     lockScreen.classList.add('hidden');
     adminContent.classList.remove('hidden');
+    lockBtn.textContent = ways.signedIn ? '↩ Exit to the arcade' : '🔒 Lock admin panel';
     await Promise.all([loadRequests(), loadThemes(), loadVersion()]);
   }
 
-  // The server checks the password once and answers with a session cookie the
+  async function showNope() {
+    card('gateNope');
+    try {
+      const c = await apiGet('/api/custom');
+      const pic = c && c.brand && c.brand.notAdmin;
+      if (pic) { document.getElementById('nopeImg').src = pic; }
+      document.getElementById('nopeShot').hidden = !pic;
+      document.getElementById('nopeLock').hidden = !!pic;
+    } catch (e) { /* the plain lock is fine */ }
+    document.getElementById('nopeBack').focus();
+  }
+  function showPin(msg) {
+    if (!ways.hasPin) return showPw(msg);
+    card('gatePin');
+    const pin = document.getElementById('pinInput');
+    document.getElementById('pinErr').textContent = msg || '';
+    document.getElementById('usePw').hidden = !ways.hasPassword;
+    PinPad.clear(pin);
+    pin.focus();
+  }
+  function showPw(msg) {
+    card('gatePw');
+    lockError.textContent = msg || '';
+    document.getElementById('usePin').hidden = !ways.hasPin;
+    tokenInput.value = '';
+    tokenInput.focus();
+  }
+  // Recovery: the server checks once and answers with a session cookie the
   // page itself can't read; every admin request after that carries it.
+  async function recover(body) {
+    const res = await fetch('/api/admin/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const data = await res.json().catch(() => ({}));
+    return { ok: res.ok, status: res.status, data };
+  }
+  PinPad.attach(document.getElementById('pinInput'), async pin => {
+    try {
+      const r = await recover({ pin });
+      if (r.ok) { ways.signedIn = false; return showAdmin(); }
+      if (r.data.noPin) { ways.hasPin = false; return showPw(r.data.error); }
+      document.getElementById('pinErr').textContent = r.data.error || 'Incorrect PIN.';
+      PinPad.clear(document.getElementById('pinInput'));
+    } catch (e) { document.getElementById('pinErr').textContent = 'The arcade didn\'t answer. Try again in a moment.'; }
+  }, { profile: true });
+
   async function tryUnlock(password) {
     lockError.textContent = '';
     try {
-      await apiPost('/api/admin/login', { password });
+      const r = await recover({ password });
+      if (r.ok) { tokenInput.value = ''; ways.signedIn = false; return showAdmin(); }
+      // Paused for too many tries: say so here. Plainly wrong: where to look next.
+      if (r.status === 429 || r.data.noPassword) { lockError.textContent = r.data.error || 'Too many tries, wait a few minutes, then try again.'; return; }
       tokenInput.value = '';
-      await showAdmin();
+      card('gateHelp');
     } catch (e) {
-      lockError.textContent = e.message || 'Wrong password.';
+      lockError.textContent = 'The arcade didn\'t answer. Try again in a moment.';
     }
   }
 
@@ -328,18 +385,37 @@ ${theme.words.join(', ')}`;
   tokenInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') tryUnlock(tokenInput.value.trim());
   });
+  document.getElementById('usePw').addEventListener('click', () => showPw());
+  document.getElementById('usePin').addEventListener('click', () => showPin());
+  document.getElementById('nopeRecover').addEventListener('click', () => showPin());
+  document.getElementById('tryAgain').addEventListener('click', () => showPin());
+  // Still locked out: the setup guide's section on the .env file.
+  document.getElementById('helpLink').href = 'https://github.com/DestynnReigneer/arks-arcade/blob/main/docs/SETUP.md#3-the-env-file';
+  // Oops, back to safety: back where they came from, or the arcade.
+  const goBack = () => {
+    if (document.referrer && new URL(document.referrer).origin === location.origin && history.length > 1) history.back();
+    else location.href = '/';
+  };
+  document.getElementById('nopeBack').addEventListener('click', goBack);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !document.getElementById('gateNope').hidden && !lockScreen.classList.contains('hidden')) goBack(); });
 
   lockBtn.addEventListener('click', async () => {
+    // An ARKS ID admin has nothing to lock: back to the arcade.
+    if (ways.signedIn) { location.href = '/'; return; }
     try { await apiPost('/api/admin/logout'); } catch (e) { /* signed out either way */ }
     adminContent.classList.add('hidden');
-    lockScreen.classList.remove('hidden');
     tokenInput.value = '';
+    if (ways.arksId) showNope(); else showPin();
   });
 
   (async function init() {
     try { localStorage.removeItem(OLD_TOKEN_KEY); } catch (e) { /* unavailable */ }
     try {
-      if ((await apiGet('/api/admin/session')).admin) await showAdmin();
-    } catch (e) { /* stay on the lock screen */ }
+      const r = await apiGet('/api/admin/session');
+      ways = { arksId: !!r.arksId, hasPin: !!r.hasPin, hasPassword: r.hasPassword !== false, signedIn: !!r.signedIn };
+      if (r.admin) return await showAdmin();
+      if (ways.arksId) return showNope();
+      showPin();
+    } catch (e) { showPin(); }
   })();
 })();

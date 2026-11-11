@@ -66,6 +66,29 @@ The maintainer asked for the adult unlock to be the ARKS ID login, so there's no
   works under `NODE_ENV=test` (`test/unit.test.js` checks it's refused otherwise). A typed PIN could be guessed, so
   it's gone; the pass is signed by the server.
 
+## The admin page: straight in for an ARKS ID admin, and the ARKS look (2026-11-11)
+
+The maintainer's call, the same in all three ARKS apps, from an approved mockup.
+
+- **The way in** (`arcade/admin-session.js`): with ARKS ID on, someone signed in with an ARKS ID admin account is
+  straight in. `/api/admin/session` gives them the usual admin cookie marked `viaArks` (12 hours, renewed each time
+  the page opens), and `requireAdmin` asks ARKS ID again on every admin request, so signing out there ends it. The
+  quick `isAdmin()` (theme lists, photos) accepts the cookie as before. Recovery, and the only way in without ARKS ID:
+  `ADMIN_PIN` (new, optional, 6 digits) on a PIN pad, or `ADMIN_PASSWORD`, through `/api/admin/login` (`{ pin }` or
+  `{ password }`, 10 tries per 15 minutes). The `X-Admin-Token` header still works for scripts and the tests.
+- **The cards** (`public/admin.html`, `public/admin.js`, `public/admin-look.css`): anyone else gets the not-the-admin
+  card ("U n0 1337, 4DmiN", Oops, back to safety, and "I'm the admin, but I can't get in"). Its picture is
+  `brand/not-admin.jpg` on the server (`notAdmin` in `/api/custom`'s brand list), never in this public repo; without
+  it the card shows a lock. The link opens recovery: the PIN pad, "Use the password instead", and after a wrong
+  password a Click Here card linking to `docs/SETUP.md`'s `.env` section. Without ARKS ID, recovery shows right away.
+- **The look:** the shared top bar (`topbar.js`) with Admin lit in turquoise, the tabs as a side menu grouped into the
+  arcade and game content (a swipeable strip on a phone), the sections as cards. Every tab's contents are unchanged:
+  every id the admin scripts use is still on the page (checked before and after). The Lock button was inside the
+  Wordless tab only; it's in the side menu now, as **Exit to the arcade** for an ARKS ID admin and **Lock admin panel**
+  for a recovery visit. The banner stays above the cards.
+- **Tests:** `test/arksid.test.js` (an ARKS ID admin straight in, a kid turned away, recovery with the PIN),
+  `test/browser/admin-gate.spec.js` (the cards, Click Here, every tab, Lock).
+
 ## The trophy page (2026-11-10)
 
 Built from the mockup the maintainer approved, with their answers to its three questions.
