@@ -639,7 +639,7 @@
         <tr><td>📡 Host / 🔗 Join</td><td>Everyone answers on their own phone at the same time. Fastest right answer scores most.</td></tr>
       </table>` },
     { emoji: '🎚️', title: 'Pick what you like', html: `<p>Choose <b>genres</b> (or none for a mix), a <b>difficulty</b>, how many questions, and how long to answer.</p><p>Got an idea for a topic? Tap <b>💡 Suggest a topic</b>.</p>` },
-    { emoji: '🔞', title: 'For grown-ups', html: `<p><b>Cheeky</b>, <b>Spicy</b> and <b>Filthy</b> unlock with the adult PIN and get spicier as you go.</p><p>🍺 <b>Drinking</b>: wrong answers drink, three in a row gives drinks, last place finishes theirs.</p><p>💋 <b>Couples dares</b>: miss a question, do a dare. The heat matches the level.</p><div class="tut-tip">Tap <b>?</b> at the top any time to see this again.</div>` }
+    { emoji: '🔞', title: 'For grown-ups', html: `<p><b>Cheeky</b>, <b>Spicy</b> and <b>Filthy</b> unlock for grown-ups signed in with ARKS ID and get spicier as you go.</p><p>🍺 <b>Drinking</b>: wrong answers drink, three in a row gives drinks, last place finishes theirs.</p><p>💋 <b>Couples dares</b>: miss a question, do a dare. The heat matches the level.</p><div class="tut-tip">Tap <b>?</b> at the top any time to see this again.</div>` }
   ]);
 
   // ---- wiring ---------------------------------------------------------------------------------

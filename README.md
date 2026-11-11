@@ -137,7 +137,7 @@ A wheel-and-phrase puzzle game that follows the TV show's turns. On your turn yo
 - **Sounds** are our own, made in the browser like the rest of the arcade's (`public/blip.js`), in the spirit of a TV wheel game without using any of the show's recordings: a bright ding for each letter that lights up, a low buzzer for a letter that isn't there, a wrong answer or running out of time, a click for every peg the wheel passes, a sting for Bankrupt and a fanfare when the puzzle is solved.
 - **Sound off:** each of those has something to see too. Letters glow as they turn over, the buzzer flashes the board red with a big ✕ over the wheel, the pointer kicks at every peg, and Bankrupt, Lose a Turn, Time's up and Solved show over the wheel.
 
-Levels run Kids, Cheeky, Spicy, Filthy like the party card games; the three adult levels have their own built-in banks (`spinsolve/puzzles.js`), sit behind the adult PIN, switch on the adult look, and keep their own unannounced high-score board. Players can suggest a theme from the game; the admin builds packs at any level in the Spin & Solve tab by copying a prompt and pasting the AI's answer, and every pasted puzzle is checked to fit the board and use American spelling.
+Levels run Kids, Cheeky, Spicy, Filthy like the party card games; the three adult levels have their own built-in banks (`spinsolve/puzzles.js`), only open for a grown-up signed in with ARKS ID, switch on the adult look, and keep their own unannounced high-score board. Players can suggest a theme from the game; the admin builds packs at any level in the Spin & Solve tab by copying a prompt and pasting the AI's answer, and every pasted puzzle is checked to fit the board and use American spelling.
 
 ### Chess (`/chess.html`)
 
@@ -281,7 +281,7 @@ A word race. Everyone gets the same 6 or 7 letters, mixed up, and races to find 
 - **A daily you've played fades:** its Daily button goes pale, can't be started again, and says "Come back tomorrow for a new one" on hover, on focus (the TV's highlight) and when tapped (phones have no hover), and free play is picked instead. For a profile the server says which are done (`POST /daily-status`); a guest's device remembers it.
 - **Free play:** new letters every game, 3, 5 or 7 rounds, any round length. These scores don't go on a board.
 - **Rooms, a phone each:** the host gets a four-letter code (and a QR code), picks the rounds, the time and the word list, and everyone races on the same letters at once. Each phone sees how many words the others have found and a star when someone gets the full word, but not their words until the round ends. Latecomers can join mid-game, and rooms show on the Join a game board.
-- **Family words or unfiltered:** the family list is the kids dictionary (`words/blocklist-kids.txt` keeps rude words out). Unfiltered is the full list and follows the arcade's adult rules: the adult PIN (or an ARKS ID adult pass) to play it, and a lobby password the host makes up for a room. Guests get in with the password, never the PIN. Unfiltered rounds sometimes hide a cheeky word from `words/spice-adult.txt`.
+- **Family words or unfiltered:** the family list is the kids dictionary (`words/blocklist-kids.txt` keeps rude words out). Unfiltered is the full list and follows the arcade's adult rules: a grown-up's ARKS ID sign-in to play it, and a lobby password the host makes up for a room. Guests get in with the password. Unfiltered rounds sometimes hide a cheeky word from `words/spice-adult.txt`.
 - **The server decides everything** (`scuffle/`): it picks and mixes the letters, starts each round's clock, checks every word (in the letters, on the chosen list, not already found) and adds up every score. The page sends only the words people spell; a score or time in the request is ignored, words after the clock (plus a second and a half for the network) are refused, and a round's words are only sent once it's over.
 - **Phones first:** big letter tiles to tap, Shuffle, Back, Clear and Enter, the words you've found, and a countdown. On a keyboard you can just type. After each round you see the full word and every word you missed.
 
@@ -315,7 +315,7 @@ It was called Criss Cross until November 2026. Only the name changed: the page i
 - **On this phone** is pass-and-play, open to guests: two to four names, and the computer can take any seat. Between turns the tiles are hidden behind a "Pass the phone to Sam" screen. Only that device can open the game (it keeps a key).
 - **The rules:** the first word covers the star in the middle. After that, a turn's tiles go in one line, across or down, with no gaps, joined onto tiles already on the board, and every new word made (crosses included) has to be on the game's word list. Two-letter words count. Instead of playing you can swap tiles (when 7 or more are left in the bag), pass, or leave. The game ends when the bag is empty and someone uses their last tile (they get everyone else's leftover points, which everyone else loses), or after six scoreless turns in a row (everyone loses their leftovers), or when only one player is left.
 - **Points:** our own 66-tile bag and values: common letters are worth 1, and Q and Z are worth 10. Two blanks can be any letter and score nothing. The board's bonus squares double or triple a letter (2L, 3L) or a word (2W, 3W, and the star in the middle), on the turn a tile lands on them. Using all seven tiles in one turn adds 40.
-- **Words:** family words (the kids list, `words/blocklist-kids.txt` keeps rude words out) or unfiltered. An unfiltered game follows the adult rules for every player, not just the host: each request needs the adult PIN (or an ARKS ID adult pass), and with ARKS ID on, every invited profile has to belong to a grown-up's account.
+- **Words:** family words (the kids list, `words/blocklist-kids.txt` keeps rude words out) or unfiltered. An unfiltered game follows the adult rules for every player, not just the host: each request needs a grown-up's ARKS ID adult pass, and with ARKS ID on, every invited profile has to belong to a grown-up's account.
 - **The server decides everything** (`crisscross/`): it keeps the bag and every rack, shows each player only their own rack (everyone's leftovers are shown once the game is over), checks every move and finds every new word, and adds up the score. The page only sends where its tiles went; a score in the request is ignored.
 - **The computer** (`crisscross/bot.js`) plays the best-scoring word it can find with its rack along every row and column. It doesn't use blanks, and when it can't find a word it swaps or passes.
 - **Phones first:** tap a tile and then a square, or drag a tile onto the board; tap a placed tile to take it back. Shuffle, Recall, Swap and Pass, a Zoom button that makes the board bigger and lets it slide around inside its own box, the score of your word before you play it, the last move lit up, and a list of every word played. There's no chat between players, on purpose.
@@ -323,7 +323,7 @@ It was called Criss Cross until November 2026. Only the name changed: the page i
 
 #### The Words with Family API
 
-Everything is under `/api/crisscross`. Who's asking goes in headers, never the address: `X-Profile-Token` for online games, `X-Game-Key` for a game on one phone, and `X-Adult-Pin` for an unfiltered game. A refusal because of the adult PIN says `adult: true`.
+Everything is under `/api/crisscross`. Who's asking goes in headers, never the address: `X-Profile-Token` for online games, `X-Game-Key` for a game on one phone, and `X-Adult-Pin` (the grown-up's ARKS ID adult pass) for an unfiltered game. A refusal because of it says `adult: true`.
 
 | Call | What it does |
 |---|---|
@@ -421,7 +421,7 @@ Everything is under `/api/tumbler`.
 
 Multiple-choice trivia. Solo (high-score board), take turns on one phone, or a room where everyone answers on their own phone at the same time and faster right answers score more. Pick genres, difficulty, how many questions and how long to answer.
 
-Questions come from a built-in bank (`trivia/bank.js`), packs built from an AI prompt in the admin Trivia tab (with player topic requests), and Open Trivia DB (opentdb.com, CC BY-SA 4.0), which the server downloads in the background and saves for offline play (`TRIVIA_ONLINE=off` to skip it). Cheeky, Spicy and Filthy levels sit behind the adult PIN, with optional Drinking rules and Couples dares that get spicier with the level.
+Questions come from a built-in bank (`trivia/bank.js`), packs built from an AI prompt in the admin Trivia tab (with player topic requests), and Open Trivia DB (opentdb.com, CC BY-SA 4.0), which the server downloads in the background and saves for offline play (`TRIVIA_ONLINE=off` to skip it). Cheeky, Spicy and Filthy levels only open for a grown-up signed in with ARKS ID, with optional Drinking rules and Couples dares that get spicier with the level.
 
 #### Know-It-All on a TV
 
@@ -489,7 +489,7 @@ The rooms gained `screen: true` when making one (`POST /api/partdeux/rooms`, `/a
 ### Shared
 
 - Ships as a single Docker image with a SQLite file as its only state
-- The home page's Join a game board lists every hosted room in any game, with scan-to-join QR codes in each game's lobby and walkthrough. Adult rooms are listed too but locked: hosting one needs the adult PIN and a lobby password the host makes up; guests only need that password
+- The home page's Join a game board lists every hosted room in any game, with scan-to-join QR codes in each game's lobby and walkthrough. Adult rooms are listed too but locked: hosting one needs a grown-up's ARKS ID sign-in and a lobby password the host makes up; guests only need that password
 - The home page's Continue row lists the games you left unfinished, on any device: your Words with Family games (the ones waiting on you first) and today's Sudoku and Clueless Crosswords puzzles you started. It only shows your own, and only when you have some. The server works out who is asking from the profile token (`GET /api/continue`), so nobody can look up someone else's games
 - Spin & Solve, Chess and Dino Dash share one high-score table (`/api/scores/:game`); new #1s post to the Comm Center
 - Feedback from anywhere: a tiny red bug sits in the bottom-right corner of every page. Tap it, then tap "Found a bug? Tell us." to open a card where you write what happened, pick the kind and the game, and add a screenshot (snap the page, or upload one) that you can draw on with a pen, a box or an arrow. The home page's Send feedback button and the `/feedback` cheat code open the same card. Messages land in the admin's Comm Center inbox, and ping Discord when `DISCORD_WEBHOOK_URL` is set. A picture can be up to 1.5 MB (the card shrinks screenshots to fit), and the arcade keeps up to 500 MB of them in all; past that, notes still arrive without their pictures and the admin gets one note about it. Someone without a profile can send 5 notes an hour from one device, a profile can send 30 in 3 minutes, and the admin has no limit
@@ -561,7 +561,6 @@ See **[docs/SETUP.md](docs/SETUP.md)** for every setting in `.env`, a step-by-st
 |---|---|
 | `ADMIN_PASSWORD` | Password for `/admin.html`. Blank keeps admin locked. |
 | `ARCADE_NAME` | "<name> Arcade" on the home page. |
-| `ADULT_PIN` | Optional 6-digit PIN for adult content (changeable from admin). |
 | `TZ` | Your timezone, for daily resets. |
 | `PUBLIC_URL` | The address QR codes use (e.g. `https://arcade.example.com`). |
 | `TRUST_PROXY` | `1` when behind one reverse proxy like Nginx Proxy Manager. |
@@ -587,7 +586,7 @@ Visit `/admin.html` and enter your `ADMIN_PASSWORD`.
 
 **Arcade:**
 - Profiles: approve or turn down "New profile" requests, rename, clear a forgotten PIN, unlock a profile locked by wrong PINs, or remove a profile (their old scores stay on the boards)
-- Set, change or remove the adult PIN, and unblock devices that tried too many wrong PINs
+- See whether adult levels are on (they need ARKS ID), and unblock devices that tried too many wrong PINs
 - Home page games: reorder them, hide them, or turn one off while it's being worked on (it stays on the home page, faded, under a "Pardon our dust" sign)
 - Comm Center: the feedback inbox (with screenshots, the page and device each message came from, and a Copy for chat button), announcements, high-score boards, Spin & Solve and Know-It-All packs and requests
 
@@ -637,7 +636,7 @@ clueless/                 Clueless Crosswords: shapes and the filler (grid.js), 
 tumbler/                  Tumbler Rumble's runs, the replay check and the boards (/api/tumbler; the rules are public/tumbler-engine.js)
 spinsolve/                Spin & Solve levels, adult banks, packs and requests (/api/spinsolve)
 trivia/                   Know-It-All questions, packs, Open Trivia DB download, rooms (/api/trivia)
-arcade/                   Arcade-wide pieces: Comm Center, adult PIN, high scores, profiles, stats and the error log, Wordless hints, notifications (push.js)
+arcade/                   Arcade-wide pieces: Comm Center, adult levels (ARKS ID only), high scores, profiles, stats and the error log, Wordless hints, notifications (push.js)
 
 words/                    Dictionaries, baked into the image (see above)
 

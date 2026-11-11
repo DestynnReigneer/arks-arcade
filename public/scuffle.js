@@ -789,7 +789,7 @@
     },
     {
       emoji: '🔞', title: 'Family words or unfiltered',
-      html: `<p><b>Family words</b> leaves rude words out, so it's good for kids. <b>Unfiltered</b> counts every word on the list, rude ones included, and needs the adult PIN. A room on the unfiltered list gets a lobby password so kids can't wander in.</p>
+      html: `<p><b>Family words</b> leaves rude words out, so it's good for kids. <b>Unfiltered</b> counts every word on the list, rude ones included, and is for grown-ups signed in with ARKS ID. A room on the unfiltered list gets a lobby password so kids can't wander in.</p>
         <div class="tut-tip">Tap <b>?</b> at the top any time to see this again.</div>`
     }
   ]);

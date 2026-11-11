@@ -614,7 +614,7 @@
         <tr><td>+4 Wild Draw Four</td><td>Pick the color; the next player draws 4.</td></tr>
       </table>` },
     { emoji: '🚨', title: 'Say "Uh-Oh!"', html: '<p>When you\'re about to play your <b>second-to-last card</b>, tap <b>Say "Uh-Oh!"</b> first.</p><p>Forget, and anyone can <b>catch</b> you before the next turn: you draw 2.</p>' },
-    { emoji: '🍺', title: 'Grown-up decks', html: '<p>Cheeky, Spicy and Filthy decks have naughtier card names, behind the adult PIN.</p><p><b>🍺 Drinking</b>: drink a sip for every card you\'re forced to draw, drink when you\'re caught, and when someone wins, everyone else drinks.</p><div class="tut-tip">Tap <b>?</b> at the top any time to see this again.</div>' }
+    { emoji: '🍺', title: 'Grown-up decks', html: '<p>Cheeky, Spicy and Filthy decks have naughtier card names, for grown-ups signed in with ARKS ID.</p><p><b>🍺 Drinking</b>: drink a sip for every card you\'re forced to draw, drink when you\'re caught, and when someone wins, everyone else drinks.</p><div class="tut-tip">Tap <b>?</b> at the top any time to see this again.</div>' }
   ]);
 
   // Back: from a game, its results or a room's lobby to the setup screen

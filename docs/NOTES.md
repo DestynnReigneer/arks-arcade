@@ -49,6 +49,23 @@ order they were clicked, and keep the rest pinned here.
 - Building the trophy page, and Clueless Crosswords keeping its letters on the server so they follow you to another
   device the way Sudoku's squares do.
 
+## Adult levels need ARKS ID, and the adult PIN is gone (2026-11-11)
+
+The maintainer asked for the adult unlock to be the ARKS ID login, so there's no PIN to guess.
+
+- **`arcade/adult-pin.js`**: `matches()` only accepts the signed adult pass a grown-up's ARKS ID sign-in gets
+  (`arksid.passOk`). Without ARKS ID nothing matches, so every adult level, theme, deck and word list is off.
+  `status()` always says `set: true` (so the games show their unlock screen) and `arksId` says which way it goes.
+  `set()` refuses. The header and field are still called `X-Adult-Pin` and `pin`, names kept from the PIN days.
+- **`ADULT_PIN` is gone** from `.env.example`, both compose files, `docs/SETUP.md` and the README. An old value in `.env`
+  is ignored, with a note at startup. The admin page's Adult PIN card is now a read-only "Adult levels" note.
+- **The PIN pads** (`public/pin-pad.js`): every pad is an adult one unless attached with `{ profile: true }` (the
+  profile PIN in `profile.js`). With ARKS ID it fetches the pass as before; without it, it says adult levels need ARKS
+  ID. The games' hints and How to play say "for grown-ups signed in with ARKS ID" instead of "enter the adult PIN".
+- **Tests:** the suite runs most games without ARKS ID, so `test/run.js` sets `TEST_ADULT_PASS`, a pass that only
+  works under `NODE_ENV=test`. Guardian finding from 2026-11-10 (a typed PIN guessable through GET headers) is closed
+  by this: there's no typed PIN left, and the pass is signed by the server.
+
 ## The trophy page (2026-11-10)
 
 Built from the mockup the maintainer approved, with their answers to its three questions.

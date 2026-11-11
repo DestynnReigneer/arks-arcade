@@ -446,7 +446,7 @@
         <tr><td>💣 Uh-Oh!</td><td>A big one. +3</td></tr>
       </table>` },
     { emoji: '🐔', title: 'Chickening out', html: '<p>Don\'t want to? Tap <b>Chicken out</b>. You lose a point, or in <b>🍺 Drinking</b> mode you drink 3 sips instead.</p>' },
-    { emoji: '🔞', title: 'How wild?', html: '<p><b>Family</b> is silly dares for everyone. <b>Cheeky</b>, <b>Spicy</b> and <b>Filthy</b> unlock with the adult PIN and get spicier as you go, from flirty to steamy.</p><p>Hosting an adult game? You\'ll make a lobby password for your guests.</p><div class="tut-tip">Tap <b>?</b> at the top any time to see this again.</div>' }
+    { emoji: '🔞', title: 'How wild?', html: '<p><b>Family</b> is silly dares for everyone. <b>Cheeky</b>, <b>Spicy</b> and <b>Filthy</b> unlock for grown-ups signed in with ARKS ID and get spicier as you go, from flirty to steamy.</p><p>Hosting an adult game? You\'ll make a lobby password for your guests.</p><div class="tut-tip">Tap <b>?</b> at the top any time to see this again.</div>' }
   ]);
 
   // Back: from a game, its results or a room's lobby to the setup screen
