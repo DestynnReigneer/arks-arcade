@@ -13,7 +13,7 @@ const comm = require('./comm');
 // so a typo'd or tampered post can't sit at #1 forever.
 const GAMES = {
   // Adult boards are open to read like every other board (the maintainer's call, 2026-11-11); their #1s are never
-  // announced. Playing the adult levels still needs the adult PIN.
+  // announced. Playing the adult levels still needs a grown-up's ARKS ID sign-in.
   spinsolve: { label: 'Spin & Solve', boards: { solo: 'Solo', adult: 'Adult' }, adultBoards: ['adult'], max: 200000 },
   chess: { label: 'Chess', boards: { easy: 'vs Easy', medium: 'vs Medium', hard: 'vs Hard' }, max: 5000 },
   dino: { label: 'Dino Dash', boards: { run: 'Distance' }, max: 9999999 },

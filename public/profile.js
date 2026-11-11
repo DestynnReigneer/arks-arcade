@@ -413,7 +413,7 @@ const ArcadeProfile = (() => {
     const input = c.querySelector('input');
     PinPad.attach(input, async pin => {
       try { await choose(p, pin); } catch (e) { c.querySelector('.apf-msg').textContent = e.message; PinPad.clear(input); }
-    });
+    }, { profile: true });
     c.querySelector('[data-back]').onclick = showList;
     setTimeout(() => input.focus(), 30);
   }

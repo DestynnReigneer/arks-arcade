@@ -18,7 +18,7 @@ function fail(message, status = 400) {
 const clean = (v, max) => String(v == null ? '' : v).trim().slice(0, max);
 const unlocked = req => adultPin.matches(req.get('X-Adult-Pin') || (req.body && req.body.adultPin) || '');
 function requireLevel(level, req) {
-  if (bank.LEVELS[level].adult && !unlocked(req)) throw fail('That PIN is not right.', 403);
+  if (bank.LEVELS[level].adult && !unlocked(req)) throw fail('Adult levels need a grown-up signed in with ARKS ID.', 403);
 }
 const extrasFor = level => bank.LEVELS[level].adult ? { drinks: bank.DRINKS[level], dares: bank.DARES[level] } : { drinks: null, dares: null };
 const CREDIT = 'Some questions from Open Trivia DB (opentdb.com), licensed CC BY-SA 4.0.';
@@ -81,7 +81,7 @@ module.exports = function triviaRoutes({ requireAdmin, notify, whoIs = null }) {
       res.status(201).json(rooms.create({ name: body.name, settings, password: body.password, screen: body.screen === true }));
     } catch (e) { next(e); }
   });
-  // Guests don't need the adult PIN: an adult game's own lobby password lets
+  // Guests don't need an ARKS ID adult pass: an adult game's own lobby password lets
   // them in. With ARKS ID on, a phone signed in as a kid or a teen (or a TV)
   // is turned away from an adult game whatever it types: joining a game on the
   // TV plays as the phone's own owner, it never unlocks anything.

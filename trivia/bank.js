@@ -1,7 +1,7 @@
 'use strict';
 
 // Know-It-All's built-in content: questions for every level, couples dares,
-// and drinking rules. The adult parts are only ever sent with the adult PIN.
+// and drinking rules. The adult parts are only ever sent with an ARKS ID adult pass.
 // Questions are [genre, difficulty (e/m/h), question, correct, wrong, wrong, wrong].
 
 const LEVELS = {

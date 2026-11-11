@@ -62,7 +62,7 @@ app.get('/api/admin/version', requireAdmin, (req, res) => res.json(version()));
 // ---- Optional: signing in through ARKS ID (arcade/arksid.js) ----
 // Off unless ARKS_ID_URL and ARKS_ID_SECRET are set. With it on, profiles,
 // names, the boards choice and adult levels follow ARKS ID instead of the
-// arcade's own profiles and adult PIN.
+// arcade's own profiles, and adult levels are off.
 const arksid = require('./arcade/arksid');
 {
   const problem = arksid.problem();
@@ -264,7 +264,7 @@ app.get('/api/banner', async (req, res) => {
 });
 
 // Adult-only Wordless themes (and their scores) show up only when the page
-// asks for them with ?adult=1 and the adult PIN, or with no PIN set at all.
+// asks for them with ?adult=1 and a grown-up's ARKS ID adult pass.
 const adultUnlocked = req => req.query.adult === '1' && adultPin.matches(req.get('X-Adult-Pin'));
 
 app.post('/api/adult-check', adultPin.tryLimiter(), (req, res) => {
@@ -326,13 +326,13 @@ app.get('/api/wordless/hints', (req, res) => {
   const theme = db.getTheme(String(req.query.theme || ''));
   const word = String(req.query.word || '').toLowerCase();
   if (!theme || !WORD_RE.test(word)) return res.status(400).json({ error: 'Unknown theme or word' });
-  if (theme.adult && !adultUnlocked(req)) return res.status(403).json({ error: 'That PIN is not right.' });
+  if (theme.adult && !adultUnlocked(req)) return res.status(403).json({ error: 'Adult levels need a grown-up signed in with ARKS ID.' });
   res.json(wordlessHints.hintsFor(theme, word, dictionary.load().common));
 });
 
 app.get('/api/themes', (req, res) => {
   if (req.query.adult === '1' && !adultUnlocked(req)) {
-    return res.status(403).json({ error: 'That PIN is not right.' });
+    return res.status(403).json({ error: 'Adult levels need a grown-up signed in with ARKS ID.' });
   }
   // The admin page lists every theme, so adult ones can be deleted too.
   const isAdmin = adminSession.isAdmin(req);
@@ -539,7 +539,7 @@ app.listen(PORT, err => {
   }
   if (arks) {
     console.log('Signing in through ARKS ID is on: profiles and adult levels follow ARKS ID.');
-  } else if (adultPin.status().set) {
-    console.log('Adult PIN is set — adult content requires it.');
+  } else {
+    console.log('ARKS ID sign-in is off, so adult levels are off.');
   }
 });
