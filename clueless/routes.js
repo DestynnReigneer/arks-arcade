@@ -81,7 +81,7 @@ db.db.exec(`
 const fail = (message, status = 400, extra = {}) => Object.assign(new Error(message), { status, ...extra });
 const profiles = () => require('../arcade/profiles');
 const levelOf = level => {
-  if (!maker.LEVELS[level]) throw fail('Pick a puzzle: the family mini or the grown-ups\' one.');
+  if (!maker.LEVELS[level]) throw fail('Pick a puzzle: the family mini or the adults\' one.');
   return level;
 };
 
@@ -225,7 +225,7 @@ function reveal(id, body, now = Date.now()) {
 // Which clues to cross off in the lists. The rule depends on the level, and
 // How to play explains both:
 //  - the family mini crosses a clue off as soon as its word is right;
-//  - the grown-ups' crossword waits until the whole line is right: an across
+//  - the adults' crossword waits until the whole line is right: an across
 //    clue once every square in its row is right, a down clue once every
 //    square in its column is. So a crossed-off clue there gives away less.
 // Only filled squares can be right, and nothing is said about which letters

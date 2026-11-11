@@ -493,7 +493,7 @@ const ArcadeProfile = (() => {
   function showNew() {
     const c = card();
     const chosen = { value: Avatars.DEFAULT };
-    c.innerHTML = '<h2>New profile</h2><p>A grown-up approves new profiles in the admin page. You can play as a guest until then.</p>' +
+    c.innerHTML = '<h2>New profile</h2><p>An adult approves new profiles in the admin page. You can play as a guest until then.</p>' +
       '<label>Your name</label><input data-name maxlength="16" placeholder="e.g. Sam">' +
       '<label>Pick an avatar</label><div data-av></div>' +
       '<label>PIN (optional, 6 digits) to keep your profile yours</label><input data-pin type="password" inputmode="numeric" maxlength="6" autocomplete="new-password" placeholder="Leave blank for no PIN">' +
@@ -503,7 +503,7 @@ const ArcadeProfile = (() => {
     c.querySelector('[data-ok]').onclick = async () => {
       try {
         await api('', { name: c.querySelector('[data-name]').value, avatar: chosen.value, pin: c.querySelector('[data-pin]').value.trim() });
-        c.innerHTML = '<h2>🙌 Sent!</h2><p>Once a grown-up approves it in the admin page, your profile shows up here. Play as a guest until then.</p><div class="apf-row"><button class="apf-btn apf-main" data-back>OK</button></div>';
+        c.innerHTML = '<h2>🙌 Sent!</h2><p>Once an adult approves it in the admin page, your profile shows up here. Play as a guest until then.</p><div class="apf-row"><button class="apf-btn apf-main" data-back>OK</button></div>';
         c.querySelector('[data-back]').onclick = showList;
       } catch (e) { c.querySelector('.apf-msg').textContent = e.message; }
     };

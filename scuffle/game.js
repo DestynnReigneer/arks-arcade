@@ -156,7 +156,7 @@ function makeRound(word, profile, rng) {
 const lengthFor = (i, total) => (i < Math.ceil(total / 2) ? 6 : 7);
 
 function pickWord(rng, length, profile, used) {
-  // Grown-up rounds now and then hide a cheeky word instead.
+  // Adult rounds now and then hide a cheeky word instead.
   if (profile === 'adult' && rng() < 0.3) {
     const spice = spicyWords().filter(w => w.length === length && !used.has(w));
     for (let tries = 0; tries < 10 && spice.length; tries++) {

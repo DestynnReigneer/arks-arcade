@@ -24,8 +24,8 @@ test.beforeEach(({}, info) => {
 
 const fake = (p, body) => fetch(FAKE + p, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then(r => r.json());
 
-// One TV per worker, set up the way a grown-up does it: the TV shows a code
-// and the pretend grown-up's phone approves it. Every test then opens its
+// One TV per worker, set up the way an adult does it: the TV shows a code
+// and the pretend adult's phone approves it. Every test then opens its
 // game on that TV (its sign-in is kept and reused), so the tests don't each
 // ask for a new code (the arcade allows 30 new codes in 10 minutes).
 let signedInTv = null;

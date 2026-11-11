@@ -18,7 +18,7 @@ async function run({ base, root }) {
   };
 
   // ADULT: the test-only adult pass (TEST_ADULT_PASS in test/run.js), standing in
-  // for a grown-up's ARKS ID adult pass on this arcade without ARKS ID.
+  // for an adult's ARKS ID adult pass on this arcade without ARKS ID.
   const ADULT = { 'X-Adult-Pin': '246810' };
   async function api(p, method = 'GET', body, extra = {}) {
     const res = await fetch(API + p, {

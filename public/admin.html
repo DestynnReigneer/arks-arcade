@@ -375,7 +375,7 @@
 
     <div class="admin-section">
       <h2>🔞 Adult levels</h2>
-      <p class="admin-note">Every adult option in the arcade (adult Wordless themes, Rambler's Unfiltered words, the adult Uh-Oh and Dare Devil decks, and the adult levels of Know-It-All, Spin &amp; Solve, Shuffle Scuffle and Words with Family) unlocks only for a grown-up signed in with ARKS ID. There's no PIN to set.</p>
+      <p class="admin-note">Every adult option in the arcade (adult Wordless themes, Rambler's Unfiltered words, the adult Uh-Oh and Dare Devil decks, and the adult levels of Know-It-All, Spin &amp; Solve, Shuffle Scuffle and Words with Family) unlocks only for an adult signed in with ARKS ID. There's no PIN to set.</p>
       <div id="pinStatus" class="admin-note">Loading…</div>
     </div>
   </div>
@@ -537,7 +537,7 @@
         </div>
         <button class="small-btn" id="spinCopyPrompt">📋 Copy prompt</button>
       </div>
-      <p class="admin-note">Paste the prompt into any AI chatbot, then paste its answer below. Adult packs only open for grown-ups signed in with ARKS ID and never show on the home page. Puzzles that won't fit the board or use British spelling are skipped, and you'll see which.</p>
+      <p class="admin-note">Paste the prompt into any AI chatbot, then paste its answer below. Adult packs only open for adults signed in with ARKS ID and never show on the home page. Puzzles that won't fit the board or use British spelling are skipped, and you'll see which.</p>
       <textarea id="spinJson" rows="6" class="admin-textarea" placeholder='{"label":"Camping","emoji":"🏕️","puzzles":[{"category":"Thing","answer":"SLEEPING BAG"}]}'></textarea>
       <button id="spinCreate" class="primary-btn" style="border:none;border-radius:8px;padding:10px 16px;font-weight:700;cursor:pointer;margin-top:8px;">Create pack</button>
       <div id="spinStatus" class="status-msg"></div>
@@ -583,7 +583,7 @@
         </div>
         <button class="small-btn" id="triviaCopyPrompt">📋 Copy prompt</button>
       </div>
-      <p class="admin-note">Paste the prompt into any AI chatbot, then paste its answer below. Adult packs only open for grown-ups signed in with ARKS ID and never show on the home page. Questions with broken answers are skipped, and you'll see which.</p>
+      <p class="admin-note">Paste the prompt into any AI chatbot, then paste its answer below. Adult packs only open for adults signed in with ARKS ID and never show on the home page. Questions with broken answers are skipped, and you'll see which.</p>
       <textarea id="triviaJson" rows="6" class="admin-textarea" placeholder='{"label":"Space","emoji":"🚀","genre":"Science","questions":[{"question":"…","correct":"…","wrong":["…","…","…"],"difficulty":"easy"}]}'></textarea>
       <button id="triviaCreate" class="primary-btn" style="border:none;border-radius:8px;padding:10px 16px;font-weight:700;cursor:pointer;margin-top:8px;">Create pack</button>
       <div id="triviaStatus" class="status-msg"></div>
@@ -605,7 +605,7 @@
   <div id="cluelessPanel" class="hidden">
     <div class="admin-section">
       <h2>📰 Crossword clue packs</h2>
-      <p class="admin-note">Clueless Crosswords only builds its crosswords from words that have a clue. It comes with about a thousand clues written for it, and every pack you add here gives it more words to choose from, so the grids get more varied. The family mini only uses Family clues; the grown-ups' crossword uses both kinds.</p>
+      <p class="admin-note">Clueless Crosswords only builds its crosswords from words that have a clue. It comes with about a thousand clues written for it, and every pack you add here gives it more words to choose from, so the grids get more varied. The family mini only uses Family clues; the adults' crossword uses both kinds.</p>
       <div class="admin-note" id="cluelessSummary">Loading…</div>
     </div>
 
@@ -616,7 +616,7 @@
           <label for="cluelessKind">Kind of clues</label>
           <select id="cluelessKind">
             <option value="kids">👪 Family (fine for kids)</option>
-            <option value="grownup">🧠 Grown-up (trickier)</option>
+            <option value="grownup">🧠 Tricky</option>
           </select>
         </div>
         <div>
@@ -734,7 +734,7 @@
         </div>
         <button class="small-btn" id="copyNewPromptBtn">📋 Copy prompt</button>
       </div>
-      <label class="check-row"><input type="checkbox" id="newAdult"> 🔞 Adult theme: naughty words, only for grown-ups signed in with ARKS ID</label>
+      <label class="check-row"><input type="checkbox" id="newAdult"> 🔞 Adult theme: naughty words, only for adults signed in with ARKS ID</label>
       <p class="admin-note">Paste the prompt into any AI chatbot, then paste its answer below.</p>
       <p style="font-size:12px; opacity:0.7; margin-top:0;">Paste the JSON a chatbot (or you, by hand) generated for a topic.</p>
       <textarea id="jsonInput" rows="6" placeholder='{"label":"Bluey","subject":"Bluey character","emoji":"🐶","accent":"#4fb8e8","bg":"#0d1a22","fontKey":"comic","words":["bluey","bingo","muffin","chili","bandit","socks"]}'></textarea>

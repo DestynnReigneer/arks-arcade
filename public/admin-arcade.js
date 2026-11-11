@@ -483,7 +483,7 @@
     try {
       const s = await api('/adult-pin');
       $('pinStatus').textContent = s.arksId
-        ? 'Adult levels are on. They open for grown-ups signed in with ARKS ID (adult or admin accounts).'
+        ? 'Adult levels are on. They open for adults signed in with ARKS ID (adult or admin accounts).'
         : 'Adult levels are off, because this arcade doesn’t sign in through ARKS ID. Set it up (see docs/SETUP.md) to turn them on.';
     } catch (e) { $('pinStatus').textContent = e.message; }
   }

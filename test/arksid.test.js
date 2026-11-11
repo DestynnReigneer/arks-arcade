@@ -86,7 +86,7 @@ async function run({ base, root, fake, admin: ADMIN }) {
   ok('…wearing the character picked in ARKS ID', me.profile.avatar === 'toon:2', me.profile.avatar);
   ok('…its old PIN is off, and the boards show the initials chosen in ARKS ID', !me.profile.hasPin && me.profile.boardShow === 'initials' && me.profile.initials === 'MIL');
   ok('…and the token works like any profile token', /^abcdefabcdef0001\./.test(me.token));
-  ok('a role is reported, and a kid is not a grown-up', me.role === 'kid' && me.adult === false);
+  ok('a role is reported, and a kid is not an adult', me.role === 'kid' && me.adult === false);
   ok('nobody asks for an arcade profile anymore', (await milo.call('/api/profiles', { method: 'POST', body: { name: 'Sneaky' } })).status === 403);
   ok('or picks one with a PIN', (await milo.call('/api/profiles/abcdefabcdef0001/use', { method: 'POST', body: { pin: '123456' } })).status === 403);
   ok('the boards choice is made in ARKS ID', (await milo.call('/api/profiles/abcdefabcdef0001', { method: 'PATCH', body: { token: me.token, boardShow: 'name' } })).status === 403);
@@ -118,7 +118,7 @@ async function run({ base, root, fake, admin: ADMIN }) {
   ok('a kid gets no adult pass', (await milo.call('/api/arksid/adult-pass', { method: 'POST' })).status === 403);
   ok('neither does someone signed out', (await visitor.call('/api/arksid/adult-pass', { method: 'POST' })).status === 401);
   const p = await fresh.call('/api/arksid/adult-pass', { method: 'POST' });
-  ok('a grown-up does', p.status === 200 && /^ap\./.test(p.data.pass));
+  ok('an adult does', p.status === 200 && /^ap\./.test(p.data.pass));
   ok('…and it works wherever the adult PIN did', (await visitor.call('/api/adult-check', { method: 'POST', body: { pin: p.data.pass } })).data.ok === true &&
     (await visitor.call('/api/trivia/unlock', { method: 'POST', body: { pin: p.data.pass } })).data.ok === true);
   ok('a PIN does nothing', (await visitor.call('/api/adult-check', { method: 'POST', body: { pin: '123456' } })).data.ok === false);
@@ -261,7 +261,7 @@ async function run({ base, root, fake, admin: ADMIN }) {
   ok('…its database size and the free disk space where its data lives', report.dbBytes > 0 && report.diskTotalBytes > 0 &&
     report.diskFreeBytes >= 0 && report.diskFreeBytes <= report.diskTotalBytes, JSON.stringify(report));
 
-  console.log('\n-- criss cross: grown-ups only on the unfiltered list --');
+  console.log('\n-- criss cross: adults only on the unfiltered list --');
   const kimCB = browser();
   fake.next = 'kim';
   await kimCB.call('/auth/signin?return=%2F');
@@ -281,11 +281,11 @@ async function run({ base, root, fake, admin: ADMIN }) {
   const withKid = await cc('/games', kimCC, { method: 'POST', body: { kind: 'online', invite: [miloCC.profile.id], dictionary: 'adult' }, pass: kimPass });
   ok('a kid can\'t be invited to an unfiltered game', withKid.status === 403 && /Milo/.test(withKid.data.error), JSON.stringify(withKid.data));
   const grown = await cc('/games', kimCC, { method: 'POST', body: { kind: 'online', invite: [samCC.profile.id], dictionary: 'adult' }, pass: kimPass });
-  ok('two grown-ups can play one', grown.status === 201);
+  ok('two adults can play one', grown.status === 201);
   ok('…each opening it with their own adult pass', (await cc(`/games/${grown.data.id}`, samCC)).status === 403 &&
     (await cc(`/games/${grown.data.id}`, samCC, { pass: samPass })).status === 200);
-  ok('a kid holding a grown-up\'s pass still can\'t start one', (await cc('/games', miloCC, { method: 'POST', body: { kind: 'local', players: [{ name: 'A' }, { name: 'B' }], dictionary: 'adult' }, pass: kimPass })).status === 403);
-  ok('a kid can start a family-words game with a grown-up', (await cc('/games', miloCC, { method: 'POST', body: { kind: 'online', invite: [kimCC.profile.id] } })).status === 201);
+  ok('a kid holding an adult\'s pass still can\'t start one', (await cc('/games', miloCC, { method: 'POST', body: { kind: 'local', players: [{ name: 'A' }, { name: 'B' }], dictionary: 'adult' }, pass: kimPass })).status === 403);
+  ok('a kid can start a family-words game with an adult', (await cc('/games', miloCC, { method: 'POST', body: { kind: 'online', invite: [kimCC.profile.id] } })).status === 201);
 
   console.log('\n-- notifications: your turn in Words with Family --');
   // Notifications go out in the background, so wait for them to land (or for nothing to).

@@ -7,7 +7,7 @@
 (() => {
   const API = '/api/clueless/admin';
   const $ = id => document.getElementById(id);
-  const KINDS = { kids: '👪 Family', grownup: '🧠 Grown-up' };
+  const KINDS = { kids: '👪 Family', grownup: '🧠 Tricky' };
   let words = [];
   let limits = { maxClue: 80 };
 
@@ -21,8 +21,8 @@
 
   function buildPrompt(kind, list) {
     const tone = kind === 'kids'
-      ? 'These clues are for a family crossword that kids play, so keep every clue friendly and simple enough for a 9-year-old: everyday words, nothing rude, scary or grown-up.'
-      : 'These clues are for grown-ups who like a bit of a challenge: wordplay, double meanings, well-known pop culture and general knowledge are all welcome. Keep them clean enough to play with the family in the room, with nothing rude or crude.';
+      ? 'These clues are for a family crossword that kids play, so keep every clue friendly and simple enough for a 9-year-old: everyday words, nothing rude, scary or adult.'
+      : 'These clues are for adults who like a bit of a challenge: wordplay, double meanings, well-known pop culture and general knowledge are all welcome. Keep them clean enough to play with the family in the room, with nothing rude or crude.';
     return `Write one short crossword clue for each of these ${list.length} words.
 
 ${list.join(', ')}
@@ -45,7 +45,7 @@ ${tone}`;
     try {
       const s = await api('/summary');
       limits = s;
-      $('cluelessSummary').textContent = `Built-in family clues: ${s.starter.toLocaleString('en-US')} words. From packs: ${s.kids.toLocaleString('en-US')} words with Family clues and ${s.grownup.toLocaleString('en-US')} with Grown-up clues.`;
+      $('cluelessSummary').textContent = `Built-in family clues: ${s.starter.toLocaleString('en-US')} words. From packs: ${s.kids.toLocaleString('en-US')} words with Family clues and ${s.grownup.toLocaleString('en-US')} with Adult clues.`;
     } catch (e) { $('cluelessSummary').textContent = e.message; }
   }
 

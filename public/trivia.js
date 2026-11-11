@@ -9,7 +9,7 @@
 // ways: everyone answers on their own phone, one phone is passed around, or
 // the TV remote plays for everyone in turn. The server keeps every score.
 // The TV always starts in family mode; adult levels need an adults' night,
-// unlocked from a grown-up's phone, and never a PIN on the TV.
+// unlocked from an adult's phone, and never a PIN on the TV.
 
 (() => {
   const { $, toast, api } = ArcadeKit;
@@ -98,7 +98,7 @@
     await loadConfig();
   }
 
-  // On a TV: an adults' night (a QR code for a grown-up's phone, tv.js), then
+  // On a TV: an adults' night (a QR code for an adult's phone, tv.js), then
   // the TV's adult pass from the arcade, used wherever the PIN would go.
   async function unlockOnTv() {
     if (!ArcadeTV.adult() && !(await ArcadeTV.unlock())) return false;
@@ -126,7 +126,7 @@
       const done = ok => { $('pinView').classList.add('hidden'); $('pinCancel').onclick = null; resolve(ok); };
       const tryPin = async pin => {
         const r = await api('/api/trivia/unlock', { pin }).catch(() => ({ ok: false }));
-        if (!r.ok) { $('pinMsg').textContent = 'Adult levels need a grown-up signed in with ARKS ID.'; PinPad.clear($('pinInput')); return; }
+        if (!r.ok) { $('pinMsg').textContent = 'Adult levels need an adult signed in with ARKS ID.'; PinPad.clear($('pinInput')); return; }
         S.pin = pin;
         try { sessionStorage.setItem('trivia.adultPin', pin); } catch { /* unavailable */ }
         done(true);
@@ -187,7 +187,7 @@
       }
       const code = $('joinCode').value.trim().toUpperCase();
       if (code.length !== 4) { $('setupMsg').textContent = 'Type the 4-letter code.'; return; }
-      // A grown-ups game asks for its lobby password (not the adult pass).
+      // A adults game asks for its lobby password (not the adult pass).
       const r = await RoomPassword.withPassword(password =>
         api(`/api/trivia/rooms/${code}/join`, { name: $('joinName').value, password }));
       if (r) enterRoom(r);
@@ -639,7 +639,7 @@
         <tr><td>📡 Host / 🔗 Join</td><td>Everyone answers on their own phone at the same time. Fastest right answer scores most.</td></tr>
       </table>` },
     { emoji: '🎚️', title: 'Pick what you like', html: `<p>Choose <b>genres</b> (or none for a mix), a <b>difficulty</b>, how many questions, and how long to answer.</p><p>Got an idea for a topic? Tap <b>💡 Suggest a topic</b>.</p>` },
-    { emoji: '🔞', title: 'For grown-ups', html: `<p><b>Cheeky</b>, <b>Spicy</b> and <b>Filthy</b> unlock for grown-ups signed in with ARKS ID and get spicier as you go.</p><p>🍺 <b>Drinking</b>: wrong answers drink, three in a row gives drinks, last place finishes theirs.</p><p>💋 <b>Couples dares</b>: miss a question, do a dare. The heat matches the level.</p><div class="tut-tip">Tap <b>?</b> at the top any time to see this again.</div>` }
+    { emoji: '🔞', title: 'For adults', html: `<p><b>Cheeky</b>, <b>Spicy</b> and <b>Filthy</b> unlock for adults signed in with ARKS ID and get spicier as you go.</p><p>🍺 <b>Drinking</b>: wrong answers drink, three in a row gives drinks, last place finishes theirs.</p><p>💋 <b>Couples dares</b>: miss a question, do a dare. The heat matches the level.</p><div class="tut-tip">Tap <b>?</b> at the top any time to see this again.</div>` }
   ]);
 
   // ---- wiring ---------------------------------------------------------------------------------

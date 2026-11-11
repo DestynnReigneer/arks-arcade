@@ -22,9 +22,9 @@
 //     whichever app the person opens next.
 //   - Feedback goes to ARKS ID's one inbox instead of the Comm Center's, and
 //     "My feedback" comes from there (see comm.js).
-//   - A TV signs in with a pairing code a grown-up approves on their phone
+//   - A TV signs in with a pairing code an adult approves on their phone
 //     (contract v14, arcade/tv.js). Its account has the kid role, and it counts
-//     as a grown-up only while its adults' night is on.
+//     as an adult only while its adults' night is on.
 //   - A photo or team picture someone picked on ARKS ID shows here too. The
 //     arcade's server fetches it from ARKS ID and serves it from the arcade
 //     itself (/api/arksid/photo/<profile>), so the browser only ever talks to
@@ -275,7 +275,7 @@ function createArksId({ client, now = Date.now, profiles }) {
 
   // ---- Adults' night on a TV (contract v14) ----
   // A TV's account always has the kid role. While ARKS ID says its session
-  // has adultMode set, the TV counts as a grown-up for adult levels. It's
+  // has adultMode set, the TV counts as an adult for adult levels. It's
   // kept in memory only, from the latest session check, so restarting the
   // arcade or losing touch with ARKS ID means family mode, the safe direction.
   const tvAdult = new Map();   // TV account id -> { until, since, by }
@@ -477,7 +477,7 @@ function createArksId({ client, now = Date.now, profiles }) {
       if (me) {
         const p = profiles.pub(me.profile);
         Object.assign(out, { profile: p, token: profiles.tokenFor(me.profile), role: me.account.role, adult: GROWN_UP.includes(me.account.role) });
-        // A TV (contract v14) counts as a grown-up only during adults' night.
+        // A TV (contract v14) counts as an adult only during adults' night.
         if (me.tv) Object.assign(out, { tv: true, adult: !!me.adultMode, adultMode: me.adultMode });
       }
       res.json(out);
@@ -509,13 +509,13 @@ function createArksId({ client, now = Date.now, profiles }) {
       res.set({ 'Content-Type': pic.type, 'Cache-Control': 'private, max-age=3600', 'X-Content-Type-Options': 'nosniff' }).send(pic.body);
     });
 
-    // The adult pass, for a signed-in grown-up. It goes where the PIN used to.
+    // The adult pass, for a signed-in adult. It goes where the PIN used to.
     router.post('/api/arksid/adult-pass', async (req, res) => {
       res.set('Cache-Control', 'no-store');
       const me = client ? await current(req) : null;
       if (!me) return res.status(401).json({ error: 'Sign in with ARKS ID first.' });
-      if (me.tv && !me.adultMode) return res.status(403).json({ error: 'Adult levels on the TV need an adults\' night, unlocked from a grown-up\'s phone.' });
-      if (!me.tv && !GROWN_UP.includes(me.account.role)) return res.status(403).json({ error: 'Adult levels are for grown-ups\' ARKS ID accounts.' });
+      if (me.tv && !me.adultMode) return res.status(403).json({ error: 'Adult levels on the TV need an adults\' night, unlocked from an adult\'s phone.' });
+      if (!me.tv && !GROWN_UP.includes(me.account.role)) return res.status(403).json({ error: 'Adult levels are for adult ARKS ID accounts.' });
       res.json({ pass: passFor(me.profile) });
     });
     return router;
