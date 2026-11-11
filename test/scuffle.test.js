@@ -158,7 +158,6 @@ async function run({ base, root }) {
   ok('starting the finished one again hands back the finished game, not new letters', skyAgain.data.gameId === sd.gameId && skyAgain.data.phase === 'over');
 
   console.log('\n-- scuffle: grown-up words --');
-  await api('/api/comm/admin/adult-pin', 'POST', { pin: '246810' }, { 'X-Admin-Token': 'test-admin-token' });
   const PIN = { 'X-Adult-Pin': '246810' };
   ok('the unfiltered list needs the adult PIN on your own', (await api('/solo', 'POST', { mode: 'free', dictionary: 'adult' })).status === 403);
   ok('…and works with it', (await api('/solo', 'POST', { mode: 'free', dictionary: 'adult' }, PIN)).status === 201);
@@ -182,7 +181,6 @@ async function run({ base, root }) {
   const kidsRoom = (await api('/rooms', 'POST', { name: 'H2', settings: { dictionary: 'kids' } })).data;
   ok('a host can\'t switch a room to the unfiltered list without the PIN',
     (await api(`/rooms/${kidsRoom.code}/settings`, 'POST', { ...kidsRoom, settings: { dictionary: 'adult' }, password: 'pears' })).status === 403);
-  await api('/api/comm/admin/adult-pin', 'POST', { pin: '' }, { 'X-Admin-Token': 'test-admin-token' });
 
   console.log('\n-- scuffle: a room with two phones --');
   const host = (await api('/rooms', 'POST', { name: 'Sam', settings: { rounds: 3, seconds: 2, dictionary: 'kids' } })).data;

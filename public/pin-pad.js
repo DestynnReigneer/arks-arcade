@@ -7,6 +7,11 @@
 // calls the callback with the six digits. Call attach again to swap the
 // callback; call PinPad.clear(input) after a wrong PIN, and
 // PinPad.show(input, false) to hide the input and its keypad together.
+//
+// Every pad is an adult one unless attached with { profile: true } (a
+// profile's own PIN). Adult levels unlock only with a grown-up's ARKS ID
+// sign-in (2026-11-11), so an adult pad never takes digits: with ARKS ID it
+// fetches the grown-up's pass, and without it, it says adult levels are off.
 (function () {
   const LEN = 6;
 
@@ -26,7 +31,7 @@
     document.head.appendChild(s);
   }
 
-  function attach(input, onComplete) {
+  function attach(input, onComplete, opts = {}) {
     if (input._pinPad) { input._pinPad.onComplete = onComplete; return; }
     addStyles();
     const state = { onComplete, busy: false };
@@ -66,7 +71,23 @@
     input.addEventListener('input', check);
     // On an arcade that signs in through ARKS ID, the only PIN pads are the
     // adult ones, and they don't take a PIN: see arksIdPad below.
-    if (typeof ArcadeProfile !== 'undefined' && ArcadeProfile.arksId) ArcadeProfile.arksId().ready.then(Id => { if (Id.on) arksIdPad(input, state, Id); });
+    if (opts.profile) return;
+    if (typeof ArcadeProfile !== 'undefined' && ArcadeProfile.arksId) {
+      ArcadeProfile.arksId().ready.then(Id => { if (Id.on) arksIdPad(input, state, Id); else offPad(input, state); });
+    } else offPad(input, state);
+  }
+
+  // No ARKS ID on this arcade: nothing can unlock adult levels.
+  function offPad(input, state) {
+    state.arks = true;
+    input.style.display = 'none';
+    state.pad.style.display = 'none';
+    const note = document.createElement('p');
+    note.className = 'pin-pad-arksid';
+    note.style.cssText = 'text-align:center;margin:10px 0;line-height:1.45';
+    note.textContent = 'Adult levels need a grown-up signed in with ARKS ID, and this arcade doesn’t use ARKS ID, so they stay off.';
+    state.pad.after(note);
+    state.note = note;
   }
 
   // With ARKS ID, adult levels follow the signed-in person's role. When an

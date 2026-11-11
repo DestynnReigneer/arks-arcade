@@ -130,8 +130,7 @@
     return data;
   }
   // ---- Adult themes ----
-  // Hidden until unlocked with the arcade's adult PIN (or a one-tap "I'm an
-  // adult" when no PIN is set). Remembered for this browser tab only.
+  // Hidden until unlocked with a grown-up's ARKS ID adult pass. Remembered for this browser tab only.
   const adult = {
     on: !TV && (() => { try { return sessionStorage.getItem('wordless.adult') === 'on'; } catch { return false; } })(),
     pin: TV ? '' : (() => { try { return sessionStorage.getItem('wordless.adultPin') || ''; } catch { return ''; } })(),
@@ -226,7 +225,7 @@
     PinPad.show(pinInput, adult.requiresPin);
     document.getElementById('adultError').textContent = '';
     document.getElementById('adultHint').textContent = adult.requiresPin
-      ? 'Naughty themes for grown-ups. Enter the adult PIN.'
+      ? 'Naughty themes for grown-ups signed in with ARKS ID.'
       : 'Naughty themes for grown-ups. Are you 18 or older?';
     // With a PIN the pad checks it on the 6th digit, so there's no button.
     document.getElementById('adultOkBtn').classList.toggle('hidden', adult.requiresPin);
@@ -240,7 +239,7 @@
     try {
       if (adult.requiresPin) {
         const r = await apiPost('/api/adult-check', { pin });
-        if (!r.ok) { err.textContent = 'That PIN is not right.'; PinPad.clear(document.getElementById('adultPinInput')); return; }
+        if (!r.ok) { err.textContent = 'Adult levels need a grown-up signed in with ARKS ID.'; PinPad.clear(document.getElementById('adultPinInput')); return; }
       }
       setAdult(true, pin);
       document.getElementById('adultOverlay').classList.add('hidden');

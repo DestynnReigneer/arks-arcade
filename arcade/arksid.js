@@ -2,7 +2,7 @@
 
 // Optional: signing in through ARKS ID, a family sign-in service the arcade
 // can share with other apps. Off unless ARKS_ID_URL and ARKS_ID_SECRET are set
-// in .env; without them the arcade keeps its own profiles, PINs and adult PIN
+// in .env; without them the arcade keeps its own profiles and PINs, and adult levels are off
 // exactly as before (see docs/SETUP.md).
 //
 // With it on, ARKS ID owns everything about a person:
@@ -14,7 +14,7 @@
 //   - Name, role and "name or initials on the boards" come from the account.
 //     The arcade's own profile requests and profile PINs switch off.
 //   - Adult levels follow the role: a signed-in adult or admin gets a short-
-//     lived adult pass that works wherever the adult PIN used to. Kids, teens
+//     lived adult pass, the only thing that unlocks adult levels. Kids, teens
 //     and guests can't unlock them.
 //   - Guest play is only offered on a device ARKS ID doesn't know, or one an
 //     admin owns, so nobody can dodge the adult rules by playing as a guest.

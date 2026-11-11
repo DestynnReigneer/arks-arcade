@@ -342,7 +342,7 @@ const ArcadeTV = (() => {
     return unlocking;
   }
 
-  // The pass that goes wherever the adult PIN would: adults' night first (a
+  // The pass that goes wherever an adult check is made: adults' night first (a
   // QR code for a grown-up's phone), then the arcade hands one out. '' if not.
   async function adultPass() {
     if (!adultOn() && !(await unlock())) return '';

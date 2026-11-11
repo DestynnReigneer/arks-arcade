@@ -236,7 +236,6 @@ async function run({ base, root }) {
   ok('a game can\'t have more than 4 players', (await api('/games', 'POST', { kind: 'online', invite: [Ben.id, Cy.id], openSeats: 2 }, Ana.h)).status === 400);
 
   console.log('\n-- criss cross: the unfiltered list --');
-  await api('/api/comm/admin/adult-pin', 'POST', { pin: '246810' }, ADMIN);
   const PIN = { 'X-Adult-Pin': '246810' };
   ok('an unfiltered game needs the adult PIN to start', (await api('/games', 'POST', { kind: 'online', invite: [Ben.id], dictionary: 'adult' }, Ana.h)).status === 403);
   ok('…on one phone too', (await api('/games', 'POST', { kind: 'local', players: [{ name: 'A' }, { name: 'B' }], dictionary: 'adult' })).status === 403);
@@ -246,7 +245,6 @@ async function run({ base, root }) {
   ok('every player needs the PIN to open it, not just the host', noPin.status === 403 && noPin.data.adult === true);
   ok('…a wrong PIN doesn\'t work', (await api(`/games/${adult.data.id}`, 'GET', null, { ...Ben.h, 'X-Adult-Pin': '111111' })).status === 403);
   ok('…the right one does', (await api(`/games/${adult.data.id}`, 'GET', null, { ...Ben.h, ...PIN })).status === 200);
-  await api('/api/comm/admin/adult-pin', 'POST', { pin: '' }, ADMIN);
 
   console.log(`\n  ${pass} passed, ${fail} failed`);
   return { pass, fail };

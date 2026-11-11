@@ -16,11 +16,11 @@ function fail(message, status = 400) {
 
 function makeRoutes({ tables, config }) {
   const router = express.Router();
-  // Hosting adult content needs the adult PIN; joining someone's adult room
+  // Hosting adult content needs an ARKS ID adult pass; joining someone's adult room
   // needs only that room's lobby password.
   const assertLevelAllowed = (level, req) => {
     if (!tables.isAdult(level)) return;
-    if (!adultPin.matches(req.get('X-Adult-Pin') || '')) throw fail('That PIN is not right.', 403);
+    if (!adultPin.matches(req.get('X-Adult-Pin') || '')) throw fail('Adult levels need a grown-up signed in with ARKS ID.', 403);
   };
   const limiter = rateLimit({ windowMs: 10 * 60 * 1000, limit: 60, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many new games at once.' } });
   const creds = req => [req.params.code, (req.body || {}).playerId || req.query.playerId, (req.body || {}).token || req.query.token];

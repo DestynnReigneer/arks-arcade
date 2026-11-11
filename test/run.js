@@ -91,6 +91,9 @@ function startServer(port, extraEnv = {}) {
         ...extraEnv,
         PORT: String(port),
         NODE_ENV: 'test',
+        // Adult levels need an ARKS ID adult pass; without ARKS ID the suite uses this
+        // test-only pass instead (arcade/adult-pin.js, never read outside NODE_ENV=test).
+        TEST_ADULT_PASS: '246810',
         // Admin routes are deny-by-default, so the suite has to supply a
         // token to be able to prove they are locked *and* that they work.
         ADMIN_TOKEN: 'test-admin-token',
