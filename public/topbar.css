@@ -61,3 +61,10 @@
   .ah-back, .ah-lock { padding: 0 9px; }
 }
 @media (prefers-reduced-motion: reduce) { .ah-bar, .ah-brand .helm, .ah-brand .wide, .ah-brand .word { transition: none; } }
+
+/* The trophy beside who's playing on the home page (2026-11-10): opens the
+   trophy page. The pink number is how many boards you're #1 on. */
+.ah-ib.trophy { position: relative; border-color: #ffc72c; box-shadow: 0 0 0 3px rgba(255, 199, 44, .22); }
+.ah-ib.trophy .trophy-n { position: absolute; top: -7px; right: -7px; background: #ff2ec4; color: #1a0424; font: 700 10px/1 ui-monospace, Consolas, monospace;
+  border-radius: 999px; padding: 2px 5px; letter-spacing: 0; }
+.ah-ib.trophy .trophy-n.hidden { display: none; }
