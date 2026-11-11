@@ -20,7 +20,7 @@ function makeRoutes({ tables, config }) {
   // needs only that room's lobby password.
   const assertLevelAllowed = (level, req) => {
     if (!tables.isAdult(level)) return;
-    if (!adultPin.matches(req.get('X-Adult-Pin') || '')) throw fail('Adult levels need a grown-up signed in with ARKS ID.', 403);
+    if (!adultPin.matches(req.get('X-Adult-Pin') || '')) throw fail('Adult levels need an adult signed in with ARKS ID.', 403);
   };
   const limiter = rateLimit({ windowMs: 10 * 60 * 1000, limit: 60, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many new games at once.' } });
   const creds = req => [req.params.code, (req.body || {}).playerId || req.query.playerId, (req.body || {}).token || req.query.token];
@@ -50,7 +50,7 @@ function makeRoutes({ tables, config }) {
       res.status(201).json({ code: table.id, playerId: player.id, token: player.token });
     } catch (e) { next(e); }
   });
-  // Guests get into a grown-ups room with its lobby password; a phone signed
+  // Guests get into a adults room with its lobby password; a phone signed
   // in to ARKS ID as a kid, a teen or a TV doesn't, whatever it types.
   router.post('/rooms/:code/join', limiter, async (req, res, next) => {
     try {

@@ -17,13 +17,13 @@ test.use({ userAgent: TV_UA, viewport: { width: 1920, height: 1080 }, isMobile: 
 // One TV is enough: these run in the laptop project only.
 test.beforeEach(({}, info) => {
   info.skip(info.project.name !== 'laptop', 'TV tests run once, at TV size');
-  // Setting the TV up waits for the pretend grown-up's phone, and the remote moves one press at a time.
+  // Setting the TV up waits for the pretend adult's phone, and the remote moves one press at a time.
   info.setTimeout(120000);
 });
 
 const fake = (p, body) => fetch(FAKE + p, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then(r => r.json());
 
-// The first time, the TV shows a code; a grown-up's phone approves it.
+// The first time, the TV shows a code; an adult's phone approves it.
 async function pairTv(page, path) {
   await quietFonts(page);
   await page.goto(path);
@@ -192,15 +192,15 @@ test('a phone joins a game the TV hosts', async ({ page, browser }) => {
   await phoneCtx.close();
 });
 
-test('adults\' night from a grown-up\'s phone, and Back to family', async ({ page }) => {
+test('adults\' night from an adult\'s phone, and Back to family', async ({ page }) => {
   const problems = watchProblems(page);
   await pairTv(page, '/trivia.html');
-  // Picking an adult level on the TV asks for a grown-up's phone, never a PIN.
+  // Picking an adult level on the TV asks for an adult's phone, never a PIN.
   await expect(page.locator('#levelList')).toContainText('Needs an adults\' night');
   await press(page, '#levelList .level:nth-child(3)');
   const card = page.locator('.tv-unlock');
   await expect(card).toBeVisible();
-  await expect(card).toContainText('grown-up');
+  await expect(card).toContainText('adult');
   await expect(page.locator('#pinView')).toBeHidden();
   const userCode = (await card.locator('.tv-code').textContent()).replace(/\s/g, '');
   // A kid's phone can't; an adult's can.

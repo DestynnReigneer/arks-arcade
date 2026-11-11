@@ -6,10 +6,10 @@
 const grid = require('./grid');
 
 // The two puzzles of the day. The family mini only uses family clues; the
-// grown-ups' puzzle is bigger and also uses the trickier grown-up clues.
+// adults' puzzle is bigger and also uses the trickier adult clues.
 const LEVELS = {
   mini: { id: 'mini', label: 'Family mini', size: 5, kinds: ['kids'] },
-  big: { id: 'big', label: 'Grown-ups', size: 7, kinds: ['kids', 'grownup'] }
+  big: { id: 'big', label: 'Big', size: 7, kinds: ['kids', 'grownup'] }
 };
 const LEVEL_IDS = Object.keys(LEVELS);
 
@@ -24,7 +24,7 @@ function makePuzzle(day, level, clues, { budget } = {}) {
   if (!built) return null;
   const entries = built.entries.map(e => {
     const have = clues.get(e.answer);
-    // A grown-up clue when there is one (they're the trickier kind), picked
+    // An adult clue when there is one (they're the trickier kind), picked
     // from the date like everything else.
     const kind = L.kinds.slice().reverse().find(k => (have[k] || []).length);
     const options = [...new Set(have[kind])].sort();

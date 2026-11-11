@@ -198,7 +198,7 @@ What's already done for you:
 
 What's up to you:
 
-- Set a long `ADMIN_PASSWORD`. Adult levels only open for grown-ups signed in with ARKS ID, so there's no adult PIN to set.
+- Set a long `ADMIN_PASSWORD`. Adult levels only open for adults signed in with ARKS ID, so there's no adult PIN to set.
 - Keep the arcade on your home network; use Tailscale/WireGuard from outside.
 - Put HTTPS in front (Nginx Proxy Manager does it in a few clicks): the admin
   password travels with every admin request.

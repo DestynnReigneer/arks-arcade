@@ -71,7 +71,7 @@ function remove(id) {
 
 const profileRow = id => db.db.prepare("SELECT id, name, avatar FROM arcade_profiles WHERE id = ? AND status = 'approved'").get(String(id || ''));
 
-// With ARKS ID on, each profile belongs to an account with a role. Grown-ups
+// With ARKS ID on, each profile belongs to an account with a role. Adults
 // (admin and adult) can play on the unfiltered list. Without ARKS ID there
 // are no roles, and an ARKS ID adult pass is what's checked instead.
 const GROWN_UP = ['admin', 'adult'];
@@ -174,7 +174,7 @@ function createOnline({ host, invite, openSeats, dictionary, adultOk }, now = Da
   });
   if (dict === 'adult' && adultOk) {
     const kid = people.find(p => !adultOk(p.id));
-    if (kid) throw fail(`${kid.name} can't be invited to a game on the unfiltered list. Everyone in it has to be a grown-up.`, 403);
+    if (kid) throw fail(`${kid.name} can't be invited to a game on the unfiltered list. Everyone in it has to be an adult.`, 403);
   }
   const players = [{ name: host.name, profileId: host.id }, ...people.map(p => ({ name: p.name, profileId: p.id }))];
   const id = newId();

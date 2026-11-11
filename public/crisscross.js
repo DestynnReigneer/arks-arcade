@@ -87,7 +87,7 @@
       const done = ok => { $('pinView').classList.add('hidden'); $('pinCancel').onclick = null; resolve(ok); };
       PinPad.attach($('pinInput'), async pin => {
         const r = await api('/api/crisscross/unlock', { pin }).catch(() => ({ ok: false }));
-        if (!r.ok) { $('pinMsg').textContent = 'Adult levels need a grown-up signed in with ARKS ID.'; PinPad.clear($('pinInput')); return; }
+        if (!r.ok) { $('pinMsg').textContent = 'Adult levels need an adult signed in with ARKS ID.'; PinPad.clear($('pinInput')); return; }
         S.pin = pin;
         try { sessionStorage.setItem('crisscross.adultPin', pin); } catch { /* unavailable */ }
         done(true);
@@ -270,7 +270,7 @@
       S.onlineDict = v; paintDict();
     });
     $('dictHint').textContent = S.onlineDict === 'adult'
-      ? 'Every word on the list counts, rude ones included. Everyone has to be a grown-up, and each of them will need to be signed in with ARKS ID to participate.'
+      ? 'Every word on the list counts, rude ones included. Everyone has to be an adult, and each of them will need to be signed in with ARKS ID to participate.'
       : 'Rude words are left out, so it\'s good for kids.';
     adultMode(S.onlineDict === 'adult');
   }
@@ -325,7 +325,7 @@
       S.localDict = v; paintLocalDict();
     });
     $('localDictHint').textContent = S.localDict === 'adult'
-      ? 'Every word on the list counts, rude ones included. Grown-ups only.'
+      ? 'Every word on the list counts, rude ones included. Adults only.'
       : 'Rude words are left out, so it\'s good for kids.';
     adultMode(S.localDict === 'adult');
   }
@@ -350,7 +350,7 @@
     try {
       const r = await call(`/invite/${encodeURIComponent(code)}`);
       $('inviteTitle').textContent = `${r.players[0]} invited you`;
-      $('inviteText').textContent = `${names(r.players)} ${r.players.length === 1 ? 'is' : 'are'} playing Words with Family, with ${r.seats - r.players.length} seat${r.seats - r.players.length === 1 ? '' : 's'} left, on ${r.dictionary === 'adult' ? 'the unfiltered word list (grown-ups only)' : 'family words'}.` +
+      $('inviteText').textContent = `${names(r.players)} ${r.players.length === 1 ? 'is' : 'are'} playing Words with Family, with ${r.seats - r.players.length} seat${r.seats - r.players.length === 1 ? '' : 's'} left, on ${r.dictionary === 'adult' ? 'the unfiltered word list (adults only)' : 'family words'}.` +
         (me() ? '' : ' Pick your profile first, so the game knows whose turn is whose.');
       $('inviteJoin').textContent = me() ? 'Join the game' : 'Pick my profile';
       $('inviteJoin').onclick = async () => {
@@ -1051,7 +1051,7 @@
       emoji: '📱', title: 'Playing with the family',
       html: `<p><b>New game with the family</b> lets each person play on their own phone. Choose who to play with, and the game shows up in their list. There's no rush: a turn can wait hours, and the arcade's home page says when it's your turn. You can also leave a seat open and share a link or QR code.</p>
         <p><b>Play on this phone</b> is for passing one phone around, or playing against the computer. The tiles are hidden between turns so nobody peeks.</p>
-        <p><b>Family words</b> leaves rude words out. <b>Unfiltered</b> counts every word on the list, and everyone in the game has to be a grown-up signed in with ARKS ID.</p>`
+        <p><b>Family words</b> leaves rude words out. <b>Unfiltered</b> counts every word on the list, and everyone in the game has to be an adult signed in with ARKS ID.</p>`
     }
   ]);
   $('helpBtn').addEventListener('click', () => help.open());

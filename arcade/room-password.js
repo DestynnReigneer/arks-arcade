@@ -26,7 +26,7 @@ function check(room, supplied) {
   if (!room.password) return;
   const p = clean(supplied);
   if (p !== room.password) {
-    throw fail(p ? 'That password isn\'t right.' : 'This is a grown-ups game. Ask the host for the lobby password.', 401, 'join');
+    throw fail(p ? 'That password isn\'t right.' : 'This is an adult game. Ask the host for the lobby password.', 401, 'join');
   }
 }
 

@@ -133,7 +133,7 @@ module.exports = function profileRoutes({ requireAdmin, notify }) {
     res.json(db.db.prepare("SELECT * FROM arcade_profiles WHERE status = 'approved' ORDER BY name COLLATE NOCASE").all().map(pub));
   });
 
-  // Ask for a new profile. A grown-up approves it in admin.
+  // Ask for a new profile. An adult approves it in admin.
   router.post('/', askLimiter, (req, res, next) => {
     try {
       if (arksMode) throw fail(OFF, 403);

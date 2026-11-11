@@ -56,7 +56,7 @@ function create({ name, settings, password, screen = false }) {
     rounds: [], index: -1, endsAt: 0, firstFull: null, timer: null, clients: new Set(),
     lastActivity: Date.now(), password: null, history: []
   };
-  // The grown-up list gets a lobby password the host makes up.
+  // The adult list gets a lobby password the host makes up.
   if (r.settings.dictionary === 'adult') r.password = roomPassword.requireNew(password);
   if (screen) {
     r.screen = { id: makeId(), token: makeToken(), name: cleanName(name, 'TV'), clients: 0, screen: true };

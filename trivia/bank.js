@@ -7,7 +7,7 @@
 const LEVELS = {
   kids: { id: 'kids', label: 'Family', emoji: '🧒', adult: false, blurb: 'Fun facts for everyone.' },
   cheeky: { id: 'cheeky', label: 'Cheeky', emoji: '🌶️', adult: true, blurb: 'Flirty facts, love songs and cocktails.' },
-  spicy: { id: 'spicy', label: 'Spicy', emoji: '🌶️🌶️', adult: true, blurb: 'Steamy facts and bar trivia. Grown-ups only.' },
+  spicy: { id: 'spicy', label: 'Spicy', emoji: '🌶️🌶️', adult: true, blurb: 'Steamy facts and bar trivia. Adults only.' },
   filthy: { id: 'filthy', label: 'Filthy', emoji: '🌶️🌶️🌶️', adult: true, blurb: 'No holds barred. For couples and close friends.' }
 };
 const levelOf = id => (LEVELS[id] ? id : 'kids');

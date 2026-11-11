@@ -16,9 +16,9 @@
   const { $, toast, api } = ArcadeKit;
   const TV = !!(window.ArcadeTV && ArcadeTV.on);
   // [id, name, the shorter name a phone shows]
-  const LEVELS = [['mini', 'Family mini · 5×5', '👪 Mini 5×5'], ['big', 'Grown-ups · 7×7', '🧠 Big 7×7']];
+  const LEVELS = [['mini', 'Family mini · 5×5', '👪 Mini 5×5'], ['big', 'Big · 7×7', '🧠 Big 7×7']];
   const MODES = [['daily', '📅 Today\'s puzzle', '📅 Today'], ['free', '🎲 Free play', '🎲 Free play']];
-  const LABEL = { mini: 'Family mini', big: 'Grown-ups' };
+  const LABEL = { mini: 'Family mini', big: 'Big' };
   const store = (k, v) => { try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch { /* private mode */ } };
   const recall = (k, d = null) => { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch { return d; } };
   const token = () => (typeof ArcadeProfile !== 'undefined' ? ArcadeProfile.token() : null);
@@ -287,7 +287,7 @@
 
   // ---- crossing off solved clues ------------------------------------------------------------
   // The page doesn't know the answers, so it asks the server which clues are
-  // solved whenever a word (or, on the grown-ups' crossword, a whole row or
+  // solved whenever a word (or, on the adults' crossword, a whole row or
   // column) is full. It waits a moment so typing fast doesn't ask every time.
   let solvedTimer = 0;
   function askSolved() {
@@ -729,7 +729,7 @@
       html: `<p>Every day there are two small crosswords, and they're the <b>same for everyone</b>, so the family can race each other.</p>
         <table>
           <tr><td>👪 Family mini</td><td>A 5 by 5 grid with clues written for kids. Usually a few minutes.</td></tr>
-          <tr><td>🧠 Grown-ups</td><td>A 7 by 7 grid with longer words and some trickier clues.</td></tr>
+          <tr><td>🧠 Big</td><td>A 7 by 7 grid with longer words and some trickier clues.</td></tr>
         </table>
         <p>New ones arrive at midnight.</p>`
     },
@@ -752,7 +752,7 @@
       html: `<p>When you get a word right, its clue is crossed off in the lists under the grid, with a ✓. The arcade decides, not your phone, and it never says which letter is wrong.</p>
         <table>
           <tr><td>👪 Family mini</td><td>A clue is crossed off as soon as its word is right.</td></tr>
-          <tr><td>🧠 Grown-ups</td><td>A clue waits until its <b>whole line</b> is right: an across clue once every square in its row is right, and a down clue once every square in its column is. So a crossed-off clue gives away a bit less.</td></tr>
+          <tr><td>🧠 Big</td><td>A clue waits until its <b>whole line</b> is right: an across clue once every square in its row is right, and a down clue once every square in its column is. So a crossed-off clue gives away a bit less.</td></tr>
         </table>`
     },
     {

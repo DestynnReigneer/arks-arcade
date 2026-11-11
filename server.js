@@ -88,7 +88,7 @@ if (arks) {
   // (arcade/switches.js): the list of games goes now, and again when it changes.
   require('./arcade/switches').createArcadeSwitches({ client: arks.client }).start();
   adultPin.usePasses(arks.passOk);
-  // A kid's, a teen's or a TV's phone can't join a grown-ups room (arcade/adult-join.js).
+  // A kid's, a teen's or a TV's phone can't join a adults room (arcade/adult-join.js).
   require('./arcade/adult-join').use(req => arks.current(req));
   app.use(arks.routes());
   // The arcade on a TV (contract v14): setting a TV up with a pairing code,
@@ -264,7 +264,7 @@ app.get('/api/banner', async (req, res) => {
 });
 
 // Adult-only Wordless themes (and their scores) show up only when the page
-// asks for them with ?adult=1 and a grown-up's ARKS ID adult pass.
+// asks for them with ?adult=1 and an adult's ARKS ID adult pass.
 const adultUnlocked = req => req.query.adult === '1' && adultPin.matches(req.get('X-Adult-Pin'));
 
 app.post('/api/adult-check', adultPin.tryLimiter(), (req, res) => {
@@ -326,13 +326,13 @@ app.get('/api/wordless/hints', (req, res) => {
   const theme = db.getTheme(String(req.query.theme || ''));
   const word = String(req.query.word || '').toLowerCase();
   if (!theme || !WORD_RE.test(word)) return res.status(400).json({ error: 'Unknown theme or word' });
-  if (theme.adult && !adultUnlocked(req)) return res.status(403).json({ error: 'Adult levels need a grown-up signed in with ARKS ID.' });
+  if (theme.adult && !adultUnlocked(req)) return res.status(403).json({ error: 'Adult levels need an adult signed in with ARKS ID.' });
   res.json(wordlessHints.hintsFor(theme, word, dictionary.load().common));
 });
 
 app.get('/api/themes', (req, res) => {
   if (req.query.adult === '1' && !adultUnlocked(req)) {
-    return res.status(403).json({ error: 'Adult levels need a grown-up signed in with ARKS ID.' });
+    return res.status(403).json({ error: 'Adult levels need an adult signed in with ARKS ID.' });
   }
   // The admin page lists every theme, so adult ones can be deleted too.
   const isAdmin = adminSession.isAdmin(req);

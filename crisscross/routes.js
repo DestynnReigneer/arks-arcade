@@ -27,14 +27,14 @@ const needProfile = req => {
 const arksMode = () => adultPin.status().source === 'arksid';
 
 // The unfiltered list: every request needs an ARKS ID adult pass, and with
-// ARKS ID the person asking has to be a grown-up too. So everyone in an
+// ARKS ID the person asking has to be an adult too. So everyone in an
 // unfiltered game has to qualify, not just the one who started it.
 function adultGate(req, dictionary, profile) {
   if (E.dictOf(dictionary) !== 'adult') return;
   if (!adultPin.matches(req.get('X-Adult-Pin') || (req.body && req.body.adultPin) || '')) {
-    throw Object.assign(fail('This game uses the unfiltered word list, so it needs a grown-up signed in with ARKS ID.', 403), { adult: true });
+    throw Object.assign(fail('This game uses the unfiltered word list, so it needs an adult signed in with ARKS ID.', 403), { adult: true });
   }
-  if (arksMode() && profile && !games.grownUp(profile.id)) throw fail('Games on the unfiltered list are only for grown-ups.', 403);
+  if (arksMode() && profile && !games.grownUp(profile.id)) throw fail('Games on the unfiltered list are only for adults.', 403);
 }
 
 const router = express.Router();

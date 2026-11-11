@@ -9,9 +9,9 @@
 // PinPad.show(input, false) to hide the input and its keypad together.
 //
 // Every pad is an adult one unless attached with { profile: true } (a
-// profile's own PIN). Adult levels unlock only with a grown-up's ARKS ID
+// profile's own PIN). Adult levels unlock only with an adult's ARKS ID
 // sign-in (2026-11-11), so an adult pad never takes digits: with ARKS ID it
-// fetches the grown-up's pass, and without it, it says adult levels are off.
+// fetches the adult's pass, and without it, it says adult levels are off.
 (function () {
   const LEN = 6;
 
@@ -85,13 +85,13 @@
     const note = document.createElement('p');
     note.className = 'pin-pad-arksid';
     note.style.cssText = 'text-align:center;margin:10px 0;line-height:1.45';
-    note.textContent = 'Adult levels need a grown-up signed in with ARKS ID, and this arcade doesn’t use ARKS ID, so they stay off.';
+    note.textContent = 'Adult levels need an adult signed in with ARKS ID, and this arcade doesn’t use ARKS ID, so they stay off.';
     state.pad.after(note);
     state.note = note;
   }
 
   // With ARKS ID, adult levels follow the signed-in person's role. When an
-  // adult PIN pad shows up on screen, a grown-up's page fetches an adult pass
+  // adult PIN pad shows up on screen, an adult's page fetches an adult pass
   // and hands it to the game in place of the PIN; anyone else is told why the
   // levels stay locked. Waiting until the pad is actually showing means
   // nothing unlocks unless the game is asking.
@@ -106,7 +106,7 @@
     state.note = note;
     const me = Id.me || {};
     if (!me.signedIn) {
-      note.textContent = 'Adult levels unlock when a grown-up signs in with their ARKS ID. ';
+      note.textContent = 'Adult levels unlock when an adult signs in with their ARKS ID. ';
       const a = document.createElement('a');
       a.href = '/auth/signin?return=' + encodeURIComponent(location.pathname + location.search + location.hash);
       a.textContent = 'Sign in';
@@ -114,7 +114,7 @@
       note.appendChild(a);
       return;
     }
-    if (!me.adult) { note.textContent = 'Adult levels are only for grown-ups’ ARKS ID accounts, so they stay locked here.'; return; }
+    if (!me.adult) { note.textContent = 'Adult levels are only for adult ARKS ID accounts, so they stay locked here.'; return; }
     note.textContent = 'Unlocking with your ARKS ID…';
     let done = false;
     const unlock = async () => {

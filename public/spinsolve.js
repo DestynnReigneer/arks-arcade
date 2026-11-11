@@ -120,7 +120,7 @@
     await loadConfig();
   }
 
-  // A grown-up's ARKS ID adult pass, through the PIN pad.
+  // An adult's ARKS ID adult pass, through the PIN pad.
   async function unlockOnTv() {
     S.pin = await ArcadeTV.adultPass();
     return !!S.pin;
@@ -146,7 +146,7 @@
       const tryPin = async pin => {
         try {
           const r = await api('/api/spinsolve/unlock', { pin });
-          if (!r.ok) { $('pinMsg').textContent = 'Adult levels need a grown-up signed in with ARKS ID.'; PinPad.clear($('pinInput')); return; }
+          if (!r.ok) { $('pinMsg').textContent = 'Adult levels need an adult signed in with ARKS ID.'; PinPad.clear($('pinInput')); return; }
           S.pin = pin;
           try { sessionStorage.setItem('spin.adultPin', pin); } catch { /* unavailable */ }
           done(true);
@@ -1047,7 +1047,7 @@
         <p><b>2–4 players:</b> pass the phone. Only whoever solves keeps that round's money.</p>
         <p><b>Turn timer:</b> pick 30 to 90 seconds (or Off) in setup. Like on the TV show, nothing ticks while you decide whether to spin, buy a vowel or solve. The clock starts once the wheel stops (to call a letter), when you buy a vowel, and when you tap Solve. Run out and your turn passes.</p>
         <p><b>Sound off?</b> Everything you'd hear also shows: letters light up, a wrong letter flashes the board red with a big ✕, and Bankrupt, Lose a Turn and Solved show up over the wheel.</p>
-        <p><b>Puzzles:</b> play everything, or pick one theme pack from the list. 💡 Suggest a theme to ask for a new one. Grown-ups can turn up the heat with Cheeky, Spicy or Filthy.</p>
+        <p><b>Puzzles:</b> play everything, or pick one theme pack from the list. 💡 Suggest a theme to ask for a new one. Adults can turn up the heat with Cheeky, Spicy or Filthy.</p>
         <div class="tut-tip">Tap <b>?</b> at the top any time to see this again.</div>`
     }
   ]);
