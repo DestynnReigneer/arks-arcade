@@ -49,6 +49,33 @@ order they were clicked, and keep the rest pinned here.
 - Building the trophy page, and Clueless Crosswords keeping its letters on the server so they follow you to another
   device the way Sudoku's squares do.
 
+## The trophy page (2026-11-10)
+
+Built from the mockup the maintainer approved, with their answers to its three questions.
+
+- **The trophy** sits beside who's playing in the home page's top bar and opens `trophies.html`. Its pink number is
+  how many boards the person playing is #1 on (`GET /api/trophies?summary=1`, painted by `public/hub.js`).
+- **The page** (`public/trophies.*`): the Trophy Shelf (boards you're #1 on, top 3 on, and on), your closest climb
+  (the smallest real gap to the score right above yours, with Go get it), filters (Every game, Only mine and the four
+  kinds of game), and one card per game with its boards. A board opens to its top 10 with a Play button. A guest sees
+  every board but no shelf.
+- **The server** (`arcade/trophies.js`, `GET /api/trophies`) reads every board straight from its game's table and
+  works out "you" from the profile token, never the address. Ranks count scores strictly better than your best, the
+  same as the games do. Rambler's boards are the 4x4, 5x5 and Marathon top tens; Wordless leaves out adult themes,
+  like its own board.
+- **Grown-up boards** (Know-It-All's and Spin & Solve's adult boards) are shown locked to everyone, the maintainer's
+  choice, until the adult PIN is typed (`POST /api/trophies/unlock`, the shared PIN limiter; with ARKS ID the PIN pad
+  hands over a grown-up's pass). With no PIN set they still wait for an "I'm a grown-up" tap. Every other board is
+  open, as it is in its own game.
+- **Today and Overall:** only the daily games (Sudoku, Clueless Crosswords, Shuffle Scuffle, Tumbler Rumble) get the
+  switch, on their own card (the maintainer's pick). The shelf counts Overall.
+- **Words with Family's boards:** Games won, Best game score and Best single word, shared by everyone with nothing
+  locked or hidden (the maintainer's call, including the unfiltered list's words). `crisscross/results.js` keeps one
+  row per profile per finished game (`crisscross_results`), written when `save()` sees a game end, because a game's
+  own row can be cleared later. Games that finished before it existed are filled in once at startup (setting
+  `crisscross_results_filled`). Bots and players without a profile aren't on these boards.
+- **Tests:** `test/trophies.test.js` and `test/browser/trophies.spec.js`; `/trophies.html` is in the browser page list.
+
 ## Words with Family's word rules and moving tiles (2026-11-09)
 
 - **#107** (setup screens and the end-of-game pop-up, below) was approved and merged.

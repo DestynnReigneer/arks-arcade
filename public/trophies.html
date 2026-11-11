@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trophy Room</title>
+<link rel="icon" href="/custom/brand/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/custom/brand/app-icon-180.png">
+<link rel="stylesheet" href="arcade-ui.css">
+<link rel="stylesheet" href="trophies.css">
+<link rel="stylesheet" href="look.css">
+<link rel="stylesheet" href="topbar.css">
+<link rel="stylesheet" href="tv.css">
+</head>
+<body>
+<script src="topbar.js"></script>
+
+<main class="tr-wrap">
+  <div class="tr-head">
+    <h1>🏆 <em>TROPHY</em> ROOM</h1>
+    <span class="tr-label" id="shelfName"></span>
+  </div>
+
+  <p class="tr-note" id="guestNote" hidden>You're playing as a guest. Choose who's playing to see where you stand on every board.
+    <button class="tr-btn" type="button" id="pickProfile">Who's playing?</button></p>
+
+  <div class="tr-shelf" id="shelf">
+    <div class="tr-stat"><div class="n" id="sGold">0</div><div class="t">boards you're #1 on</div></div>
+    <div class="tr-stat"><div class="n" id="sTop3">0</div><div class="t">boards you're top 3 on</div></div>
+    <div class="tr-stat"><div class="n" id="sOn">0</div><div class="t">boards you're on</div></div>
+  </div>
+
+  <div class="tr-close" id="closeCall" hidden></div>
+
+  <div class="tr-filters" id="filters" role="group" aria-label="Which games"></div>
+
+  <div class="tr-unlock" id="unlockRow" hidden>
+    <span>🔞 Grown-up boards are locked.</span>
+    <button class="tr-btn" type="button" id="unlockBtn">Unlock</button>
+  </div>
+
+  <p class="tr-note" id="loadMsg">Loading the boards…</p>
+  <div class="tr-games" id="games"></div>
+</main>
+
+<div class="tr-pin hidden" id="pinView" role="dialog" aria-modal="true" aria-labelledby="pinTitle">
+  <div class="tr-pin-card">
+    <h2 id="pinTitle">Grown-up boards</h2>
+    <p id="pinText">Type the adult PIN to see them.</p>
+    <input id="pinInput" inputmode="numeric" autocomplete="off" aria-label="Adult PIN">
+    <p class="tr-err" id="pinMsg" role="alert"></p>
+    <div class="tr-pin-btns">
+      <button class="tr-btn" type="button" id="pinYes" hidden>I'm a grown-up</button>
+      <button class="tr-btn ghost" type="button" id="pinCancel">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script src="feedback.js"></script>
+<script src="avatars.js"></script>
+<script src="avatar-photo.js"></script>
+<script src="pin-pad.js"></script>
+<script src="profile.js"></script>
+<script src="trophies.js"></script>
+<script src="banner.js" defer></script>
+</body>
+</html>

@@ -56,6 +56,7 @@ const SUITES = [
   ['clueless', require('./clueless.test.js')],
   ['tumbler', require('./tumbler.test.js')],
   ['continue', require('./continue.test.js')],
+  ['trophies', require('./trophies.test.js')],
   ['cabinet', require('./cabinet.test.js')],
   ['housekeeping', require('./housekeeping.test.js')],
   ['boards', require('./boards.test.js')],

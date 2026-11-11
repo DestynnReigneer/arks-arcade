@@ -1,0 +1,87 @@
+/* The trophy page (2026-11-10), from the mockup the maintainer approved: your
+   shelf, the filters, and one card per game with its boards inside. The
+   colors come from look.css; gold, silver and bronze are the podium. */
+:root {
+  --pink: #ff2ec4; --violet: #8a3ffc; --turq: #00ffc2; --gold: #ffc72c;
+  --silver: #c9d1e0; --bronze: #e08a4a;
+  --display: 'Orbitron', 'Trebuchet MS', sans-serif;
+  --body: 'Rajdhani', 'Segoe UI', system-ui, sans-serif;
+}
+body { color: var(--text); font-family: var(--body); font-size: 17px; line-height: 1.35; }
+.hidden, [hidden] { display: none !important; }
+.tr-wrap { max-width: 720px; margin: 0 auto; padding: 16px 0 48px; display: flex; flex-direction: column; gap: 16px; }
+.tr-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.tr-head h1 { font-family: var(--display); font-size: clamp(22px, 6.4vw, 30px); font-weight: 800; letter-spacing: .04em; margin: 0; }
+.tr-head h1 em { font-style: normal; color: var(--gold); }
+.tr-label { font-family: ui-monospace, Consolas, monospace; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+.tr-note { margin: 0; color: var(--muted); }
+.tr-note .tr-btn { margin-left: 6px; }
+.tr-btn { font-family: var(--body); font-weight: 700; font-size: 15px; background: var(--turq); color: #04121f; border: 0; border-radius: 9px; padding: 8px 12px; text-decoration: none; cursor: pointer; white-space: nowrap; }
+.tr-btn.ghost { background: transparent; color: var(--text); border: 1px solid var(--border); }
+button:focus-visible, a:focus-visible { outline: 2px solid var(--turq); outline-offset: 2px; }
+
+.tr-shelf { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.tr-stat { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px; min-width: 0; }
+.tr-stat .n { font-family: var(--display); font-weight: 800; font-size: clamp(22px, 7vw, 32px); color: var(--gold); font-variant-numeric: tabular-nums; }
+.tr-stat .t { color: var(--muted); font-size: 15px; }
+.tr-close { background: linear-gradient(135deg, color-mix(in srgb, var(--pink) 20%, var(--card)), var(--card)); border: 1px solid color-mix(in srgb, var(--pink) 50%, var(--border)); border-radius: 12px; padding: 12px 14px; display: flex; align-items: center; gap: 12px; }
+.tr-close .big { font-size: 26px; }
+.tr-close .tr-btn { margin-left: auto; }
+
+.tr-filters { display: flex; gap: 8px; flex-wrap: wrap; }
+.tr-pill { font-family: var(--body); font-weight: 700; font-size: 15px; color: var(--muted); background: var(--card); border: 1px solid var(--border); border-radius: 999px; padding: 6px 12px; cursor: pointer; }
+.tr-pill[aria-pressed="true"] { color: #1a0424; background: var(--pink); border-color: var(--pink); }
+.tr-unlock { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--plate); border: 1px dashed var(--dim); border-radius: 10px; padding: 10px 12px; color: var(--muted); }
+
+.tr-games { display: flex; flex-direction: column; gap: 12px; }
+.tr-game { background: var(--card); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+.tr-game > header { display: flex; align-items: center; gap: 10px; padding: 12px 14px; flex-wrap: wrap; }
+.tr-game > header .e { font-size: 24px; }
+.tr-game > header h2 { font-family: var(--display); font-size: 16px; font-weight: 800; letter-spacing: .04em; flex: 1; min-width: 0; margin: 0; }
+.tr-game > header .mine { font-family: ui-monospace, Consolas, monospace; font-size: 12px; color: var(--gold); white-space: nowrap; }
+.tr-seg { display: inline-flex; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.tr-seg button { font-family: ui-monospace, Consolas, monospace; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); background: var(--card); border: 0; padding: 6px 10px; cursor: pointer; }
+.tr-seg button[aria-pressed="true"] { background: var(--turq); color: #04121f; font-weight: 700; }
+
+.tr-board { border-top: 1px solid var(--border); }
+.tr-board > button { width: 100%; display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 10px; background: none; border: 0; color: var(--text); font-family: var(--body); font-size: 16px; text-align: left; padding: 10px 14px; cursor: pointer; }
+.tr-board > button:hover { background: var(--card-2); }
+.tr-board .bn { font-weight: 700; min-width: 0; }
+.tr-board .bn small { display: block; color: var(--muted); font-weight: 500; font-size: 14px; overflow-wrap: anywhere; }
+.tr-board .bn small.locked { color: var(--dim); }
+.tr-rank { font-family: ui-monospace, Consolas, monospace; font-size: 12px; font-weight: 700; border-radius: 6px; padding: 3px 7px; border: 1px solid var(--border); color: var(--muted); white-space: nowrap; }
+.tr-rank.r1 { color: #1a0424; background: var(--gold); border-color: var(--gold); }
+.tr-rank.r2 { color: #1a0424; background: var(--silver); border-color: var(--silver); }
+.tr-rank.r3 { color: #1a0424; background: var(--bronze); border-color: var(--bronze); }
+.tr-caret { color: var(--dim); transition: transform .15s; }
+.tr-board.open .tr-caret { transform: rotate(90deg); }
+@media (prefers-reduced-motion: reduce) { .tr-caret { transition: none; } }
+
+.tr-table { background: var(--plate); padding: 8px 14px 12px; }
+.tr-table ol { list-style: none; margin: 0; padding: 0; }
+.tr-table li { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 5px 0; border-bottom: 1px solid color-mix(in srgb, var(--text) 7%, transparent); font-variant-numeric: tabular-nums; }
+.tr-table li.you { color: var(--turq); font-weight: 700; }
+.tr-table .pos { font-family: ui-monospace, Consolas, monospace; font-size: 13px; color: var(--dim); }
+.tr-table li:nth-child(1) .pos { color: var(--gold); }
+.tr-table li:nth-child(2) .pos { color: var(--silver); }
+.tr-table li:nth-child(3) .pos { color: var(--bronze); }
+.tr-table .who { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.tr-table .who b { font-weight: inherit; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tr-table .who small { color: var(--dim); font-size: 13px; white-space: nowrap; }
+.tr-table .sc { font-family: ui-monospace, Consolas, monospace; font-size: 14px; text-align: right; }
+.tr-table .sc small { display: block; color: var(--dim); font-size: 12px; }
+.tr-table .foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 10px; color: var(--muted); font-size: 15px; flex-wrap: wrap; }
+.tr-empty { color: var(--muted); padding: 6px 0; }
+
+.tr-pin { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(16, 6, 32, .85); }
+.tr-pin-card { width: 100%; max-width: 360px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 18px; text-align: center; }
+.tr-pin-card h2 { font-family: var(--display); font-size: 18px; margin: 0 0 6px; }
+.tr-pin-card p { color: var(--muted); margin: 0 0 10px; }
+.tr-pin-card input { font-size: 22px; width: 12ch; padding: 8px; border-radius: 10px; border: 1px solid var(--border); background: var(--plate); color: var(--text); }
+.tr-err { color: #ff8a8a !important; min-height: 1.3em; margin-top: 8px !important; }
+.tr-pin-btns { display: flex; gap: 8px; justify-content: center; margin-top: 8px; }
+
+@media (max-width: 420px) {
+  .tr-stat .t { font-size: 14px; }
+  .tr-close { flex-wrap: wrap; }
+}

@@ -196,4 +196,4 @@ router.use((err, req, res, next) => {
   res.status(err.status).json({ error: err.message });
 });
 
-module.exports = { router, start, finish, save, board, SLACK_MS };
+module.exports = { router, start, finish, save, board, SLACK_MS, RULES_VERSION };

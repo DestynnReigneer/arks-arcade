@@ -97,11 +97,14 @@ function save(row, state, now = Date.now(), actor) {
   const status = state.waiting ? 'waiting' : state.over ? 'over' : 'playing';
   const p = !state.waiting && !state.over ? state.players[state.turn] : null;
   const before = row.turn_profile || null, turn = p && p.profileId ? p.profileId : null;
+  const ended = status === 'over' && row.status !== 'over';
   db.db.prepare('UPDATE crisscross_games SET status = ?, turn_profile = ?, state = ?, updated_at = ?, join_code = ? WHERE id = ?')
     .run(status, turn, JSON.stringify(state), now, status === 'waiting' ? row.join_code : null, row.id);
   row.status = status;
   row.updated_at = now;
   row.turn_profile = turn;
+  // A finished game goes on the trophy page's boards (crisscross/results.js).
+  if (ended) { try { require('./results').record(row.id, state, now); } catch { /* the boards can miss one game */ } }
   if (actor !== undefined && row.kind === 'online' && turn && turn !== before && turn !== actor) yourTurn(row, state, turn, actor);
 }
 
