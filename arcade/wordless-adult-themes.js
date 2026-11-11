@@ -1,7 +1,7 @@
 'use strict';
 
 // Built-in adult Wordless themes, so the adult side has something to play
-// before anyone makes their own. Hidden behind the adult PIN like any adult
+// before anyone makes their own. Hidden behind an ARKS ID adult pass like any adult
 // theme. Each word has [category, clue]; db.js seeds the themes and
 // wordless-hints.js uses the clues.
 

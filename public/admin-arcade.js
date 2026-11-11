@@ -1,7 +1,7 @@
 'use strict';
 
 // Admin for the arcade as a whole: the Comm Center inbox, home-page
-// announcements, and the adult PIN. Shares the admin password admin.js unlocks.
+// announcements, and whether adult levels are on. Shares the admin password admin.js unlocks.
 
 (() => {
   const API = '/api/comm/admin';

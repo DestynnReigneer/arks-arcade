@@ -304,7 +304,7 @@ module.exports = function profileRoutes({ requireAdmin, notify }) {
     db.db.prepare('UPDATE arcade_profiles SET pin_fails = 0, locked_until = NULL WHERE id = ?').run(req.params.id);
     res.json({ unlocked: true });
   });
-  // Lift every device lock: profile PINs and the adult PIN alike.
+  // Lift every device lock: profile PINs and an ARKS ID adult pass alike.
   admin.post('/unlock-devices', async (req, res) => {
     await deviceStore.resetAll();
     await adultPin.resetTries();

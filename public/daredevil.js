@@ -78,7 +78,7 @@
       const done = ok => { $('pinView').classList.add('hidden'); resolve(ok); };
       PinPad.attach($('pinInput'), async pin => {
         const r = await api('/unlock', { method: 'POST', body: { pin } }).catch(() => ({ ok: false }));
-        if (!r.ok) { $('pinMsg').textContent = 'That PIN is not right.'; PinPad.clear($('pinInput')); return; }
+        if (!r.ok) { $('pinMsg').textContent = 'Adult levels need a grown-up signed in with ARKS ID.'; PinPad.clear($('pinInput')); return; }
         S.pin = pin;
         try { sessionStorage.setItem('dd.pin', pin); } catch { /* unavailable */ }
         done(true);

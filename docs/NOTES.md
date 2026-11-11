@@ -63,8 +63,8 @@ The maintainer asked for the adult unlock to be the ARKS ID login, so there's no
   profile PIN in `profile.js`). With ARKS ID it fetches the pass as before; without it, it says adult levels need ARKS
   ID. The games' hints and How to play say "for grown-ups signed in with ARKS ID" instead of "enter the adult PIN".
 - **Tests:** the suite runs most games without ARKS ID, so `test/run.js` sets `TEST_ADULT_PASS`, a pass that only
-  works under `NODE_ENV=test`. Guardian finding from 2026-11-10 (a typed PIN guessable through GET headers) is closed
-  by this: there's no typed PIN left, and the pass is signed by the server.
+  works under `NODE_ENV=test` (`test/unit.test.js` checks it's refused otherwise). A typed PIN could be guessed, so
+  it's gone; the pass is signed by the server.
 
 ## The trophy page (2026-11-10)
 

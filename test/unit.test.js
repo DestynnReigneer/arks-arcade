@@ -22,6 +22,20 @@ async function run() {
     else { fail++; console.log('  FAIL  ' + label + (extra ? '  ' + extra : '')); }
   };
 
+  console.log('\n-- the test-only adult pass stays in the tests --');
+  {
+    // arcade/adult-pin.js gives the test suite a pass of its own (TEST_ADULT_PASS), and only under NODE_ENV=test.
+    // Each check loads it fresh in its own process, with that NODE_ENV.
+    const { execFileSync } = require('node:child_process');
+    const tryPass = env => execFileSync(process.execPath, ['-e',
+      "const p=require('./arcade/adult-pin.js');process.stdout.write(String(p.matches('246810'))+','+String(p.matches('')))"],
+      { cwd: require('node:path').join(__dirname, '..'), env: { PATH: process.env.PATH, SYSTEMROOT: process.env.SYSTEMROOT || '', TEST_ADULT_PASS: '246810', ...env } }).toString();
+    ok('in production the test pass unlocks nothing', tryPass({ NODE_ENV: 'production' }) === 'false,false');
+    ok('…nor with NODE_ENV unset', tryPass({}) === 'false,false');
+    ok('…nor in development', tryPass({ NODE_ENV: 'development' }) === 'false,false');
+    ok('only the test suite can use it', tryPass({ NODE_ENV: 'test' }) === 'true,false');
+  }
+
   console.log('\n-- dice and board shape --');
   ok('4x4 rolls 16 tiles', dice.rollBoard(4).length === 16);
   ok('5x5 rolls 25 tiles', dice.rollBoard(5).length === 25);

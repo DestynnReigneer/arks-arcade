@@ -126,7 +126,7 @@
       const done = ok => { $('pinView').classList.add('hidden'); $('pinCancel').onclick = null; resolve(ok); };
       const tryPin = async pin => {
         const r = await api('/api/trivia/unlock', { pin }).catch(() => ({ ok: false }));
-        if (!r.ok) { $('pinMsg').textContent = 'That PIN is not right.'; PinPad.clear($('pinInput')); return; }
+        if (!r.ok) { $('pinMsg').textContent = 'Adult levels need a grown-up signed in with ARKS ID.'; PinPad.clear($('pinInput')); return; }
         S.pin = pin;
         try { sessionStorage.setItem('trivia.adultPin', pin); } catch { /* unavailable */ }
         done(true);
@@ -187,7 +187,7 @@
       }
       const code = $('joinCode').value.trim().toUpperCase();
       if (code.length !== 4) { $('setupMsg').textContent = 'Type the 4-letter code.'; return; }
-      // A grown-ups game asks for its lobby password (not the adult PIN).
+      // A grown-ups game asks for its lobby password (not the adult pass).
       const r = await RoomPassword.withPassword(password =>
         api(`/api/trivia/rooms/${code}/join`, { name: $('joinName').value, password }));
       if (r) enterRoom(r);

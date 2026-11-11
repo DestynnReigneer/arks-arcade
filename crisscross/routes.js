@@ -4,7 +4,7 @@
 //
 // Who's asking comes from headers, never the address: X-Profile-Token (the
 // profile's signed token) for online games, X-Game-Key for a pass-and-play
-// game on one device, and X-Adult-Pin (the adult PIN, or an ARKS ID adult
+// game on one device, and X-Adult-Pin (an ARKS ID adult pass, or an ARKS ID adult
 // pass) for games on the unfiltered list. The page only ever sends where it
 // put its tiles; the server checks the move and decides the points.
 
@@ -26,13 +26,13 @@ const needProfile = req => {
 // With ARKS ID on, adult levels follow each person's role (see arcade/arksid.js).
 const arksMode = () => adultPin.status().source === 'arksid';
 
-// The unfiltered list: every request needs the adult PIN (or pass), and with
+// The unfiltered list: every request needs an ARKS ID adult pass, and with
 // ARKS ID the person asking has to be a grown-up too. So everyone in an
 // unfiltered game has to qualify, not just the one who started it.
 function adultGate(req, dictionary, profile) {
   if (E.dictOf(dictionary) !== 'adult') return;
   if (!adultPin.matches(req.get('X-Adult-Pin') || (req.body && req.body.adultPin) || '')) {
-    throw Object.assign(fail('This game uses the unfiltered word list, so it needs the adult PIN.', 403), { adult: true });
+    throw Object.assign(fail('This game uses the unfiltered word list, so it needs a grown-up signed in with ARKS ID.', 403), { adult: true });
   }
   if (arksMode() && profile && !games.grownUp(profile.id)) throw fail('Games on the unfiltered list are only for grown-ups.', 403);
 }
@@ -97,7 +97,7 @@ router.post('/invite/:code/join', newLimit, wrap(req => {
 }));
 
 // Everything about one game goes through this: the game must exist, and an
-// unfiltered one needs the adult PIN from whoever is asking.
+// unfiltered one needs an ARKS ID adult pass from whoever is asking.
 function gameWho(req) {
   const w = who(req);
   adultGate(req, games.load(req.params.id).row.dictionary, w.profile);

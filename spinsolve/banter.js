@@ -2,7 +2,7 @@
 
 // What the robot hosts say when there's a lull: jokes, and the hecklers who
 // wander on to roast the host. Kept on the server and sent with the puzzles,
-// so the adult tiers sit behind the adult PIN like the adult puzzles do.
+// so the adult tiers sit behind an ARKS ID adult pass like the adult puzzles do.
 // Each level mixes in the one below it, weighted toward its own.
 // {host} is the host's name; jokes are [setup, punchline].
 
