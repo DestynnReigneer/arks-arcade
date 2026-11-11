@@ -401,8 +401,7 @@ function adminRouter(requireAdmin) {
     try { res.json({ cars: trainCars.set((req.body || {}).cars) }); } catch (e) { next(e); }
   });
 
-  // The adult PIN lives here rather than under one game: it guards adult
-  // content anywhere in the arcade.
+  // Whether adult levels are on (only with ARKS ID), for the admin page's Adult levels card.
   admin.get('/adult-pin', (req, res) => res.json(adultPin.status()));
   // There's no adult PIN to set any more (adult levels follow ARKS ID); kept so an old admin page gets a clear answer.
   admin.post('/adult-pin', (req, res, next) => {

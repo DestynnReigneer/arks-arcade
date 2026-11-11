@@ -1,7 +1,7 @@
 'use strict';
 
 // Lobby passwords for adult games. Whoever hosts an adult game makes one up;
-// guests type it to join. It's separate from the adult PIN on purpose: the
+// guests type it to join. It's separate from an ARKS ID adult pass on purpose: the
 // PIN lets someone host adult content, the password lets the host's friends
 // in without knowing the PIN, and a curious kid tapping Join hits a wall.
 

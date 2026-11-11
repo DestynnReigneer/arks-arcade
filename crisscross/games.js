@@ -73,7 +73,7 @@ const profileRow = id => db.db.prepare("SELECT id, name, avatar FROM arcade_prof
 
 // With ARKS ID on, each profile belongs to an account with a role. Grown-ups
 // (admin and adult) can play on the unfiltered list. Without ARKS ID there
-// are no roles, and the adult PIN is what's checked instead.
+// are no roles, and an ARKS ID adult pass is what's checked instead.
 const GROWN_UP = ['admin', 'adult'];
 function grownUp(profileId) {
   try {

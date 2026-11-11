@@ -56,7 +56,7 @@
     if (S.pin) h['X-Adult-Pin'] = S.pin;
     return h;
   }
-  // Asks again after the adult PIN when an unfiltered game wants it.
+  // Asks again for the adult pass when an unfiltered game wants it.
   async function call(path, body) {
     try {
       return await api('/api/crisscross' + path, body, headers());
@@ -87,7 +87,7 @@
       const done = ok => { $('pinView').classList.add('hidden'); $('pinCancel').onclick = null; resolve(ok); };
       PinPad.attach($('pinInput'), async pin => {
         const r = await api('/api/crisscross/unlock', { pin }).catch(() => ({ ok: false }));
-        if (!r.ok) { $('pinMsg').textContent = 'That PIN is not right.'; PinPad.clear($('pinInput')); return; }
+        if (!r.ok) { $('pinMsg').textContent = 'Adult levels need a grown-up signed in with ARKS ID.'; PinPad.clear($('pinInput')); return; }
         S.pin = pin;
         try { sessionStorage.setItem('crisscross.adultPin', pin); } catch { /* unavailable */ }
         done(true);
