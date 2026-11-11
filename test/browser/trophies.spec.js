@@ -11,7 +11,8 @@ test.beforeEach(async ({ page }) => { await quietFonts(page); });
 
 async function asGuest(page) {
   const pick = chooser(page);
-  if (await pick.isVisible().catch(() => false)) {
+  // Who's playing? can open a moment after the page does, so give it time to show.
+  if (await pick.waitFor({ state: 'visible', timeout: 4000 }).then(() => true, () => false)) {
     await page.getByRole('button', { name: /Play as a guest/ }).click();
     await page.getByRole('button', { name: 'Play', exact: true }).click();
     await expect(pick).toBeHidden();
