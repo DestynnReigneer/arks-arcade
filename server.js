@@ -55,6 +55,8 @@ const INITIALS_RE = /^[A-Z0-9]{1,3}$/;
 const adminSession = require('./arcade/admin-session');
 const { requireAdmin } = adminSession;
 app.use('/api/admin', adminSession.routes());
+// Recovery opening the admin page pings the admin (arcade/admin-session.js).
+adminSession.useNotify(text => { notifyText(text).catch(() => {}); });
 // Which build is running, for the line at the bottom of the admin page.
 const { version } = require('./kit/version');
 app.get('/api/admin/version', requireAdmin, (req, res) => res.json(version()));
@@ -230,8 +232,7 @@ app.get('/manifest.webmanifest', (req, res) => {
 comm.setFeedbackNotify(notifyText);
 // An admin (the admin page unlocked, or signed in with ARKS ID's admin role)
 // sends as much feedback as they like.
-comm.setAdminCheck(async req => require('./arcade/admin-session').isAdmin(req) ||
-  !!(arks && ((await arks.current(req)) || {}).account?.role === 'admin'));
+comm.setAdminCheck(async req => require('./arcade/admin-session').isAdminNow(req));
 app.use('/api/comm/admin', comm.adminRouter(requireAdmin));
 app.use('/api/comm', comm.router);
 
@@ -332,12 +333,12 @@ app.get('/api/wordless/hints', (req, res) => {
   res.json(wordlessHints.hintsFor(theme, word, dictionary.load().common));
 });
 
-app.get('/api/themes', (req, res) => {
+app.get('/api/themes', async (req, res) => {
   if (req.query.adult === '1' && !adultUnlocked(req)) {
     return res.status(403).json({ error: 'Adult levels need an adult signed in with ARKS ID.' });
   }
   // The admin page lists every theme, so adult ones can be deleted too.
-  const isAdmin = adminSession.isAdmin(req);
+  const isAdmin = await adminSession.isAdminNow(req);
   res.json(db.listThemes({ includeAdult: isAdmin || adultUnlocked(req) }).map(t =>
     t.id === 'classic' ? { ...t, words: [...new Set([...t.words, ...getClassicExtras()])] }
       : t.adult && !isAdmin && t.words.filter(w => w.length <= 4).length < 10
