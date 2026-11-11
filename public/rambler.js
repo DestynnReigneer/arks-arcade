@@ -54,7 +54,7 @@ const S = {
 // ---------------------------------------------------------------- utilities
 
 async function api(path, { method = 'GET', body } = {}) {
-  // The adult PIN rides on every request once it has been entered. Posts could
+  // The adult pass rides on every request once it has been entered. Posts could
   // put it in the body, but GETs cannot, and a query string would leave it in
   // logs and browser history.
   const headers = {};

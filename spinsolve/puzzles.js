@@ -3,7 +3,7 @@
 // Spin & Solve's puzzle levels, the built-in banks for each, and the checks a
 // pasted-in pack has to pass. The Kids bank lives in public/spin-puzzles.js
 // (it's family-friendly, so the page may as well see it); the adult banks
-// live only here and are served behind the adult PIN.
+// live only here and are served behind an ARKS ID adult pass.
 
 const dictionary = require('../rambler/dictionary');
 const KIDS = require('../public/spin-puzzles');

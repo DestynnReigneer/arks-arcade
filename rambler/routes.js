@@ -19,9 +19,7 @@ const adminRouter = require('./admin');
 const router = express.Router();
 router.use('/admin', adminRouter);
 
-// Optional extra lock on the unfiltered dictionary. Unset -- the default --
-// means a confirmation tap is all that stands in front of it. ADULT_PIN in
-// .env sets it; the admin page can change it later (arcade/adult-pin.js).
+// The unfiltered dictionary needs a grown-up's ARKS ID adult pass (arcade/adult-pin.js).
 const adultPin = require('../arcade/adult-pin');
 const adultJoin = require('../arcade/adult-join');
 const comm = require('../arcade/comm');
@@ -42,7 +40,7 @@ function assertProfileAllowed(profile, req) {
   if (profile !== 'adult') return;
   const supplied = req.get('X-Adult-Pin') || (req.body && req.body.adultPin) || '';
   if (!adultPin.matches(supplied)) {
-    throw fail('That PIN is not right.', 403);
+    throw fail('Adult levels need a grown-up signed in with ARKS ID.', 403);
   }
 }
 
@@ -91,7 +89,7 @@ const roomLimiter = limit(60, 40, 'Too many rooms created. Try again later.');
 
 // ---- config ----------------------------------------------------------------
 
-// Checks a typed-in adult PIN before the page keeps it.
+// Checks an ARKS ID adult pass before the page keeps it.
 router.post('/unlock', adultPin.tryLimiter(), (req, res) => res.json(adultPin.check(req, res)));
 
 router.get('/config', (req, res) => {

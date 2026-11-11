@@ -120,7 +120,7 @@
     await loadConfig();
   }
 
-  // The adult PIN if one is set, otherwise a one-tap "I'm an adult".
+  // A grown-up's ARKS ID adult pass, through the PIN pad.
   async function unlockOnTv() {
     S.pin = await ArcadeTV.adultPass();
     return !!S.pin;
@@ -146,7 +146,7 @@
       const tryPin = async pin => {
         try {
           const r = await api('/api/spinsolve/unlock', { pin });
-          if (!r.ok) { $('pinMsg').textContent = 'That PIN is not right.'; PinPad.clear($('pinInput')); return; }
+          if (!r.ok) { $('pinMsg').textContent = 'Adult levels need a grown-up signed in with ARKS ID.'; PinPad.clear($('pinInput')); return; }
           S.pin = pin;
           try { sessionStorage.setItem('spin.adultPin', pin); } catch { /* unavailable */ }
           done(true);
