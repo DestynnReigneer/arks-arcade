@@ -374,6 +374,30 @@ async function run({ base, root, fake, admin: ADMIN }) {
   const chessPage = await fetch(base + '/chess.html').then(r => r.text());
   ok('…and every page loads the banner script', chessPage.includes('<script src="banner.js" defer></script>'));
 
+  console.log('\n-- the admin page: an ARKS ID admin is straight in --');
+  {
+    const sam = browser();
+    fake.next = 'sam';
+    await sam.call('/auth/signin?return=%2Fadmin.html');
+    const s = (await sam.call('/api/admin/session')).data;
+    ok('an ARKS ID admin is straight into the admin page, with no PIN or password', s.admin === true && s.signedIn === true && s.arksId === true, JSON.stringify(s));
+    ok('…and the admin routes answer them', (await sam.call('/api/admin/version')).status === 200 && (await sam.call('/api/admin/scores')).status === 200);
+    const kid = browser();
+    fake.next = 'milo';
+    await kid.call('/auth/signin?return=%2Fadmin.html');
+    const k = (await kid.call('/api/admin/session')).data;
+    ok('a kid signed in with ARKS ID is not the admin', k.admin === false && k.arksId === true, JSON.stringify(k));
+    ok('…and the admin routes turn them away', (await kid.call('/api/admin/version')).status === 401);
+    const lost = browser();
+    const ways = (await lost.call('/api/admin/session')).data;
+    ok('recovery: the page learns there\'s a PIN and a password to try', ways.admin === false && ways.hasPin === true && ways.hasPassword === true);
+    ok('…a wrong PIN is refused', (await lost.call('/api/admin/login', { method: 'POST', body: { pin: '000000' } })).status === 401);
+    ok('…the admin PIN from setup opens it', (await lost.call('/api/admin/login', { method: 'POST', body: { pin: '135790' } })).status === 200);
+    const r = (await lost.call('/api/admin/session')).data;
+    ok('…as recovery, not as an ARKS ID admin', r.admin === true && r.signedIn === false && (await lost.call('/api/admin/version')).status === 200);
+    fake.next = 'milo';
+  }
+
   console.log('\n-- signing out --');
   const out = await milo.call('/auth/signout', { method: 'POST', follow: false });
   ok('signing out ends the arcade sign-in and goes on to ARKS ID\'s sign-out', out.data.next === `${fake.base}/signout?app=arcade&return=%2F`);

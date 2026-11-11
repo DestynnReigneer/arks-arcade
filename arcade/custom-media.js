@@ -36,7 +36,8 @@ const KINDS = {
   images: { ext: IMAGE.filter(e => e !== 'svg'), max: 10 * MB }
 };
 // The app icons are what a phone shows when the arcade is added to its home screen.
-const BRAND_FILES = { avatar: 'avatar.svg', wide: 'logo-wide.svg', square: 'logo-square.svg', favicon: 'favicon.svg',
+// notAdmin: the picture on the admin page's not-the-admin card (2026-11-11); without it, a plain lock.
+const BRAND_FILES = { avatar: 'avatar.svg', wide: 'logo-wide.svg', square: 'logo-square.svg', favicon: 'favicon.svg', notAdmin: 'not-admin.jpg',
   icon180: 'app-icon-180.png', icon192: 'app-icon-192.png', icon512: 'app-icon-512.png' };
 // Plain names only, so a file name can't reach outside its folder or into HTML.
 const SAFE_NAME = /^[a-z0-9][a-z0-9_-]*\.[a-z0-9]+$/i;

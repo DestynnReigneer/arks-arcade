@@ -246,34 +246,66 @@
   .fb-rep-who { font-size: 12px; opacity: .7; margin-bottom: 3px; }
   .fb-thread textarea { width: 100%; box-sizing: border-box; }
 </style>
+<link rel="stylesheet" href="look.css">
+<link rel="stylesheet" href="topbar.css">
+<link rel="stylesheet" href="admin-look.css">
 </head>
-<body>
+<body class="admin-page">
+<script src="topbar.js"></script>
 <main>
-  <div class="admin-header">
-    <div class="back-row"><a href="index.html" class="back-link">← Back to arcade</a></div>
-    <h1>🛠️ Arcade Admin</h1>
-    <div style="opacity:0.5; font-size:12px;">Comm Center · games · settings</div>
-  </div>
-
-  <div id="lockScreen" class="admin-section">
-    <h2>Enter admin password</h2>
-    <input type="password" id="tokenInput" placeholder="Admin password" autocomplete="current-password">
-    <button id="unlockBtn" class="primary-btn" style="border:none;border-radius:8px;padding:10px 16px;font-weight:700;cursor:pointer;">Unlock</button>
-    <div id="lockError" class="status-msg error"></div>
+  <!-- The way in (2026-11-11, the ARKS standard): an ARKS ID admin never sees
+       these. Anyone else gets the not-the-admin card, whose link leads to
+       recovery: the admin PIN, then the password, then where to look. Without
+       ARKS ID, recovery is the way in, so it shows straight away. -->
+  <div id="lockScreen" class="adm-gate hidden">
+    <section class="adm-card nope" id="gateNope" hidden role="dialog" aria-modal="true" aria-label="Not the admin">
+      <div class="nope-shot" id="nopeShot" hidden><img id="nopeImg" alt="An administrator, unimpressed"></div>
+      <div class="nope-lock" id="nopeLock" aria-hidden="true">🔒</div>
+      <div class="leet">U n0 1337, 4DmiN</div>
+      <button type="button" class="adm-btn hot" id="nopeBack">Oops, back to safety</button>
+      <button type="button" class="adm-link" id="nopeRecover">I'm the admin, but I can't get in</button>
+    </section>
+    <section class="adm-card" id="gatePin" hidden role="dialog" aria-modal="true" aria-label="Admin recovery">
+      <h2>Admin recovery</h2>
+      <p class="sub">Type the admin PIN from when this was set up.</p>
+      <input id="pinInput" inputmode="numeric" autocomplete="off" aria-label="Admin PIN">
+      <div class="adm-err" id="pinErr" aria-live="polite"></div>
+      <button type="button" class="adm-link" id="usePw">Use the password instead</button>
+    </section>
+    <section class="adm-card" id="gatePw" hidden role="dialog" aria-modal="true" aria-label="Admin recovery">
+      <h2>Admin recovery</h2>
+      <p class="sub">Type the admin password from when this was set up.</p>
+      <input type="password" id="tokenInput" autocomplete="current-password" aria-label="Admin password">
+      <button type="button" id="unlockBtn" class="adm-btn turq">Open admin</button>
+      <div id="lockError" class="adm-err" aria-live="polite"></div>
+      <button type="button" class="adm-link" id="usePin">Use the PIN instead</button>
+    </section>
+    <section class="adm-card" id="gateHelp" hidden role="dialog" aria-modal="true" aria-label="Still locked out">
+      <h2>Still locked out?</h2>
+      <p class="sub">Both were set when this app was installed.</p>
+      <a class="help-link" id="helpLink" target="_blank" rel="noopener">CLICK HERE ↗</a>
+      <button type="button" class="adm-link" id="tryAgain">Try again</button>
+    </section>
   </div>
 
   <div id="adminContent" class="hidden">
 
-  <div class="tabs">
+  <nav class="tabs side-nav" aria-label="Admin sections">
+    <div class="adm-title">ARCADE <em>ADMIN</em></div>
+    <span class="nav-label">The arcade</span>
     <button id="tabArcade" aria-pressed="true">📡 Arcade</button>
+    <button id="tabBoards" aria-pressed="false">🏆 Boards</button>
+    <button id="tabStats" aria-pressed="false">📊 Stats</button>
+    <span class="nav-label">Game content</span>
     <button id="tabRambler" aria-pressed="false">🔠 Rambler</button>
     <button id="tabWordless" aria-pressed="false">🔤 Wordless</button>
     <button id="tabSpin" aria-pressed="false">🎡 Spin &amp; Solve</button>
-    <button id="tabTrivia" aria-pressed="false">🧠 Trivia</button>
+    <button id="tabTrivia" aria-pressed="false">🧠 Know-It-All</button>
     <button id="tabClueless" aria-pressed="false">📰 Clueless Crosswords</button>
-    <button id="tabBoards" aria-pressed="false">🏆 Boards</button>
-    <button id="tabStats" aria-pressed="false">📊 Stats</button>
-  </div>
+    <!-- Exit for an ARKS ID admin (back to the arcade), Lock for a recovery visit. -->
+    <button id="lockBtn" class="nav-exit" type="button">🔒 Lock admin panel</button>
+  </nav>
+  <div class="adm-pane">
 
   <div id="arcadePanel">
     <div class="admin-section">
@@ -747,15 +779,16 @@
       <div id="themesList"></div>
     </div>
 
-    <button id="lockBtn" class="small-btn" style="margin-top:10px;">🔒 Lock admin panel</button>
   </div>
+  </div><!-- .adm-pane -->
+  </div><!-- #adminContent -->
   <!-- Which build is running; under every tab, filled in by admin.js. -->
   <p class="admin-note" id="versionLine" style="margin-top:18px;text-align:center;"></p>
 </main>
-  </div>
 
 <script src="avatars.js"></script>
 <script src="avatar-photo.js"></script>
+<script src="pin-pad.js"></script>
 <script src="stats.js"></script>
 <script src="admin.js"></script>
 <script src="admin-rambler.js"></script>
