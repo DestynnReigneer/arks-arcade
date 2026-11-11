@@ -374,10 +374,55 @@ async function run({ base, root, fake, admin: ADMIN }) {
   const chessPage = await fetch(base + '/chess.html').then(r => r.text());
   ok('…and every page loads the banner script', chessPage.includes('<script src="banner.js" defer></script>'));
 
+  console.log('\n-- the admin page: an ARKS ID admin is straight in --');
+  {
+    const sam = browser();
+    fake.next = 'sam';
+    await sam.call('/auth/signin?return=%2Fadmin.html');
+    const s = (await sam.call('/api/admin/session')).data;
+    ok('an ARKS ID admin is straight into the admin page, with no PIN or password', s.admin === true && s.signedIn === true && s.arksId === true, JSON.stringify(s));
+    ok('…and the admin routes answer them', (await sam.call('/api/admin/version')).status === 200 && (await sam.call('/api/admin/scores')).status === 200);
+    const kid = browser();
+    fake.next = 'milo';
+    await kid.call('/auth/signin?return=%2Fadmin.html');
+    const k = (await kid.call('/api/admin/session')).data;
+    ok('a kid signed in with ARKS ID is not the admin', k.admin === false && k.arksId === true, JSON.stringify(k));
+    ok('…and the admin routes turn them away', (await kid.call('/api/admin/version')).status === 401);
+    const lost = browser();
+    const ways = (await lost.call('/api/admin/session')).data;
+    ok('recovery: the page learns there\'s a PIN and a password to try', ways.admin === false && ways.hasPin === true && ways.hasPassword === true);
+    ok('…a wrong PIN is refused', (await lost.call('/api/admin/login', { method: 'POST', body: { pin: '000000' } })).status === 401);
+    ok('…the admin PIN from setup opens it', (await lost.call('/api/admin/login', { method: 'POST', body: { pin: '135790' } })).status === 200);
+    const r = (await lost.call('/api/admin/session')).data;
+    ok('…as recovery, not as an ARKS ID admin', r.admin === true && r.signedIn === false && (await lost.call('/api/admin/version')).status === 200);
+
+    // Signing out takes the admin page with it.
+    const adultThemes = async who => ((await who.call('/api/themes')).data || []).filter(t => t.adult).length;
+    const all = (await browser().call('/api/themes', { headers: { 'X-Admin-Token': ADMIN } })).data.filter(t => t.adult).length;
+    ok('an ARKS ID admin on the admin page sees the adult themes too', all > 0 && await adultThemes(sam) === all, `${await adultThemes(sam)} of ${all}`);
+    await sam.call('/auth/signout', { method: 'POST', follow: false });
+    ok('…and after signing out of the arcade, that browser doesn\'t', await adultThemes(sam) === 0);
+    ok('…and the admin page turns it away', (await sam.call('/api/admin/version')).status === 401 && (await sam.call('/api/admin/session')).data.admin === false);
+    fake.next = 'milo';
+  }
+
   console.log('\n-- signing out --');
   const out = await milo.call('/auth/signout', { method: 'POST', follow: false });
   ok('signing out ends the arcade sign-in and goes on to ARKS ID\'s sign-out', out.data.next === `${fake.base}/signout?app=arcade&return=%2F`);
   ok('…and the device is signed out', (await milo.me()).signedIn === false);
+
+  console.log('\n-- the admin page: wrong recovery tries pause --');
+  {
+    // Last in this suite: it pauses this address on purpose.
+    const guesser = browser();
+    for (let i = 0; i < 9; i++) await guesser.call('/api/admin/login', { method: 'POST', body: { pin: '000000' } });
+    const tenth = await guesser.call('/api/admin/login', { method: 'POST', body: { password: 'not it either' } });
+    ok('wrong PINs and passwords count together', tenth.status === 401);
+    const after = await guesser.call('/api/admin/login', { method: 'POST', body: { pin: '135790' } });
+    ok('…and after ten, even the right PIN waits', after.status === 429);
+    ok('…and so does the password header', (await browser().call('/api/admin/version', { headers: { 'X-Admin-Token': ADMIN } })).status === 429);
+    ok('a write from another site is refused', (await guesser.call('/api/admin/logout', { method: 'POST', body: {}, headers: { Origin: 'https://evil.example' } })).status === 403);
+  }
 
   console.log(`\n  ${pass} passed, ${fail} failed`);
   return { pass, fail };
