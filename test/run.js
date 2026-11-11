@@ -97,6 +97,8 @@ function startServer(port, extraEnv = {}) {
         // Admin routes are deny-by-default, so the suite has to supply a
         // token to be able to prove they are locked *and* that they work.
         ADMIN_TOKEN: 'test-admin-token',
+        // The recovery PIN on the admin page's PIN pad (arcade/admin-session.js).
+        ADMIN_PIN: '135790',
         BRAND_DIR: path.join(MEDIA_ROOT, 'brand'),
         MEDIA_DIR: path.join(MEDIA_ROOT, 'media'),
         CLIP_SURPRISE: '0',

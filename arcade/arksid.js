@@ -458,6 +458,8 @@ function createArksId({ client, now = Date.now, profiles }) {
         try { await client.appCall('POST', '/push/unsubscribe', { session: row.session_id }); } catch { /* ARKS ID away: it drops them when the session ends everywhere */ }
       }
       end(token);
+      // The admin page's cookie goes with the sign-in.
+      require('./admin-session').end(req, res);
       res.clearCookie(COOKIE, { path: '/' }).set('Cache-Control', 'no-store')
         .json({ next: client ? `${client.url}/signout?app=arcade&return=%2F` : '/' });
     });
@@ -491,7 +493,7 @@ function createArksId({ client, now = Date.now, profiles }) {
     router.get('/api/arksid/photo/:profileId', async (req, res) => {
       const nope = () => res.status(404).set('Cache-Control', 'no-store').end();
       if (!client || !/^[A-Za-z0-9]{1,40}$/.test(req.params.profileId)) return nope();
-      if (!require('./admin-session').isAdmin(req) && !(await current(req))) return nope();
+      if (!(await current(req)) && !(await require('./admin-session').isAdminNow(req))) return nope();
       const row = db.db.prepare(`SELECT a.image FROM arcade_profiles p JOIN arcade_id_accounts a ON a.user_id = p.arksid_user
         WHERE p.id = ? AND p.status = 'approved'`).get(req.params.profileId);
       if (!row || !row.image) return nope();

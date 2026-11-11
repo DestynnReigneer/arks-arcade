@@ -559,7 +559,8 @@ See **[docs/SETUP.md](docs/SETUP.md)** for every setting in `.env`, a step-by-st
 
 | Variable | Purpose |
 |---|---|
-| `ADMIN_PASSWORD` | Password for `/admin.html`. Blank keeps admin locked. |
+| `ADMIN_PASSWORD` | Password for `/admin.html` (with ARKS ID, only for when an admin can't sign in there). |
+| `ADMIN_PIN` | Optional 6-digit PIN for the admin page, asked before the password. |
 | `ARCADE_NAME` | "<name> Arcade" on the home page. |
 | `TZ` | Your timezone, for daily resets. |
 | `PUBLIC_URL` | The address QR codes use (e.g. `https://arcade.example.com`). |
@@ -577,7 +578,7 @@ Like streaming-service profiles for the family. **Who's playing?** on the home p
 
 ## Admin panel
 
-Visit `/admin.html` and enter your `ADMIN_PASSWORD`.
+Visit `/admin.html`. With ARKS ID sign-in on, an admin signed in there goes straight in. Otherwise it asks for `ADMIN_PIN` on a PIN pad, or `ADMIN_PASSWORD` ("Use the password instead"). Anyone else gets a "not the admin" card. The menu on the left (a strip you swipe on a phone) has every section: the arcade (Comm Center, profiles, games, boards, stats) and each game's content.
 
 **Stats:**
 - What gets played, how often and for how long (only on-screen, recently-touched time counts), who plays what, and a day-by-hour chart of when

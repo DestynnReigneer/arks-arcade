@@ -49,7 +49,8 @@ admin password.
 | Setting | What it does |
 |---|---|
 | `ARCADE_NAME` | Your arcade's name: `Smith` shows "Smith Arcade". Blank shows "Arcade". |
-| `ADMIN_PASSWORD` | Password for the admin page (`/admin.html`). **Set this**, and make it long. Blank keeps admin locked to everyone. |
+| `ADMIN_PASSWORD` | The admin page's password (`/admin.html`). **Set this**, and make it long. Without ARKS ID it's the way into the admin page; with ARKS ID, an admin signed in there goes straight in and this is only for when they can't. |
+| `ADMIN_PIN` | Optional, exactly 6 digits. The admin page asks for it first, on a PIN pad, with "Use the password instead" under it. |
 | `TZ` | Your timezone, e.g. `America/Los_Angeles` or `America/New_York`. Daily challenges and streaks roll over at your midnight. |
 | `PUBLIC_URL` | The address phones should use, for QR codes. Set it to your arcade's real address, e.g. `https://arcade.example.com`. Pages opened on a real address already use that address, so this mainly matters for QR codes made from the server itself. |
 | `TRUST_PROXY` | Set to `1` when the arcade sits behind **one** reverse proxy (like Nginx Proxy Manager) so rate limits see each visitor's real address. Leave blank if people connect to the container directly. |
@@ -199,6 +200,7 @@ What's already done for you:
 What's up to you:
 
 - Set a long `ADMIN_PASSWORD`. Adult levels only open for adults signed in with ARKS ID, so there's no adult PIN to set.
+- Anyone who isn't the admin and opens `/admin.html` gets a "not the admin" card. Put a picture named `not-admin.jpg` in the `brand/` folder to show it on that card; without one it shows a lock.
 - Keep the arcade on your home network; use Tailscale/WireGuard from outside.
 - Put HTTPS in front (Nginx Proxy Manager does it in a few clicks): the admin
   password travels with every admin request.
