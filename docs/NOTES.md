@@ -71,11 +71,15 @@ The maintainer asked for the adult unlock to be the ARKS ID login, so there's no
 The maintainer's call, the same in all three ARKS apps, from an approved mockup.
 
 - **The way in** (`arcade/admin-session.js`): with ARKS ID on, someone signed in with an ARKS ID admin account is
-  straight in. `/api/admin/session` gives them the usual admin cookie marked `viaArks` (12 hours, renewed each time
-  the page opens), and `requireAdmin` asks ARKS ID again on every admin request, so signing out there ends it. The
-  quick `isAdmin()` (theme lists, photos) accepts the cookie as before. Recovery, and the only way in without ARKS ID:
-  `ADMIN_PIN` (new, optional, 6 digits) on a PIN pad, or `ADMIN_PASSWORD`, through `/api/admin/login` (`{ pin }` or
-  `{ password }`, 10 tries per 15 minutes). The `X-Admin-Token` header still works for scripts and the tests.
+  straight in. `/api/admin/session` gives them an admin cookie marked `viaArks` (12 hours, renewed each time the
+  page opens), which never counts on its own: `requireAdmin` and the new `isAdminNow()` (theme lists, photos, the
+  Comm Center's limits) ask ARKS ID again, and the quick `isAdmin()` ignores it. Signing out of the arcade
+  (`/auth/signout`) and the admin page's Exit clear it. Recovery, and the only way in without ARKS ID: `ADMIN_PIN`
+  (new, optional, 6 digits) on a PIN pad, or `ADMIN_PASSWORD`, through `/api/admin/login` (`{ pin }` or
+  `{ password }`). Wrong PINs, passwords and `X-Admin-Token` headers share one count: 10 from one address pauses it
+  for 15 minutes, and 30 from anywhere in an hour pauses everyone for 15 minutes (so a made-up address on every guess
+  doesn't help). Recovery opening the page, and the overall pause, ping Discord. Admin writes and the login refuse a
+  request from another site (`kit/security.js` `sameOrigin`).
 - **The cards** (`public/admin.html`, `public/admin.js`, `public/admin-look.css`): anyone else gets the not-the-admin
   card ("U n0 1337, 4DmiN", Oops, back to safety, and "I'm the admin, but I can't get in"). Its picture is
   `brand/not-admin.jpg` on the server (`notAdmin` in `/api/custom`'s brand list), never in this public repo; without
@@ -86,7 +90,8 @@ The maintainer's call, the same in all three ARKS apps, from an approved mockup.
   every id the admin scripts use is still on the page (checked before and after). The Lock button was inside the
   Wordless tab only; it's in the side menu now, as **Exit to the arcade** for an ARKS ID admin and **Lock admin panel**
   for a recovery visit. The banner stays above the cards.
-- **Tests:** `test/arksid.test.js` (an ARKS ID admin straight in, a kid turned away, recovery with the PIN),
+- **Tests:** `test/arksid.test.js` (an ARKS ID admin straight in, a kid turned away, recovery with the PIN, signing out
+  ending it, the shared pause, another site refused),
   `test/browser/admin-gate.spec.js` (the cards, Click Here, every tab, Lock).
 
 ## The trophy page (2026-11-10)

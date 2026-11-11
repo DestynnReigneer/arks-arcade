@@ -400,9 +400,9 @@ ${theme.words.join(', ')}`;
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !document.getElementById('gateNope').hidden && !lockScreen.classList.contains('hidden')) goBack(); });
 
   lockBtn.addEventListener('click', async () => {
-    // An ARKS ID admin has nothing to lock: back to the arcade.
-    if (ways.signedIn) { location.href = '/'; return; }
     try { await apiPost('/api/admin/logout'); } catch (e) { /* signed out either way */ }
+    // An ARKS ID admin has nothing to lock: back to the arcade (the cookie's gone; Admin opens it again).
+    if (ways.signedIn) { location.href = '/'; return; }
     adminContent.classList.add('hidden');
     tokenInput.value = '';
     if (ways.arksId) showNope(); else showPin();
