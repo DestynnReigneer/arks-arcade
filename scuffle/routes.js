@@ -14,13 +14,12 @@ const rooms = require('./rooms');
 
 const fail = (message, status = 400) => Object.assign(new Error(message), { status });
 
-// The grown-up word list needs the adult PIN (or, with ARKS ID, an adult
-// pass), checked on every path that could reach it. Guests joining a room
+// The grown-up word list needs an ARKS ID adult pass, checked on every path that could reach it. Guests joining a room
 // don't need it: the room's own lobby password lets them in.
 function assertDictionary(dictionary, req) {
   if (game.profileOf(dictionary) !== 'adult') return;
   const supplied = req.get('X-Adult-Pin') || (req.body && req.body.adultPin) || '';
-  if (!adultPin.matches(supplied)) throw fail('That PIN is not right.', 403);
+  if (!adultPin.matches(supplied)) throw fail('Adult levels need a grown-up signed in with ARKS ID.', 403);
 }
 
 function nextMidnight(now = new Date()) {

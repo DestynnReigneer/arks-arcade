@@ -49,7 +49,7 @@ function rowToPack(r, withPuzzles = false) {
 const allPacks = () => db.db.prepare('SELECT * FROM spin_packs ORDER BY created_at DESC, id DESC').all();
 
 function requireLevel(level, req) {
-  if (P.LEVELS[level].adult && !unlocked(req)) throw fail('That PIN is not right.', 403);
+  if (P.LEVELS[level].adult && !unlocked(req)) throw fail('Adult levels need a grown-up signed in with ARKS ID.', 403);
 }
 
 module.exports = function spinRoutes({ requireAdmin, notify }) {

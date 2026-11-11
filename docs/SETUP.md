@@ -50,7 +50,6 @@ admin password.
 |---|---|
 | `ARCADE_NAME` | Your arcade's name: `Smith` shows "Smith Arcade". Blank shows "Arcade". |
 | `ADMIN_PASSWORD` | Password for the admin page (`/admin.html`). **Set this**, and make it long. Blank keeps admin locked to everyone. |
-| `ADULT_PIN` | Optional PIN guarding every adult option (adult themes, Unfiltered words, adult decks and levels). You can set, change or remove it later from Admin → Arcade, which overrides this. Blank means a "yes, I'm 18+" tap is the only guard. |
 | `TZ` | Your timezone, e.g. `America/Los_Angeles` or `America/New_York`. Daily challenges and streaks roll over at your midnight. |
 | `PUBLIC_URL` | The address phones should use, for QR codes. Set it to your arcade's real address, e.g. `https://arcade.example.com`. Pages opened on a real address already use that address, so this mainly matters for QR codes made from the server itself. |
 | `TRUST_PROXY` | Set to `1` when the arcade sits behind **one** reverse proxy (like Nginx Proxy Manager) so rate limits see each visitor's real address. Leave blank if people connect to the container directly. |
@@ -167,7 +166,7 @@ set, ARKS ID takes over everything about a person:
 - **Guests pick an avatar for fun.** **Make an account** sends them to ARKS ID's
   sign-up page with the name and avatar they played with already filled in.
 - **Adult levels follow the person's role**: a signed-in adult or admin opens
-  them without a PIN, and kids, teens and guests can't. `ADULT_PIN` isn't used.
+  them, and kids, teens and guests can't. Without ARKS ID, adult levels are off.
 - **Guest play** is only offered on a device ARKS ID doesn't know, or one that
   belongs to an admin, so nobody can get around the adult rules by playing as a
   guest. The first visit from a signed-out browser makes one quick stop at
@@ -199,7 +198,7 @@ What's already done for you:
 
 What's up to you:
 
-- Set a long `ADMIN_PASSWORD`, and an `ADULT_PIN` before kids are around.
+- Set a long `ADMIN_PASSWORD`. Adult levels only open for grown-ups signed in with ARKS ID, so there's no adult PIN to set.
 - Keep the arcade on your home network; use Tailscale/WireGuard from outside.
 - Put HTTPS in front (Nginx Proxy Manager does it in a few clicks): the admin
   password travels with every admin request.
