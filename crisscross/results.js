@@ -11,8 +11,16 @@
 
 const db = require('../db');
 
+// The first version (2026-11-10) keyed rows by (game_id, profile_id) with no id of
+// their own. The admin's Boards tab takes rows off by id, so a table made that
+// way is copied once into this shape.
+const old = db.db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'crisscross_results'").get()
+  && !db.db.prepare('PRAGMA table_info(crisscross_results)').all().some(c => c.name === 'id');
+if (old) db.db.exec('ALTER TABLE crisscross_results RENAME TO crisscross_results_v1');
+
 db.db.exec(`
   CREATE TABLE IF NOT EXISTS crisscross_results (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     game_id TEXT NOT NULL,
     profile_id TEXT NOT NULL,
     dictionary TEXT NOT NULL DEFAULT 'kids',
@@ -22,10 +30,15 @@ db.db.exec(`
     best_word_score INTEGER NOT NULL DEFAULT 0,
     players INTEGER NOT NULL,
     finished_at INTEGER NOT NULL,
-    PRIMARY KEY (game_id, profile_id)
+    UNIQUE (game_id, profile_id)
   );
   CREATE INDEX IF NOT EXISTS crisscross_results_profile ON crisscross_results (profile_id);
 `);
+if (old) {
+  db.db.exec(`INSERT OR IGNORE INTO crisscross_results (game_id, profile_id, dictionary, won, score, best_word, best_word_score, players, finished_at)
+    SELECT game_id, profile_id, dictionary, won, score, best_word, best_word_score, players, finished_at FROM crisscross_results_v1 ORDER BY finished_at;
+    DROP TABLE crisscross_results_v1;`);
+}
 
 const insert = db.db.prepare(`INSERT OR IGNORE INTO crisscross_results
   (game_id, profile_id, dictionary, won, score, best_word, best_word_score, players, finished_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`);
