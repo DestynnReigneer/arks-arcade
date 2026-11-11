@@ -31,7 +31,6 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--turq); outline-
 .tr-filters { display: flex; gap: 8px; flex-wrap: wrap; }
 .tr-pill { font-family: var(--body); font-weight: 700; font-size: 15px; color: var(--muted); background: var(--card); border: 1px solid var(--border); border-radius: 999px; padding: 6px 12px; cursor: pointer; }
 .tr-pill[aria-pressed="true"] { color: #1a0424; background: var(--pink); border-color: var(--pink); }
-.tr-unlock { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--plate); border: 1px dashed var(--dim); border-radius: 10px; padding: 10px 12px; color: var(--muted); }
 
 .tr-games { display: flex; flex-direction: column; gap: 12px; }
 .tr-game { background: var(--card); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
@@ -48,7 +47,6 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--turq); outline-
 .tr-board > button:hover { background: var(--card-2); }
 .tr-board .bn { font-weight: 700; min-width: 0; }
 .tr-board .bn small { display: block; color: var(--muted); font-weight: 500; font-size: 14px; overflow-wrap: anywhere; }
-.tr-board .bn small.locked { color: var(--dim); }
 .tr-rank { font-family: ui-monospace, Consolas, monospace; font-size: 12px; font-weight: 700; border-radius: 6px; padding: 3px 7px; border: 1px solid var(--border); color: var(--muted); white-space: nowrap; }
 .tr-rank.r1 { color: #1a0424; background: var(--gold); border-color: var(--gold); }
 .tr-rank.r2 { color: #1a0424; background: var(--silver); border-color: var(--silver); }
@@ -73,13 +71,6 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--turq); outline-
 .tr-table .foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 10px; color: var(--muted); font-size: 15px; flex-wrap: wrap; }
 .tr-empty { color: var(--muted); padding: 6px 0; }
 
-.tr-pin { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(16, 6, 32, .85); }
-.tr-pin-card { width: 100%; max-width: 360px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 18px; text-align: center; }
-.tr-pin-card h2 { font-family: var(--display); font-size: 18px; margin: 0 0 6px; }
-.tr-pin-card p { color: var(--muted); margin: 0 0 10px; }
-.tr-pin-card input { font-size: 22px; width: 12ch; padding: 8px; border-radius: 10px; border: 1px solid var(--border); background: var(--plate); color: var(--text); }
-.tr-err { color: #ff8a8a !important; min-height: 1.3em; margin-top: 8px !important; }
-.tr-pin-btns { display: flex; gap: 8px; justify-content: center; margin-top: 8px; }
 
 @media (max-width: 420px) {
   .tr-stat .t { font-size: 14px; }

@@ -969,8 +969,8 @@
   }
 
   function openScores(highlightId, board = isAdult() ? 'adult' : 'solo') {
-    // The adult board only shows (and only loads) once adult play is unlocked.
-    $('scoreBoardSeg').classList.toggle('hidden', !unlocked());
+    // Both boards are open to everyone; only playing the adult level needs the PIN.
+    $('scoreBoardSeg').classList.remove('hidden');
     for (const b of $('scoreBoardSeg').children) b.setAttribute('aria-pressed', String(b.dataset.board === board));
     ArcadeKit.loadScores('spinsolve', board, $('scoreList'), highlightId, pinHeaders());
     $('scoresView').classList.remove('hidden');

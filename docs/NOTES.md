@@ -63,10 +63,11 @@ Built from the mockup the maintainer approved, with their answers to its three q
   works out "you" from the profile token, never the address. Ranks count scores strictly better than your best, the
   same as the games do. Rambler's boards are the 4x4, 5x5 and Marathon top tens; Wordless leaves out adult themes,
   like its own board.
-- **Grown-up boards** (Know-It-All's and Spin & Solve's adult boards) are shown locked to everyone, the maintainer's
-  choice, until the adult PIN is typed (`POST /api/trophies/unlock`, the shared PIN limiter; with ARKS ID the PIN pad
-  hands over a grown-up's pass). With no PIN set they still wait for an "I'm a grown-up" tap. Every other board is
-  open, as it is in its own game.
+- **No leaderboard is locked** (the maintainer's call, 2026-11-11). Know-It-All's and Spin & Solve's Adult boards used
+  to need the adult PIN to read; now `GET /api/scores/:game` serves them like any other board, both games show the
+  board switch to everyone, and the trophy page lists them open. A board only shows names, scores and dates. Playing
+  the adult levels still needs the PIN, and adult #1s are still never posted to the Comm Center. Wordless still leaves
+  adult themes off its board, because those rows carry the theme's name.
 - **Today and Overall:** only the daily games (Sudoku, Clueless Crosswords, Shuffle Scuffle, Tumbler Rumble) get the
   switch, on their own card (the maintainer's pick). The shelf counts Overall.
 - **Words with Family's boards:** Games won, Best game score and Best single word, shared by everyone with nothing

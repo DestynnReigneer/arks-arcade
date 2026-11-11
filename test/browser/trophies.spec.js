@@ -1,8 +1,8 @@
 'use strict';
 
 // The trophy page: the trophy on the home page opens it, every game has a
-// card, a board opens to show its scores, grown-up boards stay locked until
-// the PIN, the filters work, and daily games switch between Overall and Today.
+// card, a board opens to show its scores (adult boards too, with no PIN),
+// the filters work, and daily games switch between Overall and Today.
 
 const { test, expect } = require('@playwright/test');
 const { quietFonts, openPage, chooser } = require('./helpers');
@@ -27,7 +27,7 @@ test('the trophy on the home page opens the trophy page', async ({ page }) => {
   await expect(page.locator('h1')).toContainText('TROPHY');
 });
 
-test('every game has a card, boards open, and grown-up boards stay locked', async ({ page }) => {
+test('every game has a card, and boards open, adult ones included', async ({ page }) => {
   await openPage(page, '/trophies.html');
   await asGuest(page);
   const games = page.locator('.tr-game');
@@ -43,14 +43,10 @@ test('every game has a card, boards open, and grown-up boards stay locked', asyn
   await expect(snake.locator('.tr-table')).toBeVisible();
   await expect(snake.getByRole('link', { name: /Play Snake/ })).toHaveAttribute('href', 'snake.html');
 
-  // Know-It-All's adult board is locked, and tapping it asks first.
+  // Know-It-All's adult board opens like any other, with no PIN.
   const adult = page.locator('.tr-game[data-game="trivia"] .tr-board[data-board="adult"]');
-  await expect(adult).toContainText('🔞');
   await adult.locator('button').click();
-  await expect(page.locator('#pinView')).toBeVisible();
-  await page.locator('#pinCancel').click();
-  await expect(page.locator('#pinView')).toBeHidden();
-  await expect(adult.locator('.tr-table')).toHaveCount(0);
+  await expect(adult.locator('.tr-table')).toBeVisible();
 
   // Nothing runs off the side of a phone.
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);

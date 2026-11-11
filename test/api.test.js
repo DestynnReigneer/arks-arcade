@@ -939,8 +939,7 @@ async function run({ base, root }) {
   ok('too few good puzzles is refused', (await asAdmin('/spinsolve/admin/packs', 'POST', { label: 'X', puzzles: [{ answer: 'HI THERE' }] })).status === 400);
 
   await wl('/scores/spinsolve', 'POST', { initials: 'XXX', score: 99999, board: 'adult' });
-  ok('the adult score board needs the PIN', (await wl('/scores/spinsolve?board=adult')).status === 403);
-  ok('…shows with it', (await pinGet('/scores/spinsolve?board=adult', '246810')).data.some(r => r.initials === 'XXX'));
+  ok('the adult score board is open to everyone', (await wl('/scores/spinsolve?board=adult')).data.some(r => r.initials === 'XXX'));
   ok('…and adult #1s are never announced', !(await wl('/comm/posts')).data.some(p => p.title.includes('XXX took #1 on Spin')));
 
   // ---- Know-It-All (trivia) --------------------------------------------------------

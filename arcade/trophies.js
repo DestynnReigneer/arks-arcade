@@ -7,10 +7,8 @@
 // row, so "you" is never taken from the address. Without a profile the page
 // still shows every board, just with no "you".
 //
-// Adult boards (Know-It-All's and Spin & Solve's grown-up boards) are listed
-// for everyone but come back locked, with no rows, until the adult PIN (or,
-// with ARKS ID, a grown-up's adult pass) is sent, the same rule those games'
-// own boards follow. Every other board is open to all, as it is in its game.
+// Every board is open to everyone, adult ones included (the maintainer's call,
+// 2026-11-11): a board only shows names, scores and dates.
 //
 // Each board below says where its scores live. Daily games' boards also get a
 // Today list. Words with Family's boards come from crisscross/results.js.
@@ -18,7 +16,6 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const db = require('../db');
-const adultPin = require('./adult-pin');
 
 const profiles = () => require('./profiles');
 const TOP = 10;
@@ -159,15 +156,7 @@ function readBoard(b, me, today) {
 
 // ---- the whole page -----------------------------------------------------------------------------
 
-function adultOpen(req) {
-  const status = adultPin.status();
-  const pin = req.get('X-Adult-Pin') || '';
-  if (status.set) return !!pin && adultPin.matches(pin);
-  // No PIN set: grown-up boards still wait for a tap that says "I'm a grown-up".
-  return req.get('X-Adult-Ok') === 'yes';
-}
-
-function page({ profile, adult }) {
+function page({ profile }) {
   const me = profile ? profile.id : null;
   const today = require('../rambler/progress').today();
   const shelf = { gold: 0, top3: 0, on: 0 };
@@ -177,7 +166,6 @@ function page({ profile, adult }) {
     daily: g.boards.some(b => b.day),
     boards: g.boards.map(b => {
       const base = { id: b.id, label: b.label, unit: b.unit, low: !!b.low, adult: !!b.adult, daily: !!b.day };
-      if (b.adult && !adult) return { ...base, locked: true, rows: [], you: null };
       const all = readBoard(b, me);
       if (all.you) {
         shelf.on++;
@@ -190,7 +178,7 @@ function page({ profile, adult }) {
           if (!closest || rel < closest.rel) closest = { rel, game: g.id, gameLabel: g.label, board: b.id, boardLabel: b.label, unit: b.unit, gap, name: a.name, href: `${g.id}.html` };
         }
       }
-      const board = { ...base, locked: false, ...all };
+      const board = { ...base, ...all };
       if (b.day) board.today = readBoard(b, me, today);
       return board;
     })
@@ -198,7 +186,7 @@ function page({ profile, adult }) {
   if (closest) delete closest.rel;
   return {
     you: profile ? { id: profile.id, ...whose(profile.id, { profile_name: profile.name, profile_avatar: profile.avatar }) } : null,
-    today, adultOpen: adult, adultRequiresPin: adultPin.status().set, shelf, closest, games: out
+    today, shelf, closest, games: out
   };
 }
 
@@ -211,15 +199,12 @@ const limit = rateLimit({
 router.get('/', limit, (req, res, next) => {
   try {
     const profile = profiles().verify(req.get('X-Profile-Token'));
-    const data = page({ profile, adult: adultOpen(req) });
+    const data = page({ profile });
     res.set('Cache-Control', 'no-store');
     // The top bar's trophy only needs the number of boards you're #1 on.
     if (req.query.summary === '1') return res.json({ gold: data.shelf.gold, you: !!profile });
     res.json(data);
   } catch (e) { next(e); }
 });
-
-// The adult PIN, typed on the trophy page (with ARKS ID the PIN pad hands over a grown-up's pass).
-router.post('/unlock', adultPin.tryLimiter(), (req, res) => res.json(adultPin.check(req, res)));
 
 module.exports = { router, page, games };

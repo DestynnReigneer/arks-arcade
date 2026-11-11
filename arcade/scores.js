@@ -8,12 +8,12 @@ const express = require('express');
 const rateLimit = require('express-rate-limit');
 const db = require('../db');
 const comm = require('./comm');
-const adultPin = require('./adult-pin');
 
 // Each game's boards and the highest score that could honestly be reached,
 // so a typo'd or tampered post can't sit at #1 forever.
 const GAMES = {
-  // Adult boards are read only with the adult PIN and never announced.
+  // Adult boards are open to read like every other board (the maintainer's call, 2026-11-11); their #1s are never
+  // announced. Playing the adult levels still needs the adult PIN.
   spinsolve: { label: 'Spin & Solve', boards: { solo: 'Solo', adult: 'Adult' }, adultBoards: ['adult'], max: 200000 },
   chess: { label: 'Chess', boards: { easy: 'vs Easy', medium: 'vs Medium', hard: 'vs Hard' }, max: 5000 },
   dino: { label: 'Dino Dash', boards: { run: 'Distance' }, max: 9999999 },
@@ -120,10 +120,7 @@ const saveLimiter = rateLimit({
 
 router.get('/:game', (req, res, next) => {
   try {
-    const { g, key } = boardOf(req.params.game, req.query.board);
-    if ((g.adultBoards || []).includes(key) && !adultPin.matches(req.get('X-Adult-Pin') || '')) {
-      throw fail('That PIN is not right.', 403);
-    }
+    const { key } = boardOf(req.params.game, req.query.board);
     res.json(list(req.params.game, key, req.query.limit));
   } catch (e) { next(e); }
 });

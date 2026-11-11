@@ -3,18 +3,11 @@
 // The trophy page (2026-11-10): every leaderboard in the arcade, your own
 // place on each (the Trophy Shelf), and your closest climb. The server works
 // it all out (GET /api/trophies, arcade/trophies.js); this only draws it.
-// Grown-up boards come back locked until the adult PIN (or, with ARKS ID, a
-// grown-up's pass from the PIN pad) is sent along.
+// Every board is open to everyone, adult ones included.
 (() => {
   const $ = id => document.getElementById(id);
   const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined) n.textContent = text; return n; };
   const GROUPS = [['all', 'All Games'], ['mine', 'Only My Games'], ['word', 'Word and Puzzle Games'], ['cabinet', 'Cabinet Games'], ['classic', 'Classic Games'], ['party', 'Party Games']];
-  const PIN_KEY = 'trophies.adultPin', OK_KEY = 'trophies.adultOk';
-  const store = {
-    get: k => { try { return sessionStorage.getItem(k) || ''; } catch { return ''; } },
-    set: (k, v) => { try { if (v) sessionStorage.setItem(k, v); else sessionStorage.removeItem(k); } catch { /* unavailable */ } }
-  };
-
   let data = null;
   let group = 'all';
   const open = new Set();          // boards opened, "game/board"
@@ -59,8 +52,6 @@
     const headers = {};
     const token = typeof ArcadeProfile !== 'undefined' ? ArcadeProfile.token() : null;
     if (token) headers['X-Profile-Token'] = token;
-    if (store.get(PIN_KEY)) headers['X-Adult-Pin'] = store.get(PIN_KEY);
-    if (store.get(OK_KEY)) headers['X-Adult-Ok'] = 'yes';
     try {
       const res = await fetch('/api/trophies', { headers });
       const d = await res.json();
@@ -96,9 +87,6 @@
       a.href = x.href;
       c.append(el('span', 'big', '🎯'), txt, a);
     }
-
-    const anyLocked = data.games.some(g => g.boards.some(b => b.locked));
-    $('unlockRow').hidden = !anyLocked;
 
     const host = $('games');
     host.textContent = '';
@@ -142,21 +130,19 @@
     const name = el('span', 'bn', b.label);
     const top = view.rows[0];
     const empty = day ? 'No score today. Be the first!' : 'No score yet. Be the first!';
-    const leader = b.locked ? 'For adults. Unlock it with your PIN.'
-      : top ? `${top.name} leads with ${show(top.value, b.unit)}` : empty;
-    name.append(el('small', b.locked ? 'locked' : '', leader));
+    const leader = top ? `${top.name} leads with ${show(top.value, b.unit)}` : empty;
+    name.append(el('small', '', leader));
     const r = view.you;
-    const rank = el('span', 'tr-rank' + (r && r.rank <= 3 ? ` r${r.rank}` : ''), b.locked ? '🔞' : r ? `You #${r.rank}` : 'Nothing to see here...');
+    const rank = el('span', 'tr-rank' + (r && r.rank <= 3 ? ` r${r.rank}` : ''), r ? `You #${r.rank}` : 'Nothing to see here...');
     btn.append(name, rank, el('span', 'tr-caret', '▸'));
     const isOpen = open.has(key);
     btn.setAttribute('aria-expanded', String(isOpen));
     btn.onclick = () => {
-      if (b.locked) { unlock(); return; }
       if (open.has(key)) open.delete(key); else open.add(key);
       paint();
     };
     row.append(btn);
-    if (isOpen && !b.locked) {
+    if (isOpen) {
       row.classList.add('open');
       const t = el('div', 'tr-table');
       if (!view.rows.length) t.append(el('div', 'tr-empty', empty));
@@ -184,31 +170,6 @@
     return row;
   }
 
-  // ---- unlocking the grown-up boards ---------------------------------------------------------------
-  function unlock() {
-    const view = $('pinView');
-    $('pinMsg').textContent = '';
-    const needsPin = data.adultRequiresPin;
-    $('pinInput').hidden = !needsPin;
-    $('pinYes').hidden = needsPin;
-    $('pinText').textContent = needsPin ? 'Type the adult PIN to see them.' : 'These boards are for 18+.';
-    view.classList.remove('hidden');
-    const done = () => { view.classList.add('hidden'); load(); };
-    if (needsPin) {
-      $('pinInput').value = '';
-      PinPad.attach($('pinInput'), async pin => {
-        const res = await fetch('/api/trophies/unlock', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pin }) })
-          .then(r => r.json().then(d => ({ ok: r.ok && d.ok, error: d.error }))).catch(() => ({ ok: false }));
-        if (!res.ok) { $('pinMsg').textContent = res.error || 'Incorrect PIN.'; PinPad.clear($('pinInput')); return; }
-        store.set(PIN_KEY, pin);
-        done();
-      });
-      $('pinInput').focus();
-    }
-    $('pinYes').onclick = () => { store.set(OK_KEY, 'yes'); done(); };
-    $('pinCancel').onclick = () => view.classList.add('hidden');
-  }
-
   // ---- the filters -------------------------------------------------------------------------------
   const f = $('filters');
   for (const [id, label] of GROUPS) {
@@ -218,9 +179,7 @@
     b.onclick = () => { group = id; f.querySelectorAll('.tr-pill').forEach(p => p.setAttribute('aria-pressed', String(p === b))); if (data) paint(); };
     f.append(b);
   }
-  $('unlockBtn').onclick = unlock;
   $('pickProfile').onclick = () => { if (typeof ArcadeProfile !== 'undefined') ArcadeProfile.open(); };
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') $('pinView').classList.add('hidden'); });
 
   if (typeof ArcadeProfile !== 'undefined') ArcadeProfile.onChange(() => load());
   load();
