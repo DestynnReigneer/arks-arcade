@@ -76,7 +76,7 @@ Built from the mockup the maintainer approved, with their answers to its three q
   own row can be cleared later. Games that finished before it existed are filled in once at startup (setting
   `crisscross_results_filled`). Bots and players without a profile aren't on these boards.
 - **Tests:** `test/trophies.test.js` and `test/browser/trophies.spec.js`; `/trophies.html` is in the browser page list.
-- **The admin can take a Words with Family result off** (2026-11-11, found by the guardian): the Boards tab lists
+- **The admin can take a Words with Family result off** (2026-11-11): the Boards tab lists
   Words with Family with Best single word and Best game score (`arcade/score-admin.js`). Removing a result moves it to
   `removed_scores` like any other score, which takes it off all three trophy boards at once, Games won included, and
   Put back restores it. For that, `crisscross_results` now has its own `id` (the first version was keyed only by game

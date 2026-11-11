@@ -13,12 +13,11 @@ const db = require('../db');
 
 // The first version (2026-11-10) keyed rows by (game_id, profile_id) with no id of
 // their own. The admin's Boards tab takes rows off by id, so a table made that
-// way is copied once into this shape.
-const old = db.db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'crisscross_results'").get()
-  && !db.db.prepare('PRAGMA table_info(crisscross_results)').all().some(c => c.name === 'id');
-if (old) db.db.exec('ALTER TABLE crisscross_results RENAME TO crisscross_results_v1');
-
-db.db.exec(`
+// way is copied once into this shape. It all happens in one transaction, and a
+// leftover crisscross_results_v1 (from a copy that stopped partway) is copied
+// again, so nothing gets stranded. The old table's index moves with it on the
+// rename, so it's dropped first and made again on the new table.
+const SCHEMA = `
   CREATE TABLE IF NOT EXISTS crisscross_results (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     game_id TEXT NOT NULL,
@@ -33,11 +32,25 @@ db.db.exec(`
     UNIQUE (game_id, profile_id)
   );
   CREATE INDEX IF NOT EXISTS crisscross_results_profile ON crisscross_results (profile_id);
-`);
-if (old) {
-  db.db.exec(`INSERT OR IGNORE INTO crisscross_results (game_id, profile_id, dictionary, won, score, best_word, best_word_score, players, finished_at)
-    SELECT game_id, profile_id, dictionary, won, score, best_word, best_word_score, players, finished_at FROM crisscross_results_v1 ORDER BY finished_at;
-    DROP TABLE crisscross_results_v1;`);
+`;
+const tableExists = name => !!db.db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?").get(name);
+const old = tableExists('crisscross_results')
+  && !db.db.prepare('PRAGMA table_info(crisscross_results)').all().some(c => c.name === 'id');
+if (old || tableExists('crisscross_results_v1')) {
+  db.db.exec('BEGIN');
+  try {
+    if (old) {
+      db.db.exec('DROP INDEX IF EXISTS crisscross_results_profile');
+      db.db.exec('ALTER TABLE crisscross_results RENAME TO crisscross_results_v1');
+    }
+    db.db.exec(SCHEMA);
+    db.db.exec(`INSERT OR IGNORE INTO crisscross_results (game_id, profile_id, dictionary, won, score, best_word, best_word_score, players, finished_at)
+      SELECT game_id, profile_id, dictionary, won, score, best_word, best_word_score, players, finished_at FROM crisscross_results_v1 ORDER BY finished_at;
+      DROP TABLE crisscross_results_v1;`);
+    db.db.exec('COMMIT');
+  } catch (e) { db.db.exec('ROLLBACK'); throw e; }
+} else {
+  db.db.exec(SCHEMA);
 }
 
 const insert = db.db.prepare(`INSERT OR IGNORE INTO crisscross_results
