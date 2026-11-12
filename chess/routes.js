@@ -30,7 +30,7 @@ const wrap = fn => (req, res, next) => { try { res.json(fn(req, res)); } catch (
 
 router.post('/rooms', createLimiter, (req, res, next) => {
   try {
-    res.status(201).json(rooms.create({ name: b(req).name, color: b(req).color, profile: profileOf(req) }));
+    res.status(201).json(rooms.create({ name: b(req).name, color: b(req).color, profile: profileOf(req), ip: req.ip }));
   } catch (e) { next(e); }
 });
 
@@ -48,6 +48,7 @@ router.post('/rooms/:code/start', wrap(req => rooms.start(...auth(req))));
 router.post('/rooms/:code/invite', createLimiter, wrap(req => rooms.invite(...auth(req), b(req).to)));
 router.post('/rooms/:code/chat', chatLimiter, wrap(req => rooms.say(...auth(req), b(req).text)));
 router.post('/rooms/:code/mute', wrap(req => rooms.mute(...auth(req), b(req).seat, !!b(req).on)));
+router.post('/rooms/:code/remove', wrap(req => rooms.remove(...auth(req), b(req).seat)));
 router.post('/rooms/:code/leave', wrap(req => rooms.leave(...auth(req))));
 
 router.post('/rooms/:code/move', wrap(req => {

@@ -1,12 +1,12 @@
 'use strict';
 
-// The pieces every game's lobby shares (arks-internal's play-together design):
+// The pieces every game's lobby shares (the play-together design):
 // the players' seats, the "choose who to play with" list, and the live chat.
 // Chess is the first game to use them. Each game keeps its own rooms on the
 // server and hands these the room's snapshot; nothing here talks to a server
 // except through the functions the game passes in.
 //
-//   LobbyUI.seats(el, seats, { invited, max, canMute, onMute })
+//   LobbyUI.seats(el, seats, { invited, max, canMute, onMute, onRemove })
 //   LobbyUI.people(el, people, picked)       picked: a Set of profile ids, kept by the game
 //   LobbyUI.chat(el, { send })               builds the chat once; returns { render(messages, { muted }) }
 
@@ -28,7 +28,7 @@ window.LobbyUI = (() => {
   }
 
   // Who's in, who's been invited, and the empty seats.
-  function seats(el, list, { invited = [], max = 2, canMute = false, onMute } = {}) {
+  function seats(el, list, { invited = [], max = 2, canMute = false, onMute, onRemove } = {}) {
     el.replaceChildren();
     for (const s of list) {
       const box = make('div', 'lb-seat');
@@ -39,6 +39,12 @@ window.LobbyUI = (() => {
         b.type = 'button';
         b.addEventListener('click', () => onMute(s.id, !s.muted));
         box.append(b);
+        if (onRemove) {
+          const x = make('button', 'lb-mute', 'Remove');
+          x.type = 'button';
+          x.addEventListener('click', () => onRemove(s.id));
+          box.append(x);
+        }
       }
       el.append(box);
     }

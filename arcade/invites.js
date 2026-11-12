@@ -19,6 +19,11 @@ const db = require('../db');
 const profiles = () => require('./profiles');
 const MAX_TO = 7;
 const TTL_MS = 3 * 24 * 60 * 60 * 1000;   // an invite nobody answered fades after 3 days
+// A repeat invite to the same room only buzzes the phone again after this long,
+// and one person can invite at most PER_HOUR people an hour, so nobody's phone
+// can be flooded.
+const RENOTIFY_MS = 10 * 60 * 1000;
+const PER_HOUR = 20;
 
 db.db.exec(`
   CREATE TABLE IF NOT EXISTS arcade_invites (
@@ -54,19 +59,31 @@ function people(exceptId) {
 }
 
 // from: { id, name }. to: profile ids. notify: { title, body } for the phone.
+const recentSends = new Map();   // from profile -> times an invite went out
 function send({ game, room, from, to, title, href, notify }) {
   const ids = [...new Set((Array.isArray(to) ? to : []).map(String))].filter(id => id && id !== from.id).slice(0, MAX_TO);
   if (!ids.length) throw fail('Choose someone to play with first.');
-  const sent = [];
-  for (const id of ids) {
+  // Everyone is checked before anyone is invited.
+  const people = ids.map(id => {
     const p = db.db.prepare("SELECT id, name FROM arcade_profiles WHERE id = ? AND status = 'approved'").get(id);
     if (!p) throw fail('One of the people you picked doesn\'t have a profile here anymore.');
+    return p;
+  });
+  const now = Date.now();
+  const times = (recentSends.get(from.id) || []).filter(t => now - t < 60 * 60 * 1000);
+  if (times.length + people.length > PER_HOUR) throw fail('That\'s a lot of invites in an hour. Give people a chance to answer first.', 429);
+  for (const p of people) times.push(now);
+  recentSends.set(from.id, times);
+  const sent = [];
+  for (const p of people) {
+    const before = db.db.prepare('SELECT created_at FROM arcade_invites WHERE game = ? AND room = ? AND to_profile = ?').get(game, String(room), p.id);
+    const buzz = !before || now - before.created_at >= RENOTIFY_MS;
     db.db.prepare(`INSERT INTO arcade_invites (game, room, from_profile, from_name, to_profile, title, href, created_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT (game, room, to_profile) DO UPDATE SET created_at = excluded.created_at, from_name = excluded.from_name`)
-      .run(game, String(room), from.id, from.name, p.id, title, href, Date.now());
+      ON CONFLICT (game, room, to_profile) DO UPDATE SET created_at = CASE WHEN ? THEN excluded.created_at ELSE created_at END, from_name = excluded.from_name`)
+      .run(game, String(room), from.id, from.name, p.id, title, href, now, buzz ? 1 : 0);
     sent.push({ id: p.id, name: p.name });
-    if (notifier && notify) {
+    if (buzz && notifier && notify) {
       try { notifier(p.id, { title: notify.title, body: notify.body, url: href, tag: `inv-${game}-${room}` }); } catch { /* never stops a game */ }
     }
   }

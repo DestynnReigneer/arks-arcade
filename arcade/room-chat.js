@@ -16,6 +16,7 @@ const db = require('../db');
 
 const MAX_TEXT = 200;
 const KEEP = 60;             // messages a room hands out (the most recent)
+const STORE = 200;           // messages a room keeps; older ones are deleted
 const BURST = 5, BURST_MS = 10 * 1000;
 
 db.db.exec(`
@@ -107,12 +108,21 @@ function create(game) {
     if (family) text = familyFilter(text);
     db.db.prepare('INSERT INTO room_chat (game, room, at, seat, name, text) VALUES (?, ?, ?, ?, ?, ?)')
       .run(game, String(room), now, String(seat), clean(name).slice(0, 30), text);
+    trim(room);
+  }
+
+  // A room keeps its newest STORE messages, however long it lasts.
+  function trim(room) {
+    db.db.prepare(`DELETE FROM room_chat WHERE game = ? AND room = ? AND id <= (
+      SELECT id FROM room_chat WHERE game = ? AND room = ? ORDER BY id DESC LIMIT 1 OFFSET ?)`)
+      .run(game, String(room), game, String(room), STORE);
   }
 
   // A line from the game itself ("Milo joined").
   function note(room, text) {
     db.db.prepare('INSERT INTO room_chat (game, room, at, text, system) VALUES (?, ?, ?, ?, 1)')
       .run(game, String(room), Date.now(), clean(text).slice(0, MAX_TEXT));
+    trim(room);
   }
 
   function clear(room) {
@@ -123,4 +133,4 @@ function create(game) {
   return { list, say, note, clear };
 }
 
-module.exports = { create, familyFilter, isBlocked, MAX_TEXT };
+module.exports = { create, familyFilter, isBlocked, MAX_TEXT, STORE };
