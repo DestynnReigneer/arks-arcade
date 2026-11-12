@@ -113,6 +113,25 @@ async function run({ base }) {
   ok('…and not in Kim\'s', !(await cont(Kim)).length);
   ok('a game in progress isn\'t on the Join a game board', !(await api('/lobby')).data.rooms.some(r => r.code === code));
 
+  console.log('\n-- chess: limits --');
+  {
+    // The host takes someone out of a seat in the lobby.
+    const h3 = (await api('/chess/rooms', 'POST', { name: 'Host Three' })).data;
+    const g3 = (await api(`${room(h3.code)}/join`, 'POST', { name: 'Sneaky' })).data;
+    ok('only the host can take someone out', (await api(`${room(h3.code)}/remove`, 'POST', { ...seat(g3), seat: h3.playerId })).status === 403);
+    s = (await api(`${room(h3.code)}/remove`, 'POST', { ...seat(h3), seat: g3.playerId })).data;
+    ok('the host can take someone out of a seat in the lobby', s.seats.length === 1 && s.chat.some(m => m.system && m.text === 'Sneaky was taken out of the game'));
+    ok('…and their seat stops working', (await api(`${room(h3.code)}/chat`, 'POST', { ...seat(g3), text: 'hi' })).status === 403);
+    await api(`${room(h3.code)}/leave`, 'POST', seat(h3));
+    // Five unfinished games each.
+    const mine = [];
+    for (let i = 0; i < 5; i++) mine.push((await api('/chess/rooms', 'POST', {}, Kim.h)));
+    ok('someone can have five unfinished games going', mine.every(r => r.status === 201));
+    const sixth = await api('/chess/rooms', 'POST', {}, Kim.h);
+    ok('…but not a sixth', sixth.status === 409 && /5 chess games/.test(sixth.data.error), JSON.stringify(sixth.data));
+    for (const r of mine) await api(`${room(r.data.code)}/leave`, 'POST', seat(r.data));
+  }
+
   console.log('\n-- chess: leaving the lobby --');
   const h2 = (await api('/chess/rooms', 'POST', { name: 'Guest Host' })).data;
   ok('a guest can host too, and the room is on the Join a game board', (await api('/lobby')).data.rooms.some(r => r.code === h2.code && r.status === 'open'));

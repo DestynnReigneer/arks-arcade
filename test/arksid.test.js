@@ -324,6 +324,27 @@ async function run({ base, root, fake, admin: ADMIN }) {
     await settle();
     return fake.pushes.length === 0;
   })());
+  console.log('\n-- notifications: Chess invites --');
+  {
+    const chessCall = (p, who, body) => fetch(`${base}/api/chess${p}`, {
+      method: 'POST', headers: { 'X-Profile-Token': who.token, 'Content-Type': 'application/json' }, body: JSON.stringify(body || {})
+    }).then(async r => ({ status: r.status, data: await r.json().catch(() => null) }));
+    const hostRoom = (await chessCall('/rooms', kimCC, { color: 'w' })).data;
+    const seat = { playerId: hostRoom.playerId, token: hostRoom.token };
+    fake.pushes.length = 0;
+    await chessCall(`/rooms/${hostRoom.code}/invite`, kimCC, { ...seat, to: [samCC.profile.id] });
+    await settle();
+    const first = fake.pushes.filter(p => p.to === fake.users.sam.id);
+    ok('a Chess invite tells the person invited, with a link to the lobby', first.length === 1 && first[0].body === 'Kim invited you to Chess. Get in here!' &&
+      first[0].url === `chess.html?room=${hostRoom.code}`, JSON.stringify(fake.pushes));
+    fake.pushes.length = 0;
+    for (let i = 0; i < 3; i++) await chessCall(`/rooms/${hostRoom.code}/invite`, kimCC, { ...seat, to: [samCC.profile.id] });
+    await settle(1);
+    ok('…and inviting them again straight away doesn\'t buzz their phone again', fake.pushes.length === 0, JSON.stringify(fake.pushes));
+    ok('…and a list that isn\'t a list is a clear error, not a crash', (await chessCall(`/rooms/${hostRoom.code}/invite`, kimCC, { ...seat, to: samCC.profile.id })).status === 400);
+    await chessCall(`/rooms/${hostRoom.code}/leave`, kimCC, seat);
+  }
+
   ok('a phone can turn them off again', (await samCB.call('/api/push/unsubscribe', { method: 'POST', body: { endpoint: sub('sam').endpoint } })).status === 200 &&
     fake.pushSubs[fake.users.sam.id].length === 0);
   await samCB.call('/api/push/subscribe', { method: 'POST', body: { subscription: sub('sam2') } });

@@ -5,7 +5,7 @@
 // engine the page uses, so a phone can only ever play a legal move. Updates go
 // to both phones over server-sent events.
 //
-// Playing together (arks-internal's play-together design, 2026-11-11):
+// Playing together (the play-together design, 2026-11-11):
 //  - A room starts in its lobby. The host chooses the color, invites people
 //    from the family by name (arcade/invites.js) or shares a link or the code,
 //    and starts the game once someone's in. Whoever joins sees the setting but
@@ -15,8 +15,12 @@
 //  - A seat taken with a profile belongs to that profile, not the browser tab:
 //    opening the room on another device (seatFor) puts them back in it.
 //  - Rooms are saved in the database on every change and read back when the
-//    server starts, so a restart doesn't lose a game. A game nobody touches for
-//    30 days is cleared, chat and all; a lobby nobody started, after a day.
+//    server starts, so a restart doesn't lose a game. A game between two
+//    profiles that nobody touches for 30 days is cleared, chat and all. Anything
+//    else (a lobby nobody started, a game with a guest in it or no moves yet, a
+//    finished game) is cleared after a quiet day, so rooms can't be filled up.
+//  - Each profile can be in at most 5 unfinished games, and one address can
+//    host at most 10 at once.
 
 const crypto = require('node:crypto');
 const Chess = require('../public/chess-engine');
@@ -27,7 +31,9 @@ const chat = require('../arcade/room-chat').create('chess');
 const rooms = new Map();
 const MAX_ROOMS = 300;
 const TTL_MS = 30 * 24 * 60 * 60 * 1000;
-const LOBBY_TTL_MS = 24 * 60 * 60 * 1000;
+const SHORT_TTL_MS = 24 * 60 * 60 * 1000;
+const PER_PROFILE = 5;
+const PER_ADDRESS = 10;
 const SWEEP_MS = 10 * 60 * 1000;
 const HEARTBEAT_MS = 25000;
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -60,7 +66,7 @@ db.db.exec(`
 
 function save(r) {
   const data = {
-    code: r.code, phase: r.phase, hostId: r.hostId, settings: r.settings, muted: [...r.muted],
+    code: r.code, phase: r.phase, hostId: r.hostId, settings: r.settings, muted: [...r.muted], ip: r.ip || '',
     players: r.players.map(({ id, token, name, color, profileId }) => ({ id, token, name, color, profileId })),
     state: r.state, moves: r.moves, lastMove: r.lastMove, ended: r.ended, drawOffer: r.drawOffer,
     rematch: [...r.rematch], lastActivity: r.lastActivity
@@ -107,13 +113,26 @@ function changed(r) {
   broadcast(r);
 }
 
+// Unfinished games someone with this profile is in.
+const unfinished = profileId => [...rooms.values()].filter(r => !r.ended && r.players.some(p => p.profileId === profileId)).length;
+function roomForProfile(profile) {
+  if (profile && unfinished(profile.id) >= PER_PROFILE) {
+    throw fail(`You already have ${PER_PROFILE} chess games going. Finish or resign one first.`, 409);
+  }
+}
+
 // profile: { id, name } when the host has one (needed to invite people).
-function create({ name, color, profile }) {
+// ip: who's asking, for the per-address cap.
+function create({ name, color, profile, ip = '' }) {
   if (rooms.size >= MAX_ROOMS) throw fail('The arcade is full of chess games. Try again later.', 503);
+  if (ip && [...rooms.values()].filter(r => r.ip === ip && !r.ended).length >= PER_ADDRESS) {
+    throw fail('That\'s a lot of chess games at once. Finish one first.', 429);
+  }
+  roomForProfile(profile);
   const host = { id: makeId(), token: makeToken(), name: cleanName(profile ? profile.name : name, 'Player 1'), color: null,
     profileId: profile ? profile.id : null, clients: 0 };
   const r = { code: makeCode(), phase: 'lobby', hostId: host.id, settings: { color: COLORS.includes(color) ? color : 'w' },
-    players: [host], muted: new Set(), clients: new Set(), lastActivity: Date.now() };
+    players: [host], muted: new Set(), clients: new Set(), lastActivity: Date.now(), ip };
   newGame(r);
   rooms.set(r.code, r);
   save(r);
@@ -149,6 +168,7 @@ function join(code, name, profile) {
   if (mine) return ticket(r, mine);
   if (r.phase !== 'lobby') throw fail('That game has already started.', 409);
   if (r.players.length >= 2) throw fail('That game already has two players.', 409);
+  roomForProfile(profile);
   const p = { id: makeId(), token: makeToken(), name: cleanName(profile ? profile.name : name, 'Player 2'), color: null,
     profileId: profile ? profile.id : null, clients: 0 };
   r.players.push(p);
@@ -198,7 +218,7 @@ function invite(code, playerId, token, to) {
   if (!h.profileId) throw fail('Pick your profile first, so the people you invite know who it\'s from.', 401);
   const seated = new Set(r.players.map(p => p.profileId).filter(Boolean));
   const sent = invites.send({
-    game: 'chess', room: r.code, from: { id: h.profileId, name: h.name }, to: (to || []).filter(id => !seated.has(String(id))),
+    game: 'chess', room: r.code, from: { id: h.profileId, name: h.name }, to: (Array.isArray(to) ? to : []).filter(id => !seated.has(String(id))),
     title: 'Chess', href: `chess.html?room=${r.code}`,
     notify: { title: 'Chess', body: `${h.name} invited you to Chess. Get in here!` }
   });
@@ -221,6 +241,25 @@ function mute(code, playerId, token, target, on) {
   const t = r.players.find(p => p.id === target);
   if (!t || t.id === r.hostId) throw fail('Choose someone else in the game.');
   if (on) r.muted.add(t.id); else r.muted.delete(t.id);
+  changed(r);
+  return snapshot(r, playerId);
+}
+
+// The host taking someone out of a seat in the lobby (someone who came in on
+// the code before the person the host invited, say).
+function remove(code, playerId, token, target) {
+  const r = room(code);
+  host(r, playerId, token);
+  if (r.phase !== 'lobby') throw fail('The game has already started.', 409);
+  const t = r.players.find(p => p.id === target);
+  if (!t || t.id === r.hostId) throw fail('Choose someone else in the game.');
+  r.players = r.players.filter(p => p.id !== t.id);
+  r.muted.delete(t.id);
+  for (const c of r.clients) {
+    if (c.playerId !== t.id) continue;
+    try { c.res.write('event: removed\ndata: {}\n\n'); c.res.end(); } catch { /* gone */ }
+  }
+  chat.note(r.code, `${t.name} was taken out of the game`);
   changed(r);
   return snapshot(r, playerId);
 }
@@ -400,17 +439,22 @@ invites.register('chess', (code, profileId) => {
   return { open: true, detail: `${h ? h.name : 'The host'} is waiting` };
 });
 
-function sweep() {
-  const now = Date.now();
+// Only a game between two profiles that has really started is kept long.
+const keepsLong = r => r.phase === 'playing' && !r.ended && r.moves.length > 0 && r.players.length === 2 && r.players.every(p => p.profileId);
+
+function sweep(now = Date.now()) {
   for (const r of [...rooms.values()]) {
-    const ttl = r.phase === 'lobby' ? LOBBY_TTL_MS : TTL_MS;
+    const ttl = keepsLong(r) ? TTL_MS : SHORT_TTL_MS;
     if (now - r.lastActivity >= ttl) drop(r);
   }
+  // A backstop: chat and invites for rooms that are gone.
+  db.db.prepare("DELETE FROM room_chat WHERE game = 'chess' AND room NOT IN (SELECT code FROM chess_rooms)").run();
+  db.db.prepare("DELETE FROM arcade_invites WHERE game = 'chess' AND room NOT IN (SELECT code FROM chess_rooms)").run();
 }
 
 load();
 const sweeper = setInterval(sweep, SWEEP_MS);
 if (typeof sweeper.unref === 'function') sweeper.unref();
 
-module.exports = { create, join, seatFor, setSettings, start, invite, say, mute, leave, move, act, snapshot, room,
+module.exports = { create, join, seatFor, setSettings, start, invite, say, mute, remove, leave, move, act, snapshot, room,
   authenticate, subscribe, mine, sweep, setNotifier, _rooms: rooms };

@@ -254,7 +254,8 @@
   function renderLobby(snap) {
     const host = snap.host;
     $('lobbyWhose').textContent = host ? 'Your game' : `${snap.hostName}'s game`;
-    LobbyUI.seats($('lobbySeats'), snap.seats, { invited: snap.invited, max: 2, canMute: host, onMute: (seat, on) => mute(seat, on) });
+    LobbyUI.seats($('lobbySeats'), snap.seats, { invited: snap.invited, max: 2, canMute: host, onMute: (seat, on) => mute(seat, on),
+      onRemove: seat => roomCall('remove', { seat }).then(applySnap, e => toast(e.message)) });
     $('lobbyHost').classList.toggle('hidden', !host);
     $('lobbyGuest').classList.toggle('hidden', host);
     if (host) {
@@ -299,6 +300,7 @@
     S.es = new EventSource(`/api/chess/rooms/${code}/events?playerId=${encodeURIComponent(playerId)}&token=${encodeURIComponent(token)}`);
     S.es.addEventListener('state', e => applySnap(JSON.parse(e.data)));
     S.es.addEventListener('closed', () => { leaveRoom(); setMode('host'); show('setup'); toast('The host closed the game.'); });
+    S.es.addEventListener('removed', () => { leaveRoom(); setMode('host'); show('setup'); toast('The host took you out of the game.'); });
     S.es.onerror = () => {
       // A room that no longer exists (server restarted, game expired) can't come back.
       fetch(`/api/chess/rooms/${code}?playerId=${encodeURIComponent(playerId)}&token=${encodeURIComponent(token)}`)
