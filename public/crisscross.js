@@ -762,32 +762,40 @@
 
   // Press and hold a tile you put down this turn to pick it up again, then drop it
   // on another square (or on another of yours to swap them), or on your rack to
-  // take it back.
+  // take it back. With a mouse there's no hold: dragging picks it up straight
+  // away, like a tile on the rack. The hold is only for fingers, where moving
+  // right away has to stay a scroll.
   const HOLD_MS = 300;
   function hookCell(el, i) {
     let hold = null;
+    const pickUp = (x, y) => {
+      const ghost = el.cloneNode(true);
+      ghost.className = 'cc-tile cc-ghost';
+      ghost.style.left = `${x}px`;
+      ghost.style.top = `${y}px`;
+      document.body.appendChild(ghost);
+      el.style.opacity = '0.3';
+      hold.ghost = ghost;
+    };
     el.addEventListener('contextmenu', e => { if (S.pending.has(i)) e.preventDefault(); });
     el.addEventListener('pointerdown', e => {
       if (drag || S.swapping || !S.pending.has(i) || !S.view || S.view.over) return;
       const start = { x: e.clientX, y: e.clientY, id: e.pointerId };
       try { el.setPointerCapture(e.pointerId); } catch { /* fine */ }
+      if (e.pointerType === 'mouse') { hold = { start, mouse: true, timer: null }; return; }
       hold = { start, timer: setTimeout(() => {
-        const ghost = el.cloneNode(true);
-        ghost.className = 'cc-tile cc-ghost';
-        ghost.style.left = `${start.x}px`;
-        ghost.style.top = `${start.y}px`;
-        document.body.appendChild(ghost);
-        el.style.opacity = '0.3';
-        hold.ghost = ghost;
+        pickUp(start.x, start.y);
         if (navigator.vibrate) try { navigator.vibrate(15); } catch { /* fine */ }
       }, HOLD_MS) };
     });
     el.addEventListener('pointermove', e => {
       if (!hold || hold.start.id !== e.pointerId) return;
       if (!hold.ghost) {
-        // Moving before the hold finishes isn't a pick-up.
-        if (Math.hypot(e.clientX - hold.start.x, e.clientY - hold.start.y) > 10) { clearTimeout(hold.timer); hold = null; }
-        return;
+        const moved = Math.hypot(e.clientX - hold.start.x, e.clientY - hold.start.y);
+        // A mouse picks the tile up as soon as it drags (8px, like the rack).
+        if (hold.mouse) { if (moved < 8) return; pickUp(e.clientX, e.clientY); }
+        // With a finger, moving before the hold finishes isn't a pick-up.
+        else { if (moved > 10) { clearTimeout(hold.timer); hold = null; } return; }
       }
       hold.ghost.style.left = `${e.clientX}px`;
       hold.ghost.style.top = `${e.clientY}px`;
