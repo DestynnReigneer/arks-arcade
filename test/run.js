@@ -53,6 +53,7 @@ const SUITES = [
   ['sudoku', require('./sudoku.test.js')],
   ['scuffle', require('./scuffle.test.js')],
   ['crisscross', require('./crisscross.test.js')],
+  ['chess', require('./chess.test.js')],
   ['clueless', require('./clueless.test.js')],
   ['tumbler', require('./tumbler.test.js')],
   ['continue', require('./continue.test.js')],

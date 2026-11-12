@@ -1,7 +1,11 @@
 'use strict';
 
-// Chess: against the computer, two players on one phone, or two phones with a
-// room code. The rules live in chess-engine.js; this file draws the board and
+// Chess: against the computer, two players on one phone, or two phones. Two
+// phones start in a lobby (lobby-ui.js): the host invites people from the
+// family by name or shares a link, chooses the color and starts; the lobby and
+// the game have a chat. A game on two phones is saved on the server, so leaving
+// doesn't end it: it waits in the Continue row, and opening it on another
+// device (chess.html?room=CODE) puts you back in your seat. The rules live in chess-engine.js; this file draws the board and
 // runs the game around it.
 
 (() => {
@@ -63,8 +67,10 @@
     $('localSetup').classList.toggle('hidden', mode !== 'local');
     $('hostSetup').classList.toggle('hidden', mode !== 'host');
     $('joinSetup').classList.toggle('hidden', mode !== 'join');
-    $('colorPick').classList.toggle('hidden', !(mode === 'ai' || mode === 'host'));
-    $('goBtn').textContent = mode === 'host' ? 'Get a game code' : mode === 'join' ? 'Join the game' : 'Start';
+    $('colorPick').classList.toggle('hidden', mode !== 'ai');
+    // With a profile, your name comes from it.
+    $('hostNameRow').classList.toggle('hidden', !!profileToken());
+    $('goBtn').textContent = mode === 'host' ? 'Open the lobby' : mode === 'join' ? 'Join the game' : 'Start';
     $('setupMsg').textContent = '';
   }
 
@@ -82,12 +88,12 @@
     try {
       if (S.mode === 'ai' || S.mode === 'local') return newLocalGame(color);
       if (S.mode === 'host') {
-        const r = await api('/api/chess/rooms', { name: $('hostName').value, color: S.colorPref });
+        const r = await api('/api/chess/rooms', { name: $('hostName').value, color: 'w' }, profileHeaders());
         return enterRoom(r);
       }
       const code = $('joinCode').value.trim().toUpperCase();
       if (code.length !== 4) { $('setupMsg').textContent = 'Type the 4-letter code.'; return; }
-      enterRoom(await api(`/api/chess/rooms/${code}/join`, { name: $('joinName').value }));
+      enterRoom(await api(`/api/chess/rooms/${code}/join`, { name: $('joinName').value }, profileHeaders()));
     } catch (e) {
       $('setupMsg').textContent = e.message;
     }
@@ -184,6 +190,9 @@
 
   // ---- two phones ------------------------------------------------------------------
 
+  const profileToken = () => (typeof ArcadeProfile !== 'undefined' ? ArcadeProfile.token() : null);
+  const profileHeaders = () => (profileToken() ? { 'X-Profile-Token': profileToken() } : {});
+
   function enterRoom(r) {
     S.room = { code: r.code, playerId: r.playerId, token: r.token };
     try { sessionStorage.setItem('chess.room', JSON.stringify(S.room)); } catch { /* unavailable */ }
@@ -191,17 +200,105 @@
     S.me = r.color;
     S.ended = null;
     S.overShown = null;
+    S.snap = null;
+    S.people = null;
+    S.picked = new Set();
     $('lobbyCode').textContent = r.code;
+    $('shareBox').open = false;
     ArcadeQR.forGame($('joinQr'), 'chess.html', r.code, $('joinLink'));
     show('lobby');
     connect();
   }
+
+  // Opening chess.html?room=CODE: from an invite, the Continue row or another
+  // device. Your profile finds your seat, or takes the free one.
+  async function openRoom(code) {
+    if (!profileToken()) {
+      setMode('join');
+      $('joinCode').value = code;
+      $('setupMsg').textContent = 'Pick your profile at the top to go straight in, or type your name to join as a guest.';
+      return;
+    }
+    try {
+      enterRoom(await api(`/api/chess/rooms/${code}/seat`, {}, profileHeaders()));
+    } catch (e) {
+      try { enterRoom(await api(`/api/chess/rooms/${code}/join`, {}, profileHeaders())); } catch (e2) { $('setupMsg').textContent = e2.message; }
+    }
+  }
+
+  // ---- the lobby -------------------------------------------------------------------
+
+  const roomCall = (path, body = {}) => {
+    const { code, playerId, token } = S.room;
+    return api(`/api/chess/rooms/${code}/${path}`, { playerId, token, ...body });
+  };
+  const COLOR_WORDS = { w: 'White', b: 'Black', random: 'a random color' };
+
+  async function loadPeople() {
+    if (S.people || S.loadingPeople || !profileToken()) return;
+    S.loadingPeople = true;
+    try {
+      S.people = (await api('/api/invites/people', undefined, profileHeaders())).people;
+    } catch { S.people = []; }
+    S.loadingPeople = false;
+    paintPeople();
+  }
+  function paintPeople() {
+    const seated = new Set((S.snap ? S.snap.seats : []).map(x => x.name));
+    const list = (S.people || []).filter(p => !seated.has(p.name));
+    $('invitePanel').classList.toggle('hidden', !list.length || (S.snap && S.snap.seats.length >= 2));
+    LobbyUI.people($('invitePeople'), list, S.picked, () => { $('inviteBtn').disabled = !S.picked.size; });
+    $('inviteBtn').disabled = !S.picked.size;
+  }
+
+  function renderLobby(snap) {
+    const host = snap.host;
+    $('lobbyWhose').textContent = host ? 'Your game' : `${snap.hostName}'s game`;
+    LobbyUI.seats($('lobbySeats'), snap.seats, { invited: snap.invited, max: 2, canMute: host, onMute: (seat, on) => mute(seat, on) });
+    $('lobbyHost').classList.toggle('hidden', !host);
+    $('lobbyGuest').classList.toggle('hidden', host);
+    if (host) {
+      pressed($('lobbyColorSeg'), 'color', snap.settings.color);
+      $('lobbyStart').disabled = snap.seats.length < 2;
+      $('lobbyStart').textContent = snap.seats.length < 2 ? 'Waiting for someone to join' : 'Start the game';
+      loadPeople();
+      if (S.people) paintPeople();
+    } else {
+      const theirs = snap.settings.color === 'random' ? 'random' : snap.settings.color === 'w' ? 'b' : 'w';
+      $('lobbySettings').replaceChildren(...[`You play as ${COLOR_WORDS[theirs]}`, 'No clock'].map(t => {
+        const span = document.createElement('span'); span.textContent = t; return span;
+      }));
+      $('lobbyWait').textContent = `Waiting for ${snap.hostName} to start…`;
+    }
+    S.lobbyChat.render(snap.chat, { muted: snap.muted });
+  }
+
+  async function invite() {
+    if (!S.picked.size) return;
+    try {
+      const r = await roomCall('invite', { to: [...S.picked] });
+      S.picked.clear();
+      toast(`Invited ${r.sent.map(p => p.name).join(' and ')}. They'll get a notification.`);
+      applySnap(r.state);
+    } catch (e) { toast(e.message); }
+  }
+  async function setColor(color) {
+    try { applySnap(await roomCall('settings', { color })); } catch (e) { toast(e.message); }
+  }
+  async function startRoom() {
+    try { applySnap(await roomCall('start')); } catch (e) { toast(e.message); }
+  }
+  async function mute(seat, on) {
+    try { applySnap(await roomCall('mute', { seat, on })); } catch (e) { toast(e.message); }
+  }
+  const sendChat = text => roomCall('chat', { text });
 
   function connect() {
     if (S.es) S.es.close();
     const { code, playerId, token } = S.room;
     S.es = new EventSource(`/api/chess/rooms/${code}/events?playerId=${encodeURIComponent(playerId)}&token=${encodeURIComponent(token)}`);
     S.es.addEventListener('state', e => applySnap(JSON.parse(e.data)));
+    S.es.addEventListener('closed', () => { leaveRoom(); setMode('host'); show('setup'); toast('The host closed the game.'); });
     S.es.onerror = () => {
       // A room that no longer exists (server restarted, game expired) can't come back.
       fetch(`/api/chess/rooms/${code}?playerId=${encodeURIComponent(playerId)}&token=${encodeURIComponent(token)}`)
@@ -238,8 +335,10 @@
     S.moves = snap.moves;
     S.lastMove = snap.lastMove;
     S.ended = snap.ended;
-    if (!snap.players.w || !snap.players.b) { show('lobby'); return; }
+    if (snap.phase === 'lobby') { renderLobby(snap); show('lobby'); return; }
     show('game');
+    $('gameChat').classList.remove('hidden');
+    S.gameChat.render(snap.chat, { muted: snap.muted });
     // A new game after a rematch: clear the results.
     if (!snap.ended && fresh) { S.overShown = null; $('overView').classList.add('hidden'); }
     $('drawOfferView').classList.toggle('hidden', !(snap.drawOffer && snap.drawOffer !== snap.you && !snap.ended));
@@ -632,7 +731,12 @@
 
   function backToSetup() {
     $('overView').classList.add('hidden');
+    // Leaving a lobby gives up the seat (or closes it, for the host). A game
+    // that started is saved, so it's only left, not ended.
+    if (S.room && S.snap && S.snap.phase === 'lobby') roomCall('leave').catch(() => {});
+    else if (S.room && S.state && !S.ended) toast('Your game is saved. Find it in Continue on the arcade\'s home page.');
     leaveRoom();
+    $('gameChat').classList.add('hidden');
     if (S.mode === 'room') setMode('host');
     S.state = null;
     show('setup');
@@ -715,7 +819,7 @@
       html: `<table>
           <tr><td>🤖 vs Computer</td><td>Easy, Medium or Hard. Win to get on the 🏆 board.</td></tr>
           <tr><td>📱 Share a phone</td><td>Two players, one phone. The board turns to face whoever's move it is.</td></tr>
-          <tr><td>📡 Two phones</td><td>Host a game, share the 4-letter code, and play from across the room.</td></tr>
+          <tr><td>👨‍👩‍👧 With the family</td><td>Choose who to play with and they get an invite, or share a link with a guest. Each of you plays on your own phone, with a chat under the board, and the game is saved until you finish it.</td></tr>
         </table>
         <div class="tut-tip">Tap <b>?</b> at the top any time to see this again.</div>`
     }
@@ -730,6 +834,12 @@
   $('goBtn').addEventListener('click', start);
   $('joinCode').addEventListener('keydown', e => { if (e.key === 'Enter') start(); });
   $('lobbyLeave').addEventListener('click', backToSetup);
+  $('inviteBtn').addEventListener('click', invite);
+  $('lobbyStart').addEventListener('click', startRoom);
+  for (const b of $('lobbyColorSeg').children) b.addEventListener('click', () => setColor(b.dataset.color));
+  S.lobbyChat = LobbyUI.chat($('lobbyChat'), { send: sendChat });
+  S.gameChat = LobbyUI.chat($('gameChat'), { send: sendChat });
+  if (typeof ArcadeProfile !== 'undefined') ArcadeProfile.onChange(() => { if (!S.room) setMode(S.mode === 'room' ? 'host' : S.mode); });
   $('suggestBtn').addEventListener('click', suggest);
   $('undoBtn').addEventListener('click', undo);
   $('resignBtn').addEventListener('click', () => {
@@ -755,8 +865,7 @@
   $('reviewBtn').addEventListener('click', () => $('overView').classList.add('hidden'));
   $('menuBtn').addEventListener('click', backToSetup);
   $('quitBtn').addEventListener('click', () => {
-    if (S.state && !S.ended && S.moves.length && !confirm('Leave this game?')) return;
-    if (S.mode === 'room' && S.state && !S.ended) roomAct('resign');
+    if (S.mode !== 'room' && S.state && !S.ended && S.moves.length && !confirm('Leave this game?')) return;
     backToSetup();
   });
   $('saveScoreBtn').addEventListener('click', saveScore);
@@ -772,11 +881,11 @@
     atMenu: () => !$('setup').classList.contains('hidden'),
     back: () => {
       $('overView').classList.add('hidden');
-      if (S.mode === 'room' && S.state && !S.ended) roomAct('resign');
       backToSetup();
     },
-    busy: () => !$('game').classList.contains('hidden') && !!S.state && !S.ended && S.moves.length > 0,
-    question: () => (S.mode === 'room' ? 'Leave this game? Leaving counts as resigning.' : 'Leave this game? It ends here and won\'t be saved.')
+    // A game on two phones is saved, so leaving it needs no question.
+    busy: () => S.mode !== 'room' && !$('game').classList.contains('hidden') && !!S.state && !S.ended && S.moves.length > 0,
+    question: () => 'Leave this game? It ends here and won\'t be saved.'
   });
 
   // ---- on the TV ---------------------------------------------------------------------------
@@ -801,16 +910,17 @@
   // ---- boot --------------------------------------------------------------------------------
 
   setMode('ai');
-  const joinParam = new URLSearchParams(location.search).get('join');
-  if (joinParam) { setMode('join'); $('joinCode').value = joinParam.toUpperCase().slice(0, 4); }
-  // Coming back to a two-phone game after a refresh.
-  try {
-    const saved = JSON.parse(sessionStorage.getItem('chess.room') || 'null');
-    if (saved && saved.code) {
-      S.room = saved;
-      S.mode = 'room';
-      connect();
-    }
-  } catch { /* nothing saved */ }
+  const params = new URLSearchParams(location.search);
+  const roomParam = (params.get('room') || params.get('join') || '').toUpperCase().slice(0, 4);
+  let saved = null;
+  try { saved = JSON.parse(sessionStorage.getItem('chess.room') || 'null'); } catch { /* nothing saved */ }
+  if (saved && saved.code && (!roomParam || saved.code === roomParam)) {
+    // Coming back to a two-phone game after a refresh.
+    S.room = saved;
+    S.mode = 'room';
+    connect();
+  } else if (roomParam) {
+    openRoom(roomParam);
+  }
   help.autoOpen();
 })();
