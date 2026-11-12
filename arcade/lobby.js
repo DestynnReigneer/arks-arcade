@@ -38,9 +38,11 @@ function collect() {
   }
 
   const chess = require('../chess/rooms');
+  // Only lobbies: a game in progress can be saved for weeks, and it's nobody else's.
   for (const r of chess._rooms.values()) {
+    if (r.phase !== 'lobby') continue;
     add('chess', {
-      code: r.code, host: r.players[0] ? r.players[0].name : '', players: r.players.length, max: 2,
+      code: r.code, host: (r.players.find(p => p.id === r.hostId) || r.players[0] || {}).name || '', players: r.players.length, max: 2,
       status: r.players.length >= 2 ? 'full' : 'open', detail: 'Two phones'
     });
   }

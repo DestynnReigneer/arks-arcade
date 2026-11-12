@@ -141,7 +141,9 @@ Levels run Kids, Cheeky, Spicy, Filthy like the party card games; the three adul
 
 ### Chess (`/chess.html`)
 
-Against the computer (Easy, Medium, Hard), two players on one phone, or two phones with a room code. The rules engine (`public/chess-engine.js`) runs in the page, in a Web Worker for the computer, and on the server to check two-phone moves; the tests check it against the standard perft counts. Beating the computer scores on the high-score board.
+Against the computer (Easy, Medium, Hard), two players on one phone, or each player on their own phone. The rules engine (`public/chess-engine.js`) runs in the page, in a Web Worker for the computer, and on the server to check two-phone moves; the tests check it against the standard perft counts. Beating the computer scores on the high-score board.
+
+**With the family** (two phones) starts in a lobby. The host chooses their color and who to play with: everyone with a profile is listed, and the people chosen get a notification (when the arcade signs in with ARKS ID) and an **Invites** row at the top of the home page, which takes them straight into the lobby with no code to type. A guest, or a friend without a profile, gets in with **Share a link** (a link, a QR code or the four-letter code, with **Join with a code**). Whoever joins sees the host's setting but can't change it, and waits until the host starts. The lobby and the game have a chat, with quick buttons; every word the kids word list turns away is starred out, and the host can mute someone. The game is saved on the server, so it survives a restart, waits in the **Continue** row until it's finished, and opening it on another device puts you back in your seat. A game nobody touches for 30 days is cleared, chat and all.
 
 ### Dino Dash (`/dino.html`)
 
@@ -629,7 +631,7 @@ rambler/                   Rambler, self-contained
   rooms.js                In-memory multi-device rooms over Server-Sent Events
   routes.js               Everything under /api/rambler
 
-chess/                    Two-phone chess rooms (/api/chess)
+chess/                    Two-phone chess rooms, saved, with the lobby (/api/chess)
 sudoku/                   Sudoku's puzzle maker (generator.js) and its runs and boards (/api/sudoku)
 scuffle/                  Shuffle Scuffle: letters and points (game.js), solo games and the two daily boards (solo.js), rooms (rooms.js), /api/scuffle
 crisscross/               Words with Family: the rules (engine.js), the computer player (bot.js), games in the database (games.js), /api/crisscross

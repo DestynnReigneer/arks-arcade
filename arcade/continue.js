@@ -48,7 +48,17 @@ function daily(game, name, page) {
   }));
 }
 
-const SOURCES = [wordsWithFamily, daily('sudoku', 'Sudoku', 'sudoku.html'), daily('clueless', 'Clueless Crosswords', 'clueless.html')];
+// Chess on two phones, saved since the lobby came in (chess/rooms.js).
+function chess(profile) {
+  return require('../chess/rooms').mine(profile).map(g => ({
+    game: 'chess',
+    title: g.opponent ? `Chess with ${g.opponent}` : 'Chess',
+    detail: g.yourTurn ? 'Your move' : `${g.opponent || 'Their'}'s move`,
+    href: `chess.html?room=${encodeURIComponent(g.code)}`, yourTurn: g.yourTurn, updatedAt: g.updatedAt
+  }));
+}
+
+const SOURCES = [wordsWithFamily, chess, daily('sudoku', 'Sudoku', 'sudoku.html'), daily('clueless', 'Clueless Crosswords', 'clueless.html')];
 
 // Games waiting on you first, then whatever was touched last.
 function listFor(profile) {

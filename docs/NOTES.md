@@ -49,6 +49,37 @@ order they were clicked, and keep the rest pinned here.
 - Building the trophy page, and Clueless Crosswords keeping its letters on the server so they follow you to another
   device the way Sudoku's squares do.
 
+## Playing together, step 1: Chess's lobby, invites, chat and saving (2026-11-11)
+
+From the maintainer's play-together design (kept privately, with the mockup they approved). Chess is first because
+it's the simplest room and step 2 of games that save, so both land together. Later steps bring the same lobby to
+Know-It-All, the party games, Rambler and Shuffle Scuffle.
+
+- **Shared pieces** for every game with rooms:
+  - `arcade/invites.js` (table `arcade_invites`): a host invites profiles by name. Each gets a notification (with
+    ARKS ID on, through `push.tell`) and a row in **Invites** at the top of the home page (`GET /api/invites`, answered
+    only for the profile token asking). `GET /api/invites/people` is the list to choose from. A game registers a check
+    (`register(game, fn)`) saying whether a room is still open to that person. Invites go when the person gets in, the
+    room closes or starts, or after 3 days.
+  - `arcade/room-chat.js` (table `room_chat`): the chat, kept with the room and cleared with it. In family rooms every
+    word on `blocklist-kids.txt` or `supplement-adult.txt` is starred out (first letter kept), with the usual endings
+    on stems of 4+ letters; the kids allowlist wins, and `shot`, `lit` and `wang` are allowed. 200 characters, 5
+    messages in 10 seconds per seat, and the host can mute someone.
+  - `public/lobby-ui.js` and `lobby-ui.css`: the seats, the people to choose from, and the chat on the page.
+- **Chess** (`chess/rooms.js`): a room starts in its lobby. The host chooses the color (White, Random or Black) and
+  starts once someone's in; colors are settled at the start. Rooms are saved in `chess_rooms` on every change and
+  read back at startup. A seat taken with a profile belongs to the profile: `POST /rooms/:code/seat` (or joining
+  again) gives it back on any device, and `chess.html?room=CODE` opens it from an invite or the Continue row. A
+  quiet game is cleared after 30 days, a lobby nobody started after a day. When it becomes your move and you aren't
+  looking at the game, your phone is told. Join a game lists only lobbies.
+- **Leaving a two-phone game no longer resigns it.** It's saved, so Back and Back to setup just leave, and it waits in
+  Continue. Leaving a lobby gives up the seat; the host leaving closes the room.
+- **Tests:** `test/chess.test.js` (the lobby, invites, the Invites row, host-only settings, the chat, its filter, mute,
+  the burst limit, seats following a profile, Continue, leaving) and `test/browser/chess-lobby.spec.js` (two browsers:
+  host, join from the link, chat both ways, start).
+- **Not yet:** the wording waits for the maintainer's rewrite, and a restart test (the rooms are read back at startup,
+  but no test restarts the server).
+
 ## Adult levels need ARKS ID, and the adult PIN is gone (2026-11-11)
 
 The maintainer asked for the adult unlock to be the ARKS ID login, so there's no PIN to guess.

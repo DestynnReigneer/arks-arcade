@@ -82,7 +82,7 @@
   // The games whoever is playing on this device left unfinished, on any
   // device. The server works out who's asking from the profile token, so
   // this only ever lists your own.
-  const CONTINUE_EMOJI = { crisscross: '🔡', sudoku: '🧩', clueless: '📰' };
+  const CONTINUE_EMOJI = { crisscross: '🔡', sudoku: '🧩', clueless: '📰', chess: '♞' };
   async function paintContinue() {
     const token = ArcadeProfile.token();
     let games = [];
@@ -111,6 +111,38 @@
   ArcadeProfile.onChange(paintContinue);
   paintContinue();
   setInterval(() => { if (!document.hidden) paintContinue(); }, 60 * 1000);
+
+  // ---- invites ----------------------------------------------------------------
+  // Games someone in the family asked you to play (arcade/invites.js). Like
+  // Continue, the server answers only for the profile asking. Join goes
+  // straight to that game's lobby, with no code to type.
+  async function paintInvites() {
+    const token = ArcadeProfile.token();
+    let invites = [];
+    if (token) {
+      try {
+        const r = await fetch('/api/invites', { headers: { 'X-Profile-Token': token }, cache: 'no-store' });
+        invites = r.ok ? (await r.json()).invites || [] : [];
+      } catch { /* leave it out */ }
+    }
+    if (token !== ArcadeProfile.token()) return;
+    const list = $('invitesList');
+    list.innerHTML = '';
+    for (const inv of invites) {
+      const li = document.createElement('li');
+      li.className = 'open';
+      li.innerHTML = '<span class="l-emoji"></span><span class="l-main"><div class="l-title"></div><div class="l-sub"></div></span><a class="l-join">Join</a>';
+      li.querySelector('.l-emoji').textContent = CONTINUE_EMOJI[inv.game] || '🎮';
+      li.querySelector('.l-title').textContent = `${inv.title} with ${inv.from}`;
+      li.querySelector('.l-sub').textContent = inv.detail;
+      li.querySelector('.l-join').href = inv.href;
+      list.appendChild(li);
+    }
+    $('invites').classList.toggle('hidden', !invites.length);
+  }
+  ArcadeProfile.onChange(paintInvites);
+  paintInvites();
+  setInterval(() => { if (!document.hidden) paintInvites(); }, 20 * 1000);
 
   // ---- the trophy -------------------------------------------------------------
   // The trophy beside who's playing opens the trophy page; its pink number is
