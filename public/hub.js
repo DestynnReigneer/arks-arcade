@@ -170,7 +170,7 @@
   // Every room being hosted anywhere in the arcade, refreshed every few seconds.
   const STATUS = { open: 'Join', live: 'Join game in progress?', playing: 'Playing now', full: 'Full' };
   // Games joined from the list, with no code to type (the maintainer's call, 2026-11-12).
-  const NO_CODE = new Set(['chess', 'trivia']);
+  const NO_CODE = new Set(['chess', 'trivia', 'partdeux', 'daredevil']);
 
   async function loadLobby() {
     try {

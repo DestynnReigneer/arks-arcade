@@ -130,7 +130,9 @@ function create(game) {
     for (const k of [...recent.keys()]) if (k.startsWith(`${game}|${room}|`)) recent.delete(k);
   }
 
-  return { list, say, note, clear };
+  // Every room's chat for this game, for games whose rooms don't survive a restart.
+  const clearAll = () => db.db.prepare('DELETE FROM room_chat WHERE game = ?').run(game);
+  return { list, say, note, clear, clearAll };
 }
 
 module.exports = { create, familyFilter, isBlocked, MAX_TEXT, STORE };

@@ -447,6 +447,8 @@ A party deck for 2-12: draw a card and do the dare, answer the truth, follow the
 
 Both card games share their one-phone and room plumbing (`arcade/party-tables.js`, `arcade/party-routes.js`).
 
+**Playing on everyone's own phone** works like Chess and Know-It-All. The host chooses **Create a game lobby** and picks who can join: anyone at the arcade, or only the people they choose (those people get an invite). Everyone else chooses **List Hosted Games** (or taps the lobby on the home page's Join a game list), sees the lobby's details and joins. There's no code to type; the code and QR code only show when a TV hosts the room. In the lobby each joiner taps **Ready!**, and the host can start once everyone is ready. The lobby and the game have a chat with emoji, and the host can mute someone or take them out with Remove Player. A card game can't be joined once it's dealt, so a game in progress shows on the list until it ends. The page's shared lobby pieces are in `public/party-lobby.js`, and the routes are `GET /api/<game>/lobbies` and `POST /api/<game>/rooms/:code/lobby-ready`, `/chat`, `/mute` and `/remove`.
+
 #### The party games, word games and puzzles on a TV
 
 These games work on a TV the same way as Know-It-All (see "Know-It-All on a TV" above): the TV layout, the remote's arrows and OK, and adult levels only during an adults' night. In each, the TV can host a room as its **screen**: it shows the game big, with the code and a QR code to join, and it starts the game but isn't a player. The server still decides every move and every score.
