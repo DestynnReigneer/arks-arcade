@@ -400,6 +400,12 @@ function adminRouter(requireAdmin) {
   admin.post('/train-cars', (req, res, next) => {
     try { res.json({ cars: trainCars.set((req.body || {}).cars) }); } catch (e) { next(e); }
   });
+  admin.post('/train-cars/:n/picture', (req, res, next) => {
+    try { res.json({ cars: trainCars.setPicture(req.params.n, (req.body || {}).image) }); } catch (e) { next(e); }
+  });
+  admin.delete('/train-cars/:n/picture', (req, res, next) => {
+    try { res.json({ cars: trainCars.clearPicture(req.params.n) }); } catch (e) { next(e); }
+  });
 
   // Whether adult levels are on (only with ARKS ID), for the admin page's Adult levels card.
   admin.get('/adult-pin', (req, res) => res.json(adultPin.status()));
