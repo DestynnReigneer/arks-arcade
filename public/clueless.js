@@ -245,9 +245,27 @@
   const progressKey = id => `clueless.progress.${id}`;
   const currentKey = (day, lv) => `clueless.current.${day}.${lv}`;
   const freeKey = lv => `clueless.current.free.${lv}`;
+  // Playing a daily crossword as a profile, the letters also go to the arcade (a
+  // moment after the last one typed, and when you leave), so they follow you to
+  // another device. `unsent` in this device's copy means the arcade hasn't got the
+  // latest yet; that copy wins next time, so letters typed with no signal aren't lost.
+  const SYNC_AFTER_MS = 1500;
+  let version = 0, sentVersion = 0, sendTimer = 0;
+  const unsent = () => version !== sentVersion;
+  const keepHere = () => store(progressKey(run.runId), JSON.stringify({ letters, pencil, marks, solved: [...solved], unsent: !!run.syncs && unsent() }));
   function save() {
     if (!run) return;
-    store(progressKey(run.runId), JSON.stringify({ letters, pencil, marks, solved: [...solved] }));
+    if (run.syncs) { version++; clearTimeout(sendTimer); sendTimer = setTimeout(send, SYNC_AFTER_MS); }
+    keepHere();
+  }
+  const progressBody = () => ({ letters, pencil, profileToken: token() });
+  async function send() {
+    if (!run || !run.syncs || run.finished || !unsent() || !token()) return;
+    const id = run.runId, v = version;
+    try {
+      await api(`/api/clueless/run/${id}/progress`, progressBody());
+      if (run && run.runId === id) { sentVersion = v; keepHere(); }
+    } catch { /* tries again with the next letter, or when you leave */ }
   }
   function load(state) {
     P = state.puzzle;
@@ -256,15 +274,22 @@
     pencil = new Array(n).fill(false);
     marks = {};
     solved = new Set();
-    try {
-      const saved = JSON.parse(recall(progressKey(state.runId), 'null'));
-      if (saved && Array.isArray(saved.letters) && saved.letters.length === n) {
-        letters = saved.letters.map((l, i) => (white(i) && /^[A-Z]$/.test(l) ? l : ''));
-        if (Array.isArray(saved.pencil)) pencil = saved.pencil.map(Boolean);
-        if (saved.marks && typeof saved.marks === 'object') marks = saved.marks;
-        if (Array.isArray(saved.solved)) solved = new Set(saved.solved.map(String));
-      }
-    } catch { /* start clean */ }
+    version = 0; sentVersion = 0; clearTimeout(sendTimer);
+    let local = null;
+    try { local = JSON.parse(recall(progressKey(state.runId), 'null')); } catch { /* start clean */ }
+    if (!(local && Array.isArray(local.letters) && local.letters.length === n)) local = null;
+    // The arcade's copy (another device may have moved on), unless this device has
+    // letters the arcade never got.
+    const server = state.syncs && state.progress && Array.isArray(state.progress.letters) && state.progress.letters.length === n ? state.progress : null;
+    const useLocal = !!local && (!server || !!local.unsent);
+    const from = useLocal ? local : server;
+    if (from) {
+      letters = from.letters.map((l, i) => (white(i) && /^[A-Z]$/.test(l) ? l : ''));
+      if (Array.isArray(from.pencil)) pencil = from.pencil.map(Boolean);
+      if (useLocal && local.marks && typeof local.marks === 'object') marks = local.marks;
+      if (useLocal && Array.isArray(local.solved)) solved = new Set(local.solved.map(String));
+    }
+    if (useLocal && local.unsent && state.syncs) { version = 1; sendTimer = setTimeout(send, 300); }
     applyRevealed(state.revealed);
     // Clear out older days' saved progress so it doesn't pile up.
     try {
@@ -712,6 +737,13 @@
   // Leaving the page (another app, another tab, closing it) pauses the clock.
   function away() {
     if (!run || run.paused || run.finished) return;
+    if (run.syncs && unsent() && token()) {
+      clearTimeout(sendTimer);
+      try {
+        fetch(`/api/clueless/run/${run.runId}/progress`, { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(progressBody()) });
+        sentVersion = version;
+      } catch { /* the device copy stays marked unsent */ }
+    }
     run.paused = true;
     try { fetch(`/api/clueless/run/${run.runId}/pause`, { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json' }, body: '{}' }); } catch { /* best effort */ }
     showState();

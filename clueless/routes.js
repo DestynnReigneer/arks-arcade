@@ -76,6 +76,10 @@ db.db.exec(`
 {
   const cols = db.db.prepare('PRAGMA table_info(clueless_runs)').all().map(c => c.name);
   if (!cols.includes('puzzle_key')) db.db.exec('ALTER TABLE clueless_runs ADD COLUMN puzzle_key TEXT');
+  // Where a profile got to on a daily crossword ({ letters, pencil } as JSON) and
+  // when it was saved, so it follows them to another device (2026-11-13).
+  if (!cols.includes('progress')) db.db.exec('ALTER TABLE clueless_runs ADD COLUMN progress TEXT');
+  if (!cols.includes('progress_at')) db.db.exec('ALTER TABLE clueless_runs ADD COLUMN progress_at INTEGER');
 }
 
 const fail = (message, status = 400, extra = {}) => Object.assign(new Error(message), { status, ...extra });
@@ -107,10 +111,20 @@ function nextMidnight(now = new Date()) {
 
 const puzzleOf = run => puzzles.puzzleFor(run.puzzle_key || run.day, run.level);
 
+// Whether a run's letters are kept on the arcade: a profile's daily crossword
+// (guests and free boards keep theirs on the device).
+const syncs = run => !!run.profile_id && !run.puzzle_key;
+function readProgress(run) {
+  if (!run.progress) return null;
+  try { return { ...JSON.parse(run.progress), savedAt: run.progress_at }; } catch { return null; }
+}
+
 function view(run, now = Date.now()) {
   const p = puzzleOf(run);
   const revealed = revealedOf(run);
   return {
+    syncs: syncs(run),
+    progress: syncs(run) ? readProgress(run) : null,
     runId: run.id, day: run.day, level: run.level, label: maker.LEVELS[run.level].label, free: !!run.puzzle_key,
     puzzle: maker.publicView(p),
     // Squares that were revealed come back with their letters, so a reload
@@ -167,6 +181,25 @@ function pause(id, on, now = Date.now()) {
     db.db.prepare('UPDATE clueless_runs SET paused_ms = paused_ms + ?, paused_at = NULL WHERE id = ?').run(now - run.paused_at, run.id);
   }
   return view(getRun(run.id), now);
+}
+
+// The letters a profile has typed so far (and which are in pencil), saved for that
+// profile only. Never used for the finish or the clock: the finish checks the grid
+// it's sent.
+function saveProgress(id, { letters, pencil, profileToken }, now = Date.now()) {
+  const run = needRun(id);
+  if (!syncs(run)) throw fail('Only profiles have their daily crossword kept on the arcade. Yours is kept on this device.', 409);
+  const profile = profileToken ? profiles().verify(profileToken) : null;
+  if (!profile || profile.id !== run.profile_id) throw fail('This crossword belongs to a different profile.', 403);
+  if (run.finished_at) return { saved: false };
+  const p = puzzleOf(run);
+  const n = p.size * p.size;
+  if (!Array.isArray(letters) || letters.length !== n) throw fail('Those letters don\'t fit this crossword.');
+  const out = letters.map((l, i) => (/^[A-Z]$/.test(p.letters[i] || '') && /^[A-Z]$/.test(String(l || '')) ? String(l) : ''));
+  const pen = Array.from({ length: n }, (_, i) => !!(Array.isArray(pencil) && pencil[i]) && !!out[i]);
+  db.db.prepare('UPDATE clueless_runs SET progress = ?, progress_at = ? WHERE id = ?')
+    .run(JSON.stringify({ letters: out, pencil: pen }), now, run.id);
+  return { saved: true, savedAt: now };
 }
 
 // The grid the page sends: one character per square, row by row. A letter
@@ -356,6 +389,7 @@ module.exports = function cluelessRoutes({ requireAdmin }) {
   router.post('/start', startLimit, (req, res, next) => (body(req).free ? freeLimit(req, res, next) : next()), wrap(req => start(body(req))));
   router.post('/run/:id/solved', playLimit, wrap(req => solved(req.params.id, body(req).grid)));
   router.get('/run/:id', wrap(req => view(needRun(req.params.id))));
+  router.post('/run/:id/progress', playLimit, wrap(req => saveProgress(req.params.id, body(req))));
   router.post('/run/:id/pause', playLimit, wrap(req => pause(req.params.id, true)));
   router.post('/run/:id/resume', playLimit, wrap(req => pause(req.params.id, false)));
   router.post('/run/:id/check', playLimit, wrap(req => check(req.params.id, body(req))));
@@ -404,7 +438,7 @@ module.exports = function cluelessRoutes({ requireAdmin }) {
 function inProgress(profileId, now = Date.now()) {
   return db.db.prepare('SELECT * FROM clueless_runs WHERE profile_id = ? AND day = ? AND puzzle_key IS NULL AND finished_at IS NULL ORDER BY started_at')
     .all(String(profileId), today(new Date(now)))
-    .map(run => ({ level: run.level, label: maker.LEVELS[run.level].label, playMs: playMs(run, now), updatedAt: run.paused_at || run.started_at }));
+    .map(run => ({ level: run.level, label: maker.LEVELS[run.level].label, playMs: playMs(run, now), updatedAt: run.progress_at || run.paused_at || run.started_at }));
 }
 
-Object.assign(module.exports, { start, pause, check, reveal, finish, solved, save, board, inProgress, PENALTY, MIN_MS_PER_SQUARE, LINE_RULE });
+Object.assign(module.exports, { start, pause, check, reveal, finish, solved, save, saveProgress, board, inProgress, PENALTY, MIN_MS_PER_SQUARE, LINE_RULE });
