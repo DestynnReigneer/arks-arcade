@@ -142,9 +142,9 @@
   /* ---- who's playing ---- */
   /* Who's playing: tucked in the top corner, above the title */
   .player-chip {
-    display: inline-flex; align-items: center; gap: 9px; padding: 4px 12px 4px 4px; border-radius: 999px; min-width: 0;
+    display: inline-flex; align-items: center; gap: 8px; height: 30px; box-sizing: border-box; padding: 2px 11px 2px 2px; border-radius: 999px; min-width: 0;
     background: color-mix(in srgb, #0a0416 45%, #22103f); border: 1px solid var(--border); color: var(--text);
-    font: 700 14px/1 Rajdhani, var(--font); letter-spacing: .12em; text-transform: uppercase; cursor: pointer;
+    font: 700 11.5px/1 Rajdhani, var(--font); letter-spacing: .16em; text-transform: uppercase; cursor: pointer;
   }
   .top-bar.docked .player-chip span, .top-bar.docked .player-chip small { display: none; }
   .top-bar.docked .player-chip { padding: 3px; }
@@ -276,8 +276,9 @@
   .top-bar.docked .ah-brand h1 { font-size: 18px; }
   .lockup { display: flex; align-items: center; gap: 10px; cursor: default; }
   .lockup .helm { width: 40px; height: 40px; flex: none; transition: width .25s, height .25s; }
-  .lockup .wide { height: 46px; width: auto; transition: height .25s; }
-  .lockup .word { display: block; height: 46px; width: auto; overflow: visible; transition: height .25s; }
+  .lockup .wide { display: block; height: 44px; width: auto; aspect-ratio: 678 / 445; transition: height .25s; }
+  .lockup .helm.mist-tint { display: block; }
+  .lockup .word { display: block; height: 44px; width: auto; overflow: visible; transition: height .25s; }
   .lockup .word text { font-family: Orbitron, sans-serif; font-weight: 800; letter-spacing: .06em; }
   .top-bar.docked .lockup .helm { width: 30px; height: 30px; }
   .top-bar.docked .lockup .wide, .top-bar.docked .lockup .word { height: 32px; }
@@ -332,11 +333,11 @@
     .top-bar.docked .lockup .wide, .top-bar.docked .lockup .word { height: 24px; }
     .live-dock .word { display: none; }
     .top-bar .player-chip span, .top-bar .player-chip small { display: none; }
-    .top-bar .player-chip { padding: 3px; }
+    .top-bar .player-chip { padding: 1px; height: 28px; }
     .lockup { gap: 6px; min-width: 0; }
     .ah-brand h1 { font-size: 18px; letter-spacing: 2px; }
-    .lockup .helm { width: 28px; height: 28px; }
-    .lockup .wide, .lockup .word { height: 30px; }
+    .lockup .helm { width: 30px; height: 30px; }
+    .lockup .wide, .lockup .word { height: 32px; }
     .foot-logo img { height: 100px; }
     h1 { font-size: 26px; }
   }
@@ -354,7 +355,7 @@
 <script src="tv-core.js"></script>
 <script src="tv.js"></script>
 </head>
-<body>
+<body data-mist="whisper-medium">
 
 <!-- The top bar: the same bar as every game page (topbar.css). -->
 <header class="ah top-bar"><div class="ah-bar">
@@ -651,5 +652,6 @@
 <script src="hub.js"></script>
 
 <script src="banner.js" defer></script>
+<script src="mist.js" defer></script>
 </body>
 </html>

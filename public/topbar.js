@@ -28,20 +28,34 @@
   fonts.href = 'https://fonts.googleapis.com/css2?family=Orbitron:wght@800&family=Rajdhani:wght@700&display=swap';
   document.head.appendChild(fonts);
 
+  // The mist (mist.js): slow clouds of the three colors behind the page, through the
+  // logo and the waffle. A page can pick another strength with data-mist on <body>.
+  if (!document.body.dataset.mist) document.body.dataset.mist = 'whisper-medium';
+  if (!document.querySelector('script[src="mist.js"]')) {
+    const mist = document.createElement('script');
+    mist.src = 'mist.js';
+    document.head.appendChild(mist);
+  }
+
   // A div, not a <header>: some games style every <header> on their page.
   const bar = document.createElement('div');
   bar.setAttribute('role', 'banner');
   bar.className = 'ah ah-fixed';
   bar.innerHTML =
     '<div class="ah-bar">' +
-      '<div class="ah-side"><a class="ah-back" href="/" title="Back to the arcade"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg><span>Arcade</span></a></div>' +
+      '<div class="ah-side"><a class="ah-back" href="/" title="Back to the arcade"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg><span>Arcade</span></a>' +
+        '<a class="ah-ib ah-trophy" href="trophies.html" title="Trophy Room" aria-label="Trophy Room"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+          '<path d="M7 4h10v5a5 5 0 0 1-10 0V4Z"/><path d="M7 6H4.5a2.5 2.5 0 0 0 2.6 4.2"/><path d="M17 6h2.5a2.5 2.5 0 0 1-2.6 4.2"/><path d="M12 14v3.5"/><path d="M8.5 21h7l-.8-3.5H9.3L8.5 21Z"/></svg></a></div>' +
       '<a class="ah-brand" href="/" aria-label="The arcade, home"><span class="ah-plain">ARCADE</span></a>' +
       '<div class="ah-side r"><button class="ah-ib help" type="button" title="How to play" aria-label="How to play">?</button>' +
+        '<button class="ah-ib ah-waffle" type="button" title="Menu" aria-label="Menu" aria-haspopup="true" aria-expanded="false"><span class="mist-waffle"></span></button>' +
         '<a class="ah-lock" href="admin.html" title="Admin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><span>Admin</span></a></div>' +
     '</div>';
   const spacer = document.createElement('div');
   spacer.className = 'ah-spacer';
   document.body.prepend(bar, spacer);
+  // The trophy page doesn't need a trophy pointing at itself.
+  if (/trophies\.html$/.test(location.pathname)) bar.querySelector('.ah-trophy').remove();
 
   // Once the game's own header is on the page: the bar's back arrow replaces
   // the header's, and ? opens the game's own How to play.
@@ -65,10 +79,17 @@
     const brand = c && c.brand;
     if (!brand || !brand.avatar || !brand.wide) return;
     const box = bar.querySelector('.ah-brand');
-    const helm = document.createElement('img');
-    helm.className = 'helm'; helm.src = brand.avatar; helm.alt = '';
-    const wide = document.createElement('img');
-    wide.className = 'wide'; wide.src = brand.wide; wide.alt = '';
+    // The helm keeps its drawing, with the mist washed over its colors; the logo is
+    // its own shape filled with the mist (mist.js).
+    const helm = document.createElement('span');
+    helm.className = 'helm mist-tint';
+    helm.style.setProperty('--mist-src', `url("${brand.avatar}")`);
+    const helmImg = document.createElement('img');
+    helmImg.src = brand.avatar; helmImg.alt = '';
+    helm.appendChild(helmImg);
+    const wide = document.createElement('span');
+    wide.className = 'wide mist-mask';
+    wide.style.setProperty('--mist-src', `url("${brand.wide}")`);
     const word = document.createElementNS(SVG_NS, 'svg');
     word.setAttribute('class', 'word');
     word.setAttribute('viewBox', '0 0 900 445');
@@ -87,9 +108,99 @@
       t.setAttribute('y', (308.6 - m.actualBoundingBoxDescent * size / 1000).toFixed(1));
       const b = t.getBBox();
       word.setAttribute('viewBox', `${b.x} 0 ${b.width} 445`);
+      // Once trimmed, the outline fills with the mist too.
+      word.classList.add('mist-stroke');
+      if (window.Mist) window.Mist.refresh();
     };
     document.fonts.load('800 20px Orbitron').then(fit, fit);
   }).catch(() => { /* the plain name is fine */ });
+
+  // ---- The waffle's menu --------------------------------------------------------
+  // Everything that doesn't need to be on screen all the time: sound, full screen,
+  // the game's own extras (pause, high scores...), and How to play on a phone, where
+  // the bar's ? is hidden. The game's own buttons stay on the page, hidden, and the
+  // menu presses them, so every game keeps working exactly as before.
+  const waffle = bar.querySelector('.ah-waffle');
+  const ICON = {
+    sound: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M15.5 9a4 4 0 0 1 0 6"/><path d="M18.5 6.5a7.5 7.5 0 0 1 0 11"/></svg>',
+    quiet: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="m16 9.5 5 5"/><path d="m21 9.5-5 5"/></svg>',
+    full: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5"/><path d="M20 9V4h-5"/><path d="M4 15v5h5"/><path d="M20 15v5h-5"/></svg>',
+    unfull: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4v5H4"/><path d="M15 4v5h5"/><path d="M9 20v-5H4"/><path d="M15 20v-5h5"/></svg>',
+  };
+  const phone = () => window.matchMedia('(max-width: 640px)').matches;
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  // The game's buttons the menu takes over (not on the TV, where they stay on screen).
+  const gameButtons = () => (document.documentElement.classList.contains('tv') ? []
+    : [...document.querySelectorAll('body > header.top .btns button')]);
+  const isMuted = b => /🔇/.test(b.textContent) || /off/i.test(b.title || '');
+  const musicOn = b => b.getAttribute('aria-pressed') !== 'false' && !b.classList.contains('off');
+
+  function items() {
+    const list = [];
+    const btns = gameButtons();
+    const mute = btns.find(b => b.id === 'muteBtn'), music = btns.find(b => b.id === 'musicBtn');
+    // Sound and music are one item: each press moves to the next setting.
+    if (mute) {
+      const on = !isMuted(mute), tune = music && musicOn(music);
+      list.push({ icon: on ? ICON.sound : ICON.quiet, label: 'Sound',
+        note: !on ? 'Off' : music ? (tune ? 'Music on' : 'Sound only') : 'On', stay: true,
+        run: () => {
+          if (!isMuted(mute) && music && musicOn(music)) music.click();
+          else if (!isMuted(mute)) mute.click();
+          else { mute.click(); if (music && !musicOn(music)) music.click(); }
+        } });
+    }
+    if (document.fullscreenEnabled) {
+      const fs = !!document.fullscreenElement;
+      list.push({ icon: fs ? ICON.unfull : ICON.full, label: fs ? 'Leave full screen' : 'Full screen',
+        run: () => (fs ? document.exitFullscreen() : document.documentElement.requestFullscreen()).catch(() => {}) });
+    }
+    const gameHelp = document.getElementById('helpBtn');
+    if (phone() && gameHelp) list.push({ icon: '?', label: 'How to play', run: () => gameHelp.click() });
+    for (const b of btns) {
+      if (b === mute || b === music || b.id === 'helpBtn' || b.hidden || b.style.display === 'none') continue;
+      const label = (b.getAttribute('aria-label') || b.title || '').replace(/\s*\(.*?\)\s*$/, '').trim() || b.textContent.trim();
+      list.push({ icon: esc(b.textContent.trim()), label: esc(label), run: () => b.click() });
+    }
+    return list;
+  }
+
+  let menu = null, back = null;
+  function closeMenu() {
+    if (!menu) return;
+    const m = menu, bk = back; menu = back = null;
+    m.classList.remove('open'); bk.classList.remove('open');
+    waffle.setAttribute('aria-expanded', 'false');
+    setTimeout(() => { m.remove(); bk.remove(); }, 250);
+  }
+  function fill() {
+    const title = (document.querySelector('body > header.top h1, header h1') || {}).textContent || document.title;
+    const list = items();
+    menu.innerHTML = '<div class="grab"></div><h3>' + esc(title.replace(/\s+/g, ' ').trim()) + '</h3><div class="grid">' +
+      list.map((it, i) => `<button type="button" data-i="${i}"><span class="ic">${it.icon}</span><span>${it.label}${it.note ? `<small>${it.note}</small>` : ''}</span></button>`).join('') +
+      '</div>';
+    menu.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+      const it = list[+b.dataset.i];
+      it.run();
+      if (it.stay) setTimeout(fill, 60); else closeMenu();
+    }));
+  }
+  function openMenu() {
+    back = document.createElement('div'); back.className = 'ah-menu-back';
+    menu = document.createElement('div'); menu.className = 'ah-menu'; menu.setAttribute('role', 'menu');
+    fill();
+    document.body.append(back, menu);
+    const r = waffle.getBoundingClientRect();
+    menu.style.top = Math.round(r.bottom + 10) + 'px';
+    menu.style.left = Math.round(Math.max(10, Math.min(window.innerWidth - menu.offsetWidth - 10, r.right - menu.offsetWidth + 8))) + 'px';
+    back.addEventListener('click', closeMenu);
+    waffle.setAttribute('aria-expanded', 'true');
+    requestAnimationFrame(() => { if (menu) { menu.classList.add('open'); back.classList.add('open'); } });
+    const first = menu.querySelector('button'); if (first) first.focus({ preventScroll: true });
+  }
+  waffle.addEventListener('click', () => (menu ? closeMenu() : openMenu()));
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && menu) { e.stopPropagation(); closeMenu(); waffle.focus(); } }, true);
+  document.addEventListener('fullscreenchange', () => { if (menu) fill(); });
 
   // Shrinks once the page scrolls a little.
   let queued = false;
