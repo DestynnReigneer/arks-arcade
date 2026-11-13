@@ -984,6 +984,15 @@
     const who = g.kind === 'local' ? g.players[g.turn].name : 'you';
     if (await ask(g.kind === 'local' ? `Should ${who} leave this game? Their score stays, but they can't win.` : 'Leave this game? Your score stays, but you can\'t win, and the others carry on without you.')) act('resign');
   };
+  // The top bar's menu on a phone: zoom, the words played, and the two ways out,
+  // which sit under the board on a bigger screen.
+  $('zoomMenuBtn').onclick = () => $('zoomBtn').click();
+  $('gamesMenuBtn').onclick = () => $('backBtn').click();
+  $('leaveMenuBtn').onclick = () => $('resignBtn').click();
+  const showMoves = on => document.body.classList.toggle('cc-moves-open', on);
+  $('movesMenuBtn').onclick = () => showMoves(true);
+  $('movesClose').onclick = () => showMoves(false);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.body.classList.contains('cc-moves-open')) showMoves(false); });
   $('zoomBtn').onclick = () => {
     const box = $('boardBox');
     const on = !box.classList.contains('zoomed');
