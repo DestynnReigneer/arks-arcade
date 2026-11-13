@@ -197,3 +197,7 @@ body.tv-screen #opponents { order: 1; }
 body.tv-screen #myArea { order: 2; margin: 0 0 12px; padding: 8px 10px; }
 body.tv-screen .table { order: 3; }
 body.tv-screen #latest, body.tv-screen #pendingBanner { order: 4; }
+
+/* No scrolling while you play (2026-11-13): the page's own bottom padding was the
+   only thing past the screen. */
+html:not(.tv) body:has(#game:not(.hidden)) { padding-bottom: 0; }

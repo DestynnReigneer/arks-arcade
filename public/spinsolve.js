@@ -1083,7 +1083,8 @@
   $('nextRoundBtn').addEventListener('click', nextRound);
   $('againBtn').addEventListener('click', startGame);
   $('menuBtn').addEventListener('click', backToSetup);
-  $('quitBtn').addEventListener('click', async () => { if (await (TV ? ArcadeTV.confirm('Leave this game?') : Promise.resolve(confirm('Leave this game?')))) backToSetup(); });
+  $('quitBtn').addEventListener('click', async () => { if (await ArcadeBack.ask('Leave this game?')) backToSetup(); });
+  $('setupMenuBtn').addEventListener('click', () => $('quitBtn').click());
   if (TV) {
     buildSolveKeys();
     // Typing on a TV pops up its own keyboard over everything; the one on the screen is easier.
