@@ -14,7 +14,8 @@ const comm = require('./comm');
 const GAMES = {
   // Adult boards are open to read like every other board (the maintainer's call, 2026-11-11); their #1s are never
   // announced. Playing the adult levels still needs an adult's ARKS ID sign-in.
-  spinsolve: { label: 'Spin & Solve', boards: { solo: 'Solo', adult: 'Adult' }, adultBoards: ['adult'], max: 200000 },
+  // Spin & Solve runs on the server (spinsolve/game.js), which saves the total itself; the page can't post one.
+  spinsolve: { label: 'Spin & Solve', boards: { solo: 'Solo', adult: 'Adult' }, adultBoards: ['adult'], max: 200000, serverOnly: true },
   chess: { label: 'Chess', boards: { easy: 'vs Easy', medium: 'vs Medium', hard: 'vs Hard' }, max: 5000 },
   dino: { label: 'Dino Dash', boards: { run: 'Distance' }, max: 9999999 },
   trivia: { label: 'Know-It-All', boards: { solo: 'Family', adult: 'Adult' }, adultBoards: ['adult'], max: 30000 },
@@ -83,8 +84,9 @@ function list(game, board, limit = 25) {
   });
 }
 
-function save(game, { initials, score, board, detail, profileToken }) {
+function save(game, { initials, score, board, detail, profileToken, fromServer }) {
   const { g, key } = boardOf(game, board);
+  if (g.serverOnly && !fromServer) throw fail(`${g.label} saves its scores from the game itself.`, 403);
   // Playing as a profile: the score is theirs, no initials needed.
   const profile = profileToken ? require('./profiles').verify(profileToken) : null;
   const who = profile ? profile.initials || initialsOf(profile.name) : String(initials || '').toUpperCase().trim();
@@ -126,7 +128,8 @@ router.get('/:game', (req, res, next) => {
 });
 
 router.post('/:game', saveLimiter, (req, res, next) => {
-  try { res.status(201).json(save(req.params.game, req.body || {})); } catch (e) { next(e); }
+  // fromServer is only ever set by a game's own server code, never by a request.
+  try { res.status(201).json(save(req.params.game, { ...(req.body || {}), fromServer: false })); } catch (e) { next(e); }
 });
 
 router.use((err, req, res, next) => {
