@@ -103,6 +103,9 @@ if (arks) {
   const push = require('./arcade/push').createPush({ arks });
   app.use(push.routes());
   require('./crisscross/games').setNotifier(push.tell);
+  // Invites by name in games with a lobby (arcade/invites.js), and Chess's turns.
+  require('./arcade/invites').setNotifier(push.tell);
+  require('./chess/rooms').setNotifier(push.tell);
 } else {
   app.get('/api/arksid/me', (req, res) => res.set('Cache-Control', 'no-store').json({ on: false }));
   app.use(require('./arcade/tv').offRoutes());
@@ -188,6 +191,8 @@ app.use('/api/clueless', require('./clueless/routes')({ requireAdmin }));
 app.use('/api/tumbler', require('./tumbler/routes').router);
 // The home page's Continue row: the games the person asking has in progress.
 app.use('/api/continue', require('./arcade/continue').router);
+// Invites to play (the Invites row on the home page, and who can be invited).
+app.use(require('./arcade/invites').routes());
 // The trophy page: every leaderboard, with the asker's own place on each.
 app.use('/api/trophies', require('./arcade/trophies').router);
 // Taking a single score off any game's board, and putting it back (the admin

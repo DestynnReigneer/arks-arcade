@@ -375,7 +375,7 @@ test('Chess against the computer with the remote', async ({ page }) => {
   const problems = await openTv(page, '/chess.html');
   // The two-phone games stay on phones.
   await expect(page.locator('[data-mode="host"]')).toBeHidden();
-  await expect(page.locator('[data-mode="join"]')).toBeHidden();
+  await expect(page.locator('[data-mode="find"]')).toBeHidden();
   await press(page, '#goBtn');
   await expect(page.locator('#game')).toBeVisible();
   await expectTvLayout(page);

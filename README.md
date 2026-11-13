@@ -141,7 +141,9 @@ Levels run Kids, Cheeky, Spicy, Filthy like the party card games; the three adul
 
 ### Chess (`/chess.html`)
 
-Against the computer (Easy, Medium, Hard), two players on one phone, or two phones with a room code. The rules engine (`public/chess-engine.js`) runs in the page, in a Web Worker for the computer, and on the server to check two-phone moves; the tests check it against the standard perft counts. Beating the computer scores on the high-score board.
+Against the computer (Easy, Medium, Hard), two players on one phone, or each player on their own phone. The rules engine (`public/chess-engine.js`) runs in the page, in a Web Worker for the computer, and on the server to check two-phone moves; the tests check it against the standard perft counts. Beating the computer scores on the high-score board.
+
+**Multiplayer-Multiple devices** (each player on their own phone) starts with **Create a game lobby**. The host chooses their color and **Who can join**: **Anyone at the arcade**, or **Only People Selected**, a list of everyone with a profile to check one, a few or all (the people checked get a notification when the arcade signs in with ARKS ID, and an **Invites** row at the top of the home page). The lobby shows up in **List Hosted Games** and on the home page's Join a game board, only for the people picked when the host picked people. Nobody types a code: tapping a lobby shows its details (who's in, how it plays, your color, whether it's full) and **Join lobby**; without a profile you type a name and join as a guest. Whoever joins sees the host's setting but can't change it and taps **Ready!**; the host's **Players Ready, Start Game!** only lights up once everyone is ready. An open seat says Open with dots that grow while it waits. The lobby and the game have a chat, with quick buttons; every word the kids word list turns away is starred out, and the host can mute someone. The host can **Mute** someone (their chat messages are hidden from everyone) or **Remove Player** from a seat in the lobby. The game is saved on the server, so it survives a restart, waits in the **Continue** row until it's finished, and opening it on another device puts you back in your seat. A game between two profiles that nobody touches for 30 days is cleared, chat and all; a game with a guest in it, one with no moves yet, a finished one and a lobby nobody started are cleared after a quiet day. Each profile can have 5 unfinished games, and a phone's seat follows its profile, so give a profile a PIN if you don't want someone else picking it and opening its games. A repeat invite only buzzes a phone again after 10 minutes, and each room keeps its newest 200 chat messages.
 
 ### Dino Dash (`/dino.html`)
 
@@ -629,7 +631,7 @@ rambler/                   Rambler, self-contained
   rooms.js                In-memory multi-device rooms over Server-Sent Events
   routes.js               Everything under /api/rambler
 
-chess/                    Two-phone chess rooms (/api/chess)
+chess/                    Two-phone chess rooms, saved, with the lobby (/api/chess)
 sudoku/                   Sudoku's puzzle maker (generator.js) and its runs and boards (/api/sudoku)
 scuffle/                  Shuffle Scuffle: letters and points (game.js), solo games and the two daily boards (solo.js), rooms (rooms.js), /api/scuffle
 crisscross/               Words with Family: the rules (engine.js), the computer player (bot.js), games in the database (games.js), /api/crisscross
