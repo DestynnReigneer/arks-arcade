@@ -304,6 +304,7 @@ async function run({ base, root, fake, admin: ADMIN }) {
   ok('starting a game tells the person invited, with a link straight to it', toSam.length === 1 && /^Kim started a game with you[.,]/.test(toSam[0].body) &&
     toSam[0].url === `/crisscross.html?game=${ng.data.id}` && toSam[0].tag === `ww-${ng.data.id}`, JSON.stringify(fake.pushes));
   ok('…and not the one who started it', toKim().length === 0);
+  ok('…saying it is a new game, from Kim, in Words with Family (contract v16)', toSam[0].kind === 'started' && toSam[0].from === fake.users.kim.id && toSam[0].game === 'Words with Family', JSON.stringify(toSam[0]));
   // Whoever goes first passes; the other one hears about it.
   let g = (await cc(`/games/${ng.data.id}`, kimCC)).data;
   const [first, second, secondKey] = g.you === g.turn ? [kimCC, samCC, 'sam'] : [samCC, kimCC, 'kim'];
@@ -314,6 +315,7 @@ async function run({ base, root, fake, admin: ADMIN }) {
   const told = fake.pushes.filter(p => p.to === fake.users[secondKey].id);
   ok("…and the next player hears it's their turn, and what was played", fake.pushes.length === 1 && told.length === 1 &&
     told[0].body === `${firstName} passed. Your move!` && told[0].title === 'Words with Family', JSON.stringify(fake.pushes));
+  ok('…as a turn, from the player who moved', told[0].kind === 'turn' && told[0].from === fake.users[first === kimCC ? 'kim' : 'sam'].id, JSON.stringify(told[0]));
   fake.pushDown = true;
   ok("a move still goes through when the notification can't be sent", (await cc(`/games/${ng.data.id}/pass`, second, { method: 'POST', body: {} })).status === 200);
   await settle();
@@ -324,6 +326,16 @@ async function run({ base, root, fake, admin: ADMIN }) {
     await settle();
     return fake.pushes.length === 0;
   })());
+  console.log('\n-- Discord #trophies: a new #1 (contract v16) --');
+  fake.trophies = [];
+  const top = await fetch(`${base}/api/scores/launcher`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ score: 49999, board: 'points', profileToken: kimCC.token }) });
+  await new Promise(r => setTimeout(r, 200));
+  const t0 = fake.trophies[0] || {};
+  ok('a new #1 on an all-time board goes to the trophy channel, as that person', top.status === 201 && t0.game === 'ARKS Launcher' && t0.who === fake.users.kim.id && /49,999 points/.test(t0.score), JSON.stringify(fake.trophies));
+  fake.trophies = [];
+  await fetch(`${base}/api/scores/launcher`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ score: 10, board: 'points', initials: 'LOW' }) });
+  await new Promise(r => setTimeout(r, 200));
+  ok('…and a score that isn\'t #1 doesn\'t', fake.trophies.length === 0);
   console.log('\n-- notifications: Chess invites --');
   {
     const chessCall = (p, who, body) => fetch(`${base}/api/chess${p}`, {
@@ -342,6 +354,15 @@ async function run({ base, root, fake, admin: ADMIN }) {
     await settle(1);
     ok('…and inviting them again straight away doesn\'t buzz their phone again', fake.pushes.length === 0, JSON.stringify(fake.pushes));
     ok('…and a list that isn\'t a list is a clear error, not a crash', (await chessCall(`/rooms/${hostRoom.code}/invite`, kimCC, { ...seat, to: samCC.profile.id })).status === 400);
+    ok('the invite says it\'s an invite, from Kim (contract v16)', first[0].kind === 'invite' && first[0].from === fake.users.kim.id && first[0].game === 'Chess', JSON.stringify(first[0]));
+    // Sam joins; a chat message from Kim reaches Sam, who isn't looking at the game.
+    await chessCall(`/rooms/${hostRoom.code}/join`, samCC, {});
+    fake.pushes.length = 0;
+    await chessCall(`/rooms/${hostRoom.code}/chat`, kimCC, { ...seat, text: 'ready when you are' });
+    await settle();
+    const chatPush = fake.pushes.filter(p => p.to === fake.users.sam.id);
+    ok('a chat message tells the others who aren\'t looking, as a chat, never with the words', chatPush.length === 1 && chatPush[0].kind === 'chat' &&
+      chatPush[0].body === 'Kim sent a chat message in Chess.' && !/ready when/.test(JSON.stringify(chatPush[0])) && !fake.pushes.some(p => p.to === fake.users.kim.id), JSON.stringify(fake.pushes));
     await chessCall(`/rooms/${hostRoom.code}/leave`, kimCC, seat);
   }
 
