@@ -50,12 +50,14 @@ at any size and sit nicely on the dark page.
 ## media/sprites/: characters on the home page
 
 The home page has little characters on the walls beside the games (on a phone,
-they sit inside the Cheat codes box instead). Tap one and it hops and runs a
-command, like making the page dance. The arcade comes with four of its own
-pixel characters. If you put pictures here, yours take their place.
+they line up under INSERT COIN instead, a little smaller). Tap one and it hops and
+does something fun, like making the page dance, and when nobody has touched the
+page for a while they break into a little dance on their own. The arcade comes
+with four of its own pixel characters. If you put pictures here, yours take
+their place.
 
 - **What:** PNG, GIF (animated is fine), WebP, SVG or JPG.
-- **Size:** each file 2 MB or less. They're shown about 52 pixels tall, so a
+- **Size:** each file 2 MB or less. They're shown about 52 pixels tall (34 on a phone), so a
   square-ish picture with a see-through background looks best. Anything from
   64×64 to 256×256 pixels is plenty.
 - **How many:** up to six are shown. If you add more, the first six in
