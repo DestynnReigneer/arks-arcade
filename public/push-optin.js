@@ -6,7 +6,11 @@
 // can do it. An iPhone or iPad can only once the arcade is on its Home Screen,
 // so there the card says how.
 //
-//   ArcadePush.card(box)  draws the card into box (or hides it)
+//   ArcadePush.status()   where this phone stands: { state, sub, wanted }, state
+//                         being 'none' (can't here), 'tip' (an iPhone that needs
+//                         the Home Screen first), 'blocked', 'off' or 'on'
+//   ArcadePush.turnOn(wanted) / turnOff(sub)   the profile card's switch uses these
+//   ArcadePush.card(box)  draws the old card into box (or hides it)
 //   ArcadePush.clear(tag) takes away a notification that's showing for tag
 window.ArcadePush = (() => {
   const supported = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
@@ -104,6 +108,48 @@ window.ArcadePush = (() => {
     box.append(btn, err);
   }
 
+  // The same checks as the card, as an answer instead of a drawing.
+  async function status() {
+    let info = null, key = null;
+    try {
+      info = await (await fetch('/api/arksid/me')).json();
+      key = await (await fetch('/api/push/key')).json();
+    } catch { return { state: 'none' }; }
+    if (!info || !info.on || !info.signedIn || !key || !key.on) return { state: 'none' };
+    if (!supported()) return { state: apple() && !installed() ? 'tip' : 'none' };
+    const r = await worker().catch(() => null);
+    if (!r) return { state: 'none' };
+    const sub = await r.pushManager.getSubscription().catch(() => null);
+    const wanted = toBytes(key.publicKey);
+    if (sub && Notification.permission === 'granted') {
+      if (same(sub.options && sub.options.applicationServerKey, wanted)) {
+        post('/api/push/subscribe', { subscription: sub.toJSON() }).catch(() => {});
+        return { state: 'on', sub, wanted };
+      }
+      await sub.unsubscribe().catch(() => {});
+    }
+    return { state: Notification.permission === 'denied' ? 'blocked' : 'off', wanted };
+  }
+  // Throws an Error whose message can be shown as it is; `blocked` is set when the phone said no for good.
+  async function turnOn(wanted) {
+    try {
+      const r = await worker();
+      const s = await r.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: wanted });
+      try { await post('/api/push/subscribe', { subscription: s.toJSON() }); }
+      catch (e) { await s.unsubscribe().catch(() => {}); throw e; }
+      return s;
+    } catch (e) {
+      if (Notification.permission === 'denied') throw Object.assign(new Error('blocked'), { blocked: true });
+      throw new Error(e && e.name === 'NotAllowedError' ? 'Your phone said no that time. Tap the switch again and choose Allow.'
+        : e && e.name === 'AbortError' ? 'Notifications don\'t work in a private or incognito window. Open the Arcade in a regular window and try again.'
+          : e && e.name === 'Error' && e.message ? e.message : 'Something went wrong. Give it a moment and try again.');
+    }
+  }
+  async function turnOff(sub) {
+    await post('/api/push/unsubscribe', { endpoint: sub.endpoint });
+    await sub.unsubscribe();
+  }
+
   async function clear(tag) {
     if (!supported()) return;
     try {
@@ -112,5 +158,5 @@ window.ArcadePush = (() => {
     } catch { /* nothing showing */ }
   }
 
-  return { card, clear };
+  return { card, clear, status, turnOn, turnOff, apple };
 })();
