@@ -67,9 +67,11 @@
   function unlockAdult() {
     if (TV) return unlockOnTv();
     if (!S.config.adultRequiresPin) {
-      const ok = confirm('These cards are for adults only (18+). Continue?');
-      if (ok) { S.adultOk = true; try { sessionStorage.setItem('dd.adultOk', 'yes'); } catch { /* unavailable */ } }
-      return Promise.resolve(ok);
+      // The arcade's own card, not the browser's confirm box.
+      return ArcadeBack.ask('These cards are for adults only (18+). Continue?', { yes: "I'm 18 or older", no: 'Back' }).then(ok => {
+        if (ok) { S.adultOk = true; try { sessionStorage.setItem('dd.adultOk', 'yes'); } catch { /* unavailable */ } }
+        return ok;
+      });
     }
     return new Promise(resolve => {
       $('pinInput').value = '';

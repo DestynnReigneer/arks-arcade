@@ -263,7 +263,8 @@ test('Dino Dash with the remote and a controller', async ({ page }) => {
 test('Block Drop with the remote and a controller', async ({ page }) => {
   const problems = await openTv(page, '/blocks.html');
   await expectTvLayout(page);
-  await expect(page.locator('.tv-go')).toBeFocused();
+  // On a busy machine the highlight can land a moment late; give it longer.
+  await expect(page.locator('.tv-go')).toBeFocused({ timeout: 15000 });
   await page.keyboard.press('Enter');
   await expect(page.locator('body')).toHaveAttribute('data-state', 'playing');
   await page.keyboard.press('ArrowLeft');

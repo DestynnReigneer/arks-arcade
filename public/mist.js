@@ -111,7 +111,8 @@
       for (const p of ['backgroundColor', 'backgroundImage', 'backgroundAttachment', 'backgroundSize', 'backgroundPosition', 'backgroundRepeat']) h[p] = b[p];
       document.body.style.background = 'transparent';
     }
-    document.body.prepend(bg); blobs = [...bg.children];
+    // Added last: it sits behind everything anyway, and pages expect their own first element (a banner) to stay first.
+    document.body.appendChild(bg); blobs = [...bg.children];
   }
 
   function paint(fast, slow) {

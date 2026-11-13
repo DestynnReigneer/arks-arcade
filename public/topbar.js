@@ -280,9 +280,11 @@ window.ArcadeBack = (() => {
   }
 
   // A yes-or-no question on the page itself. On a TV, the TV's own card
-  // (the remote can answer it); elsewhere a card in the arcade's colors.
-  function ask(text) {
-    if (window.ArcadeTV && window.ArcadeTV.on) return window.ArcadeTV.confirm(text, { yes: 'Leave', no: 'Keep playing' });
+  // (the remote can answer it); elsewhere a card in the arcade's colors. Games use
+  // it too (ArcadeBack.ask) instead of the browser's own confirm box; `no` is the
+  // safe answer and gets the focus.
+  function ask(text, { yes = 'Leave', no = 'Keep playing' } = {}) {
+    if (window.ArcadeTV && window.ArcadeTV.on) return window.ArcadeTV.confirm(text, { yes, no });
     return new Promise(resolve => {
       const root = document.createElement('div');
       root.className = 'ab-confirm';
@@ -296,6 +298,8 @@ window.ArcadeBack = (() => {
           <button data-leave style="display:block;width:100%;margin-top:8px;padding:11px;border:1px solid #ff2ec4;border-radius:10px;background:transparent;color:#f5eaff;font-size:14px;font-weight:700;cursor:pointer">Leave</button>
         </div>`;
       root.querySelector('[data-q]').textContent = text;
+      root.querySelector('[data-stay]').textContent = no;
+      root.querySelector('[data-leave]').textContent = yes;
       const key = e => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); done(false); } };
       const done = ok => { root.remove(); document.removeEventListener('keydown', key, true); resolve(ok); };
       root.querySelector('[data-stay]').onclick = () => done(false);
@@ -381,7 +385,7 @@ window.ArcadeBack = (() => {
     setInterval(sync, 400);
   }
 
-  return { setup, sync, back, get inside() { return !!cfg && !atMenu(); } };
+  return { setup, sync, back, ask, get inside() { return !!cfg && !atMenu(); } };
 })();
 
 // The end of a game pops up over the page instead of opening above the board
