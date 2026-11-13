@@ -5,15 +5,20 @@
 // could reach, and a jackpot score must match a jackpot really won here (arcade/cab-jackpot.js).
 (() => {
   const $ = id => document.getElementById(id);
+  const game = CAB.games[0];
+  // One board for each Cups and Speed setting, keyed "big-fast" (arcade/scores.js has the same list).
+  const choices = id => game.options.find(o => o.id === id).choices;
+  const boards = {};
+  for (const [size, sizeLabel] of choices('size')) for (const [speed, speedLabel] of choices('speed')) boards[`${size}-${speed}`] = `${sizeLabel} cups, ${speedLabel}`;
 
   const shell = GameShell.create({
-    game: 'bucketdrop', boards: { points: 'Points' }, mount: $('cab'),
+    game: 'bucketdrop', boards, mount: $('cab'),
     onAgain: () => frame.start(),
     onSetup: () => frame.setup()
   });
 
   const frame = CabFrame.run({
-    game: CAB.games[0], root: $('cab'), muteBtn: $('muteBtn'), musicBtn: $('musicBtn'),
+    game, root: $('cab'), muteBtn: $('muteBtn'), musicBtn: $('musicBtn'),
     onStart: () => shell.hideOver(),
     onSetup: () => shell.hideOver(),
     onOver: g => {
@@ -22,7 +27,7 @@
     }
   });
 
-  $('scoresBtn').addEventListener('click', () => shell.openScores('points'));
+  $('scoresBtn').addEventListener('click', () => shell.openScores(`${game.opt.size}-${game.opt.speed}`));
   Blip.muteButton($('muteBtn'));
   Blip.musicButton($('musicBtn'));
 
@@ -44,7 +49,7 @@
     },
     {
       emoji: '⚙️', title: 'Make it easier or harder',
-      html: `<p><b>Cups</b> sets how big the cups are, and <b>Speed</b> sets how fast the turntable spins. They're saved on this device, and your score on the board says which you played with.</p>`
+      html: `<p><b>Cups</b> sets how big the cups are, and <b>Speed</b> sets how fast the turntable spins. They're saved on this device, and each pair has its own board, so you're only up against people who played the same way.</p>`
     }
   ]);
   $('helpBtn').addEventListener('click', () => { frame.pause(); help.open(); });
