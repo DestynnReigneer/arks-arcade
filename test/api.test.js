@@ -1057,6 +1057,8 @@ async function run({ base, root }) {
   const pdGuest = (await party('partdeux', `/rooms/${pdRoom.code}/join`, 'POST', { name: 'Pal', password: 'lime' })).data;
   ok('…and lets a guest in with it', !!pdGuest.playerId);
   ok('Uh-Oh rooms show on the arcade lobby, locked', (await wl('/lobby')).data.rooms.some(r => r.game === 'partdeux' && r.code === pdRoom.code && r.locked && r.adult));
+  ok('Uh-Oh: the host can\'t start until everyone is ready', (await party('partdeux', `/rooms/${pdRoom.code}/start`, 'POST', { playerId: pdRoom.playerId, token: pdRoom.token })).status === 409);
+  await party('partdeux', `/rooms/${pdRoom.code}/lobby-ready`, 'POST', { playerId: pdGuest.playerId, token: pdGuest.token, ready: true });
   await party('partdeux', `/rooms/${pdRoom.code}/start`, 'POST', { playerId: pdRoom.playerId, token: pdRoom.token });
   const pdSnap = (await party('partdeux', `/rooms/${pdRoom.code}?playerId=${pdGuest.playerId}&token=${pdGuest.token}`)).data;
   ok('Uh-Oh: each phone sees only its own hand', pdSnap.game.hand.length === 7 && pdSnap.game.hands === undefined && pdSnap.game.drinking === true);

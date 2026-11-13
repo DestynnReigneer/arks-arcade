@@ -25,6 +25,18 @@ function makeRoutes({ tables, config }) {
   const limiter = rateLimit({ windowMs: 10 * 60 * 1000, limit: 60, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many new games at once.' } });
   const creds = req => [req.params.code, (req.body || {}).playerId || req.query.playerId, (req.body || {}).token || req.query.token];
   const token = req => req.get('X-Table-Token');
+  // Who someone is in the family comes from the X-Profile-Token header, never the address.
+  const profileOf = req => require('./profiles').verify(req.get('X-Profile-Token')) || null;
+  const listLimiter = rateLimit({ windowMs: 10 * 60 * 1000, limit: 600, standardHeaders: true, legacyHeaders: false, message: { error: 'Slow down a little, then try again.' } });
+  const seatLimiter = rateLimit({ windowMs: 60 * 1000, limit: 120, standardHeaders: true, legacyHeaders: false, message: { error: 'Slow down a little, then try again.' } });
+  const chatLimiter = rateLimit({ windowMs: 60 * 1000, limit: 40, standardHeaders: true, legacyHeaders: false, message: { error: 'Slow down a little, then try again.' } });
+  // List Hosted Games: the rooms this person can see and join.
+  router.get('/lobbies', listLimiter, (req, res) => res.json({ lobbies: tables.lobbies(profileOf(req)) }));
+  // The lobby: Ready, the chat, and the host's Mute and Remove Player.
+  router.post('/rooms/:code/lobby-ready', seatLimiter, (req, res, next) => { try { tables.lobbyReady(...creds(req), (req.body || {}).ready !== false); res.json({ ok: true }); } catch (e) { next(e); } });
+  router.post('/rooms/:code/chat', chatLimiter, (req, res, next) => { try { tables.say(...creds(req), (req.body || {}).text); res.json({ ok: true }); } catch (e) { next(e); } });
+  router.post('/rooms/:code/mute', seatLimiter, (req, res, next) => { try { tables.mute(...creds(req), (req.body || {}).seat, !!(req.body || {}).on); res.json({ ok: true }); } catch (e) { next(e); } });
+  router.post('/rooms/:code/remove', seatLimiter, (req, res, next) => { try { tables.remove(...creds(req), (req.body || {}).seat); res.json({ ok: true }); } catch (e) { next(e); } });
 
   router.get('/config', (req, res) => res.json({ ...config(), adultRequiresPin: adultPin.status().set, maxPlayers: tables.MAX_PLAYERS }));
   router.post('/unlock', adultPin.tryLimiter(), (req, res) => res.json(adultPin.check(req, res)));
@@ -46,7 +58,8 @@ function makeRoutes({ tables, config }) {
       const body = req.body || {};
       assertLevelAllowed(body.level, req);
       // screen: a TV hosts the room and shows the table; it doesn't play.
-      const { table, player } = tables.createRoom({ name: body.name, level: body.level, drinking: body.drinking, password: body.password, options: body.options, screen: body.screen === true });
+      const { table, player } = tables.createRoom({ name: body.name, level: body.level, drinking: body.drinking, password: body.password, options: body.options, screen: body.screen === true,
+        profile: profileOf(req), who: body.who, allowed: body.allowed });
       res.status(201).json({ code: table.id, playerId: player.id, token: player.token });
     } catch (e) { next(e); }
   });
@@ -56,7 +69,7 @@ function makeRoutes({ tables, config }) {
     try {
       const body = req.body || {};
       await adultJoin.refuseKids(req, tables.isAdult(tables.room(req.params.code).level));
-      const { table, player } = tables.joinRoom(req.params.code, body.name, body.password);
+      const { table, player } = tables.joinRoom(req.params.code, body.name, body.password, profileOf(req));
       res.status(201).json({ code: table.id, playerId: player.id, token: player.token });
     } catch (e) { next(e); }
   });
