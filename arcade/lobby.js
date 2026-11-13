@@ -114,7 +114,12 @@ function publicUrl() {
 
 const router = express.Router();
 
-router.get('/lobby', (req, res) => {
+// The home page checks this every few seconds.
+const listLimiter = require('express-rate-limit')({
+  windowMs: 10 * 60 * 1000, limit: 600, standardHeaders: true, legacyHeaders: false,
+  message: { error: 'Slow down a little, then try again.' }
+});
+router.get('/lobby', listLimiter, (req, res) => {
   const viewer = require('./profiles').verify(req.get('X-Profile-Token')) || null;
   res.json({ rooms: collect(viewer), publicUrl: publicUrl() });
 });
