@@ -307,3 +307,43 @@ html.tv .host-lane { height: 56px; }
 /* Wide, short letter tiles, so the whole puzzle stays in sight. */
 html.tv .puzzle-board .tile { aspect-ratio: 1 / 1; }
 html.tv .stage { width: 100%; max-width: 640px; margin: 0 auto; box-sizing: border-box; }
+
+/* ---- No scrolling while you play (2026-11-13) -------------------------------------
+   The puzzle and the wheel are both on the screen at once. On a computer: two
+   columns, the puzzle, category, players and used letters on the left, the wheel,
+   whose turn it is and the buttons on the right. On a phone: one column, with the
+   wheel as big as the room left allows, and Back to setup in the top bar's menu.
+   The TV keeps its own layout (above). */
+@media (max-width: 899px) {
+  html:not(.tv):has(#game:not(.hidden)) { height: 100%; overflow: hidden; }
+  html:not(.tv) body:has(#game:not(.hidden)) { height: 100dvh; overflow: hidden; display: flex; flex-direction: column; padding-bottom: 0; box-sizing: border-box; }
+  html:not(.tv) body:has(#game:not(.hidden)) > * { flex: none; }
+  html:not(.tv) body:has(#game:not(.hidden)) .fb-corner { display: none; }
+  html:not(.tv) #game:not(.hidden) { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; padding-bottom: max(10px, env(safe-area-inset-bottom)); }
+  html:not(.tv) #game:not(.hidden) > * { flex: none; }
+  html:not(.tv) #game > .wheel-area { flex: 1 1 auto; min-height: 120px; width: 100%; margin: 6px 0 2px; container-type: size; display: grid; justify-items: center; align-items: start; }
+  html:not(.tv) #game > .wheel-area > .wheel { width: min(100cqw, 100cqh, 320px); }
+  html:not(.tv) #game > #quitBtn { display: none; }
+}
+@media (min-width: 900px) {
+  html:not(.tv) body:has(#game:not(.hidden)) {
+    max-width: none; padding-left: 0; padding-right: 0; padding-bottom: 0;
+    --bar-w: calc(min(1100px, 100vw) - 32px);
+  }
+  html:not(.tv) body:has(#game:not(.hidden)) > header.top { width: var(--bar-w); margin: 0 auto; box-sizing: border-box; }
+  html:not(.tv) #game:not(.hidden) {
+    display: grid; width: var(--bar-w); margin: 6px auto 16px; column-gap: 28px; align-items: start;
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+    grid-template-areas: "round round" "stage wheel" "cat wheel" "players wheel" "used turn" "used timer" "used actions" "used quit";
+  }
+  html:not(.tv) #game > .round-line { grid-area: round; }
+  html:not(.tv) #game > .stage { grid-area: stage; }
+  html:not(.tv) #game > .category { grid-area: cat; justify-self: center; }
+  html:not(.tv) #game > #playerList { grid-area: players; }
+  html:not(.tv) #game > #usedLetters { grid-area: used; }
+  html:not(.tv) #game > .wheel-area { grid-area: wheel; justify-self: center; width: clamp(220px, calc(100dvh - 420px), 380px); }
+  html:not(.tv) #game > .turn-line { grid-area: turn; }
+  html:not(.tv) #game > #turnTimer { grid-area: timer; }
+  html:not(.tv) #game > .actions { grid-area: actions; }
+  html:not(.tv) #game > #quitBtn { grid-area: quit; margin-top: 10px; }
+}
