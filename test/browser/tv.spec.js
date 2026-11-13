@@ -172,11 +172,13 @@ test('a phone joins a game the TV hosts', async ({ page, browser }) => {
   await expect(phone.locator('.apf')).toBeHidden();
   const close = phone.locator('.tut-x');
   if (await close.isVisible().catch(() => false)) await close.click();
-  await expect(phone.locator('#joinCode')).toHaveValue(code);
+  // The QR opens that lobby's details: type a name and join (no code to type).
+  await expect(phone.locator('#detailsView')).toBeVisible();
+  await expect(phone.locator('#dHow')).toContainText('on the TV');
   await phone.locator('#joinName').fill('Pat');
-  await phone.locator('#goBtn').click();
+  await phone.locator('#joinBtn').click();
   await expect(phone.locator('#lobby')).toBeVisible();
-  await expect(phone.locator('#waitHost')).toContainText('host');
+  await expect(phone.locator('#waitHost')).toContainText('start the game');
 
   // The TV sees them and starts with the remote.
   await expect(page.locator('#lobbyPlayers')).toContainText('Pat');
