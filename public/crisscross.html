@@ -28,6 +28,12 @@
     <button class="icon-btn" id="muteBtn" title="Sound">🔊</button>
     <button class="icon-btn music-btn" id="musicBtn" title="Music">🎵</button>
     <button class="icon-btn" id="helpBtn" title="How to play">?</button>
+    <!-- For the top bar's menu on a phone, where the game uses the whole screen
+         and these don't fit under the board. -->
+    <button class="icon-btn no-tv" id="zoomMenuBtn" data-menu="phone" data-when="#game" title="Zoom">🔍</button>
+    <button class="icon-btn no-tv" id="movesMenuBtn" data-menu="phone" data-when="#game" title="Words played">📜</button>
+    <button class="icon-btn no-tv" id="gamesMenuBtn" data-menu="phone" data-when="#game" title="My games">↩️</button>
+    <button class="icon-btn no-tv" id="leaveMenuBtn" data-menu="phone" data-when="#game" title="Leave this game">🚪</button>
   </div>
 </header>
 
@@ -166,8 +172,8 @@
       <button class="primary" id="swapGo">Swap them</button>
     </div>
   </div>
-  <div class="panel">
-    <h2>Words played</h2>
+  <div class="panel cc-moves-panel">
+    <div class="cc-moves-head"><h2>Words played</h2><button class="ghost cc-moves-x" id="movesClose" type="button">Close</button></div>
     <ol class="cc-moves" id="moveList"></ol>
   </div>
   <div class="stack">

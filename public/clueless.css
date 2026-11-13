@@ -205,3 +205,74 @@ html.tv .cl-keys { display: block; }
 html.tv .cl-key { min-height: 44px; font-size: 17px; }
 html.tv .cl-wrap { max-width: 330px; margin-left: auto; margin-right: auto; }
 html.tv .cl-cell:focus { z-index: 3; }
+
+/* ---- No scrolling while you play (2026-11-13) --------------------------------------
+   clueless.js groups the page into .cl-stage (.cl-fit holding the grid, and .cl-side),
+   off the TV only. On a phone they stay one column and, while a puzzle is going, fit
+   between the top bar and the bottom of the screen: the grid as big as the space
+   allows, the tools and the keyboard under it, and the clue lists in the top bar's
+   menu. On a computer the grid fills the height on the left and the rest sits beside
+   it, lined up with the ends of the top bar. The finished-puzzle screen scrolls as
+   before. */
+.cl-lists-x { display: none; }
+html:not(.tv) .cl-stage, html:not(.tv) .cl-side { display: contents; }
+html:not(.tv) .cl-fit { container-type: size; display: grid; place-items: center; min-height: 0; }
+html:not(.tv) .cl-fit > .cl-wrap { width: min(100cqw, 100cqh); margin: 0; }
+
+@media (max-width: 899px) {
+  html:not(.tv) body { display: flex; flex-direction: column; }
+  html:not(.tv) .cl-picks { order: 1; }
+  html:not(.tv) .cl-side > .hud { order: 2; }
+  html:not(.tv) #over { order: 3; }
+  html:not(.tv) #clueBar { order: 4; }
+  html:not(.tv) #freeBar { order: 5; }
+  html:not(.tv) .cl-fit { order: 6; }
+  html:not(.tv) .cl-legend { order: 7; }
+  html:not(.tv) #tools { order: 8; }
+  html:not(.tv) #keys { order: 9; }
+  html:not(.tv) .cl-side > .keys-hint { order: 10; }
+  html:not(.tv) #lists { order: 11; }
+  /* Finished: the grid at the size it always was. */
+  html:not(.tv) body[data-state="over"] .cl-fit { height: min(100vw - 32px, 440px); }
+
+  html:not(.tv):has(body:not([data-state="over"])) { height: 100%; overflow: hidden; }
+  html:not(.tv) body:not([data-state="over"]) { height: 100dvh; overflow: hidden; padding-bottom: 0; box-sizing: border-box; }
+  html:not(.tv) body:not([data-state="over"]) > * { flex: none; }
+  html:not(.tv) body:not([data-state="over"]) .cl-picks { margin: 0 0 6px; }
+  html:not(.tv) body:not([data-state="over"]) .cl-side > .hud { margin: 0 0 6px; }
+  html:not(.tv) body:not([data-state="over"]) #clueBar { max-width: none; width: 100%; margin: 0 0 6px; }
+  html:not(.tv) body:not([data-state="over"]) .cl-fit { flex: 1 1 auto; }
+  html:not(.tv) body:not([data-state="over"]) #tools { max-width: none; margin: 6px 0 0; }
+  html:not(.tv) body:not([data-state="over"]) #keys { max-width: none; margin: 2px 0 max(8px, env(safe-area-inset-bottom)); }
+  html:not(.tv) body:not([data-state="over"]) #lists,
+  html:not(.tv) body:not([data-state="over"]) .fb-corner { display: none; }
+  /* All the clues, opened from the menu, slide up over the game. */
+  html:not(.tv) body.cl-clues-open:not([data-state="over"]) #lists {
+    display: grid; grid-template-columns: 1fr; position: fixed; left: 10px; right: 10px; bottom: 10px; z-index: 62; max-height: 70dvh; overflow: auto;
+    margin: 0; padding: 14px; border-radius: 18px; background: var(--card); border: 1px solid var(--border); box-shadow: 0 -10px 40px rgba(0,0,0,.55);
+  }
+  html:not(.tv) body.cl-clues-open .cl-lists-x { display: inline-flex; justify-self: end; }
+}
+
+@media (min-width: 900px) {
+  html:not(.tv) body {
+    max-width: none; padding-left: 0; padding-right: 0; padding-bottom: 0;
+    --bar-w: calc(min(1100px, 100vw) - 32px); --gap: 24px;
+    --board: clamp(360px, min(calc(100dvh - 76px - 44px - 16px), calc(var(--bar-w) - var(--gap) - 380px)), 820px);
+  }
+  html:not(.tv) body > header.top, html:not(.tv) body > #over { width: var(--bar-w); margin-left: auto; margin-right: auto; box-sizing: border-box; }
+  html:not(.tv) .cl-stage {
+    display: grid; grid-template-columns: var(--board) minmax(0, 1fr); column-gap: var(--gap);
+    width: var(--bar-w); height: var(--board); margin: 6px auto 16px;
+  }
+  html:not(.tv) .cl-fit { height: var(--board); }
+  html:not(.tv) .cl-side { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+  html:not(.tv) .cl-side > * { flex: none; max-width: none; margin-left: 0; margin-right: 0; }
+  html:not(.tv) .cl-side .cl-picks { margin: 0 0 10px; }
+  html:not(.tv) .cl-side > .hud { margin: 0 0 10px; }
+  html:not(.tv) .cl-side .cl-tools { margin: 8px 0 0; }
+  html:not(.tv) .cl-side > .keys-hint { margin: 8px 0 0; text-align: left; }
+  /* The clue lists take the room that's left, and scroll inside it. */
+  html:not(.tv) .cl-side .cl-lists { flex: 1 1 auto; min-height: 0; overflow: auto; margin: 12px 0 0; align-content: start; }
+  html:not(.tv) body[data-state="over"] .cl-stage { height: auto; }
+}
