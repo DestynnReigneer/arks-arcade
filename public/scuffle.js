@@ -148,9 +148,11 @@
   function unlockAdult() {
     if (TV) return unlockOnTv();
     if (!S.config || !S.config.adultRequiresPin) {
-      const ok = confirm('The unfiltered list is for adults only (18+). Continue?');
-      if (ok) { S.adultOk = true; try { sessionStorage.setItem('scuffle.adultOk', 'yes'); } catch { /* unavailable */ } }
-      return Promise.resolve(ok);
+      // The arcade's own card, not the browser's confirm box.
+      return ArcadeBack.ask('The unfiltered list is for adults only (18+). Continue?', { yes: "I'm 18 or older", no: 'Back' }).then(ok => {
+        if (ok) { S.adultOk = true; try { sessionStorage.setItem('scuffle.adultOk', 'yes'); } catch { /* unavailable */ } }
+        return ok;
+      });
     }
     return new Promise(resolve => {
       $('pinInput').value = '';
@@ -673,7 +675,7 @@
   async function doneEarly() {
     if (!playing()) return;
     if (S.room) { try { await roomPost(onScreen() ? 'next' : 'done'); } catch (e) { toast(e.message); } return; }
-    if (!(await (TV ? ArcadeTV.confirm('End this round now? Any words you haven\'t found yet will be shown.') : confirm('End this round now? Any words you haven\'t found yet will be shown.')))) return;
+    if (!(await ArcadeBack.ask('End this round now? Any words you haven\'t found yet will be shown.', { yes: 'End the round', no: 'Keep playing' }))) return;
     try { applySolo(await api(`/api/scuffle/solo/${S.solo.gameId}/stop`, {})); } catch (e) { toast(e.message); }
   }
 

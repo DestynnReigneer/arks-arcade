@@ -87,8 +87,9 @@ test('Chess: Back to setup and Play again are at the top of the results', async 
   const problems = await openGame(page, '/chess.html');
   await page.locator('#goBtn').click();
   await expect(page.locator('#game')).toBeVisible();
-  page.on('dialog', d => d.accept());
   await page.locator('#resignBtn').click();
+  // Resign asks on the page, in the arcade's own card.
+  await page.locator('.ab-confirm [data-leave]').click();
   await expect(page.locator('#overView')).toBeVisible({ timeout: 10000 });
   await expectOnTop(page, { buttons: ['#menuBtn', '#againBtn'] });
   await page.locator('#menuBtn').click();
