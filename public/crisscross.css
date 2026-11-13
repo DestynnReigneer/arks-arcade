@@ -167,3 +167,93 @@ html.tv .cc-cell:focus { z-index: 3; }
 /* Notifications when it's your turn (push-optin.js) */
 .push-card button { margin-top: 4px; }
 .push-card .push-err:empty { display: none; }
+
+/* ---- No scrolling while you play (2026-11-12) -------------------------------------
+   While a game is on screen, everything fits between the top bar and the bottom of
+   the screen. On a phone the board is as big as the space allows, with the scores
+   above and your tiles and buttons below; zoom, the words played and the ways out
+   are in the top bar's menu. On a computer the board fills the height on the left
+   and the rest sits beside it, lined up with the ends of the top bar. The TV keeps
+   its own layout (above). */
+.cc-moves-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.cc-moves-head h2 { margin: 0; }
+.cc-moves-x { display: none; }
+.cc-scores li:nth-child(1) .cc-pts { color: #00ffc2; }
+.cc-scores li:nth-child(2) .cc-pts { color: #ff2ec4; }
+.cc-scores li:nth-child(3) .cc-pts { color: #ffd23f; }
+.cc-scores li:nth-child(4) .cc-pts { color: #9b7bff; }
+
+/* The board carries its own frame, so the box around it can be any shape. */
+html:not(.tv) body:has(#game:not(.hidden)) .cc-board-box {
+  width: 100%; max-width: none; aspect-ratio: auto; border: 0; background: none; border-radius: 0;
+  display: grid; place-items: center; container-type: size; overflow: hidden; margin: 0;
+}
+html:not(.tv) body:has(#game:not(.hidden)) .cc-board {
+  width: min(100cqw, 100cqh); height: min(100cqw, 100cqh); box-sizing: border-box;
+  border: 2px solid var(--border); border-radius: 10px; background: #0e0d18;
+}
+html:not(.tv) body:has(#game:not(.hidden)) .cc-board-box.zoomed { overflow: auto; place-items: start; }
+html:not(.tv) body:has(#game:not(.hidden)) .cc-board-box.zoomed .cc-board { width: calc(min(100cqw, 100cqh) * 1.7); height: calc(min(100cqw, 100cqh) * 1.7); }
+
+@media (max-width: 899px) {
+  html:not(.tv):has(#game:not(.hidden)) { height: 100%; overflow: hidden; }
+  html:not(.tv) body:has(#game:not(.hidden)) { height: 100dvh; overflow: hidden; display: flex; flex-direction: column; padding-bottom: 0; box-sizing: border-box; }
+  html:not(.tv) body:has(#game:not(.hidden)) > :not(#game) { flex: none; }
+  html:not(.tv) #game:not(.hidden) { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column;
+    padding-bottom: max(10px, env(safe-area-inset-bottom)); }
+  html:not(.tv) #game:not(.hidden) > * { flex: none; }
+  html:not(.tv) #game > #overPanel { order: 0; }
+  html:not(.tv) #game > #scoreStrip { order: 1; margin: 4px 0; }
+  html:not(.tv) #game > #status { order: 2; margin: 0; }
+  html:not(.tv) #game > .cc-board-tools { order: 3; justify-content: center; margin: 0 0 6px; min-height: 0; }
+  html:not(.tv) #game > .cc-board-tools #zoomBtn { display: none; }
+  html:not(.tv) #game > #boardBox { order: 4; flex: 1 1 auto; min-height: 0; }
+  html:not(.tv) #game > #rack { order: 5; margin: 10px 0 0; }
+  html:not(.tv) #game > #preview { order: 6; min-height: 0; margin: 6px 0; font-size: 13px; }
+  html:not(.tv) #game > #actions, html:not(.tv) #game > #swapActions { order: 7; margin: 0; }
+  html:not(.tv) #game > .cc-moves-panel, html:not(.tv) #game > .stack { display: none; }
+  /* The bug-report button would sit on Play; it's in the top bar's menu meanwhile. */
+  html:not(.tv) body:has(#game:not(.hidden)) .fb-corner { display: none; }
+  html:not(.tv) #game .cc-scores li { padding: 6px 4px 4px; }
+  html:not(.tv) #game .cc-scores small { display: none; }
+  html:not(.tv) #game .cc-scores .cc-pts { font-size: 17px; line-height: 1.1; }
+  /* Words played, opened from the menu, slides up over the game. */
+  html:not(.tv) body.cc-moves-open #game > .cc-moves-panel {
+    display: flex; flex-direction: column; position: fixed; left: 10px; right: 10px; bottom: 10px; z-index: 62; max-height: 60dvh; margin: 0;
+    box-shadow: 0 -10px 40px rgba(0,0,0,.55);
+  }
+  html:not(.tv) body.cc-moves-open #game > .cc-moves-panel .cc-moves { overflow: auto; }
+  html:not(.tv) body.cc-moves-open .cc-moves-x { display: inline-flex; }
+}
+
+@media (min-width: 900px) {
+  /* The stage is exactly as wide as the top bar, so the board's left edge and the
+     side column's right edge line up with the bar's ends, and the board's top and
+     bottom line up with the scores and the bottom buttons. */
+  html:not(.tv) body:has(#game:not(.hidden)) {
+    max-width: none; padding-left: 0; padding-right: 0; padding-bottom: 0;
+    --bar-w: calc(min(1100px, 100vw) - 32px); --gap: 24px;
+    --board: clamp(360px, min(calc(100dvh - 76px - 44px - 24px), calc(var(--bar-w) - var(--gap) - 340px)), 900px);
+  }
+  html:not(.tv) body:has(#game:not(.hidden)) > header.top { width: var(--bar-w); margin: 0 auto; box-sizing: border-box; }
+  html:not(.tv) #game:not(.hidden) {
+    display: grid; width: var(--bar-w); margin: 6px auto 16px; height: var(--board);
+    grid-template-columns: var(--board) minmax(0, 1fr); column-gap: var(--gap);
+    grid-template-rows: auto auto auto auto auto auto minmax(0, 1fr) auto;
+    grid-template-areas: "board scores" "board status" "board tools" "board rack" "board preview" "board actions" "board moves" "board stack";
+  }
+  html:not(.tv) #game > #boardBox { grid-area: board; height: var(--board); }
+  html:not(.tv) #game > #overPanel { grid-area: board; z-index: 2; align-self: center; margin: 0 24px; }
+  html:not(.tv) #game > #scoreStrip { grid-area: scores; margin: 0; }
+  html:not(.tv) #game > #status { grid-area: status; margin: 14px 0 0; }
+  html:not(.tv) #game > .cc-board-tools { grid-area: tools; justify-content: center; margin: 0; }
+  html:not(.tv) #game > .cc-board-tools #zoomBtn { display: none; }
+  html:not(.tv) #game > #rack { grid-area: rack; margin: 14px 0 0; gap: 5px; }
+  html:not(.tv) #game > #rack .cc-tile { flex: 0 1 44px; font-size: 24px; }
+  html:not(.tv) #game > #preview { grid-area: preview; margin: 12px 0; min-height: 0; }
+  html:not(.tv) #game > #actions, html:not(.tv) #game > #swapActions { grid-area: actions; margin: 0; }
+  html:not(.tv) #game > .cc-moves-panel { grid-area: moves; display: flex; flex-direction: column; min-height: 0; overflow: hidden; margin: 14px 0 0; }
+  html:not(.tv) #game > .cc-moves-panel .cc-moves { overflow: auto; min-height: 0; }
+  html:not(.tv) #game > .stack { grid-area: stack; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0 0; }
+  html:not(.tv) #game > .stack button { margin: 0; }
+}

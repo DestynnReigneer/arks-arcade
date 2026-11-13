@@ -109,6 +109,17 @@ test('moving and switching tiles you put down in Words with Family', async ({ pa
   await hold(cell(61), page.locator('#rack'));
   await expect(page.locator('#board .cc-cell.pending')).toHaveCount(0);
   await expect(page.locator('#rack .cc-tile.used')).toHaveCount(0);
+
+  // With a mouse there's no hold: tap a tile onto the board, then just drag it.
+  await tile(0).click();
+  await cell(60).click();
+  const a = await cell(60).boundingBox(), b = await cell(62).boundingBox();
+  await page.mouse.move(a.x + a.width / 2, a.y + a.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2, { steps: 6 });
+  await page.mouse.up();
+  await expect(cell(62)).toHaveClass(/pending/);
+  await expect(cell(60)).not.toHaveClass(/pending/);
   // One tile isn't a word yet, so the score check before playing turns it down; that's expected here.
   const real = problems.filter(p => !/preview|status of 400/.test(p));
   expect(real, real.join('\n')).toEqual([]);

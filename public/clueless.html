@@ -30,6 +30,8 @@
     <button class="icon-btn music-btn" id="musicBtn" title="Music">🎵</button>
     <button class="icon-btn" id="scoresBtn" title="Fastest times">🏆</button>
     <button class="icon-btn" id="helpBtn" title="How to play">?</button>
+    <!-- For the top bar's menu on a phone, where the clue lists don't fit under the grid. -->
+    <button class="icon-btn no-tv" id="cluesMenuBtn" data-menu="phone" title="All the clues">📋</button>
   </div>
 </header>
 
@@ -110,6 +112,7 @@
 <p class="hint center keys-hint no-tv">Keyboard: type letters, <b>arrows</b> to move, <b>Space</b> to switch across and down, <b>Tab</b> for the next clue, <b>Backspace</b> to erase.</p>
 
 <div class="cl-lists" id="lists">
+  <button class="ghost cl-lists-x" id="cluesClose" type="button">Close</button>
   <section class="across"><h2>→ Across</h2><ol id="acrossList"></ol></section>
   <section class="down"><h2>↓ Down</h2><ol id="downList"></ol></section>
 </div>
