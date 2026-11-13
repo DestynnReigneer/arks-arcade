@@ -27,6 +27,51 @@ window.LobbyUI = (() => {
     return a;
   }
 
+  // The emoji picker: a row of groups, and the group's emoji to tap. The list is a
+  // separate file (about 1,150 emoji), fetched the first time anyone opens it.
+  let listLoading = null;
+  function loadList() {
+    if (window.EMOJI_GROUPS) return Promise.resolve(window.EMOJI_GROUPS);
+    if (!listLoading) listLoading = new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'emoji-list.js';
+      s.onload = () => resolve(window.EMOJI_GROUPS || []);
+      s.onerror = reject;
+      document.head.appendChild(s);
+    });
+    return listLoading;
+  }
+  function emojiPanel(panel, pickOne) {
+    if (panel.dataset.built) return;
+    panel.dataset.built = '1';
+    panel.textContent = 'Loading…';
+    loadList().then(groups => {
+      panel.replaceChildren();
+      const tabs = make('div', 'lb-emo-tabs');
+      const grid = make('div', 'lb-emo-grid');
+      const show = g => {
+        for (const t of tabs.children) t.setAttribute('aria-pressed', String(t.dataset.id === g.id));
+        grid.replaceChildren(...g.emoji.map(ch => {
+          const b = make('button', '', ch);
+          b.type = 'button';
+          b.addEventListener('click', () => pickOne(ch));
+          return b;
+        }));
+        grid.scrollTop = 0;
+      };
+      for (const g of groups) {
+        const t = make('button', '', [...g.label][0] === '❤' ? '❤️' : g.label.split(' ')[0]);
+        t.type = 'button';
+        t.title = g.label.slice(g.label.indexOf(' ') + 1);
+        t.dataset.id = g.id;
+        t.addEventListener('click', () => show(g));
+        tabs.append(t);
+      }
+      panel.append(tabs, grid);
+      if (groups.length) show(groups[0]);
+    }, () => { panel.textContent = 'The emoji didn\'t load. Try again in a moment.'; delete panel.dataset.built; });
+  }
+
   // Who's in, who's been invited, and the empty seats. A seat with `ready` (true or
   // false) says Ready or Not ready under the name; an open seat's dots grow and start
   // over while it waits for someone.
@@ -101,8 +146,27 @@ window.LobbyUI = (() => {
     input.autocomplete = 'off';
     const go = make('button', 'lb-send', 'Send');
     go.type = 'submit';
-    form.append(input, go);
-    el.append(lines, quick, form);
+    // Every standard emoji, in groups (emoji-list.js, loaded the first time it's opened).
+    const smile = make('button', 'lb-emo-btn', '😀');
+    smile.type = 'button';
+    smile.title = 'Emoji';
+    smile.setAttribute('aria-label', 'Emoji');
+    smile.setAttribute('aria-expanded', 'false');
+    const panel = make('div', 'lb-emo hidden');
+    form.append(smile, input, go);
+    el.append(lines, quick, panel, form);
+    smile.addEventListener('click', () => {
+      const open = panel.classList.toggle('hidden') === false;
+      smile.setAttribute('aria-expanded', String(open));
+      if (open) emojiPanel(panel, ch => {
+        const at = input.selectionStart == null ? input.value.length : input.selectionStart;
+        const end = input.selectionEnd == null ? at : input.selectionEnd;
+        const next = input.value.slice(0, at) + ch + input.value.slice(end);
+        if (next.length > input.maxLength) return;
+        input.value = next;
+        input.setSelectionRange(at + ch.length, at + ch.length);
+      });
+    });
 
     let busy = false;
     const post = async text => {
@@ -120,7 +184,8 @@ window.LobbyUI = (() => {
 
     let lastId = null;
     function render(messages, { muted = false } = {}) {
-      input.disabled = go.disabled = muted;
+      input.disabled = go.disabled = smile.disabled = muted;
+      if (muted) panel.classList.add('hidden');
       for (const b of quick.children) b.disabled = muted;
       input.placeholder = muted ? 'The host muted you' : 'Say something…';
       const newest = messages.length ? messages[messages.length - 1].id : null;
