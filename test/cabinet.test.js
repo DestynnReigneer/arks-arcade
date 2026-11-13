@@ -12,7 +12,7 @@ const fs = require('node:fs');
 const CABINETS = [
   { game: 'bigswing', board: 'runs', max: 300 },
   // 750 is a perfect game without the jackpot; a jackpot score is checked below
-  { game: 'bucketdrop', board: 'points', max: 750 },
+  { game: 'bucketdrop', board: 'big-fast', max: 750 },
   { game: 'launcher', board: 'points', max: 50000 },
   { game: 'train', board: 'points', max: 100000 }
 ];
@@ -62,13 +62,13 @@ async function run({ base, root }) {
   ok('the jackpot starts at 1,000 or more', start >= 1000, String(start));
   const grown = (await jp('/played', { won: false })).amount;
   ok('every game adds 10 to the jackpot', grown === start + 10, `${start} -> ${grown}`);
-  const fake = await post('bucketdrop', { initials: 'CAB', score: 750 + grown, board: 'points' });
+  const fake = await post('bucketdrop', { initials: 'CAB', score: 750 + grown, board: 'big-fast' });
   ok('a jackpot score nobody won is refused', fake.status === 400, String(fake.status));
   const after = (await jp('/played', { won: true })).amount;
   ok('winning starts the jackpot over at 1,000', after === 1000, String(after));
-  const real = await post('bucketdrop', { initials: 'WIN', score: 750 + grown, board: 'points', detail: 'Jackpot!' });
+  const real = await post('bucketdrop', { initials: 'WIN', score: 750 + grown, board: 'small-wild', detail: 'Jackpot!' });
   ok('the winner can save 750 plus the jackpot they won', real.status === 201, String(real.status));
-  const again = await post('bucketdrop', { initials: 'WIN', score: 750 + grown, board: 'points' });
+  const again = await post('bucketdrop', { initials: 'WIN', score: 750 + grown, board: 'small-wild' });
   ok('the same win can only be saved once', again.status === 400, String(again.status));
   ok('a game with no jackpot says so', (await fetch(`${base}/api/cab-jackpot/bigswing`)).status === 404);
 
