@@ -70,6 +70,15 @@ test('Chess: creating a lobby, finding it, Ready, the chat and starting', async 
   await host.locator('#lobbyChat .lb-quick button', { hasText: 'GG' }).click();
   await expect(joiner.locator('#lobbyChat .lb-line').last()).toHaveText('Sam GG');
 
+  // The emoji picker: every standard emoji in groups; tapping one types it.
+  await joiner.locator('#lobbyChat .lb-emo-btn').click();
+  await expect(joiner.locator('#lobbyChat .lb-emo-grid button').first()).toBeVisible();
+  expect(await joiner.locator('#lobbyChat .lb-emo-tabs button').count()).toBeGreaterThanOrEqual(6);
+  await joiner.locator('#lobbyChat .lb-emo-tabs button[data-id="food"]').click();
+  await joiner.locator('#lobbyChat .lb-emo-grid button', { hasText: '🍕' }).click();
+  await joiner.locator('#lobbyChat input').press('Enter');
+  await expect(host.locator('#lobbyChat .lb-line').last()).toHaveText('Milo 🍕');
+
   // Ready lights up the host's start button.
   await joiner.locator('#readyBtn').click();
   await expect(joiner.locator('#lobbyWait')).toHaveText('Waiting for Sam to start the game…');
