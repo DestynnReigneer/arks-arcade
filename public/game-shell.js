@@ -162,17 +162,37 @@ const GameShell = (() => {
   // A canvas that fills its box sharply on any screen. draw(ctx, w, h) gets
   // CSS pixels; aspect is width / height (null = fill the box). maxHeight can
   // be a number or a function (checked on every resize).
-  function fitCanvas(canvas, { aspect = null, maxHeight = Infinity } = {}) {
+  //
+  // No scrolling while you play (2026-11-13): the board is never taller than the
+  // room between its top and the bottom of the screen, after whatever sits under it
+  // (the thumb buttons), so the whole game fits without scrolling.
+  // fitScreen: 'phone' fits the board to the screen only under 900px wide (a game
+  // whose controls under the board are too tall to share a laptop's height).
+  function fitCanvas(canvas, { aspect = null, maxHeight = Infinity, fitScreen = true } = {}) {
     const ctx = canvas.getContext('2d');
     const box = canvas.parentElement;
     const size = { w: 0, h: 0 };
+    function room() {
+      const top = box.getBoundingClientRect().top + window.scrollY;
+      let below = 0;
+      for (let n = box.nextElementSibling; n; n = n.nextElementSibling) {
+        const cs = getComputedStyle(n);
+        if (n.tagName === 'SCRIPT' || cs.display === 'none' || cs.position === 'fixed' || cs.position === 'absolute') continue;
+        below += n.getBoundingClientRect().height + parseFloat(cs.marginTop) + parseFloat(cs.marginBottom);
+      }
+      const frame = box.offsetHeight - box.clientHeight;   // the stage's own border
+      const bodyEnd = parseFloat(getComputedStyle(document.body).paddingBottom) || 0;   // the page's own bottom padding
+      return window.innerHeight - top - below - frame - bodyEnd - 8;
+    }
     function resize() {
       const dpr = Math.max(1, window.devicePixelRatio || 1);
       let w = box.clientWidth;
       let h = aspect ? w / aspect : box.clientHeight;
       // On the TV the box is the whole right side of the screen (tv-play.css):
       // as tall as that, not a share of the window like on a phone.
-      const mh = box.closest('.tv-stage') ? box.clientHeight : typeof maxHeight === 'function' ? maxHeight() : maxHeight;
+      const asked = typeof maxHeight === 'function' ? maxHeight() : maxHeight;
+      const fits = fitScreen === true || (fitScreen === 'phone' && window.innerWidth < 900);
+      const mh = box.closest('.tv-stage') ? box.clientHeight : fits ? Math.max(220, Math.min(asked, room())) : asked;
       if (h > mh) { h = mh; if (aspect) w = h * aspect; }
       canvas.style.width = `${w}px`;
       canvas.style.height = `${h}px`;
@@ -183,6 +203,8 @@ const GameShell = (() => {
     }
     new ResizeObserver(resize).observe(box);
     window.addEventListener('resize', resize);
+    // Starting and ending a game shows and hides things around the board.
+    new MutationObserver(() => requestAnimationFrame(resize)).observe(document.body, { attributes: true, attributeFilter: ['data-state'] });
     resize();
     return { ctx, size, resize };
   }

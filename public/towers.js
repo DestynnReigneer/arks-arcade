@@ -56,7 +56,7 @@
 
   function reset() {
     g = E.create({ map: mapId });
-    if (!view) view = GameShell.fitCanvas($('canvas'), { aspect: g.map.cols / g.map.rows, maxHeight: () => Math.max(320, window.innerHeight * 0.6) });
+    if (!view) view = GameShell.fitCanvas($('canvas'), { aspect: g.map.cols / g.map.rows, maxHeight: () => Math.max(320, window.innerHeight * 0.6), fitScreen: 'phone' });
     state = 'ready';
     paused = false;
     $('pauseBtn').textContent = '⏸';
