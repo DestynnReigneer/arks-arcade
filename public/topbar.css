@@ -12,11 +12,13 @@
    width and place whatever the game's own layout is; a spacer keeps the game
    from starting under it. */
 .ah.ah-fixed { position: fixed; left: 50%; transform: translateX(-50%); width: min(1100px, 100vw); margin: 0; }
-.ah-spacer { height: 86px; flex: none; }
-@media (max-width: 640px) { .ah-spacer { height: 68px; } }
+.ah-spacer { height: 76px; flex: none; }
+@media (max-width: 640px) { .ah-spacer { height: 64px; } }
+/* Round 4 (2026-11-12): every button the same size, smaller than the lockup by a
+   clear step, with open space around the lockup so it reads first. */
 .ah-bar {
-  position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 12px;
-  height: 76px; padding: 0 14px; box-sizing: border-box; color: var(--tb-text);
+  position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 40px;
+  height: 66px; padding: 0 18px; box-sizing: border-box; color: var(--tb-text);
   background: color-mix(in srgb, var(--tb-bar) 94%, transparent); border: 1px solid var(--tb-border); border-top: 0; border-radius: 0 0 10px 10px;
   -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); transition: height .25s ease, box-shadow .25s;
   font-family: "Rajdhani", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -25,40 +27,48 @@
   content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; border-radius: 2px;
   background: linear-gradient(90deg, var(--tb-pink), var(--tb-teal) 60%, transparent);
 }
-.ah.docked .ah-bar { height: 54px; box-shadow: 0 12px 30px -14px #000; }
-.ah-side { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.ah.docked .ah-bar { height: 52px; box-shadow: 0 12px 30px -14px #000; }
+.ah-side { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .ah-side.r { justify-content: flex-end; }
 .ah-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--tb-text); }
 .ah-brand .helm { width: 40px; height: 40px; flex: none; transition: width .25s, height .25s; }
-.ah-brand .wide, .ah-brand .word { height: 46px; width: auto; flex: none; overflow: visible; transition: height .25s; }
+.ah-brand .wide, .ah-brand .word { height: 44px; width: auto; flex: none; overflow: visible; transition: height .25s, width .25s; }
+.ah-brand .wide { aspect-ratio: 678 / 445; }
+.ah-brand .mist-tint.helm { display: block; }
 .ah-brand .word text { font-family: Orbitron, sans-serif; font-weight: 800; letter-spacing: .06em; }
 .ah.docked .ah-brand .helm { width: 30px; height: 30px; }
 .ah.docked .ah-brand .wide, .ah.docked .ah-brand .word { height: 32px; }
 /* Without the owner's logos: the plain name. */
 .ah-plain { font: 800 24px/1 Orbitron, -apple-system, sans-serif; letter-spacing: 4px; }
 .ah-back, .ah-ib, .ah-lock {
-  display: inline-flex; align-items: center; justify-content: center; gap: 7px; height: 34px; min-width: 34px; padding: 0 12px; box-sizing: border-box;
-  border-radius: 9px; border: 1px solid var(--tb-border); background: var(--tb-bar); color: var(--tb-text-2);
-  font-family: inherit; font-weight: 700; font-size: 13px; line-height: 1; letter-spacing: .14em; text-transform: uppercase; text-decoration: none; cursor: pointer;
+  position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 7px; height: 30px; min-width: 30px; padding: 0 11px; box-sizing: border-box;
+  border-radius: 8px; border: 1px solid var(--tb-border); background: var(--tb-bar); color: var(--tb-text-2);
+  font-family: inherit; font-weight: 700; font-size: 11.5px; line-height: 1; letter-spacing: .16em; text-transform: uppercase; text-decoration: none; cursor: pointer;
 }
-.ah-ib { padding: 0; font-size: 18px; letter-spacing: 0; }
-.ah-back svg, .ah-lock svg { width: 15px; height: 15px; flex: none; }
+.ah-ib { padding: 0; font-size: 17px; letter-spacing: 0; }
+/* Every symbol is drawn about 14px tall: a 24-unit icon shown at 18px. */
+.ah-back svg, .ah-lock svg, .ah-ib svg { width: 18px; height: 18px; flex: none; }
 .ah-lock { border-color: color-mix(in srgb, var(--tb-pink) 55%, #22103f); color: var(--tb-pink); }
 .ah-back:hover, .ah-ib:hover { color: var(--tb-text); border-color: color-mix(in srgb, var(--tb-pink) 55%, #22103f); }
 .ah.docked .ah-back span, .ah.docked .ah-lock span { display: none; }
 .ah.docked .ah-back, .ah.docked .ah-lock { padding: 0 9px; }
 @media (max-width: 640px) {
   .ah { padding: 0 8px; }
-  .ah-bar { height: 60px; padding: 0 8px; gap: 6px; }
+  .ah-bar { height: 56px; padding: 0 10px; gap: 14px; }
   .ah.docked .ah-bar { height: 50px; }
+  .ah-side { gap: 6px; }
   .ah-brand { gap: 6px; }
-  .ah-brand .helm { width: 28px; height: 28px; }
-  .ah-brand .wide, .ah-brand .word { height: 30px; }
-  .ah.docked .ah-brand .helm { width: 24px; height: 24px; }
-  .ah.docked .ah-brand .wide, .ah.docked .ah-brand .word { height: 24px; }
+  .ah-brand .helm { width: 30px; height: 30px; }
+  .ah-brand .wide, .ah-brand .word { height: 32px; }
+  .ah.docked .ah-brand .helm { width: 26px; height: 26px; }
+  .ah.docked .ah-brand .wide, .ah.docked .ah-brand .word { height: 26px; }
   .ah-plain { font-size: 18px; letter-spacing: 2px; }
   .ah-back span, .ah-lock span, .ah-ib.help { display: none; }
-  .ah-back, .ah-lock { padding: 0 9px; }
+  .ah-back, .ah-ib, .ah-lock { height: 28px; min-width: 28px; }
+  .ah-back, .ah-lock { padding: 0; width: 28px; }
+  .ah-back svg, .ah-lock svg, .ah-ib svg { width: 17px; height: 17px; }
+  /* A 44px tap area around each 28px button, as Apple asks. */
+  .ah-back::after, .ah-ib::after, .ah-lock::after { content: ""; position: absolute; inset: -8px; }
 }
 @media (prefers-reduced-motion: reduce) { .ah-bar, .ah-brand .helm, .ah-brand .wide, .ah-brand .word { transition: none; } }
 
@@ -68,3 +78,46 @@
 .ah-ib.trophy .trophy-n { position: absolute; top: -7px; right: -7px; background: #ff2ec4; color: #1a0424; font: 700 10px/1 ui-monospace, Consolas, monospace;
   border-radius: 999px; padding: 2px 5px; letter-spacing: 0; }
 .ah-ib.trophy .trophy-n.hidden { display: none; }
+
+/* The trophy on every page but the home page: the lock's own button in neon gold,
+   with a line drawing of a cup. */
+.ah-ib.ah-trophy { color: #ffd23f; border-color: color-mix(in srgb, #ffd23f 55%, #22103f); }
+.ah-ib.ah-trophy svg { filter: drop-shadow(0 0 4px rgba(255, 210, 63, .55)); }
+
+/* The waffle: the menu for everything that doesn't need to be on screen all the time.
+   Its outline and nine squares are drawn by mist.js (lines only, with the mist in them). */
+.ah-ib.ah-waffle { border: 0; background: transparent; }
+.ah-ib.ah-waffle .mist-waffle { width: 30px; height: 30px; }
+@media (max-width: 640px) { .ah-ib.ah-waffle .mist-waffle { width: 28px; height: 28px; } }
+.ah-ib.ah-waffle[aria-expanded="true"] { box-shadow: 0 0 0 3px rgba(155, 123, 255, .28); border-radius: 8px; }
+
+.ah-menu-back { position: fixed; inset: 0; z-index: 60; background: rgba(5, 2, 12, .5); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
+  opacity: 0; transition: opacity .2s ease; }
+.ah-menu { position: fixed; z-index: 61; width: 340px; max-width: calc(100vw - 20px); box-sizing: border-box; padding: 14px 12px 12px; border-radius: 20px;
+  color: #f5eaff; font-family: "Rajdhani", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: linear-gradient(#22103f, #22103f) padding-box, linear-gradient(135deg, rgba(255,46,196,.7), rgba(138,63,252,.5), rgba(0,255,194,.7)) border-box;
+  border: 1px solid transparent; box-shadow: 0 20px 50px rgba(0,0,0,.55), 0 0 30px rgba(138,63,252,.15);
+  opacity: 0; transform: translateY(-6px) scale(.98); transform-origin: top right; transition: opacity .2s ease, transform .25s cubic-bezier(.2,.8,.2,1); }
+.ah-menu.open, .ah-menu-back.open { opacity: 1; transform: none; }
+.ah-menu h3 { margin: 0 0 10px; font-size: 12px; letter-spacing: .16em; color: #9483ae; text-align: center; font-weight: 700; text-transform: uppercase; }
+.ah-menu .grab { display: none; width: 40px; height: 4px; border-radius: 3px; background: #9483ae; margin: 0 auto 10px; opacity: .6; }
+.ah-menu .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.ah-menu .grid button { border: 1px solid color-mix(in srgb, #f5eaff 12%, #22103f); background: #2c1350; color: #f5eaff; border-radius: 14px; padding: 10px 4px 8px;
+  display: grid; gap: 5px; justify-items: center; font: inherit; font-size: 14px; font-weight: 700; line-height: 1.15; cursor: pointer; }
+.ah-menu .grid button:hover, .ah-menu .grid button:focus-visible { border-color: color-mix(in srgb, #00ffc2 50%, #22103f); outline: none; }
+.ah-menu .grid .ic { height: 22px; display: grid; place-items: center; font-size: 20px; color: #00ffc2; }
+.ah-menu .grid .ic svg { width: 22px; height: 22px; }
+.ah-menu .grid small { display: block; color: #00ffc2; font-size: 11.5px; font-weight: 600; }
+@media (max-width: 640px) {
+  .ah-menu { left: 10px !important; right: 10px; top: auto !important; bottom: 10px; width: auto; max-width: none; transform: translateY(14px); transform-origin: bottom center; }
+  .ah-menu .grab { display: block; }
+  .ah-menu .grid { grid-template-columns: repeat(4, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) { .ah-menu, .ah-menu-back { transition: none; } }
+
+/* The game's own name sits centered under the bar in small letters; its icons moved
+   into the waffle (not on the TV, where the remote moves between them). */
+html:not(.tv) body > header.top { justify-content: center !important; padding-top: 4px !important; padding-bottom: 8px !important; }
+html:not(.tv) body > header.top h1 { font-size: 15px !important; letter-spacing: .14em !important; margin: 0 !important; text-align: center; }
+html:not(.tv) body > header.top .btns { display: none !important; }
+@media (max-width: 640px) { html:not(.tv) body > header.top h1 { font-size: 13px !important; } }

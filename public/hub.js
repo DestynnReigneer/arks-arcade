@@ -35,7 +35,7 @@
     const chip = $('playerChip');
     const p = ArcadeProfile.get();
     chip.innerHTML = '';
-    chip.appendChild(ArcadeProfile.avatarEl(p ? p.avatar : 'emoji:👤', 26));
+    chip.appendChild(ArcadeProfile.avatarEl(p ? p.avatar : 'emoji:👤', 24));
     const label = document.createElement('span');
     label.textContent = p ? p.name : 'Who\'s playing?';
     chip.title = p ? `Playing as ${p.name}. Tap to switch.` : 'Pick who is playing';
@@ -486,10 +486,18 @@
   function showBrand(brand) {
     if (brand.avatar && brand.wide) {
       const box = $('lockup');
-      const helm = document.createElement('img');
-      helm.className = 'helm'; helm.src = brand.avatar; helm.alt = '';
-      const wide = document.createElement('img');
-      wide.className = 'wide'; wide.src = brand.wide; wide.alt = 'ARKS';
+      // The helm keeps its drawing with the mist washed over its colors; the logo is
+      // its own shape filled with the mist (mist.js).
+      const helm = document.createElement('span');
+      helm.className = 'helm mist-tint';
+      helm.style.setProperty('--mist-src', `url("${brand.avatar}")`);
+      const helmImg = document.createElement('img');
+      helmImg.src = brand.avatar; helmImg.alt = '';
+      helm.appendChild(helmImg);
+      const wide = document.createElement('span');
+      wide.className = 'wide mist-mask';
+      wide.setAttribute('role', 'img'); wide.setAttribute('aria-label', 'ARKS');
+      wide.style.setProperty('--mist-src', `url("${brand.wide}")`);
       box.append(helm, wide, titleWord('ARCADE'));
       box.classList.remove('hidden');
       $('arcadeTitle').classList.add('hidden');
@@ -528,6 +536,9 @@
     t.setAttribute('y', (308.6 - m.actualBoundingBoxDescent * size / 1000).toFixed(1));
     const b = t.getBBox();
     t.ownerSVGElement.setAttribute('viewBox', `${b.x} 0 ${b.width} 445`);
+    // Once trimmed, the outline fills with the mist too.
+    t.ownerSVGElement.classList.add('mist-stroke');
+    if (window.Mist) window.Mist.refresh();
   }
 
   // ---- clickable characters --------------------------------------------------
