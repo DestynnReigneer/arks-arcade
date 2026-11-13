@@ -127,9 +127,10 @@ test('Uh-Oh: Part Deux: the TV shows the table and one phone is passed around', 
 
   // One phone joins, and adds a second player to pass it to.
   const { ctx, phone, problems: phoneProblems } = await phoneJoins(browser, '/partdeux.html', code);
-  await expect(phone.locator('#joinCode')).toHaveValue(code);
-  await phone.locator('#joinName').fill('Pat');
-  await phone.locator('#goBtn').click();
+  // The QR opens that lobby's details: type a name and join (no code to type).
+  await expect(phone.locator('.pl-details')).toBeVisible();
+  await phone.locator('.pl-details [data-name]').fill('Pat');
+  await phone.locator('.pl-details [data-join]').click();
   await expect(phone.locator('#seatBox')).toBeVisible();
   await phone.locator('#seatName').fill('Sam');
   await phone.locator('#seatAdd').click();
@@ -179,8 +180,10 @@ test('Dare Devil: phones draw while the TV shows the card, then the remote plays
   await expect(page.locator('#lobby')).toBeVisible();
   const code = (await page.locator('#lobbyCode').textContent()).trim();
   const { ctx, phone, problems: phoneProblems } = await phoneJoins(browser, '/daredevil.html', code);
-  await phone.locator('#joinName').fill('Ana');
-  await phone.locator('#goBtn').click();
+  await expect(phone.locator('.pl-details')).toBeVisible();
+  await phone.locator('.pl-details [data-name]').fill('Ana');
+  await phone.locator('.pl-details [data-join]').click();
+  await expect(phone.locator('#seatBox')).toBeVisible();
   await phone.locator('#seatName').fill('Ben');
   await phone.locator('#seatAdd').click();
   await expect(page.locator('#lobbyPlayers li')).toHaveCount(2);

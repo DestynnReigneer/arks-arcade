@@ -10,7 +10,15 @@
 // Adult levels get a lobby password the host makes up. Each game supplies
 // its own engine; this handles the seats, codes, passwords and sockets.
 //
-//   makeTables({ engine, act, levels, minPlayers, maxPlayers, cleanOptions })
+// The lobby (the play-together design, step 2, 2026-11-13): a room shows up in List
+// Hosted Games and on the home page, open to anyone at the arcade or only to the
+// profiles the host picks (who get an invite). Whoever joins taps Ready, and the host
+// can start once everyone is (a TV-hosted room starts from the remote as before). The
+// lobby and the game have a chat (room-chat.js). A card game can't be joined partway,
+// because nobody can be dealt in mid-round.
+//
+//   makeTables({ game, title, engine, act, levels, minPlayers, maxPlayers, cleanOptions })
+//     game, title: the game's id and name (for invites, the chat and the lists)
 //     engine.createGame({ players, level, drinking, ...options })
 //     engine.snapshot(game, viewerId, { allHands })
 //     engine.removePlayer(game, playerId)
@@ -19,6 +27,8 @@
 
 const crypto = require('node:crypto');
 const roomPassword = require('./room-password');
+const invites = require('./invites');
+const roomChat = require('./room-chat');
 
 const TTL_MS = 6 * 60 * 60 * 1000;
 const HEARTBEAT_MS = 25000;
@@ -34,8 +44,9 @@ const makeToken = () => crypto.randomBytes(24).toString('hex');
 const makeId = () => crypto.randomBytes(8).toString('hex');
 const cleanName = (raw, fallback) => String(raw || '').trim().replace(/\s+/g, ' ').slice(0, 16) || fallback;
 
-function makeTables({ engine, act, levels, minPlayers = 2, maxPlayers = 8, cleanOptions = () => ({}) }) {
+function makeTables({ game = 'party', title = 'the game', engine, act, levels, minPlayers = 2, maxPlayers = 8, cleanOptions = () => ({}) }) {
   const tables = new Map();
+  const chat = roomChat.create(game);
   const levelOf = id => (levels[id] ? id : Object.keys(levels)[0]);
   const isAdult = level => !!levels[levelOf(level)].adult;
 
@@ -112,24 +123,40 @@ function makeTables({ engine, act, levels, minPlayers = 2, maxPlayers = 8, clean
   // The players a device plays for: itself (unless it's the screen) and its seats.
   const controlled = (t, device) => [...t.players.values()].filter(p => p.id === device.id || p.owner === device.id).map(p => p.id);
 
-  function addPlayer(t, name, owner = null) {
+  function addPlayer(t, name, owner = null, profile = null) {
     const used = new Set([...t.players.values()].map(p => p.name.toLowerCase()));
-    const base = cleanName(name, `Player ${t.players.size + 1}`);
+    const base = cleanName(profile ? profile.name : name, `Player ${t.players.size + 1}`);
     let n = base;
     for (let i = 2; used.has(n.toLowerCase()); i++) n = `${base} ${i}`;
-    const p = { id: makeId(), token: owner ? null : makeToken(), name: n, clients: 0, owner };
+    const p = { id: makeId(), token: owner ? null : makeToken(), name: n, clients: 0, owner, profileId: profile ? profile.id : null, ready: false };
     t.players.set(p.id, p);
     return p;
   }
 
+  // Whether someone may see and join this room.
+  const mayJoin = (t, profile) => t.who !== 'selected' ||
+    (!!profile && (t.allowed.includes(profile.id) || [...t.players.values()].some(p => p.profileId === profile.id)));
+  const playing = t => !!t.game && t.game.phase !== 'over';
+  // A TV-hosted room keeps its own flow: the remote starts it whenever the room is set.
+  const allReady = t => !!t.screen || [...t.players.values()].every(p => !p.token || p.id === t.hostId || p.ready);
+
   // screen: this device (a TV) hosts and shows the game, and doesn't play.
-  function createRoom({ name, level, drinking, password, options, screen = false }) {
+  // profile: the host's { id, name }. who: 'anyone' or 'selected', with allowed: the profile ids picked.
+  function createRoom({ name, level, drinking, password, options, screen = false, profile = null, who, allowed }) {
     roomForMore();
+    const onlySome = who === 'selected' && !screen;
+    const list = Array.isArray(allowed) ? allowed : [];
+    if (onlySome && list.length > invites.MAX_TO) throw fail(`Choose up to ${invites.MAX_TO} people.`);
+    const picked = onlySome ? [...new Set(list.map(id => String(id).slice(0, 64)))].filter(id => !profile || id !== profile.id) : [];
+    if (onlySome && !profile) throw fail('Pick your profile first, so the people you choose know who it\'s from.', 401);
+    if (onlySome && !picked.length) throw fail('Choose at least one person, or let anyone at the arcade join.');
+    if (onlySome && !invites.allProfiles(picked)) throw fail('One of the people you picked doesn\'t have a profile here anymore.');
     const lv = levelOf(level);
     const t = {
       id: makeCode(), kind: 'room', level: lv, drinking: !!drinking && isAdult(lv), options: cleanOptions(options || {}),
       password: isAdult(lv) ? roomPassword.requireNew(password) : null,
-      players: new Map(), hostId: null, screen: null, game: null, clients: new Set(), lastActivity: Date.now()
+      players: new Map(), hostId: null, screen: null, game: null, clients: new Set(), lastActivity: Date.now(),
+      who: onlySome ? 'selected' : 'anyone', allowed: picked, muted: new Set()
     };
     tables.set(t.id, t);
     if (screen) {
@@ -137,8 +164,15 @@ function makeTables({ engine, act, levels, minPlayers = 2, maxPlayers = 8, clean
       t.hostId = t.screen.id;
       return { table: t, player: t.screen };
     }
-    const host = addPlayer(t, name || 'Host');
+    const host = addPlayer(t, name || 'Host', null, profile);
+    host.ready = true;
     t.hostId = host.id;
+    if (onlySome) {
+      try {
+        invites.send({ game, room: t.id, from: { id: profile.id, name: host.name }, to: picked, title, href: `${game}.html?join=${t.id}`,
+          notify: { title, body: `${host.name} invited you to ${title}. Get in here!` } });
+      } catch (e) { close(t); throw e; }
+    }
     return { table: t, player: host };
   }
 
@@ -164,14 +198,58 @@ function makeTables({ engine, act, levels, minPlayers = 2, maxPlayers = 8, clean
     touch(t);
   }
 
-  function joinRoom(code, name, password) {
+  function joinRoom(code, name, password, profile = null) {
     const t = room(code);
+    if (!mayJoin(t, profile)) throw fail('This game is only for the people the host picked.', 403);
     roomPassword.check(t, password);
     if (t.game && t.game.phase !== 'over') throw fail('That game has already started. Wait for the next one.', 409);
     if (t.players.size >= maxPlayers) throw fail(`That game is full (${maxPlayers} players).`, 409);
-    const p = addPlayer(t, name);
+    const p = addPlayer(t, name, null, profile);
+    if (profile) invites.clear(game, t.id, profile.id);
+    chat.note(t.id, `${p.name} joined`);
     touch(t);
     return { table: t, player: p };
+  }
+
+  // Someone in the lobby saying they're ready (or not yet). The host always is.
+  function lobbyReady(code, playerId, token, on) {
+    const t = room(code);
+    const p = authenticate(t, playerId, token);
+    if (playing(t)) throw fail('The game has already started.', 409);
+    if (p.id === t.hostId || p.screen) return;
+    p.ready = !!on;
+    touch(t);
+  }
+  function say(code, playerId, token, text) {
+    const t = room(code);
+    const p = authenticate(t, playerId, token);
+    chat.say(t.id, { seat: p.id, name: p.screen ? 'TV' : p.name, muted: t.muted.has(p.id), family: !isAdult(t.level) }, text);
+    touch(t);
+  }
+  const hostOnly = (t, p) => { if (p.id !== t.hostId) throw fail('Only the host can do that.', 403); };
+  function mute(code, playerId, token, target, on) {
+    const t = room(code);
+    hostOnly(t, authenticate(t, playerId, token));
+    const x = t.players.get(String(target || ''));
+    if (!x || !x.token || x.id === t.hostId) throw fail('Choose someone else in the game.');
+    if (on) t.muted.add(x.id); else t.muted.delete(x.id);
+    touch(t);
+  }
+  // The host taking someone (and the players on their phone) out of the lobby.
+  function remove(code, playerId, token, target) {
+    const t = room(code);
+    hostOnly(t, authenticate(t, playerId, token));
+    if (playing(t)) throw fail('The game has already started.', 409);
+    const x = t.players.get(String(target || ''));
+    if (!x || !x.token || x.id === t.hostId) throw fail('Choose someone else in the game.');
+    for (const id of controlled(t, x)) t.players.delete(id);
+    t.muted.delete(x.id);
+    for (const c of t.clients) {
+      if (c.playerId !== x.id) continue;
+      try { c.res.write('event: removed\ndata: {}\n\n'); c.res.end(); } catch { /* gone */ }
+    }
+    chat.note(t.id, `${x.name} was taken out of the game`);
+    touch(t);
   }
 
   function settings(code, playerId, token, { level, drinking, password, options }) {
@@ -196,6 +274,9 @@ function makeTables({ engine, act, levels, minPlayers = 2, maxPlayers = 8, clean
     if (p.id !== t.hostId) throw fail('Only the host can start.', 403);
     if (t.game && t.game.phase !== 'over') throw fail('Already playing.', 409);
     if (t.players.size < minPlayers) throw fail(t.players.size ? 'Wait for at least one more player.' : 'Nobody has joined yet.', 409);
+    const first = !t.game;
+    if (first && !allReady(t)) throw fail('Wait until everyone is ready.', 409);
+    if (first) { invites.clear(game, t.id); chat.note(t.id, 'The game started'); }
     t.game = newGame([...t.players.values()].map(x => ({ id: x.id, name: x.name })), t);
     touch(t);
   }
@@ -250,9 +331,10 @@ function makeTables({ engine, act, levels, minPlayers = 2, maxPlayers = 8, clean
       // players this phone plays for; as: whose hand this snapshot shows.
       screen: !!t.screen, isScreen: !!(device && device.screen), hostName: host ? host.name : '', mine, as,
       locked: !!t.password, lobbyPassword: t.hostId === viewerId ? t.password : null,
+      who: t.who, allReady: allReady(t), muted: !!(device && t.muted.has(device.id)), chat: chat.list(t.id, viewerId),
       players: [...t.players.values()].map(p => ({
         id: p.id, name: p.name, online: (owner(p) || p).clients > 0, host: p.id === t.hostId,
-        on: owner(p) ? owner(p).name : null
+        on: owner(p) ? owner(p).name : null, device: !!p.token, ready: !p.token || p.id === t.hostId || !!p.ready, mutedChat: t.muted.has(p.id)
       })),
       game: t.game ? engine.snapshot(t.game, as) : null
     };
@@ -287,7 +369,29 @@ function makeTables({ engine, act, levels, minPlayers = 2, maxPlayers = 8, clean
     if (t.clients) for (const c of t.clients) { try { c.res.end(); } catch { /* gone */ } }
     tables.delete(t.id);
     allCodes.delete(t.id);
+    if (t.kind === 'room') { chat.clear(t.id); invites.clear(game, t.id); }
   }
+
+  // List Hosted Games and the home page's Join a game: the rooms one person can see.
+  function lobbies(profile) {
+    const out = [];
+    for (const t of tables.values()) {
+      if (t.kind !== 'room' || !mayJoin(t, profile)) continue;
+      const host = member(t, t.hostId);
+      out.push({ code: t.id, host: host ? host.name : '', screen: !!t.screen, players: [...t.players.values()].map(p => p.name), count: t.players.size, max: maxPlayers,
+        status: t.players.size >= maxPlayers ? 'full' : playing(t) ? 'playing' : 'open', level: t.level, adult: isAdult(t.level), locked: !!t.password,
+        drinking: !!t.drinking, who: t.who, mine: !!profile && [...t.players.values()].some(p => p.profileId === profile.id) });
+    }
+    return out;
+  }
+
+  // An invite stays open while the room has a free seat and hasn't started.
+  invites.register(game, (code, profileId) => {
+    const t = tables.get(code);
+    if (!t || t.kind !== 'room' || playing(t) || t.players.size >= maxPlayers || [...t.players.values()].some(p => p.profileId === profileId)) return { open: false };
+    const h = member(t, t.hostId);
+    return { open: true, detail: `${h ? h.name : 'The host'} is waiting` };
+  });
 
   function sweep() {
     const cutoff = Date.now() - TTL_MS;
@@ -299,7 +403,7 @@ function makeTables({ engine, act, levels, minPlayers = 2, maxPlayers = 8, clean
   return {
     MAX_PLAYERS: maxPlayers, isAdult, levelOf,
     createLocal, local, localSnapshot, actLocal, rematchLocal,
-    createRoom, joinRoom, addSeat, removeSeat, settings, startRoom, actRoom, leaveRoom, roomSnapshot, room, authenticate, subscribe,
+    createRoom, joinRoom, lobbyReady, say, mute, remove, lobbies, mayJoin, addSeat, removeSeat, settings, startRoom, actRoom, leaveRoom, roomSnapshot, room, authenticate, subscribe,
     _tables: tables
   };
 }
