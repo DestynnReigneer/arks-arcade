@@ -163,9 +163,9 @@ test('Uh-Oh: Part Deux: the TV shows the table and one phone is passed around', 
     await phone.locator('#drawBtn').click();
     if (await phone.locator('#keepBtn').isVisible()) await phone.locator('#keepBtn').click();
   }
-  // The TV moves on to the next player's turn.
-  await expect(page.locator('#turnLine')).not.toHaveText(new RegExp(`^${who.toUpperCase()}'S TURN$`), { timeout: 10000 });
-  await expect(page.locator('#latest')).not.toBeEmpty();
+  // The TV shows the move. (A Skip or a Reverse with two players gives the same
+  // person another turn, so the turn line alone can't tell.)
+  await expect(page.locator('#latest')).not.toBeEmpty({ timeout: 10000 });
   expect(problems, problems.join('\n')).toEqual([]);
   expect(phoneProblems, phoneProblems.join('\n')).toEqual([]);
   await ctx.close();
