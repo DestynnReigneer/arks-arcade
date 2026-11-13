@@ -165,7 +165,10 @@
       if (b.dataset.menu === 'phone' && !window.matchMedia('(max-width: 899px)').matches) continue;
       if (b.dataset.when) { const part = document.querySelector(b.dataset.when); if (!part || part.classList.contains('hidden') || part.hidden) continue; }
       const label = (b.getAttribute('aria-label') || b.title || '').replace(/\s*\(.*?\)\s*$/, '').trim() || b.textContent.trim();
-      list.push({ icon: esc(b.textContent.trim()), label: esc(label), run: () => b.click() });
+      // data-note shows a setting's state under its name, and data-stay keeps the menu
+      // open after pressing it, so an on/off setting can be flipped and seen.
+      list.push({ icon: esc(b.textContent.trim()), label: esc(label), note: b.dataset.note ? esc(b.dataset.note) : '',
+        stay: 'stay' in b.dataset, run: () => b.click() });
     }
     // When a game hides the bug-report button to make room, it's here instead.
     const tip = document.querySelector('.fb-corner .fb-tip');

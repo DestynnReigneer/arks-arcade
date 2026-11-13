@@ -515,6 +515,15 @@
   $('liveMistakes').addEventListener('change', e => store('sudoku.liveMistakes', e.target.checked ? 'on' : 'off'));
   $('sameHighlight').checked = recall('sudoku.same', 'on') === 'on';
   $('sameHighlight').addEventListener('change', e => { store('sudoku.same', e.target.checked ? 'on' : 'off'); paint(); });
+  // The same two settings in the top bar's menu on a phone.
+  const menuSetting = (btn, box) => {
+    const note = () => { btn.dataset.note = box.checked ? 'On' : 'Off'; };
+    btn.onclick = () => { box.checked = !box.checked; box.dispatchEvent(new Event('change')); };
+    box.addEventListener('change', note);
+    note();
+  };
+  menuSetting($('mistakesMenuBtn'), $('liveMistakes'));
+  menuSetting($('sameMenuBtn'), $('sameHighlight'));
 
   // ---- controls -----------------------------------------------------------------------------------
   $('undoBtn').addEventListener('click', stepBack);
@@ -669,6 +678,19 @@
     picker.append(title, nums, tools);
     picker.classList.remove('hidden');
     if (first) first.focus();
+  }
+  // Off the TV, the board and everything you play with are grouped into two columns
+  // (sudoku.css lays them out: side by side on a computer, stacked on a phone). The
+  // TV arranges the page its own way, so it's left alone there.
+  if (!TvPlay.on) {
+    const stage = document.createElement('div'); stage.className = 'sd-stage';
+    const side = document.createElement('div'); side.className = 'sd-side';
+    const wrap = document.querySelector('.sd-wrap');
+    wrap.before(stage);
+    side.append(...['levelSeg', 'hud', 'tools', 'pad', 'settings', 'keys']
+      .map(k => ({ levelSeg: $('levelSeg'), hud: document.querySelector('body > .hud'), tools: $('tools'), pad: $('pad'),
+        settings: document.querySelector('.sd-settings'), keys: document.querySelector('.keys-hint') })[k]).filter(Boolean));
+    stage.append(wrap, side);
   }
   if (TvPlay.on) {
     document.body.appendChild(picker);
