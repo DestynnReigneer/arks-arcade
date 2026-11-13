@@ -28,6 +28,9 @@ const Rules = require('../public/trivia-rules');
 const roomPassword = require('../arcade/room-password');
 const invites = require('../arcade/invites');
 const chat = require('../arcade/room-chat').create('trivia');
+// Rooms live only in memory, so chat and invites left from before a restart go.
+chat.clearAll();
+require('../arcade/invites').clearGame('trivia');
 
 const rooms = new Map();
 const MAX_ROOMS = 200;
