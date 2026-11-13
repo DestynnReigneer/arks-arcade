@@ -344,6 +344,7 @@ function save(id, { initials, profileToken }) {
   if (allRank === 1) {
     const shout = profile ? (profiles().boardName(profile.id) || {}).label || profile.name : ini;
     comm.safePost({
+      trophy: { game: 'Clueless Crosswords', profileId: profile ? profile.id : null, name: shout, score: clock(run.time_ms), board: label, url: '/clueless.html' },
       kind: 'highscore', emoji: '📰', game: 'clueless',
       title: `${shout} set the fastest Clueless Crosswords ${label} time ever`,
       body: `${shout} solved the ${label} crossword in ${clock(run.time_ms)}, the quickest anyone has done it. Today's puzzle is waiting if you want a go.`

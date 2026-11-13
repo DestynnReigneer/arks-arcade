@@ -116,10 +116,10 @@ function save(row, state, now = Date.now(), actor) {
 let notifier = null;
 function setNotifier(fn) { notifier = fn; }
 const nameOf = (state, profileId) => (state.players.find(p => p.profileId === profileId) || {}).name || 'Someone';
-function tell(row, profileId, body) {
+function tell(row, profileId, body, kind = 'turn', from = null) {
   if (!notifier) return;
   try {
-    notifier(profileId, { title: 'Words with Family', body, url: `/crisscross.html?game=${row.id}`, tag: `ww-${row.id}` });
+    notifier(profileId, { title: 'Words with Family', body, url: `/crisscross.html?game=${row.id}`, tag: `ww-${row.id}`, kind, from, game: 'Words with Family' });
   } catch { /* a notification never stops a game */ }
 }
 function yourTurn(row, state, to, actor) {
@@ -137,7 +137,7 @@ function yourTurn(row, state, to, actor) {
   else if (last.kind === 'pass') body = `${who} passed. Your move!`;
   else if (last.kind === 'resign') body = `${who} left the game. Your move, I guess!`;
   else body = `${who} took a turn. Your move!`;
-  tell(row, to, body);
+  tell(row, to, body, who && last ? 'turn' : 'started', actor || null);
 }
 
 // Which seat the person asking has. Online games know you by your profile;
@@ -189,7 +189,7 @@ function createOnline({ host, invite, openSeats, dictionary, adultOk }, now = Da
     const yours = !state.waiting && state.players[state.turn].profileId === p.id;
     tell(row, p.id, state.waiting ? `${host.name} started a game with you. It'll start once everyone joins.`
       : yours ? `${host.name} started a game with you, you're first!`
-        : `${host.name} started a game with you. ${state.players[state.turn].name} is first, I'll let you know when it's your turn.`);
+        : `${host.name} started a game with you. ${state.players[state.turn].name} is first, I'll let you know when it's your turn.`, 'started', host.id);
   }
   return id;
 }

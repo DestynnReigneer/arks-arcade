@@ -147,6 +147,7 @@ function save(id, { initials, profileToken } = {}) {
   if (allRank === 1) {
     const shout = profile ? (profiles().boardName(profile.id) || {}).label || profile.name : ini;
     comm.safePost({
+      trophy: { game: 'Tumbler Rumble', profileId: profile ? profile.id : null, name: shout, score: `${run.score.toLocaleString('en-US')} locks`, url: '/tumbler.html' },
       kind: 'highscore', emoji: '🔓', game: 'tumbler',
       title: `${shout} set the best Tumbler Rumble score ever`,
       body: `${shout} popped ${run.score.toLocaleString('en-US')} locks in a row on Tumbler Rumble without a miss, the best anyone has done. Think you can pop more?`

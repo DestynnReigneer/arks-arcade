@@ -208,6 +208,8 @@ function startFakeArksId({ secret, arcadeBase, port = 0 }) {
       if (fake.pushDown) return json(res, 500, { error: 'down' });
       return json(res, 200, { sent: (fake.pushSubs[b.to] || []).length });
     }
+    // v16: a new #1 for Discord's #trophies channel.
+    if (req.method === 'POST' && u.pathname === '/api/app/discord/trophy') { (fake.trophies = fake.trophies || []).push(await readBody(req)); return json(res, 200, { posted: true }); }
     if (req.method === 'POST' && u.pathname === '/api/clips') {
       const b = await readBody(req);
       const keys = b.to === 'everyone' ? Object.keys(users) : Object.keys(users).filter(k => users[k].id === b.to);

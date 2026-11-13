@@ -27,11 +27,30 @@ function createPush({ arks }) {
   // Tells the person behind an arcade profile something, on every phone they
   // turned notifications on. Never throws, and nobody waits for it: a game
   // move doesn't fail because a phone couldn't be reached.
-  function tell(profileId, { title, body, url, tag }) {
+  // Since contract v16 it also says what kind of news it is (turn, invite, started, chat), who it's from and
+  // which game, so ARKS ID can send it to the person's phone, to Discord's #turns channel, or both, as they chose.
+  const accountOf = profileId => {
     const p = db.db.prepare("SELECT arksid_user FROM arcade_profiles WHERE id = ? AND status = 'approved'").get(String(profileId || ''));
-    if (!p || !p.arksid_user) return Promise.resolve(0);
-    return arks.client.appCall('POST', '/push/send', { to: p.arksid_user, title, body, url, tag })
+    return p && p.arksid_user ? p.arksid_user : null;
+  };
+  function tell(profileId, { title, body, url, tag, kind, from, game }) {
+    const to = accountOf(profileId);
+    if (!to) return Promise.resolve(0);
+    const extra = {};
+    if (['turn', 'invite', 'started', 'chat'].includes(kind)) extra.kind = kind;
+    const fromAccount = from ? accountOf(from) : null;
+    if (fromAccount) extra.from = fromAccount;
+    if (game) extra.game = String(game).slice(0, 40);
+    return arks.client.appCall('POST', '/push/send', { to, title, body, url, tag, ...extra })
       .then(r => (r.status === 200 ? Number(r.data.sent) || 0 : 0), () => 0);
+  }
+  // A new #1 on an all-time board, for Discord's #trophies channel (v16). Never throws.
+  function trophy({ game, profileId, name, score, board, url }) {
+    const who = profileId ? accountOf(profileId) : null;
+    const body = { game: String(game).slice(0, 40), score: String(score), url };
+    if (board) body.board = String(board).slice(0, 40);
+    if (who) body.who = who; else body.name = String(name || 'Someone').slice(0, 30);
+    return arks.client.appCall('POST', '/discord/trophy', body).then(r => r.status === 200 && !!r.data.posted, () => false);
   }
 
   function routes() {
@@ -72,7 +91,7 @@ function createPush({ arks }) {
     return router;
   }
 
-  return { routes, tell };
+  return { routes, tell, trophy };
 }
 
 module.exports = { createPush };
