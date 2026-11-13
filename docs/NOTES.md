@@ -1358,7 +1358,7 @@ board-name setting and adult PIN are only for copies running without it.
 - **Shared family accounts ("ARKS ID")**: planned and approved. The
   contract is in the private `arks-id` repo (`docs/SPEC.md`); see CLAUDE.md
   for how to use it. The arcade integrates last (after ARKS ID, the Hub's
-  sign-in and passkeys). **Built against ARKS ID contract v15** (2026-11-07): notifications when it's your turn in
+  sign-in and passkeys). **Built against ARKS ID contract v16** (2026-11-13): every notification says its kind (turn, invite, started, chat), who it's from and the game, so ARKS ID can send it to the phone, Discord's #turns or both; chat messages tell the people in the room who aren't looking (never the words); and a new #1 on an all-time board goes to #trophies (`trophy` on a Comm Center post, `push.trophy`). Before that, v15 (2026-11-07): notifications when it's your turn in
   Words with Family (see the top of this file). Before that, v14 (2026-11-01): TVs (the pairing
   code sign-in, adults' night, see the top of this file). Before that, v13 (2026-11-01): game
   switches and the banner from ARKS ID's admin console (see the top of this file). Before
