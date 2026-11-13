@@ -17,4 +17,4 @@ function act(game, actorId, body) {
   throw Object.assign(new Error('Unknown move.'), { status: 400 });
 }
 
-module.exports = makeTables({ engine, act, levels: cardNames.LEVELS, minPlayers: 2, maxPlayers: 8 });
+module.exports = makeTables({ game: 'partdeux', title: 'Uh-Oh: Part Deux', engine, act, levels: cardNames.LEVELS, minPlayers: 2, maxPlayers: 8 });
