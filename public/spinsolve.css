@@ -83,7 +83,8 @@ body::before {
 @keyframes winPulse { to { box-shadow: 0 0 16px var(--gold), 0 0 30px rgba(255, 210, 63, 0.7); } }
 
 /* ---- the robot co-hosts (drawn in spin-hosts.js) ---- */
-.host-lane { position: relative; height: 96px; margin-top: -2px; }
+/* overflow-x: clip keeps a heckler waiting off to the side from widening the page; the speech bubbles can still rise above. */
+.host-lane { position: relative; height: 96px; margin-top: -2px; overflow-x: clip; }
 .host {
   position: absolute; left: 0; bottom: 0; width: 52px; height: 96px; z-index: 3;
   transition: transform 0.45s cubic-bezier(.35, .1, .25, 1);
