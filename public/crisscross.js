@@ -143,9 +143,7 @@
     const p = me();
     $('noProfile').classList.toggle('hidden', !!p);
     $('minepanel').classList.toggle('hidden', !p);
-    if (!p) $('pushCard').classList.add('hidden');
     if (!p || TV) return;
-    ArcadePush.card($('pushCard'));
     await loadMine();
     S.poll = setInterval(() => { if (!document.hidden) loadMine(); }, 30000);
   }

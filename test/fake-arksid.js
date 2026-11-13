@@ -98,7 +98,11 @@ function startFakeArksId({ secret, arcadeBase, port = 0 }) {
         return back(res, miss.href);
       }
       const c = code();
-      if (u.pathname === '/signin') codes.set(c, fake.next); else deviceCodes.set(c, fake.deviceOwner);
+      // A browser test can sign one person in with the next sign-in someone taps (fake.once, set by
+      // POST /test/next-once), without the silent sign-ins of other tests picking them up.
+      const who = u.pathname === '/signin' && q.get('silent') !== '1' && fake.once ? fake.once : fake.next;
+      if (who === fake.once) fake.once = null;
+      if (u.pathname === '/signin') codes.set(c, who); else deviceCodes.set(c, fake.deviceOwner);
       const to = new URL('/auth/callback', arcadeBase);
       to.searchParams.set(u.pathname === '/signin' ? 'code' : 'device', c);
       to.searchParams.set('return', q.get('return') || '/');
@@ -115,6 +119,7 @@ function startFakeArksId({ secret, arcadeBase, port = 0 }) {
     // the sign-in service's console. POST /test/switches { set }.
     if (req.method === 'POST' && u.pathname === '/test/switches') { fake.set = (await readBody(req)).set || {}; return json(res, 200, { ok: true }); }
     // The same for TVs: the codes showing now, and an adult's phone saying yes.
+    if (req.method === 'POST' && u.pathname === '/test/next-once') { fake.once = (await readBody(req)).as || null; return json(res, 200, { ok: true }); }
     if (req.method === 'GET' && u.pathname === '/test/tv') return json(res, 200, fake.latest);
     if (req.method === 'POST' && u.pathname === '/test/tv/approve') return json(res, 200, { ok: await readBody(req).then(b => fake.approvePair(b.userCode, b.as || 'tv')) });
     if (req.method === 'POST' && u.pathname === '/test/tv/unlock') { const b = await readBody(req); return json(res, 200, { ok: fake.approveUnlock(b.userCode, b.by || 'alex') }); }
