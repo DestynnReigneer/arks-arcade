@@ -57,7 +57,10 @@ function known() {
     boards: levels(require('../sudoku/generator').LEVELS) });
   add({ id: 'clueless', label: 'Clueless Crosswords', table: 'clueless_scores', boardCol: 'level', unit: 'time', daily: true,
     boards: levels(require('../clueless/maker').LEVELS) });
-  add({ id: 'tumbler', label: 'Tumbler Rumble', table: 'tumbler_scores', unit: 'points', daily: true, boards: one });
+  // Only scores from today's endless rules (rules 2): the old points scores stay in the
+  // table but aren't on any board, so they're not listed here either.
+  add({ id: 'tumbler', label: 'Tumbler Rumble', table: 'tumbler_scores', unit: 'points', daily: true,
+    boards: [{ id: 'all', label: 'The board', where: 'rules = 2' }] });
   add({ id: 'scuffle', label: 'Shuffle Scuffle', table: 'scuffle_scores', boardCol: 'dictionary', unit: 'points', daily: true,
     boards: [{ id: 'kids', label: 'Family daily' }, { id: 'adult', label: 'Unfiltered daily' }] });
   require('../crisscross/results');
