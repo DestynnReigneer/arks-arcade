@@ -166,18 +166,37 @@
   function reset() {
     if (window.ArcadeStats) ArcadeStats.play();
     Object.assign(S, {
-      mode: 'running', y: 0, vy: 0, ducking: false, dist: 0, speed: START_SPEED,
+      mode: 'running', paused: false, y: 0, vy: 0, ducking: false, dist: 0, speed: START_SPEED,
       obstacles: [], nextGap: 380, groundShift: 0, time: 0, night: 0, flash: 0, lastMilestone: 0
     });
+    paintPause();
     S.clouds = [{ x: 420, y: 40 }, { x: 160, y: 66 }];
     S.stars = Array.from({ length: 14 }, () => ({ x: Math.random() * W, y: 10 + Math.random() * 80 }));
     $('overPanel').classList.add('hidden');
     document.body.dataset.state = 'running';
   }
 
+  // ---- pausing (2026-11-13) -----------------------------------------------------------
+  // The pause button (in the top bar's menu), P or Escape, leaving the tab, and the
+  // "Leave this game?" card all stop the run; a tap, Space or the button carry on.
+  function paintPause() {
+    const b = $('pauseBtn');
+    if (!b) return;
+    b.textContent = S.paused ? '▶' : '⏸';
+    b.title = S.paused ? 'Keep running' : 'Pause (P)';
+  }
+  function setPaused(on) {
+    if (S.mode !== 'running' || S.paused === on) return;
+    S.paused = on;
+    S.jumpHeld = false;
+    S.ducking = false;
+    paintPause();
+  }
+
   // ---- input ------------------------------------------------------------------------
   function jump() {
     Blip.unlock();
+    if (S.paused) { setPaused(false); return; }
     if (S.mode !== 'running') {
       // A beat after crashing, so a panicked tap doesn't skip the score.
       if (S.mode === 'ready' || performance.now() - S.crashedAt > 700) reset();
@@ -203,6 +222,7 @@
   const typing = () => document.activeElement && document.activeElement.tagName === 'INPUT';
   document.addEventListener('keydown', e => {
     if (typing() || help.isOpen) return;
+    if (['p', 'P'].includes(e.key) && !e.repeat) { setPaused(!S.paused); return; }
     if ([' ', 'ArrowUp', 'w', 'W'].includes(e.key)) { e.preventDefault(); if (!e.repeat) jump(); }
     if (['ArrowDown', 's', 'S'].includes(e.key)) { e.preventDefault(); duck(true); }
   });
@@ -320,6 +340,8 @@
     $('savePart').classList.toggle('hidden', s < 1);
     $('saveScoreBtn').disabled = false;
     $('scoreMsg').textContent = '';
+    // Playing as a profile, the score is theirs: no initials to type (fills them in and hides them).
+    if (s >= 1 && initials) initials.reset();
     $('overPanel').classList.remove('hidden');
   }
 
@@ -391,7 +413,14 @@
     if (!blink) ctx.fillText(pad(score()), W - 12, 10);
 
     ctx.textAlign = 'center';
-    if (S.mode === 'ready') {
+    if (S.mode === 'running' && S.paused) {
+      ctx.fillStyle = ink;
+      ctx.font = 'bold 20px ui-monospace, Menlo, Consolas, monospace';
+      ctx.fillText('P A U S E D', W / 2, 54);
+      ctx.font = 'bold 12px ui-monospace, Menlo, Consolas, monospace';
+      ctx.fillStyle = dim;
+      ctx.fillText(TvPlay.on ? 'PRESS OK TO KEEP RUNNING' : 'TAP OR PRESS SPACE TO KEEP RUNNING', W / 2, 84);
+    } else if (S.mode === 'ready') {
       ctx.fillStyle = ink;
       ctx.fillText(TvPlay.on ? 'PRESS OK ON PLAY TO RUN' : 'TAP OR PRESS SPACE TO RUN', W / 2, 70);
     } else if (S.mode === 'over') {
@@ -410,11 +439,12 @@
     // Cap the step so a hiccup (or a background tab) can't teleport you into a cactus.
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
-    if (S.mode === 'running' && !help.isOpen) update(dt);
+    if (S.mode === 'running' && !S.paused && !help.isOpen) update(dt);
     draw();
     requestAnimationFrame(frame);
   }
-  document.addEventListener('visibilitychange', () => { last = performance.now(); });
+  document.addEventListener('visibilitychange', () => { last = performance.now(); if (document.hidden) setPaused(true); });
+  $('pauseBtn').addEventListener('click', () => setPaused(!S.paused));
 
   // ---- scores -----------------------------------------------------------------------------
   let initials = null;
@@ -492,7 +522,8 @@
       $('overPanel').classList.add('hidden');
       document.body.dataset.state = 'ready';
     },
-    busy: () => S.mode === 'running'
+    busy: () => S.mode === 'running',
+    pause: () => setPaused(true)
   });
 
   document.body.dataset.state = 'ready';

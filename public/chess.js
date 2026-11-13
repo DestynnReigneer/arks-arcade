@@ -944,18 +944,20 @@
   });
   $('suggestBtn').addEventListener('click', suggest);
   $('undoBtn').addEventListener('click', undo);
-  $('resignBtn').addEventListener('click', () => {
-    if (S.ended || !confirm(S.mode === 'local' ? `${COLOR_NAME[S.state.turn]} resigns?` : 'Resign this game?')) return;
+  // Questions use the arcade's own card (ArcadeBack.ask), not the browser's confirm box.
+  $('resignBtn').addEventListener('click', async () => {
+    if (S.ended) return;
+    if (!(await ArcadeBack.ask(S.mode === 'local' ? `${COLOR_NAME[S.state.turn]} resigns?` : 'Resign this game?', { yes: 'Resign', no: 'Keep playing' }))) return;
     if (S.mode === 'room') return roomAct('resign');
     const loser = S.mode === 'ai' ? S.me : S.state.turn;
     S.ended = { over: true, reason: 'resignation', winner: other(loser) };
     render();
     showOver();
   });
-  $('drawBtn').addEventListener('click', () => {
+  $('drawBtn').addEventListener('click', async () => {
     if (S.ended) return;
     if (S.mode === 'room') { roomAct('offer-draw'); toast('Draw offered. Waiting for an answer…'); return; }
-    if (!confirm('Do both players agree to a draw?')) return;
+    if (!(await ArcadeBack.ask('Do both players agree to a draw?', { yes: 'It\'s a draw', no: 'Keep playing' }))) return;
     S.ended = { over: true, reason: 'agreement', winner: null };
     render();
     showOver();
@@ -966,8 +968,8 @@
   $('againBtn').addEventListener('click', playAgain);
   $('reviewBtn').addEventListener('click', () => $('overView').classList.add('hidden'));
   $('menuBtn').addEventListener('click', backToSetup);
-  $('quitBtn').addEventListener('click', () => {
-    if (S.mode !== 'room' && S.state && !S.ended && S.moves.length && !confirm('Leave this game?')) return;
+  $('quitBtn').addEventListener('click', async () => {
+    if (S.mode !== 'room' && S.state && !S.ended && S.moves.length && !(await ArcadeBack.ask('Leave this game? It ends here and won\'t be saved.'))) return;
     backToSetup();
   });
   $('saveScoreBtn').addEventListener('click', saveScore);
