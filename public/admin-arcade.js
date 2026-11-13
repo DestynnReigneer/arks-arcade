@@ -612,8 +612,52 @@
       const name = document.createElement('input'); name.maxLength = 12; name.value = c.name; name.className = 'train-name'; name.setAttribute('aria-label', `Car ${i + 1}'s name`);
       const kind = document.createElement('select'); kind.className = 'train-kind'; kind.setAttribute('aria-label', `How hard car ${i + 1} is`);
       CAR_KINDS.forEach(([v, label]) => { const o = document.createElement('option'); o.value = v; o.textContent = label; o.selected = v === c.kind; kind.appendChild(o); });
-      row.append(n, name, kind);
+      // The car's picture, for the circle on the station's light board.
+      const pic = document.createElement('img');
+      pic.alt = '';
+      pic.className = 'train-pic';
+      pic.style.cssText = 'width:36px;height:36px;border-radius:50%;object-fit:cover;border:1px solid var(--border)';
+      if (c.picture) pic.src = c.picture; else pic.style.visibility = 'hidden';
+      const file = document.createElement('input');
+      file.type = 'file'; file.accept = 'image/*'; file.hidden = true;
+      const pick = document.createElement('button');
+      pick.type = 'button'; pick.className = 'small-btn'; pick.textContent = c.picture ? 'Change picture' : 'Add a picture';
+      pick.onclick = () => file.click();
+      file.onchange = async () => {
+        if (!file.files[0]) return;
+        try {
+          const image = await squareJpeg(file.files[0]);
+          renderTrainCars((await api(`/train-cars/${i + 1}/picture`, { method: 'POST', body: { image } })).cars);
+          say($('trainCarsMsg'), `Car ${i + 1}'s picture is saved. The next game on the train shows it.`);
+        } catch (e) { say($('trainCarsMsg'), e.message, false); }
+      };
+      row.append(n, name, kind, pic, pick, file);
+      if (c.picture) {
+        const drop = document.createElement('button');
+        drop.type = 'button'; drop.className = 'small-btn'; drop.textContent = 'Remove picture';
+        drop.onclick = async () => {
+          try { renderTrainCars((await api(`/train-cars/${i + 1}/picture`, { method: 'DELETE' })).cars); } catch (e) { say($('trainCarsMsg'), e.message, false); }
+        };
+        row.append(drop);
+      }
       box.appendChild(row);
+    });
+  }
+  // Any picture, cropped to its middle square and shrunk to 256 pixels, as a JPEG data: URL.
+  function squareJpeg(blob) {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(blob);
+      const img = new Image();
+      img.onload = () => {
+        const side = Math.min(img.naturalWidth, img.naturalHeight);
+        const c = document.createElement('canvas');
+        c.width = c.height = 256;
+        c.getContext('2d').drawImage(img, (img.naturalWidth - side) / 2, (img.naturalHeight - side) / 2, side, side, 0, 0, 256, 256);
+        URL.revokeObjectURL(url);
+        resolve(c.toDataURL('image/jpeg', 0.85));
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('That file isn\'t a picture the browser can open. Try a JPG or PNG.')); };
+      img.src = url;
     });
   }
   async function saveTrainCars() {
