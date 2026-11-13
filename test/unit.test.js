@@ -220,7 +220,7 @@ async function run() {
   ok('promotion makes the piece you pick', Chess.play(promo, { from: 'a7', to: 'a8', promo: 'n' }).san === 'a8=N');
 
   console.log('\n-- spin & solve --');
-  const puzzles = require(path.join(ROOT, 'public/spin-puzzles.js'));
+  const puzzles = require(path.join(ROOT, 'spinsolve/kids-puzzles.js'));
   ok('there are plenty of puzzles', puzzles.length >= 150, String(puzzles.length));
   ok('every word fits on the board (12 letters max)',
     puzzles.every(p => p.answer.split(' ').every(w => w.length <= 12)));
