@@ -116,3 +116,37 @@
 }
 .p-taken.bump { animation: bump 0.6s ease; }
 @keyframes bump { 30% { transform: scale(1.25); color: var(--danger); } }
+
+/* ---- No scrolling while you play (2026-11-13) -------------------------------------
+   On a computer the board fills the height on the left and the players, the last
+   move, the buttons, the moves and the chat sit beside it, lined up with the ends of
+   the top bar, like Words with Family. On a phone the board leaves room for the bars
+   and buttons under it. The TV keeps its own layout. */
+@media (max-width: 899px) {
+  html:not(.tv) .board { --size: min(calc(100vw - 32px), 480px, calc(100dvh - 312px)); }
+}
+@media (min-width: 900px) {
+  html:not(.tv) body:has(#game:not(.hidden)) {
+    max-width: none; padding-left: 0; padding-right: 0; padding-bottom: 0;
+    --bar-w: calc(min(1100px, 100vw) - 32px); --gap: 24px;
+    --board: clamp(360px, min(calc(100dvh - 76px - 44px - 16px), calc(var(--bar-w) - var(--gap) - 340px)), 820px);
+  }
+  html:not(.tv) body:has(#game:not(.hidden)) > header.top { width: var(--bar-w); margin: 0 auto; box-sizing: border-box; }
+  html:not(.tv) #game:not(.hidden) {
+    display: grid; width: var(--bar-w); height: var(--board); margin: 6px auto 16px;
+    grid-template-columns: var(--board) minmax(0, 1fr); column-gap: var(--gap);
+    grid-template-rows: auto auto auto auto auto minmax(0, 1fr) auto auto;
+    grid-template-areas: "board top" "board last" "board bottom" "board status" "board btns" "board moves" "board chat" "board quit";
+  }
+  html:not(.tv) #game > .board-wrap { grid-area: board; }
+  html:not(.tv) #game .board { --size: var(--board); min-width: 0; min-height: 0; }
+  html:not(.tv) #game > #topBar { grid-area: top; max-width: none; margin: 0 0 8px; }
+  html:not(.tv) #game > #lastMove { grid-area: last; max-width: none; margin: 0 0 8px; }
+  html:not(.tv) #game > #bottomBar { grid-area: bottom; max-width: none; margin: 0; }
+  html:not(.tv) #game > #statusLine { grid-area: status; margin: 12px 0; }
+  html:not(.tv) #game > #gameBtns { grid-area: btns; max-width: none; margin: 0; }
+  html:not(.tv) #game > #moveList { grid-area: moves; max-width: none; max-height: none; min-height: 0; margin: 12px 0 0; }
+  html:not(.tv) #game > #gameChat { grid-area: chat; margin: 10px 0 0; }
+  html:not(.tv) #game > #gameChat .lb-lines { height: 110px; }
+  html:not(.tv) #game > #quitBtn { grid-area: quit; max-width: none; margin: 10px 0 0; }
+}
