@@ -41,8 +41,7 @@ const SWEEP_MS = 10 * 60 * 1000;
 const HEARTBEAT_MS = 25000;
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const COLORS = ['w', 'b', 'random'];
-const WHO = ['anyone', 'selected'];
-const MAX_SELECTED = 20;
+const MAX_SELECTED = invites.MAX_TO;
 
 function fail(message, status = 400) {
   return Object.assign(new Error(message), { status });
@@ -136,10 +135,13 @@ function create({ name, color, who, allowed, profile, ip = '' }) {
   }
   roomForProfile(profile);
   const onlySome = who === 'selected';
-  const picked = onlySome ? [...new Set((Array.isArray(allowed) ? allowed : []).map(String))].filter(id => !profile || id !== profile.id) : [];
+  const list = Array.isArray(allowed) ? allowed : [];
+  if (onlySome && list.length > MAX_SELECTED) throw fail(`Choose up to ${MAX_SELECTED} people.`);
+  const picked = onlySome ? [...new Set(list.map(id => String(id).slice(0, 64)))].filter(id => !profile || id !== profile.id) : [];
   if (onlySome && !profile) throw fail('Pick your profile first, so the people you choose know who it\'s from.', 401);
   if (onlySome && !picked.length) throw fail('Choose at least one person, or let anyone at the arcade join.');
-  if (picked.length > MAX_SELECTED) throw fail(`Choose up to ${MAX_SELECTED} people.`);
+  // Only real profiles are kept, so nothing else can be stored with the room.
+  if (onlySome && !invites.allProfiles(picked)) throw fail('One of the people you picked doesn\'t have a profile here anymore.');
   const host = { id: makeId(), token: makeToken(), name: cleanName(profile ? profile.name : name, 'Player 1'), color: null,
     profileId: profile ? profile.id : null, ready: true, clients: 0 };
   const r = { code: makeCode(), phase: 'lobby', hostId: host.id,
@@ -212,6 +214,8 @@ function setSettings(code, playerId, token, { color }) {
   host(r, playerId, token);
   if (r.phase !== 'lobby') throw fail('The game has already started.', 409);
   if (!COLORS.includes(color)) throw fail('Choose white, black or random.');
+  // A new color means everyone agrees again: Ready goes back to Not ready.
+  if (r.settings.color !== color) for (const p of r.players) if (p.id !== r.hostId) p.ready = false;
   r.settings.color = color;
   changed(r);
   return snapshot(r, playerId);
@@ -255,6 +259,10 @@ function invite(code, playerId, token, to) {
     title: 'Chess', href: `chess.html?room=${r.code}`,
     notify: { title: 'Chess', body: `${h.name} invited you to Chess. Get in here!` }
   });
+  // In a lobby for picked people only, someone invited later is let in too.
+  if (r.settings.who === 'selected') {
+    for (const p of sent) if (!r.settings.allowed.includes(p.id) && r.settings.allowed.length < MAX_SELECTED) r.settings.allowed.push(p.id);
+  }
   changed(r);
   return { sent, state: snapshot(r, playerId) };
 }

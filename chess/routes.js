@@ -19,6 +19,16 @@ const createLimiter = rateLimit({
   windowMs: 10 * 60 * 1000, limit: 40, standardHeaders: true, legacyHeaders: false,
   message: { error: 'Too many new games at once. Try again in a few minutes.' }
 });
+// The lobby list is checked every 5 seconds while it's on screen.
+const listLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000, limit: 600, standardHeaders: true, legacyHeaders: false,
+  message: { error: 'Slow down a little, then try again.' }
+});
+// Ready, the color, mute, remove and start: each one saves the room and tells everyone in it.
+const seatLimiter = rateLimit({
+  windowMs: 60 * 1000, limit: 120, standardHeaders: true, legacyHeaders: false,
+  message: { error: 'Slow down a little, then try again.' }
+});
 const chatLimiter = rateLimit({
   windowMs: 60 * 1000, limit: 40, standardHeaders: true, legacyHeaders: false,
   message: { error: 'Slow down a little, then try again.' }
@@ -38,7 +48,7 @@ router.post('/rooms', createLimiter, (req, res, next) => {
 router.post('/rooms/:code/join', createLimiter, wrap(req => rooms.join(req.params.code, b(req).name, profileOf(req))));
 
 // List Hosted Games: the lobbies this person can see and join.
-router.get('/lobbies', wrap(req => ({ lobbies: rooms.lobbies(profileOf(req)) })));
+router.get('/lobbies', listLimiter, wrap(req => ({ lobbies: rooms.lobbies(profileOf(req)) })));
 
 // Your seat on this device too (your profile proves it's yours).
 router.post('/rooms/:code/seat', createLimiter, wrap(req => {
@@ -47,13 +57,13 @@ router.post('/rooms/:code/seat', createLimiter, wrap(req => {
   return rooms.seatFor(req.params.code, profile);
 }));
 
-router.post('/rooms/:code/settings', wrap(req => rooms.setSettings(...auth(req), { color: b(req).color })));
-router.post('/rooms/:code/ready', wrap(req => rooms.ready(...auth(req), b(req).ready !== false)));
-router.post('/rooms/:code/start', wrap(req => rooms.start(...auth(req))));
+router.post('/rooms/:code/settings', seatLimiter, wrap(req => rooms.setSettings(...auth(req), { color: b(req).color })));
+router.post('/rooms/:code/ready', seatLimiter, wrap(req => rooms.ready(...auth(req), b(req).ready !== false)));
+router.post('/rooms/:code/start', seatLimiter, wrap(req => rooms.start(...auth(req))));
 router.post('/rooms/:code/invite', createLimiter, wrap(req => rooms.invite(...auth(req), b(req).to)));
 router.post('/rooms/:code/chat', chatLimiter, wrap(req => rooms.say(...auth(req), b(req).text)));
-router.post('/rooms/:code/mute', wrap(req => rooms.mute(...auth(req), b(req).seat, !!b(req).on)));
-router.post('/rooms/:code/remove', wrap(req => rooms.remove(...auth(req), b(req).seat)));
+router.post('/rooms/:code/mute', seatLimiter, wrap(req => rooms.mute(...auth(req), b(req).seat, !!b(req).on)));
+router.post('/rooms/:code/remove', seatLimiter, wrap(req => rooms.remove(...auth(req), b(req).seat)));
 router.post('/rooms/:code/leave', wrap(req => rooms.leave(...auth(req))));
 
 router.post('/rooms/:code/move', wrap(req => {

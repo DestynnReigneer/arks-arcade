@@ -17,7 +17,9 @@ const rateLimit = require('express-rate-limit');
 const db = require('../db');
 
 const profiles = () => require('./profiles');
-const MAX_TO = 7;
+// The most people one invite (or one "Only People Selected" lobby) can name. Games
+// with rooms use this same number, so what they accept is what gets checked and sent.
+const MAX_TO = 12;
 const TTL_MS = 3 * 24 * 60 * 60 * 1000;   // an invite nobody answered fades after 3 days
 // A repeat invite to the same room only buzzes the phone again after this long,
 // and one person can invite at most PER_HOUR people an hour, so nobody's phone
@@ -133,4 +135,10 @@ function routes() {
   return router;
 }
 
-module.exports = { register, send, clear, pending, mine, people, routes, setNotifier };
+// Whether every id names an approved profile here (checked before a room stores them).
+function allProfiles(ids) {
+  const q = db.db.prepare("SELECT 1 FROM arcade_profiles WHERE id = ? AND status = 'approved'");
+  return ids.every(id => typeof id === 'string' && id.length <= 64 && !!q.get(id));
+}
+
+module.exports = { register, send, clear, pending, mine, people, allProfiles, routes, setNotifier, MAX_TO };

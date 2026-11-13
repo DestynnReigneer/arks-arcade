@@ -138,7 +138,8 @@
     show('find');
     loadLobbies();
     stopFinding();
-    S.findTimer = setInterval(loadLobbies, 5000);
+    // Checked every 5 seconds while the list is on screen and the tab is showing.
+    S.findTimer = setInterval(() => { if (!document.hidden) loadLobbies(); }, 5000);
   }
   function stopFinding() { if (S.findTimer) { clearInterval(S.findTimer); S.findTimer = null; } }
   async function loadLobbies() {

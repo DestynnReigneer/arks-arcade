@@ -171,6 +171,19 @@ async function run({ base }) {
   s = (await api(`${room(only.code)}?playerId=${only.playerId}&token=${only.token}`)).data;
   ok('the lobby says only the people selected can join', s.settings.who === 'selected' && s.max === 2);
   await api(`${room(only.code)}/leave`, 'POST', seat(only));
+  ok('someone who isn\'t a profile here can\'t be picked', (await api('/chess/rooms', 'POST', { who: 'selected', allowed: [Milo.id, 'x'.repeat(5000)] }, Sam.h)).status === 400);
+  ok('…and no more than 12 people', (await api('/chess/rooms', 'POST', { who: 'selected', allowed: Array.from({ length: 13 }, (_, i) => `id${i}`) }, Sam.h)).status === 400);
+  // Someone invited after the lobby opened is let in too.
+  const later = (await api('/chess/rooms', 'POST', { who: 'selected', allowed: [Milo.id] }, Sam.h)).data;
+  ok('Kim isn\'t in before being invited', (await api(`${room(later.code)}/join`, 'POST', {}, Kim.h)).status === 403);
+  await api(`${room(later.code)}/invite`, 'POST', { ...seat(later), to: [Kim.id] });
+  const kimIn = (await api(`${room(later.code)}/join`, 'POST', {}, Kim.h)).data;
+  ok('…and is after', !!(kimIn && kimIn.playerId));
+  // Changing the color asks everyone to be ready again.
+  await api(`${room(later.code)}/ready`, 'POST', { ...seat(kimIn), ready: true });
+  s = (await api(`${room(later.code)}/settings`, 'POST', { ...seat(later), color: 'b' })).data;
+  ok('a new color puts Ready back to Not ready', s.allReady === false && s.seats.find(x => !x.host).ready === false);
+  await api(`${room(later.code)}/leave`, 'POST', seat(later));
 
   console.log(`\n  ${pass} passed, ${fail} failed`);
   return { pass, fail };
