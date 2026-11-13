@@ -93,6 +93,11 @@ function send({ game, room, from, to, title, href, notify }) {
 }
 
 // Someone got in, or the room is gone.
+// Every invite for a game, for games whose rooms don't survive a restart.
+function clearGame(game) {
+  db.db.prepare('DELETE FROM arcade_invites WHERE game = ?').run(game);
+}
+
 function clear(game, room, profileId) {
   if (profileId) db.db.prepare('DELETE FROM arcade_invites WHERE game = ? AND room = ? AND to_profile = ?').run(game, String(room), String(profileId));
   else db.db.prepare('DELETE FROM arcade_invites WHERE game = ? AND room = ?').run(game, String(room));
@@ -141,4 +146,4 @@ function allProfiles(ids) {
   return ids.every(id => typeof id === 'string' && id.length <= 64 && !!q.get(id));
 }
 
-module.exports = { register, send, clear, pending, mine, people, allProfiles, routes, setNotifier, MAX_TO };
+module.exports = { register, send, clear, clearGame, pending, mine, people, allProfiles, routes, setNotifier, MAX_TO };

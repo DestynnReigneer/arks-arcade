@@ -47,6 +47,9 @@ const cleanName = (raw, fallback) => String(raw || '').trim().replace(/\s+/g, ' 
 function makeTables({ game = 'party', title = 'the game', engine, act, levels, minPlayers = 2, maxPlayers = 8, cleanOptions = () => ({}) }) {
   const tables = new Map();
   const chat = roomChat.create(game);
+  // These rooms live only in memory, so chat and invites left from before a restart go.
+  chat.clearAll();
+  invites.clearGame(game);
   const levelOf = id => (levels[id] ? id : Object.keys(levels)[0]);
   const isAdult = level => !!levels[levelOf(level)].adult;
 
@@ -202,6 +205,9 @@ function makeTables({ game = 'party', title = 'the game', engine, act, levels, m
     const t = room(code);
     if (!mayJoin(t, profile)) throw fail('This game is only for the people the host picked.', 403);
     roomPassword.check(t, password);
+    // One seat per profile: joining again (another device, or after a reload) gets the same seat back.
+    const mine = profile && [...t.players.values()].find(p => p.token && p.profileId === profile.id);
+    if (mine) { touch(t); return { table: t, player: mine }; }
     if (t.game && t.game.phase !== 'over') throw fail('That game has already started. Wait for the next one.', 409);
     if (t.players.size >= maxPlayers) throw fail(`That game is full (${maxPlayers} players).`, 409);
     const p = addPlayer(t, name, null, profile);
@@ -259,6 +265,11 @@ function makeTables({ game = 'party', title = 'the game', engine, act, levels, m
     if (t.game && t.game.phase !== 'over') throw fail('Not while a game is running.', 409);
     if (level !== undefined) {
       const lv = levelOf(level);
+      // A family lobby only turns adult before anyone else is in it, so nobody who joined
+      // a family game finds themselves in an adult one.
+      if (isAdult(lv) && !isAdult(t.level) && [...t.players.values()].some(x => x.id !== t.hostId && !x.screen)) {
+        throw fail('Switch to an adult level before anyone joins. Start a new lobby for an adult game.', 409);
+      }
       if (isAdult(lv)) { if (!t.password) t.password = roomPassword.requireNew(password); } else t.password = null;
       t.level = lv;
     }
