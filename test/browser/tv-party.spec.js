@@ -81,6 +81,9 @@ async function phoneJoins(browser, path, code) {
   await openPage(phone, `${path}?join=${code}`);
   await phone.getByRole('button', { name: /Play as a guest/ }).click();
   await phone.getByRole('button', { name: 'Play', exact: true }).click();
+  // Play saves the guest, then closes the picker; wait for it, as a person would,
+  // so the next thing typed doesn't land while the picker still has the keyboard.
+  await expect(phone.locator('.apf')).toBeHidden();
   const close = phone.locator('.tut-x');
   if (await close.isVisible().catch(() => false)) await close.click();
   return { ctx, phone, problems };
