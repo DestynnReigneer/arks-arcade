@@ -189,7 +189,8 @@
           li.querySelector('.l-emoji').appendChild(img);
         } else li.querySelector('.l-emoji').textContent = r.emoji;
         li.querySelector('.l-title').textContent = `${r.adult ? '🔞 ' : ''}${r.label} · ${r.host || 'someone'}'s game${r.locked ? ' 🔒' : ''}`;
-        li.querySelector('.l-sub').textContent = `Code ${r.code} · ${r.players}/${r.max} players · ${r.detail}${r.status === 'playing' ? ' · game in progress' : ''}`;
+        // Chess lobbies are joined from the list, with no code to type (the maintainer's call, 2026-11-12).
+        li.querySelector('.l-sub').textContent = `${r.game === 'chess' ? '' : `Code ${r.code} · `}${r.players}/${r.max} players · ${r.detail}${r.status === 'playing' ? ' · game in progress' : ''}`;
         const join = li.querySelector('.l-join');
         join.textContent = STATUS[r.status];
         if (r.status === 'open') join.href = r.href;
