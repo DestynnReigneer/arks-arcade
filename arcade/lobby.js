@@ -48,15 +48,14 @@ function collect(viewer = null) {
     });
   }
 
+  // Only rooms this person may join: open lobbies, and games everyone answers
+  // together that are still going (joined from the next question).
   const trivia = require('../trivia/rooms');
-  const bank = require('../trivia/bank');
-  for (const r of trivia._rooms.values()) {
-    const host = r.screen || r.players.find(p => p.id === r.hostId);
+  for (const l of trivia.lobbies(viewer)) {
     add('trivia', {
-      adult: bank.LEVELS[r.settings.level].adult, locked: !!r.password,
-      code: r.code, host: host ? host.name : '', players: r.players.length, max: 12,
-      status: r.players.length >= 12 ? 'full' : r.phase === 'lobby' ? 'open' : 'playing',
-      detail: `${r.settings.count} questions${bank.LEVELS[r.settings.level].adult ? ' · ' + bank.LEVELS[r.settings.level].label : ''}`
+      adult: l.adult, locked: l.locked, code: l.code, host: l.host, players: l.count, max: l.max,
+      status: l.status === 'full' ? 'full' : l.status === 'playing' ? 'live' : 'open',
+      detail: l.question ? `Game started · question ${l.question.index} of ${l.question.total}` : `${l.adult ? l.level : 'Everyone on their own phone'}${l.who === 'selected' ? ' · People selected' : ''}`
     });
   }
 

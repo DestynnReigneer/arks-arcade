@@ -142,8 +142,14 @@
     // The remote plays for everyone in turn: the same list of names as sharing a phone.
     const panel = mode === 'tvremote' ? 'local' : mode;
     for (const m of ['solo', 'local', 'host', 'join', 'tvphones', 'tvpass']) $(`${m}Setup`).classList.toggle('hidden', m !== panel);
-    $('goBtn').textContent = mode === 'host' ? 'Get a game code' : mode === 'join' ? 'Join the game'
+    $('goBtn').textContent = mode === 'host' ? 'Create lobby'
       : mode === 'tvphones' || mode === 'tvpass' ? 'Show the code on the TV' : 'Let\'s play';
+    // List Hosted Games: the lobbies to pick from replace the game's own settings.
+    const finding = mode === 'join';
+    for (const id of ['levelList', 'genreChips']) $(id).closest('.panel').classList.toggle('hidden', finding);
+    $('goBtn').classList.toggle('hidden', finding);
+    if (finding) startFinding(); else stopFinding();
+    $('hostNameRow').classList.toggle('hidden', !!profileToken());
     $('countHint').textContent = ['local', 'tvpass', 'tvremote'].includes(mode) ? '(each)' : '';
     $('localSetup').querySelector('.hint').textContent = mode === 'tvremote'
       ? 'Take turns with the remote: each player gets their own questions. Add everyone\'s names (or leave them as they are).'
@@ -180,18 +186,104 @@
       if (S.mode.startsWith('tv')) return await hostOnTv(S.mode);
       if (S.mode === 'solo' || S.mode === 'local') return await startLocal();
       if (S.mode === 'host') {
+        if (S.who === 'selected' && !S.chosen.size) { $('setupMsg').textContent = 'Choose at least one person.'; return; }
         const r = await RoomPassword.withPassword(password =>
-          api('/api/trivia/rooms', { name: $('hostName').value, settings: settings(), password }, pinHeaders()));
-        if (r) enterRoom(r);
+          api('/api/trivia/rooms', { name: $('hostName').value, settings: settings(), password, who: S.who,
+            allowed: S.who === 'selected' ? [...S.chosen] : [] }, { ...pinHeaders(), ...profileHeaders() }));
+        if (r) { if (S.who === 'selected') toast('The people you chose will get a notification.'); enterRoom(r); }
         return;
       }
-      const code = $('joinCode').value.trim().toUpperCase();
-      if (code.length !== 4) { $('setupMsg').textContent = 'Type the 4-letter code.'; return; }
-      // A adults game asks for its lobby password (not the adult pass).
-      const r = await RoomPassword.withPassword(password =>
-        api(`/api/trivia/rooms/${code}/join`, { name: $('joinName').value, password }));
-      if (r) enterRoom(r);
     } catch (e) { $('setupMsg').textContent = e.message; }
+  }
+
+  // ---- Create a game lobby: who can join --------------------------------------------
+  const profileToken = () => (typeof ArcadeProfile !== 'undefined' ? ArcadeProfile.token() : null);
+  const profileHeaders = () => (profileToken() ? { 'X-Profile-Token': profileToken() } : {});
+  S.who = 'anyone';
+  S.chosen = new Set();
+  async function setWho(who) {
+    if (who === 'selected' && !profileToken()) { $('setupMsg').textContent = 'Pick your profile at the top first, so the people you choose know who it\'s from.'; return; }
+    S.who = who;
+    for (const b of $('whoSeg').children) b.setAttribute('aria-pressed', String(b.dataset.who === who));
+    $('setupMsg').textContent = '';
+    $('pickPeople').classList.toggle('hidden', who !== 'selected');
+    if (who === 'selected') {
+      if (!S.people) { try { S.people = (await api('/api/invites/people', undefined, profileHeaders())).people; } catch { S.people = []; } }
+      LobbyUI.people($('pickPeople'), S.people, S.chosen, () => {});
+      if (!S.people.length) $('setupMsg').textContent = 'Nobody else has a profile here yet.';
+    }
+  }
+
+  // ---- List Hosted Games ----------------------------------------------------------------
+  function startFinding() {
+    stopFinding();
+    loadLobbies();
+    S.findTimer = setInterval(() => { if (!document.hidden) loadLobbies(); }, 5000);
+  }
+  function stopFinding() { if (S.findTimer) { clearInterval(S.findTimer); S.findTimer = null; } }
+  async function fetchLobbies() {
+    const r = await fetch('/api/trivia/lobbies', { headers: profileHeaders(), cache: 'no-store' });
+    return (await r.json()).lobbies || [];
+  }
+  async function loadLobbies() {
+    let list;
+    try { list = await fetchLobbies(); } catch { return; }
+    const rows = $('lobbyRows');
+    rows.replaceChildren();
+    $('findEmpty').classList.toggle('hidden', list.length > 0);
+    for (const l of list) {
+      const li = document.createElement('li');
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'lb-row';
+      if (l.status === 'full' && !l.mine) b.setAttribute('aria-disabled', 'true');
+      const main = document.createElement('span'); main.className = 'lb-row-main';
+      const name = document.createElement('b'); name.textContent = `${l.adult ? '🔞 ' : ''}${l.host}'s lobby`;
+      const sub = document.createElement('small');
+      sub.textContent = l.question ? `Game started · question ${l.question.index} of ${l.question.total}` : `${l.level} · Multiplayer-Multiple devices`;
+      main.append(name, sub);
+      const count = document.createElement('span'); count.className = 'lb-count'; count.textContent = `${l.count}/${l.max}`;
+      b.append(main, count);
+      if (l.status === 'full') { const f = document.createElement('span'); f.className = 'lb-full'; f.textContent = 'FULL'; b.append(f); }
+      b.addEventListener('click', () => openDetails(l));
+      li.append(b);
+      rows.append(li);
+    }
+  }
+  function openDetails(l) {
+    S.details = l;
+    $('detailsTitle').textContent = `${l.host}'s Know-It-All lobby`;
+    $('dPlayers').textContent = `${l.players.join(', ')} · ${l.count} of ${l.max}`;
+    $('dHow').textContent = l.screen ? 'The questions are on the TV. Everyone answers on their own phone at the same time.'
+      : 'Each player on their own phone. Everyone answers at the same time, and faster right answers score more.';
+    $('dStatus').textContent = l.status === 'full' ? 'Full' : l.question ? `Playing, question ${l.question.index} of ${l.question.total}` : 'Waiting for players';
+    $('dLate').classList.toggle('hidden', !l.question);
+    $('joinBtn').textContent = l.question ? 'Join game in progress?' : 'Join lobby';
+    $('joinBtn').disabled = l.status === 'full';
+    $('dGuest').classList.toggle('hidden', !!profileToken());
+    $('detailsMsg').textContent = '';
+    $('detailsView').classList.remove('hidden');
+  }
+  const closeDetails = () => $('detailsView').classList.add('hidden');
+  async function joinLobby() {
+    const l = S.details;
+    if (!l) return;
+    $('detailsMsg').textContent = '';
+    try {
+      // An adult game asks for its lobby password (not the adult pass).
+      const r = await RoomPassword.withPassword(password =>
+        api(`/api/trivia/rooms/${l.code}/join`, { name: $('joinName').value, password }, profileHeaders()));
+      if (r) { closeDetails(); enterRoom(r); }
+    } catch (e) { $('detailsMsg').textContent = e.message; }
+  }
+  // Opening trivia.html?join=CODE (an invite, the home page): that lobby's details.
+  async function openFromLink(code) {
+    try {
+      const l = (await fetchLobbies()).find(x => x.code === code);
+      if (l) return openDetails(l);
+    } catch { /* falls through */ }
+    setMode('join');
+    $('setupMsg').textContent = 'That game isn\'t open anymore. Here are the ones that are.';
   }
 
   // ---- the TV hosts ------------------------------------------------------------------
@@ -302,6 +394,7 @@
     const { code, playerId, token } = S.room;
     S.es = new EventSource(`/api/trivia/rooms/${code}/events?playerId=${encodeURIComponent(playerId)}&token=${encodeURIComponent(token)}`);
     S.es.addEventListener('state', e => applySnap(JSON.parse(e.data)));
+    S.es.addEventListener('removed', () => { leaveRoom(); show('setup'); toast('The host took you out of the game.'); });
     S.es.onerror = () => {
       fetch(`/api/trivia/rooms/${code}?playerId=${encodeURIComponent(playerId)}&token=${encodeURIComponent(token)}`)
         .then(r => { if (r.status === 404 || r.status === 403) { leaveRoom(); show('setup'); toast('That game has ended.'); } }).catch(() => {});
@@ -327,6 +420,9 @@
     if (snap.phase === 'lobby') return renderLobby(snap);
     if (snap.phase === 'over') return renderRoomFinal(snap);
     show('play');
+    // The chat goes on under the game (not on the TV's own screen).
+    $('gameChat').classList.toggle('hidden', !!snap.isScreen);
+    if (!snap.isScreen) S.gameChat.render(snap.chat || [], { muted: snap.muted });
     $('overView').classList.add('hidden');
     const turns = snap.settings.style === 'turns';
     const turn = snap.turn;
@@ -410,8 +506,12 @@
 
   function renderLobby(snap) {
     show('lobby');
+    $('lobbyTitle').textContent = snap.screen ? 'Know-It-All on the TV' : snap.host ? 'Your Know-It-All lobby' : `${snap.hostName}'s Know-It-All lobby`;
+    // The code and the QR are for the TV, where phones scan to join. A lobby hosted
+    // on a phone is joined from List Hosted Games, with no code.
+    $('tvJoin').classList.toggle('hidden', !snap.screen);
     $('lobbyCode').textContent = snap.code;
-    if ($('joinQr').dataset.code !== snap.code) { $('joinQr').dataset.code = snap.code; ArcadeQR.forGame($('joinQr'), 'trivia.html', snap.code, $('joinLink')); }
+    if (snap.screen && $('joinQr').dataset.code !== snap.code) { $('joinQr').dataset.code = snap.code; ArcadeQR.forGame($('joinQr'), 'trivia.html', snap.code, $('joinLink')); }
     const s = snap.settings;
     const turns = s.style === 'turns';
     $('lobbyLevel').textContent = `${s.levelLabel} · ${s.count} questions${turns ? ' each' : ''} · ${s.seconds}s each` +
@@ -430,6 +530,19 @@
       const tag = text => { const t = document.createElement('span'); t.className = 'tag'; t.textContent = text; li.appendChild(t); };
       if (p.id === snap.you) tag('you');
       if (p.name === snap.hostName && !snap.screen) tag('host');
+      else if (!snap.screen && p.device) tag(p.ready ? 'ready' : 'not ready');
+      if (p.mutedChat) tag('🔇');
+      // The host can mute someone's chat or take them out of the lobby.
+      if (snap.host && !snap.screen && p.device && p.id !== snap.you) {
+        for (const [label, act] of [[p.mutedChat ? 'Unmute' : 'Mute', () => roomPost('mute', { seat: p.id, on: !p.mutedChat })], ['Remove Player', () => roomPost('remove', { seat: p.id })]]) {
+          const b = document.createElement('button');
+          b.className = 'lb-mute';
+          b.style.marginLeft = '8px';
+          b.textContent = label;
+          b.onclick = act;
+          li.appendChild(b);
+        }
+      }
       if (p.on === 'screen') tag('on the TV');
       else if (p.on) tag(`on ${p.on}'s phone`);
       // Players this device added can be taken off again before the start.
@@ -447,10 +560,20 @@
     $('seatBox').classList.toggle('hidden', !turns);
     $('seatLabel').firstChild.textContent = snap.isScreen ? 'Add a player who uses the remote' : 'Add a player on this phone';
     $('startBtn').classList.toggle('hidden', !snap.host);
-    $('startBtn').disabled = !snap.players.length;
-    $('startBtn').toggleAttribute('data-tv-start', !!snap.players.length);
-    $('waitHost').classList.toggle('hidden', snap.host && !!snap.players.length);
-    $('waitHost').textContent = snap.host ? 'Waiting for someone to join…' : 'Waiting for the host to start…';
+    // Lights up once someone's in and everyone is ready (the TV starts whenever it's set).
+    const canStart = !!snap.players.length && (snap.screen || (snap.players.length > 1 && snap.allReady));
+    $('startBtn').disabled = !canStart;
+    $('startBtn').textContent = snap.screen ? 'Start the game' : snap.players.length < 2 ? 'Waiting on players to join...'
+      : !snap.allReady ? 'Waiting on players to be ready...' : 'Players Ready, Start Game!';
+    $('startBtn').toggleAttribute('data-tv-start', canStart);
+    const me = snap.players.find(p => p.id === snap.you);
+    const guest = !snap.host && !snap.isScreen && !snap.screen && !!me;
+    $('lobbyReadyBtn').classList.toggle('hidden', !guest);
+    $('readyHint').classList.toggle('hidden', !guest || (me && me.ready));
+    if (guest) { $('lobbyReadyBtn').textContent = me.ready ? 'Not ready yet' : 'Ready!'; $('lobbyReadyBtn').className = me.ready ? 'ghost big' : 'primary big'; }
+    $('waitHost').classList.toggle('hidden', snap.host || (guest && !me.ready));
+    $('waitHost').textContent = `Waiting for ${snap.hostName || 'the host'} to start the game…`;
+    S.lobbyChat.render(snap.chat || [], { muted: snap.muted });
   }
 
   function renderRoomFinal(snap) {
@@ -652,7 +775,14 @@
   $('packSelect').onchange = () => { S.pack = $('packSelect').value; };
   $('addPlayerBtn').onclick = () => { if (S.names.length < 8) { S.names.push(''); renderNames(); } };
   $('goBtn').onclick = go;
-  $('joinCode').onkeydown = e => { if (e.key === 'Enter') go(); };
+  for (const b of $('whoSeg').children) b.onclick = () => setWho(b.dataset.who);
+  $('joinBtn').onclick = joinLobby;
+  $('detailsClose').onclick = closeDetails;
+  $('joinName').onkeydown = e => { if (e.key === 'Enter') joinLobby(); };
+  $('lobbyReadyBtn').onclick = () => { const me = S.snap && S.snap.players.find(p => p.id === S.snap.you); roomPost('lobby-ready', { ready: !(me && me.ready) }); };
+  const sendChat = text => { const { code, playerId, token } = S.room; return api(`/api/trivia/rooms/${code}/chat`, { playerId, token, text }); };
+  S.lobbyChat = LobbyUI.chat($('lobbyChat'), { send: sendChat });
+  S.gameChat = LobbyUI.chat($('gameChat'), { send: sendChat });
   $('startBtn').onclick = () => { if (window.ArcadeStats) ArcadeStats.play(); roomPost('start'); };
   $('lobbyLeave').onclick = backToSetup;
   $('nextBtn').onclick = () => { if (S.room) roomPost('next'); else nextLocal(); };
@@ -740,7 +870,7 @@
   renderNames();
   loadConfig();
   const joinParam = new URLSearchParams(location.search).get('join');
-  if (joinParam) { setMode('join'); $('joinCode').value = joinParam.toUpperCase().slice(0, 4); }
+  if (joinParam) openFromLink(joinParam.toUpperCase().slice(0, 4));
   try {
     const saved = JSON.parse(sessionStorage.getItem('trivia.room') || 'null');
     if (saved && saved.code) { S.room = saved; connect(); }
