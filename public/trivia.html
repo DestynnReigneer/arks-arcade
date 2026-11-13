@@ -12,6 +12,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&display=swap">
 <link rel="stylesheet" href="arcade-ui.css">
 <link rel="stylesheet" href="trivia.css">
+<link rel="stylesheet" href="lobby-ui.css">
 <link rel="stylesheet" href="tutorial.css">
 <link rel="stylesheet" href="adult-mode.css">
 <link rel="stylesheet" href="look.css">
@@ -85,9 +86,9 @@
     <h2>Who's playing?</h2>
     <div class="seg" id="modeSeg">
       <button data-mode="solo" aria-pressed="true" class="no-tv">🙂 Solo</button>
-      <button data-mode="local" aria-pressed="false" class="no-tv">📱 Share a phone</button>
-      <button data-mode="host" aria-pressed="false" class="no-tv">📡 Host</button>
-      <button data-mode="join" aria-pressed="false" class="no-tv">🔗 Join</button>
+      <button data-mode="local" aria-pressed="false" class="no-tv">📱 Multiplayer-Single device</button>
+      <button data-mode="host" aria-pressed="false" class="no-tv">📱📱 Create a game lobby</button>
+      <button data-mode="join" aria-pressed="false" class="no-tv">🔎 List Hosted Games</button>
       <button data-mode="tvphones" aria-pressed="false" class="tv-only">📱 Everyone on their own phone</button>
       <button data-mode="tvpass" aria-pressed="false" class="tv-only">🔁 Pass one phone around</button>
       <button data-mode="tvremote" aria-pressed="false" class="tv-only">🎮 Play with the remote</button>
@@ -99,8 +100,14 @@
       <button class="ghost" id="addPlayerBtn">+ Add player</button>
     </div>
     <div id="hostSetup" class="hidden">
-      <p class="hint">Everyone answers on their own phone at the same time. You get a code to share.</p>
-      <label>Your name<input id="hostName" maxlength="16" placeholder="e.g. Sam"></label>
+      <p class="hint">Everyone answers on their own phone at the same time. Your lobby shows up in List Hosted Games and on the arcade's home page.</p>
+      <label id="hostNameRow">Your name<input id="hostName" maxlength="16" placeholder="e.g. Sam"></label>
+      <div class="lb-section-label">Who can join</div>
+      <div class="seg" id="whoSeg">
+        <button data-who="anyone" aria-pressed="true">🎮 Anyone at the arcade</button>
+        <button data-who="selected" aria-pressed="false">✅ Only People Selected</button>
+      </div>
+      <div class="lb-people hidden" id="pickPeople"></div>
     </div>
     <div id="tvphonesSetup" class="hidden">
       <p class="hint">The TV shows the questions and a code. Everyone scans the code with their own phone, and you all answer at the same time on your phones. The fastest right answers score the most.</p>
@@ -109,9 +116,9 @@
       <p class="hint">The TV shows the questions big, and you take turns answering on one phone. Scan the code on the TV with that phone, then add everyone's names on it. When it's someone's turn, hand them the phone.</p>
     </div>
     <div id="joinSetup" class="hidden">
-      <p class="hint">Get the 4-letter code from whoever is hosting.</p>
-      <label>Game code<input id="joinCode" maxlength="4" placeholder="ABCD" autocapitalize="characters" class="code-input"></label>
-      <label>Your name<input id="joinName" maxlength="16" placeholder="e.g. Alex"></label>
+      <h2>Available Know-It-All lobbies</h2>
+      <ul class="lb-rows" id="lobbyRows"></ul>
+      <p class="hint hidden" id="findEmpty">Nobody has a Know-It-All lobby open right now. Create one and invite someone.</p>
     </div>
     <div class="msg" id="setupMsg"></div>
     <button class="primary big" id="goBtn">Let's play</button>
@@ -121,14 +128,17 @@
 
 <!-- ============ lobby ============ -->
 <section id="lobby" class="hidden">
-  <div class="panel center">
+  <div class="panel center" id="lobbyHead">
+    <h2 id="lobbyTitle"></h2>
+    <div id="tvJoin">
     <div class="hint">Game code</div>
     <div class="code" id="lobbyCode">----</div>
     <img class="join-qr hidden" id="joinQr" width="150" height="150" alt="QR code to join"
          style="width:150px;height:150px;background:#fff;padding:6px;border-radius:10px;margin:10px auto 2px;display:block">
     <div class="join-link" id="joinLink" style="font-size:11px;opacity:0.65;text-align:center;word-break:break-all"></div>
     <div style="font-size:12px;opacity:0.75;text-align:center">Scan to join from another phone</div>
-    <div class="hint">On the other phones: Know-It-All → Join, and type this in.</div>
+    <div class="hint">On the other phones: Know-It-All → List Hosted Games.</div>
+    </div>
     <div class="hint" id="lobbyLevel"></div>
     <p class="hint" id="lobbyHow"></p>
   </div>
@@ -140,10 +150,35 @@
       <button class="ghost" id="seatAdd" style="width:100%;margin-bottom:10px">+ Add player</button>
     </div>
     <button class="primary big hidden" id="startBtn">Start the game</button>
+    <p class="hint hidden" id="readyHint">When you're ready, tap the Ready! button.</p>
+    <button class="primary big hidden" id="lobbyReadyBtn">Ready!</button>
     <div class="hint" id="waitHost">Waiting for the host to start…</div>
-    <button class="ghost" id="lobbyLeave" style="width:100%;margin-top:8px">Leave</button>
+    <div class="lb-section-label">Chat</div>
+    <div id="lobbyChat"></div>
+    <button class="ghost" id="lobbyLeave" style="width:100%;margin-top:8px">Leave lobby</button>
   </div>
 </section>
+
+<div class="overlay hidden" id="detailsView" role="dialog" aria-labelledby="detailsTitle">
+  <div class="card-panel">
+    <h2 id="detailsTitle"></h2>
+    <div class="lb-facts">
+      <div><small>PLAYERS</small><span id="dPlayers"></span></div>
+      <div><small>HOW</small><span id="dHow"></span></div>
+      <div><small>STATUS</small><span id="dStatus"></span></div>
+    </div>
+    <p class="hint hidden" id="dLate">You'll join at the next question with 0 points.</p>
+    <div id="dGuest" class="hidden">
+      <p class="hint">Pick your profile to enter, or type your name to join as a guest.</p>
+      <label>Your name<input id="joinName" maxlength="16" placeholder="e.g. Alex"></label>
+    </div>
+    <div class="msg" id="detailsMsg"></div>
+    <div class="stack">
+      <button class="primary" id="joinBtn">Join lobby</button>
+      <button class="ghost" id="detailsClose">Not now</button>
+    </div>
+  </div>
+</div>
 
 <!-- ============ play ============ -->
 <section id="play" class="hidden">
@@ -167,6 +202,7 @@
   <div class="row-btns">
     <button class="primary hidden" id="nextBtn">Next question →</button>
   </div>
+  <div id="gameChat" class="hidden" style="margin-top:12px"></div>
   <button class="ghost big" id="quitBtn">Quit</button>
 </section>
 
@@ -266,6 +302,7 @@
 <script src="trivia-rules.js"></script>
 <script src="arcade-qr.js"></script>
 <script src="room-password.js"></script>
+<script src="lobby-ui.js"></script>
 <script src="trivia.js"></script>
 <script src="banner.js" defer></script>
 </body>
