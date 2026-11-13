@@ -1,13 +1,38 @@
 # Status and to-dos
 
-Last updated 2026-11-10. Update this file whenever a piece of work lands or
+Last updated 2026-11-13. Update this file whenever a piece of work lands or
 a plan changes, so the next session can pick up from here. When the
 maintainer says "I'm back", start from "Last session" below, then show the
 to-do list as checkboxes (the rule is in the maintainer's global CLAUDE.md
 and `arks-internal/conventions/sessions.md`): do the checked items in the
 order they were clicked, and keep the rest pinned here.
 
-## Last session (2026-11-10)
+## Last session (2026-11-13)
+
+**Finished** (all merged and published)
+- **#124: the round 4 top bar** on every page: even 30px buttons (28 on a phone), the logo first, a gold
+  trophy next to Back on game pages, and a waffle menu next to Admin that holds sound and music in one,
+  full screen, each game's own extras and, on a phone, How to play. **`mist.js`**: a slow mist of pink,
+  violet and turquoise behind every page, through the logo and the waffle (#131 moved its layer last).
+- **No scrolling while you play:** Words with Family (#125), Sudoku and Clueless Crosswords (#126), and
+  Snake, Block Drop, Brick Breaker and Tower Defense on phones through the shared `fitCanvas` (#129).
+- **#123: the Chess lobby**, reworked to the maintainer's storyboard: no codes, Create a game lobby, List
+  Hosted Games with a details card, Who can join (anyone, or only the people picked), Ready before the host
+  can start. Reviewed for security before merging; its four findings were fixed in the PR.
+- **#127: small fixes:** Dino Dash's pause, Dino no longer asking a profile for initials, the arcade's own
+  question card (`ArcadeBack.ask`) instead of the browser's confirm box, Tumbler's old scores off the
+  Boards tab, and two steadier tests.
+- **#128:** Clueless Crosswords keeps a profile's letters on the arcade, like Sudoku.
+- **#130:** a full emoji picker (about 1,150) in the lobby and game chat, made from Unicode.
+- **#132:** Chess rows on Join a game show no code.
+
+**Waiting on the maintainer** (previews ready): the notifications switch in the profile card, a batch of
+new jokes, removing the cheat-code section, and the Discord notifications questions.
+
+**Next up:** Tower Defense's tower panel beside the map on a computer, then the no-scroll look for the
+remaining games (Chess, Know-It-All, Spin & Solve, Rambler, the party games, Big Swing on a phone).
+
+## The session before (2026-11-10)
 
 **Finished**
 - **#113: the maintainer's wording** went into the rank lines ("You're #1 for today, and #3 overall!"), the profile
