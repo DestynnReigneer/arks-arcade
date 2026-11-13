@@ -212,6 +212,13 @@ app.use('/api/scores', require('./arcade/scores').router);
 app.use('/api/cab-jackpot', require('./arcade/cab-jackpot').router);
 // ARKS Train Station's car names, set on the admin page (the repo only has made-up ones)
 app.get('/api/train-cars', (req, res) => res.json({ cars: require('./arcade/train-cars').get() }));
+// A car's picture. The address carries a version, so the browser may keep it.
+app.get('/api/train-cars/:n/picture', (req, res) => {
+  let jpeg = null;
+  try { jpeg = require('./arcade/train-cars').picture(req.params.n); } catch { /* not a car */ }
+  if (!jpeg) return res.status(404).json({ error: 'No picture for that car.' });
+  res.set({ 'Content-Type': 'image/jpeg', 'Cache-Control': 'public, max-age=31536000, immutable', 'X-Content-Type-Options': 'nosniff' }).send(jpeg);
+});
 app.use('/api/stats', stats.routes({ requireAdmin }));
 
 // ---- the owner's own logos, characters, sounds and clips (optional) ----

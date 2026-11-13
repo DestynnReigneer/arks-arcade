@@ -12,7 +12,19 @@
   try {
     const r = await fetch('/api/train-cars');
     const d = r.ok ? await r.json() : null;
-    if (d && Array.isArray(d.cars) && d.cars.length === 8) game.cars = d.cars.map(c => [c.name, c.kind]);
+    if (d && Array.isArray(d.cars) && d.cars.length === 8) {
+      game.cars = d.cars.map(c => [c.name, c.kind]);
+      // The cars' pictures, loaded before the station is built (a few seconds at most; a car without one keeps its letter).
+      const load = src => new Promise(resolve => {
+        if (!src) return resolve(null);
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => resolve(null);
+        setTimeout(() => resolve(null), 4000);
+        img.src = src;
+      });
+      game.carPics = await Promise.all(d.cars.map(c => load(c.picture)));
+    }
   } catch { /* made-up names it is */ }
 
   const shell = GameShell.create({
