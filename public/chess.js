@@ -1,9 +1,10 @@
 'use strict';
 
-// Chess: against the computer, two players on one phone, or two phones. Two
-// phones start in a lobby (lobby-ui.js): the host invites people from the
-// family by name or shares a link, chooses the color and starts; the lobby and
-// the game have a chat. A game on two phones is saved on the server, so leaving
+// Chess: against the computer, two players on one phone, or each on their own
+// phone. For that, the host creates a lobby (who can join: anyone at the arcade,
+// or only the people they pick) and it shows up in List Hosted Games and on the
+// home page; whoever joins taps Ready, and the host starts (lobby-ui.js draws the
+// seats and the chat). Nobody types a code. A game on two phones is saved on the server, so leaving
 // doesn't end it: it waits in the Continue row, and opening it on another
 // device (chess.html?room=CODE) puts you back in your seat. The rules live in chess-engine.js; this file draws the board and
 // runs the game around it.
@@ -60,22 +61,22 @@
     for (const b of seg.children) b.setAttribute('aria-pressed', String(b.dataset[attr] === value));
   }
 
+  // Choose game mode: the computer and one device start from here; Create a game
+  // lobby and List Hosted Games open their own screens.
   function setMode(mode) {
+    if (mode === 'host') return openCreate();
+    if (mode === 'find') return openFind();
     S.mode = mode;
     pressed($('modeSeg'), 'mode', mode);
     $('aiSetup').classList.toggle('hidden', mode !== 'ai');
     $('localSetup').classList.toggle('hidden', mode !== 'local');
-    $('hostSetup').classList.toggle('hidden', mode !== 'host');
-    $('joinSetup').classList.toggle('hidden', mode !== 'join');
     $('colorPick').classList.toggle('hidden', mode !== 'ai');
-    // With a profile, your name comes from it.
-    $('hostNameRow').classList.toggle('hidden', !!profileToken());
-    $('goBtn').textContent = mode === 'host' ? 'Open the lobby' : mode === 'join' ? 'Join the game' : 'Start';
     $('setupMsg').textContent = '';
   }
 
   function show(screen) {
-    for (const id of ['setup', 'lobby', 'game']) $(id).classList.toggle('hidden', id !== screen);
+    for (const id of ['setup', 'create', 'find', 'lobby', 'game']) $(id).classList.toggle('hidden', id !== screen);
+    if (screen !== 'find') stopFinding();
     const tvBoard = $('boardWrap').closest('.tv-stage');
     if (tvBoard) tvBoard.classList.toggle('hidden', screen !== 'game');
   }
@@ -86,17 +87,113 @@
     $('setupMsg').textContent = '';
     const color = S.colorPref === 'random' ? (Math.random() < 0.5 ? 'w' : 'b') : S.colorPref;
     try {
-      if (S.mode === 'ai' || S.mode === 'local') return newLocalGame(color);
-      if (S.mode === 'host') {
-        const r = await api('/api/chess/rooms', { name: $('hostName').value, color: 'w' }, profileHeaders());
-        return enterRoom(r);
-      }
-      const code = $('joinCode').value.trim().toUpperCase();
-      if (code.length !== 4) { $('setupMsg').textContent = 'Type the 4-letter code.'; return; }
-      enterRoom(await api(`/api/chess/rooms/${code}/join`, { name: $('joinName').value }, profileHeaders()));
+      return newLocalGame(color);
     } catch (e) {
       $('setupMsg').textContent = e.message;
     }
+  }
+
+  // ---- Create a game lobby -----------------------------------------------------------
+
+  function openCreate() {
+    S.who = 'anyone';
+    S.createColor = 'w';
+    S.chosen = new Set();
+    pressed($('whoSeg'), 'who', S.who);
+    pressed($('createColorSeg'), 'color', S.createColor);
+    // With a profile, your name comes from it.
+    $('hostNameRow').classList.toggle('hidden', !!profileToken());
+    $('pickPeople').classList.add('hidden');
+    $('createMsg').textContent = '';
+    show('create');
+  }
+  async function setWho(who) {
+    if (who === 'selected' && !profileToken()) {
+      $('createMsg').textContent = 'Pick your profile at the top first, so the people you choose know who it\'s from.';
+      return;
+    }
+    S.who = who;
+    pressed($('whoSeg'), 'who', who);
+    $('createMsg').textContent = '';
+    $('pickPeople').classList.toggle('hidden', who !== 'selected');
+    if (who === 'selected') { await loadPeople(); paintPeople(); }
+  }
+  async function createLobby() {
+    if (window.ArcadeStats) ArcadeStats.play();
+    Blip.unlock();
+    $('createMsg').textContent = '';
+    if (S.who === 'selected' && !S.chosen.size) { $('createMsg').textContent = 'Choose at least one person.'; return; }
+    try {
+      const r = await api('/api/chess/rooms', { name: $('hostName').value, color: S.createColor, who: S.who,
+        allowed: S.who === 'selected' ? [...S.chosen] : [] }, profileHeaders());
+      if (S.who === 'selected') toast('The people you chose will get a notification.');
+      enterRoom(r);
+    } catch (e) { $('createMsg').textContent = e.message; }
+  }
+
+  // ---- List Hosted Games ------------------------------------------------------------
+
+  const COLOR_WORDS = { w: 'White', b: 'Black', random: 'Random' };
+  function openFind() {
+    show('find');
+    loadLobbies();
+    stopFinding();
+    S.findTimer = setInterval(loadLobbies, 5000);
+  }
+  function stopFinding() { if (S.findTimer) { clearInterval(S.findTimer); S.findTimer = null; } }
+  async function loadLobbies() {
+    try {
+      const r = await fetch('/api/chess/lobbies', { headers: profileHeaders(), cache: 'no-store' });
+      paintLobbies((await r.json()).lobbies || []);
+    } catch { /* tries again in a moment */ }
+  }
+  function paintLobbies(list) {
+    S.lobbies = list;
+    const rows = $('lobbyRows');
+    rows.replaceChildren();
+    $('findEmpty').classList.toggle('hidden', list.length > 0);
+    for (const l of list) {
+      const li = document.createElement('li');
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'lb-row';
+      if (l.status === 'full' && !l.mine) b.setAttribute('aria-disabled', 'true');
+      const main = document.createElement('span'); main.className = 'lb-row-main';
+      const name = document.createElement('b'); name.textContent = `${l.host}'s lobby`;
+      const sub = document.createElement('small'); sub.textContent = 'Multiplayer-Multiple devices';
+      main.append(name, sub);
+      const count = document.createElement('span'); count.className = 'lb-count'; count.textContent = `${l.count}/${l.max}`;
+      b.append(main, count);
+      if (l.status === 'full') { const f = document.createElement('span'); f.className = 'lb-full'; f.textContent = 'FULL'; b.append(f); }
+      b.addEventListener('click', () => openDetails(l));
+      li.append(b);
+      rows.append(li);
+    }
+  }
+
+  // The lobby's details, before joining it.
+  function openDetails(l) {
+    if (l.mine) return api(`/api/chess/rooms/${l.code}/seat`, {}, profileHeaders()).then(enterRoom, e => toast(e.message));
+    S.detailsCode = l.code;
+    $('detailsTitle').textContent = `${l.host}'s Chess lobby`;
+    $('dPlayers').textContent = `${l.players.join(', ')} · ${l.count} of ${l.max}`;
+    const theirs = l.color === 'random' ? 'A random color' : COLOR_WORDS[other(l.color)];
+    $('dYou').textContent = `${theirs} (${l.host} chose ${COLOR_WORDS[l.color]})`;
+    $('dStatus').textContent = l.status === 'full' ? 'Full' : 'Waiting for players';
+    $('dGuest').classList.toggle('hidden', !!profileToken());
+    $('joinBtn').disabled = l.status === 'full';
+    $('detailsMsg').textContent = '';
+    $('detailsView').classList.remove('hidden');
+    $('joinBtn').focus({ preventScroll: true });
+  }
+  const closeDetails = () => $('detailsView').classList.add('hidden');
+  async function joinLobby() {
+    $('detailsMsg').textContent = '';
+    try {
+      const r = await api(`/api/chess/rooms/${S.detailsCode}/join`, { name: $('joinName').value }, profileHeaders());
+      closeDetails();
+      enterRoom(r);
+    } catch (e) { $('detailsMsg').textContent = e.message; }
   }
 
   // ---- games on this phone (computer, or pass and play) ---------------------------
@@ -201,29 +298,23 @@
     S.ended = null;
     S.overShown = null;
     S.snap = null;
-    S.people = null;
-    S.picked = new Set();
-    $('lobbyCode').textContent = r.code;
-    $('shareBox').open = false;
-    ArcadeQR.forGame($('joinQr'), 'chess.html', r.code, $('joinLink'));
     show('lobby');
     connect();
   }
 
-  // Opening chess.html?room=CODE: from an invite, the Continue row or another
-  // device. Your profile finds your seat, or takes the free one.
+  // Opening chess.html?room=CODE (an invite, the Continue row, another device) or
+  // ?join=CODE (Join a game on the home page). Your profile finds your seat; anyone
+  // else sees the lobby's details first, the same as from List Hosted Games.
   async function openRoom(code) {
-    if (!profileToken()) {
-      setMode('join');
-      $('joinCode').value = code;
-      $('setupMsg').textContent = 'Pick your profile at the top to go straight in, or type your name to join as a guest.';
-      return;
+    if (profileToken()) {
+      try { return enterRoom(await api(`/api/chess/rooms/${code}/seat`, {}, profileHeaders())); } catch { /* not in it yet */ }
     }
     try {
-      enterRoom(await api(`/api/chess/rooms/${code}/seat`, {}, profileHeaders()));
-    } catch (e) {
-      try { enterRoom(await api(`/api/chess/rooms/${code}/join`, {}, profileHeaders())); } catch (e2) { $('setupMsg').textContent = e2.message; }
-    }
+      const r = await fetch('/api/chess/lobbies', { headers: profileHeaders(), cache: 'no-store' });
+      const l = ((await r.json()).lobbies || []).find(x => x.code === code);
+      if (l) return openDetails(l);
+    } catch { /* falls through */ }
+    $('setupMsg').textContent = 'That lobby isn\'t open anymore. Choose List Hosted Games to see the ones that are.';
   }
 
   // ---- the lobby -------------------------------------------------------------------
@@ -232,8 +323,6 @@
     const { code, playerId, token } = S.room;
     return api(`/api/chess/rooms/${code}/${path}`, { playerId, token, ...body });
   };
-  const COLOR_WORDS = { w: 'White', b: 'Black', random: 'a random color' };
-
   async function loadPeople() {
     if (S.people || S.loadingPeople || !profileToken()) return;
     S.loadingPeople = true;
@@ -243,45 +332,43 @@
     S.loadingPeople = false;
     paintPeople();
   }
+  // Only People Selected: everyone with a profile here, to check one, a few or all.
   function paintPeople() {
-    const seated = new Set((S.snap ? S.snap.seats : []).map(x => x.name));
-    const list = (S.people || []).filter(p => !seated.has(p.name));
-    $('invitePanel').classList.toggle('hidden', !list.length || (S.snap && S.snap.seats.length >= 2));
-    LobbyUI.people($('invitePeople'), list, S.picked, () => { $('inviteBtn').disabled = !S.picked.size; });
-    $('inviteBtn').disabled = !S.picked.size;
+    LobbyUI.people($('pickPeople'), S.people || [], S.chosen, () => {});
+    if (S.people && !S.people.length) $('createMsg').textContent = 'Nobody else has a profile here yet.';
   }
 
   function renderLobby(snap) {
     const host = snap.host;
-    $('lobbyWhose').textContent = host ? 'Your game' : `${snap.hostName}'s game`;
-    LobbyUI.seats($('lobbySeats'), snap.seats, { invited: snap.invited, max: 2, canMute: host, onMute: (seat, on) => mute(seat, on),
+    $('lobbyTitle').textContent = host ? 'Your Chess lobby' : `${snap.hostName}'s Chess lobby`;
+    $('lobbyCount').textContent = `${snap.seats.length} of ${snap.max || 2} players · ${snap.settings.who === 'selected' ? 'Only people selected' : 'Anyone can join'}`;
+    LobbyUI.seats($('lobbySeats'), snap.seats, { invited: snap.invited, max: snap.max || 2, canMute: host, onMute: (seat, on) => mute(seat, on),
       onRemove: seat => roomCall('remove', { seat }).then(applySnap, e => toast(e.message)) });
     $('lobbyHost').classList.toggle('hidden', !host);
     $('lobbyGuest').classList.toggle('hidden', host);
     if (host) {
       pressed($('lobbyColorSeg'), 'color', snap.settings.color);
-      $('lobbyStart').disabled = snap.seats.length < 2;
-      $('lobbyStart').textContent = snap.seats.length < 2 ? 'Waiting for someone to join' : 'Start the game';
-      loadPeople();
-      if (S.people) paintPeople();
+      // Lights up only once someone has joined and everyone is ready.
+      const full = snap.seats.length >= (snap.max || 2);
+      $('lobbyStart').disabled = !full || !snap.allReady;
+      $('lobbyStart').textContent = !full ? 'Waiting on players to join...' : !snap.allReady ? 'Waiting on players to be ready...' : 'Players Ready, Start Game!';
     } else {
-      const theirs = snap.settings.color === 'random' ? 'random' : snap.settings.color === 'w' ? 'b' : 'w';
-      $('lobbySettings').replaceChildren(...[`You play as ${COLOR_WORDS[theirs]}`, 'No clock'].map(t => {
-        const span = document.createElement('span'); span.textContent = t; return span;
-      }));
-      $('lobbyWait').textContent = `Waiting for ${snap.hostName} to start…`;
+      const theirs = snap.settings.color === 'random' ? null : COLOR_WORDS[other(snap.settings.color)];
+      $('lobbySettings').textContent = `${theirs ? `You play ${theirs}.` : 'Your color is picked at random when the game starts.'} Each player on their own phone. No clock.`;
+      const me = snap.seats.find(x => x.you);
+      const ready = !!(me && me.ready);
+      $('readyHint').classList.toggle('hidden', ready);
+      $('readyBtn').textContent = ready ? 'Not ready yet' : 'Ready!';
+      $('readyBtn').className = ready ? 'ghost big' : 'primary big';
+      $('lobbyWait').classList.toggle('hidden', !ready);
+      $('lobbyWait').textContent = `Waiting for ${snap.hostName} to start the game…`;
     }
     S.lobbyChat.render(snap.chat, { muted: snap.muted });
   }
 
-  async function invite() {
-    if (!S.picked.size) return;
-    try {
-      const r = await roomCall('invite', { to: [...S.picked] });
-      S.picked.clear();
-      toast(`Invited ${r.sent.map(p => p.name).join(' and ')}. They'll get a notification.`);
-      applySnap(r.state);
-    } catch (e) { toast(e.message); }
+  async function setReady() {
+    const me = S.snap && S.snap.seats.find(x => x.you);
+    try { applySnap(await roomCall('ready', { ready: !(me && me.ready) })); } catch (e) { toast(e.message); }
   }
   async function setColor(color) {
     try { applySnap(await roomCall('settings', { color })); } catch (e) { toast(e.message); }
@@ -299,8 +386,8 @@
     const { code, playerId, token } = S.room;
     S.es = new EventSource(`/api/chess/rooms/${code}/events?playerId=${encodeURIComponent(playerId)}&token=${encodeURIComponent(token)}`);
     S.es.addEventListener('state', e => applySnap(JSON.parse(e.data)));
-    S.es.addEventListener('closed', () => { leaveRoom(); setMode('host'); show('setup'); toast('The host closed the game.'); });
-    S.es.addEventListener('removed', () => { leaveRoom(); setMode('host'); show('setup'); toast('The host took you out of the game.'); });
+    S.es.addEventListener('closed', () => { leaveRoom(); show('setup'); toast('The host closed the lobby.'); });
+    S.es.addEventListener('removed', () => { leaveRoom(); show('setup'); toast('The host took you out of the lobby.'); });
     S.es.onerror = () => {
       // A room that no longer exists (server restarted, game expired) can't come back.
       fetch(`/api/chess/rooms/${code}?playerId=${encodeURIComponent(playerId)}&token=${encodeURIComponent(token)}`)
@@ -739,7 +826,7 @@
     else if (S.room && S.state && !S.ended) toast('Your game is saved. Find it in Continue on the arcade\'s home page.');
     leaveRoom();
     $('gameChat').classList.add('hidden');
-    if (S.mode === 'room') setMode('host');
+    if (S.mode === 'room') setMode('ai');
     S.state = null;
     show('setup');
   }
@@ -819,9 +906,10 @@
       emoji: '🎮',
       title: 'Ways to play',
       html: `<table>
-          <tr><td>🤖 vs Computer</td><td>Easy, Medium or Hard. Win to get on the 🏆 board.</td></tr>
-          <tr><td>📱 Share a phone</td><td>Two players, one phone. The board turns to face whoever's move it is.</td></tr>
-          <tr><td>👨‍👩‍👧 With the family</td><td>Choose who to play with and they get an invite, or share a link with a guest. Each of you plays on your own phone, with a chat under the board, and the game is saved until you finish it.</td></tr>
+          <tr><td>🤖 VS Computer</td><td>Easy, Medium or Hard. Win to get on the 🏆 board.</td></tr>
+          <tr><td>📱 Multiplayer-Single device</td><td>Two players take turns sharing this device. The board turns to face whoever's move it is.</td></tr>
+          <tr><td>📱📱 Create a game lobby</td><td>Each player on their own phone. Choose who can join, then start once everyone taps Ready. There's a chat under the board, and the game is saved until you finish it.</td></tr>
+          <tr><td>🔎 List Hosted Games</td><td>The lobbies waiting for players. Tap one to see who's in and join.</td></tr>
         </table>
         <div class="tut-tip">Tap <b>?</b> at the top any time to see this again.</div>`
     }
@@ -834,14 +922,25 @@
   for (const b of $('colorSeg').children) b.addEventListener('click', () => { S.colorPref = b.dataset.color; pressed($('colorSeg'), 'color', S.colorPref); });
   for (const b of $('scoreBoardSeg').children) b.addEventListener('click', () => openScores(b.dataset.board));
   $('goBtn').addEventListener('click', start);
-  $('joinCode').addEventListener('keydown', e => { if (e.key === 'Enter') start(); });
+  for (const b of $('whoSeg').children) b.addEventListener('click', () => setWho(b.dataset.who));
+  for (const b of $('createColorSeg').children) b.addEventListener('click', () => { S.createColor = b.dataset.color; pressed($('createColorSeg'), 'color', S.createColor); });
+  $('createBtn').addEventListener('click', createLobby);
+  $('createBack').addEventListener('click', () => show('setup'));
+  $('findBack').addEventListener('click', () => show('setup'));
+  $('joinBtn').addEventListener('click', joinLobby);
+  $('detailsClose').addEventListener('click', closeDetails);
+  $('joinName').addEventListener('keydown', e => { if (e.key === 'Enter') joinLobby(); });
+  $('readyBtn').addEventListener('click', setReady);
   $('lobbyLeave').addEventListener('click', backToSetup);
-  $('inviteBtn').addEventListener('click', invite);
   $('lobbyStart').addEventListener('click', startRoom);
   for (const b of $('lobbyColorSeg').children) b.addEventListener('click', () => setColor(b.dataset.color));
   S.lobbyChat = LobbyUI.chat($('lobbyChat'), { send: sendChat });
   S.gameChat = LobbyUI.chat($('gameChat'), { send: sendChat });
-  if (typeof ArcadeProfile !== 'undefined') ArcadeProfile.onChange(() => { if (!S.room) setMode(S.mode === 'room' ? 'host' : S.mode); });
+  if (typeof ArcadeProfile !== 'undefined') ArcadeProfile.onChange(() => {
+    if (!$('create').classList.contains('hidden')) $('hostNameRow').classList.toggle('hidden', !!profileToken());
+    if (!$('detailsView').classList.contains('hidden')) $('dGuest').classList.toggle('hidden', !!profileToken());
+    if (!$('find').classList.contains('hidden')) loadLobbies();
+  });
   $('suggestBtn').addEventListener('click', suggest);
   $('undoBtn').addEventListener('click', undo);
   $('resignBtn').addEventListener('click', () => {
@@ -883,6 +982,8 @@
     atMenu: () => !$('setup').classList.contains('hidden'),
     back: () => {
       $('overView').classList.add('hidden');
+      closeDetails();
+      if (!$('create').classList.contains('hidden') || !$('find').classList.contains('hidden')) return show('setup');
       backToSetup();
     },
     // A game on two phones is saved, so leaving it needs no question.

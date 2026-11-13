@@ -82,6 +82,13 @@ Know-It-All, the party games, Rambler and Shuffle Scuffle.
 - **Tests:** `test/chess.test.js` (the lobby, invites, the Invites row, host-only settings, the chat, its filter, mute,
   the burst limit, seats following a profile, Continue, leaving) and `test/browser/chess-lobby.spec.js` (two browsers:
   host, join from the link, chat both ways, start).
+- **The maintainer's second round (2026-11-12), from the storyboard:** no codes and no share link. Choose game mode lists
+  VS Computer, Multiplayer-Single device, and under Multiplayer-Multiple devices, Create a game lobby and List Hosted
+  Games. **Who can join** is anyone at the arcade or Only People Selected (`settings.who`, `settings.allowed`; the
+  people picked are invited at creation, and `rooms.lobbies(profile)` and `/api/lobby` only list it for them). Tapping
+  a lobby shows its details before joining. Whoever joins taps **Ready!** (`POST /rooms/:code/ready`), and the host's
+  start only works once everyone is ready (`allReady` in the snapshot). Open seats animate their dots. All the wording
+  is the maintainer's, from the storyboard's Copy all.
 - **Not yet:** the wording waits for the maintainer's rewrite, and a restart test (the rooms are read back at startup,
   but no test restarts the server).
 

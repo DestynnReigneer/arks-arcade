@@ -22,7 +22,9 @@ const GAMES = {
 // Each game keeps its rooms in its own module; this reads them without
 // changing anything. status: open (can join), playing (wait for the next
 // one), full.
-function collect() {
+// viewer: the profile asking (from its token), so a lobby only open to the people
+// its host picked is listed only for them.
+function collect(viewer = null) {
   const out = [];
   const add = (game, room) => out.push({ game, ...GAMES[game], href: `${GAMES[game].page}?join=${room.code}`, ...room });
 
@@ -39,11 +41,10 @@ function collect() {
 
   const chess = require('../chess/rooms');
   // Only lobbies: a game in progress can be saved for weeks, and it's nobody else's.
-  for (const r of chess._rooms.values()) {
-    if (r.phase !== 'lobby') continue;
+  for (const l of chess.lobbies(viewer)) {
     add('chess', {
-      code: r.code, host: (r.players.find(p => p.id === r.hostId) || r.players[0] || {}).name || '', players: r.players.length, max: 2,
-      status: r.players.length >= 2 ? 'full' : 'open', detail: 'Two phones'
+      code: l.code, host: l.host, players: l.count, max: l.max, status: l.status,
+      detail: `Multiplayer-Multiple devices${l.who === 'selected' ? ' · People selected' : ''}`
     });
   }
 
@@ -113,7 +114,10 @@ function publicUrl() {
 
 const router = express.Router();
 
-router.get('/lobby', (req, res) => res.json({ rooms: collect(), publicUrl: publicUrl() }));
+router.get('/lobby', (req, res) => {
+  const viewer = require('./profiles').verify(req.get('X-Profile-Token')) || null;
+  res.json({ rooms: collect(viewer), publicUrl: publicUrl() });
+});
 
 // A QR code as SVG. Only for links to this arcade, so it can't be used to
 // make codes for anything else.

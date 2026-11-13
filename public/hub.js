@@ -172,7 +172,9 @@
 
   async function loadLobby() {
     try {
-      const { rooms } = await (await fetch('/api/lobby')).json();
+      // With a profile, lobbies its host opened only to the people they picked show up too.
+      const token = typeof ArcadeProfile !== 'undefined' ? ArcadeProfile.token() : null;
+      const { rooms } = await (await fetch('/api/lobby', { headers: token ? { 'X-Profile-Token': token } : {}, cache: 'no-store' })).json();
       const list = $('lobbyList');
       list.innerHTML = '';
       for (const r of rooms) {
