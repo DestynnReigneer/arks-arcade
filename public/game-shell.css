@@ -64,3 +64,8 @@ body[data-state="over"] .pad, body[data-state="over"] .keys-hint { display: none
   header.top { gap: 6px; }
   header.top h1 { font-size: 14px; letter-spacing: 0; }
 }
+
+/* While a game is running, its setup choices (mode, speed, level) step aside so the
+   board can use the room; they're back between games (2026-11-13). Not on the TV,
+   which lays the page out its own way. */
+html:not(.tv) body[data-state="playing"] > .options { display: none; }
