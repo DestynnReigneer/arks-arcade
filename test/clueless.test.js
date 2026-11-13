@@ -274,6 +274,36 @@ async function run({ base, root }) {
   ok('and deleted, clues and all', (await api('/admin/packs', 'GET', null, ADMIN)).data.length === 0 &&
     (await api('/admin/summary', 'GET', null, ADMIN)).data.kids === 0);
 
+  console.log('\n-- clueless: letters that follow a profile --');
+  const top = async (p, method = 'GET', body, headers = {}) => {
+    const res = await fetch(base + '/api' + p, { method, headers: { ...(body ? { 'Content-Type': 'application/json' } : {}), ...headers }, body: body ? JSON.stringify(body) : undefined });
+    return { status: res.status, data: await res.json().catch(() => null) };
+  };
+  const tokens = [];
+  for (const name of ['Sync Ana', 'Sync Ben']) {
+    const asked = await top('/profiles', 'POST', { name, avatar: 'shiba:1' });
+    await top(`/profiles/admin/${asked.data.id}/approve`, 'POST', {}, ADMIN);
+    tokens.push((await top(`/profiles/${asked.data.id}/use`, 'POST', {})).data.token);
+  }
+  const [anaT, benT] = tokens;
+  const mine = await api('/start', 'POST', { level: 'mini', profileToken: anaT });
+  ok('a profile\'s daily crossword is kept on the arcade', mine.data.syncs === true && mine.data.progress === null);
+  const mineAns = (await api(`/test/answer/${mine.data.runId}`)).data.letters;
+  const n = mine.data.puzzle.size * mine.data.puzzle.size;
+  const typed = Array.from({ length: n }, (_, i) => (i < 3 ? (/^[A-Z]$/.test(mineAns[i]) ? mineAns[i] : 'Q') : ''));
+  const sent = await api(`/run/${mine.data.runId}/progress`, 'POST', { letters: typed, pencil: [true], profileToken: anaT });
+  ok('its letters can be saved', sent.status === 200 && sent.data.saved === true);
+  const reopened = await api('/start', 'POST', { level: 'mini', profileToken: anaT });
+  ok('…and opening it again (on any device) hands them back',
+    reopened.data.runId === mine.data.runId && reopened.data.progress && reopened.data.progress.letters.slice(0, 3).join('') === typed.slice(0, 3).map((l, i) => (/^[A-Z]$/.test(mineAns[i]) ? l : '')).join(''));
+  ok('another profile can\'t save over them', (await api(`/run/${mine.data.runId}/progress`, 'POST', { letters: typed, profileToken: benT })).status === 403);
+  ok('letters that don\'t fit the crossword are refused', (await api(`/run/${mine.data.runId}/progress`, 'POST', { letters: ['A'], profileToken: anaT })).status === 400);
+  const guestRun = await api('/start', 'POST', { level: 'mini' });
+  ok('a guest\'s letters stay on the device', guestRun.data.syncs === false &&
+    (await api(`/run/${guestRun.data.runId}/progress`, 'POST', { letters: typed, profileToken: anaT })).status === 409);
+  const freeRun = await api('/start', 'POST', { level: 'mini', free: true, profileToken: anaT });
+  ok('…and so does a free board', freeRun.data.syncs === false);
+
   console.log(`
   ${pass} passed, ${fail} failed`);
   return { pass, fail };
