@@ -823,11 +823,14 @@ async function run({ base, root }) {
     !(await wl('/scores/chess?board=easy')).data.some(r => r.initials === 'CHE'));
 
   // ---- two-phone chess -------------------------------------------------------------
+  // (The lobby, invites and chat have their own suite, test/chess.test.js.)
   const hostChess = (await wl('/chess/rooms', 'POST', { name: 'Sam', color: 'w' })).data;
-  ok('a chess room has a code and a color', /^[A-Z0-9]{4}$/.test(hostChess.code) && hostChess.color === 'w');
+  ok('a chess room has a code', /^[A-Z0-9]{4}$/.test(hostChess.code));
   const guestChess = (await wl(`/chess/rooms/${hostChess.code}/join`, 'POST', { name: 'Alex' })).data;
-  ok('the guest gets the other color', guestChess.color === 'b');
   ok('a third player is turned away', (await wl(`/chess/rooms/${hostChess.code}/join`, 'POST', { name: 'Kim' })).status === 409);
+  await wl(`/chess/rooms/${hostChess.code}/ready`, 'POST', { playerId: guestChess.playerId, token: guestChess.token, ready: true });
+  const begun = (await wl(`/chess/rooms/${hostChess.code}/start`, 'POST', { playerId: hostChess.playerId, token: hostChess.token })).data;
+  ok('the host starts it with the color they chose, and the guest gets the other', begun.you === 'w' && begun.players.b.name === 'Alex');
   const cmove = (who, from, to) => wl(`/chess/rooms/${hostChess.code}/move`, 'POST', { playerId: who.playerId, token: who.token, from, to });
   ok('Black cannot move first', (await cmove(guestChess, 'e7', 'e5')).status === 409);
   ok('an illegal move is refused', (await cmove(hostChess, 'e2', 'e5')).status === 400);
