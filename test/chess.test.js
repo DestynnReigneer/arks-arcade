@@ -90,6 +90,17 @@ async function run({ base }) {
 
   console.log('\n-- chess: playing --');
   ok('moves wait for the game to start', (await api(`${room(code)}/move`, 'POST', { ...seat(host), from: 'e2', to: 'e4' })).status === 409);
+
+  console.log('\n-- chess: ready, then start --');
+  s = (await api(`${room(code)}?playerId=${host.playerId}&token=${host.token}`)).data;
+  ok('the host is always ready, whoever joins starts out not ready', s.seats.find(x => x.host).ready === true &&
+    s.seats.find(x => !x.host).ready === false && s.allReady === false);
+  ok('the host can\'t start until everyone is ready', (await api(`${room(code)}/start`, 'POST', seat(host))).status === 409);
+  s = (await api(`${room(code)}/ready`, 'POST', { ...seat(milo), ready: true })).data;
+  ok('tapping Ready marks the seat ready', s.seats.find(x => !x.host).ready === true && s.allReady === true);
+  s = (await api(`${room(code)}/ready`, 'POST', { ...seat(milo), ready: false })).data;
+  ok('…and tapping it again takes it back', s.allReady === false);
+  await api(`${room(code)}/ready`, 'POST', { ...seat(milo), ready: true });
   s = (await api(`${room(code)}/start`, 'POST', seat(host))).data;
   ok('the host starts it, with the color they chose', s.phase === 'playing' && s.you === 'b' && s.players.w.name === 'Chess Milo');
   const move = (who, from, to) => api(`${room(code)}/move`, 'POST', { ...seat(who), from, to });
@@ -142,6 +153,24 @@ async function run({ base }) {
   ok('a player leaving the lobby frees the seat', s.seats.length === 1 && s.chat.some(m => m.system && m.text === 'Friend left'));
   ok('the host leaving closes the room', (await api(`${room(h2.code)}/leave`, 'POST', seat(h2))).data.closed &&
     (await api(`${room(h2.code)}?playerId=${h2.playerId}&token=${h2.token}`)).status === 404);
+
+  console.log('\n-- chess: who can join --');
+  ok('Only People Selected needs at least one person', (await api('/chess/rooms', 'POST', { who: 'selected', allowed: [] }, Sam.h)).status === 400);
+  ok('…and the host\'s profile', (await api('/chess/rooms', 'POST', { name: 'X', who: 'selected', allowed: [Milo.id] })).status === 401);
+  const only = (await api('/chess/rooms', 'POST', { who: 'selected', allowed: [Milo.id] }, Sam.h)).data;
+  const listFor = async h => (await api('/chess/lobbies', 'GET', undefined, h || {})).data.lobbies.map(l => l.code);
+  ok('a lobby for picked people is listed for them', (await listFor(Milo.h)).includes(only.code));
+  ok('…and not for anyone else, with or without a profile', !(await listFor(Kim.h)).includes(only.code) && !(await listFor()).includes(only.code));
+  ok('…the same on the home page\'s Join a game', (await api('/lobby', 'GET', undefined, Milo.h)).data.rooms.some(r => r.code === only.code) &&
+    !(await api('/lobby', 'GET', undefined, Kim.h)).data.rooms.some(r => r.code === only.code));
+  ok('the people picked get an invite', (await api('/invites', 'GET', undefined, Milo.h)).data.invites.some(i => i.href.includes(only.code)));
+  ok('someone else can\'t join it', (await api(`${room(only.code)}/join`, 'POST', {}, Kim.h)).status === 403 &&
+    (await api(`${room(only.code)}/join`, 'POST', { name: 'Sneaky' })).status === 403);
+  const picked = await api(`${room(only.code)}/join`, 'POST', {}, Milo.h);
+  ok('…but someone picked can', picked.status === 200);
+  s = (await api(`${room(only.code)}?playerId=${only.playerId}&token=${only.token}`)).data;
+  ok('the lobby says only the people selected can join', s.settings.who === 'selected' && s.max === 2);
+  await api(`${room(only.code)}/leave`, 'POST', seat(only));
 
   console.log(`\n  ${pass} passed, ${fail} failed`);
   return { pass, fail };

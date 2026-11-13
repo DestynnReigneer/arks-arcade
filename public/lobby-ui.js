@@ -27,20 +27,23 @@ window.LobbyUI = (() => {
     return a;
   }
 
-  // Who's in, who's been invited, and the empty seats.
+  // Who's in, who's been invited, and the empty seats. A seat with `ready` (true or
+  // false) says Ready or Not ready under the name; an open seat's dots grow and start
+  // over while it waits for someone.
   function seats(el, list, { invited = [], max = 2, canMute = false, onMute, onRemove } = {}) {
     el.replaceChildren();
     for (const s of list) {
-      const box = make('div', 'lb-seat');
-      box.append(avatar(s.name), make('span', 'lb-name', s.you ? 'You' : s.name),
-        make('span', 'lb-tag', s.host ? 'HOST' : s.muted ? 'MUTED' : s.online ? 'HERE' : 'AWAY'));
+      const box = make('div', 'lb-seat' + (s.ready === false ? ' waiting' : ''));
+      const tag = s.host ? 'HOST' : s.ready === true ? 'READY' : s.ready === false ? 'NOT READY' : s.online ? 'HERE' : 'AWAY';
+      box.append(avatar(s.name), make('span', 'lb-name', s.you ? 'You' : s.name), make('span', 'lb-tag', (s.muted ? '🔇 ' : '') + tag));
       if (canMute && !s.host && !s.you) {
         const b = make('button', 'lb-mute', s.muted ? 'Unmute' : 'Mute');
         b.type = 'button';
+        b.title = s.muted ? 'Show their chat messages again' : 'Hide their chat messages from everyone';
         b.addEventListener('click', () => onMute(s.id, !s.muted));
         box.append(b);
         if (onRemove) {
-          const x = make('button', 'lb-mute', 'Remove');
+          const x = make('button', 'lb-mute', 'Remove Player');
           x.type = 'button';
           x.addEventListener('click', () => onRemove(s.id));
           box.append(x);
@@ -58,7 +61,9 @@ window.LobbyUI = (() => {
     }
     for (; open > 0; open--) {
       const box = make('div', 'lb-seat empty');
-      box.append(avatar('+', true), make('span', 'lb-name', 'Open'), make('span', 'lb-tag', ''));
+      const name = make('span', 'lb-name lb-open', 'Open');
+      name.append(make('span', 'lb-dots'));
+      box.append(avatar('+', true), name, make('span', 'lb-tag', ''));
       el.append(box);
     }
   }

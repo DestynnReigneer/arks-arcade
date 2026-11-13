@@ -36,16 +36,24 @@
 <!-- ============ setup ============ -->
 <section id="setup">
   <div class="panel">
-    <h2>How are you playing?</h2>
-    <div class="seg" id="modeSeg">
-      <button data-mode="ai" aria-pressed="true">🤖 vs Computer</button>
-      <button data-mode="local" aria-pressed="false">📱 Share a phone</button>
-      <button data-mode="host" aria-pressed="false" class="no-tv">👨‍👩‍👧 With the family</button>
-      <button data-mode="join" aria-pressed="false" class="no-tv">🔗 Join with a code</button>
+    <h2>Choose game mode</h2>
+    <div class="mode-list" id="modeSeg">
+      <button class="mode-card" data-mode="ai" aria-pressed="true">
+        <span class="mi">🤖</span><span><b>VS Computer</b><small>Difficulty: Easy, Medium or Hard.</small></span></button>
+      <button class="mode-card" data-mode="local" aria-pressed="false">
+        <span class="mi"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="10" y="3" width="12" height="26" rx="3"/><path d="M14.5 25h3"/></svg></span>
+        <span><b>Multiplayer-Single device</b><small>Two players take turns sharing this device.</small></span></button>
+      <div class="mode-label no-tv">Multiplayer-Multiple devices</div>
+      <button class="mode-card no-tv" data-mode="host" aria-pressed="false">
+        <span class="mi"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="11" height="22" rx="2.5"/><rect x="18" y="4" width="11" height="22" rx="2.5"/><path d="M7.5 24h2"/><path d="M22.5 22h2"/></svg></span>
+        <span><b>Create a game lobby</b><small>Set up your hosted game settings and rules.</small></span></button>
+      <button class="mode-card no-tv" data-mode="find" aria-pressed="false">
+        <span class="mi"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h14"/><path d="M4 14h10"/><path d="M4 20h8"/><circle cx="21" cy="19" r="6"/><path d="m25.5 23.5 4 4"/></svg></span>
+        <span><b>List Hosted Games</b><small>Live games lobby waiting to start or started with vacancies.</small></span></button>
     </div>
 
     <div id="aiSetup">
-      <p class="hint">Play the computer. It thinks for a moment on harder levels.</p>
+      <div class="lb-section-label">Difficulty</div>
       <div class="seg" id="levelSeg">
         <button data-level="easy" aria-pressed="false">🐣 Easy</button>
         <button data-level="medium" aria-pressed="true">🙂 Medium</button>
@@ -54,18 +62,7 @@
     </div>
 
     <div id="localSetup" class="hidden">
-      <p class="hint">Two players, one phone. The board turns around to face whoever's move it is.</p>
-    </div>
-
-    <div id="hostSetup" class="hidden">
-      <p class="hint">Each player on their own phone. Next you'll choose who to play with, and they'll get an invite.</p>
-      <label id="hostNameRow">Your name<input id="hostName" maxlength="16" placeholder="e.g. Sam"></label>
-    </div>
-
-    <div id="joinSetup" class="hidden">
-      <p class="hint">Get the 4-letter code from whoever is hosting.</p>
-      <label>Game code<input id="joinCode" maxlength="4" placeholder="ABCD" autocapitalize="characters" class="code-input"></label>
-      <label>Your name<input id="joinName" maxlength="16" placeholder="e.g. Alex"></label>
+      <p class="hint">The board turns around to face whoever's move it is.</p>
     </div>
 
     <div id="colorPick">
@@ -82,10 +79,50 @@
   </div>
 </section>
 
-<!-- ============ lobby (two phones) ============ -->
+<!-- ============ create a lobby ============ -->
+<section id="create" class="hidden">
+  <div class="panel">
+    <h2>Set Chess Settings</h2>
+    <div class="lb-section-label">How Multiplayer works</div>
+    <p class="hint">Each player uses their own phone. You'll get a notification when it's your move (if notifications are turned on), so a game can take days.</p>
+    <label id="hostNameRow">Your name<input id="hostName" maxlength="16" placeholder="e.g. Sam"></label>
+
+    <div class="lb-section-label">Who can join</div>
+    <div class="mode-list" id="whoSeg">
+      <button class="mode-card" data-who="anyone" aria-pressed="true">
+        <span class="mi">🎮</span><span><b>Anyone at the arcade</b><small>It shows up in List Hosted Games</small></span></button>
+      <button class="mode-card" data-who="selected" aria-pressed="false" id="whoSelected">
+        <span class="mi">✅</span><span><b>Only People Selected</b></span></button>
+    </div>
+    <div class="lb-people hidden" id="pickPeople"></div>
+
+    <div class="lb-section-label">Choose an option listed below:</div>
+    <div class="seg" id="createColorSeg">
+      <button data-color="w" aria-pressed="true">♔ White</button>
+      <button data-color="random" aria-pressed="false">🎲 Random</button>
+      <button data-color="b" aria-pressed="false">♚ Black</button>
+    </div>
+
+    <div class="msg" id="createMsg"></div>
+    <button class="primary big" id="createBtn">Create lobby</button>
+    <button class="ghost big" id="createBack">Back</button>
+  </div>
+</section>
+
+<!-- ============ list hosted games ============ -->
+<section id="find" class="hidden">
+  <div class="panel">
+    <h2>Available Chess lobbies</h2>
+    <ul class="lb-rows" id="lobbyRows"></ul>
+    <p class="hint hidden" id="findEmpty">Nobody has a Chess lobby open right now. Create one and invite someone.</p>
+    <button class="ghost big" id="findBack">Back</button>
+  </div>
+</section>
+
+<!-- ============ the lobby (each player on their own phone) ============ -->
 <section id="lobby" class="hidden">
   <div class="panel">
-    <div class="lb-head"><span class="lb-ic">♞</span><div><b>CHESS</b><p class="hint" id="lobbyWhose"></p></div></div>
+    <div class="lb-head"><span class="lb-ic">♞</span><div><b id="lobbyTitle">Your Chess lobby</b><p class="lb-count-line" id="lobbyCount"></p></div></div>
     <div class="lb-seats" id="lobbySeats"></div>
 
     <!-- what the host sees -->
@@ -96,34 +133,23 @@
         <button data-color="random" aria-pressed="false">🎲 Random</button>
         <button data-color="b" aria-pressed="false">♚ Black</button>
       </div>
-      <div id="invitePanel" class="hidden">
-        <div class="hint" style="margin-top:12px">Choose who to play with</div>
-        <div class="lb-people" id="invitePeople"></div>
-        <button class="ghost big" id="inviteBtn" disabled>Invite</button>
-      </div>
-      <details class="lb-share" id="shareBox">
-        <summary>🔗 Share a link, for a guest or a friend who isn't in the family</summary>
-        <div class="code" id="lobbyCode">----</div>
-        <img class="join-qr hidden" id="joinQr" width="150" height="150" alt="QR code to join"
-             style="width:150px;height:150px;background:#fff;padding:6px;border-radius:10px;margin:10px auto 2px;display:block">
-        <div class="join-link" id="joinLink" style="font-size:11px;opacity:0.65;text-align:center;word-break:break-all"></div>
-        <div class="hint">Scan it, open the link, or go to Chess, choose Join with a code, and type the code in.</div>
-      </details>
-      <button class="primary big" id="lobbyStart" disabled>Start the game</button>
+      <button class="primary big" id="lobbyStart" disabled>Waiting on players to join...</button>
     </div>
 
     <!-- what everyone else sees -->
     <div id="lobbyGuest" class="hidden">
-      <div class="lb-ro" id="lobbySettings"></div>
-      <div class="lb-wait" id="lobbyWait"></div>
+      <p class="hint" id="lobbySettings"></p>
+      <p class="hint" id="readyHint">When you're ready, tap the Ready! button.</p>
+      <button class="primary big" id="readyBtn">Ready!</button>
+      <div class="lb-wait hidden" id="lobbyWait"></div>
     </div>
 
+    <div class="lb-section-label">Chat</div>
     <div id="lobbyChat"></div>
-    <button class="ghost big" id="lobbyLeave">Leave</button>
+    <button class="ghost big" id="lobbyLeave">Leave lobby</button>
   </div>
 </section>
 
-<!-- ============ game ============ -->
 <section id="game" class="hidden">
   <div class="player-bar" id="topBar">
     <span class="p-name" id="topName"></span>
@@ -156,6 +182,27 @@
 </section>
 
 <!-- ============ overlays ============ -->
+<div class="overlay hidden" id="detailsView" role="dialog" aria-labelledby="detailsTitle">
+  <div class="card-panel">
+    <h2 id="detailsTitle">Dest's Chess lobby</h2>
+    <div class="lb-facts">
+      <div><small>PLAYERS</small><span id="dPlayers"></span></div>
+      <div><small>HOW</small><span>Each player on their own phone. You'll get a notification when it's your move.</span></div>
+      <div><small>YOU PLAY</small><span id="dYou"></span></div>
+      <div><small>STATUS</small><span id="dStatus"></span></div>
+    </div>
+    <div id="dGuest" class="hidden">
+      <p class="hint">Pick your profile to enter, or type your name to join as a guest.</p>
+      <label>Your name<input id="joinName" maxlength="16" placeholder="e.g. Alex"></label>
+    </div>
+    <div class="msg" id="detailsMsg"></div>
+    <div class="stack">
+      <button class="primary" id="joinBtn">Join lobby</button>
+      <button class="ghost" id="detailsClose">Not now</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay hidden" id="promoView">
   <div class="card-panel center">
     <h2>Promote your pawn</h2>

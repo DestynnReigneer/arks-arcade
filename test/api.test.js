@@ -828,6 +828,7 @@ async function run({ base, root }) {
   ok('a chess room has a code', /^[A-Z0-9]{4}$/.test(hostChess.code));
   const guestChess = (await wl(`/chess/rooms/${hostChess.code}/join`, 'POST', { name: 'Alex' })).data;
   ok('a third player is turned away', (await wl(`/chess/rooms/${hostChess.code}/join`, 'POST', { name: 'Kim' })).status === 409);
+  await wl(`/chess/rooms/${hostChess.code}/ready`, 'POST', { playerId: guestChess.playerId, token: guestChess.token, ready: true });
   const begun = (await wl(`/chess/rooms/${hostChess.code}/start`, 'POST', { playerId: hostChess.playerId, token: hostChess.token })).data;
   ok('the host starts it with the color they chose, and the guest gets the other', begun.you === 'w' && begun.players.b.name === 'Alex');
   const cmove = (who, from, to) => wl(`/chess/rooms/${hostChess.code}/move`, 'POST', { playerId: who.playerId, token: who.token, from, to });
