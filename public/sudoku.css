@@ -89,3 +89,69 @@ body[data-state="over"] .sd-tools, body[data-state="over"] .sd-pad { display: no
   .sd-tools { gap: 5px; }
   .sd-tool small { font-size: 9.5px; }
 }
+
+/* ---- No scrolling while you play (2026-11-13) --------------------------------------
+   sudoku.js groups the board and the rest into .sd-stage (.sd-wrap and .sd-side), off
+   the TV only. On a phone they stay one column and, while a puzzle is going, fit
+   between the top bar and the bottom of the screen: the board as big as the space
+   allows, the tools and the numbers under it, and the two settings in the top bar's
+   menu. On a computer the board fills the height on the left and the rest sits beside
+   it, lined up with the ends of the top bar. The finished-puzzle screen scrolls as
+   before. */
+html:not(.tv) .sd-stage, html:not(.tv) .sd-side { display: contents; }
+html:not(.tv) .sd-wrap { container-type: size; }
+
+@media (max-width: 899px) {
+  html:not(.tv) body { display: flex; flex-direction: column; }
+  html:not(.tv) #levelSeg { order: 1; }
+  html:not(.tv) .sd-side > .hud { order: 2; }
+  html:not(.tv) #over { order: 3; }
+  html:not(.tv) .sd-wrap { order: 4; }
+  html:not(.tv) .sd-tools { order: 5; }
+  html:not(.tv) .sd-pad { order: 6; }
+  html:not(.tv) .sd-settings { order: 7; }
+  html:not(.tv) .keys-hint { order: 8; }
+  html:not(.tv) .sd-wrap { aspect-ratio: 1; height: auto; }
+
+  html:not(.tv):has(body:not([data-state="over"])) { height: 100%; overflow: hidden; }
+  html:not(.tv) body:not([data-state="over"]) { height: 100dvh; overflow: hidden; padding-bottom: 0; box-sizing: border-box; }
+  html:not(.tv) body:not([data-state="over"]) > * { flex: none; }
+  html:not(.tv) body:not([data-state="over"]) #levelSeg { margin: 0 0 6px; }
+  html:not(.tv) body:not([data-state="over"]) .sd-side > .hud { margin: 0 0 6px; }
+  html:not(.tv) body:not([data-state="over"]) .sd-wrap {
+    flex: 1 1 auto; min-height: 0; aspect-ratio: auto; max-width: none; width: 100%; display: grid; place-items: center;
+  }
+  html:not(.tv) body:not([data-state="over"]) .sd-board { width: min(100cqw, 100cqh); }
+  html:not(.tv) body:not([data-state="over"]) .sd-cover { inset: auto; left: 50%; top: 50%; width: min(100cqw, 100cqh); height: min(100cqw, 100cqh); transform: translate(-50%, -50%); }
+  html:not(.tv) body:not([data-state="over"]) .sd-tools { max-width: none; margin: 8px 0 0; }
+  html:not(.tv) body:not([data-state="over"]) .sd-pad { max-width: none; margin: 6px 0 max(10px, env(safe-area-inset-bottom)); }
+  html:not(.tv) body:not([data-state="over"]) .sd-num { height: 50px; }
+  html:not(.tv) body:not([data-state="over"]) .sd-settings,
+  html:not(.tv) body:not([data-state="over"]) .keys-hint,
+  html:not(.tv) body:not([data-state="over"]) .fb-corner { display: none; }
+}
+
+@media (min-width: 900px) {
+  html:not(.tv) body {
+    max-width: none; padding-left: 0; padding-right: 0; padding-bottom: 0;
+    --bar-w: calc(min(1100px, 100vw) - 32px); --gap: 24px;
+    --board: clamp(360px, min(calc(100dvh - 76px - 44px - 16px), calc(var(--bar-w) - var(--gap) - 340px)), 860px);
+  }
+  html:not(.tv) body > header.top, html:not(.tv) body > #over { width: var(--bar-w); margin-left: auto; margin-right: auto; box-sizing: border-box; }
+  html:not(.tv) .sd-stage {
+    display: grid; grid-template-columns: var(--board) minmax(0, 1fr); column-gap: var(--gap);
+    width: var(--bar-w); height: var(--board); margin: 6px auto 16px;
+  }
+  html:not(.tv) .sd-wrap { max-width: none; width: var(--board); height: var(--board); margin: 0; }
+  html:not(.tv) .sd-side { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+  html:not(.tv) .sd-side > * { flex: none; max-width: none; }
+  html:not(.tv) .sd-side #levelSeg { margin: 0 0 12px; }
+  html:not(.tv) .sd-side > .hud { margin: 0 0 14px; }
+  html:not(.tv) .sd-side .sd-tools { margin: 0; }
+  /* The numbers as a phone keypad: three rows of three, filling the room left. */
+  html:not(.tv) .sd-side .sd-pad { flex: 1 1 auto; min-height: 0; margin: 12px 0 0; grid-template-columns: repeat(3, 1fr); grid-auto-rows: 1fr; }
+  html:not(.tv) .sd-side .sd-num { height: auto; min-height: 0; font-size: 30px; }
+  html:not(.tv) .sd-side .sd-settings { margin: 12px 0 0; }
+  html:not(.tv) .sd-side .keys-hint { margin: 8px 0 0; text-align: left; }
+  html:not(.tv) body[data-state="over"] .sd-stage { height: auto; }
+}
