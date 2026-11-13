@@ -77,7 +77,14 @@ test('Clueless Crosswords: steady squares, crossed-off clues and New board', asy
   await page.locator('#dirBtn').click();
   const down = await page.locator('.cl-cell.sel').evaluate(e => getComputedStyle(e).backgroundColor);
   if (await page.locator('#dirBtn small').textContent() === 'Down') expect(down).not.toBe(across);
+  // On a phone the clue lists are in the top bar's menu, so open them there first.
+  if (!(await page.locator('#acrossList li').first().isVisible())) {
+    await page.locator('.ah-waffle').click();
+    await page.getByRole('button', { name: /All the clues/ }).click();
+  }
   await page.locator('#acrossList li').first().click();
+  // Picking a clue there closes the list, back to the grid.
+  await expect(page.locator('body')).not.toHaveClass(/cl-clues-open/);
 
   // Type the first across word right: it's crossed off, and no square moved.
   const first = await page.evaluate(() => {
