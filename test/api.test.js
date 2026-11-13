@@ -1003,7 +1003,7 @@ async function run({ base, root }) {
   if (over.canSave) {
     const saved = await spinPost(`/run/${solo.id}/save`, { initials: 'KIM', score: 199999 });
     ok('the server saves its own total, not one the page sends', saved.status === 201 && saved.data.score === over.players[0].total);
-    ok('…once', (await spinPost(`/run/${solo.id}/save`, { initials: 'KIM' })).status === 409);
+    ok('…once, and the game is gone after', (await spinPost(`/run/${solo.id}/save`, { initials: 'KIM' })).status === 404);
   }
   ok('the page can\'t post a Spin & Solve score itself', (await wl('/scores/spinsolve', 'POST', { initials: 'BAD', score: 150000, board: 'solo' })).status === 403);
   ok('…not even by claiming to be the server', (await wl('/scores/spinsolve', 'POST', { initials: 'BAD', score: 150000, board: 'solo', fromServer: true })).status === 403);
@@ -1016,6 +1016,28 @@ async function run({ base, root }) {
   await spinPost(`/run/${duo.id}/next`);
   ok('…and a game for two never goes on the board', (await spinPost(`/run/${duo.id}/save`, { initials: 'KIM' })).status === 409);
   ok('a made-up game is refused', (await spinPost('/run/' + 'f'.repeat(32) + '/spin')).status === 404);
+  // One address can't fill the arcade with games: an eleventh drops its oldest.
+  const spinMany = [];
+  for (let i = 0; i < 11; i++) spinMany.push((await spinPost('/run/start', { level: 'kids', names: ['Kim'] })).data.id);
+  ok('one address keeps at most 10 games going', (await wl(`/spinsolve/run/${spinMany[0]}`)).status === 404 && (await wl(`/spinsolve/run/${spinMany[10]}`)).status === 200);
+  // A guest's game can't be handed to a profile afterwards.
+  const prof = await wl('/profiles', 'POST', { name: 'Spin Pat', avatar: 'shiba:1' });
+  await asAdmin(`/profiles/admin/${prof.data.id}/approve`, 'POST', {});
+  const patToken = (await wl(`/profiles/${prof.data.id}/use`, 'POST', {})).data.token;
+  const asPat = async (p, body) => {
+    const res = await fetch(base + '/api/spinsolve' + p, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Profile-Token': patToken }, body: JSON.stringify(body || {}) });
+    return { status: res.status, data: await res.json().catch(() => null) };
+  };
+  const playOut = async (id, post) => { await post(`/run/${id}/solve`, { guess: await answerOf(id) }); await post(`/run/${id}/next`); };
+  const guestGame = (await spinPost('/run/start', { level: 'kids', names: ['G'], rounds: 1 })).data;
+  await playOut(guestGame.id, spinPost);
+  const handed = await asPat(`/run/${guestGame.id}/save`, { initials: 'GG' });
+  ok('a guest\'s game saves under the initials, never a profile sent at the end', handed.status === 201 &&
+    !(await wl('/scores/spinsolve?board=solo&limit=100')).data.find(r => r.id === handed.data.id).profileName);
+  const patGame = (await asPat('/run/start', { level: 'kids', names: ['Pat'], rounds: 1 })).data;
+  await playOut(patGame.id, asPat);
+  ok('a profile\'s game can\'t be saved by someone else', (await spinPost(`/run/${patGame.id}/save`, { initials: 'ZZ' })).status === 403);
+  ok('…only by that profile', (await asPat(`/run/${patGame.id}/save`, {})).status === 201);
 
   // An adult game, solved and saved, lands on the Adult board.
   const adultRun = (await spinPost('/run/start', { level: 'spicy', names: ['X'], rounds: 1 }, '246810')).data;

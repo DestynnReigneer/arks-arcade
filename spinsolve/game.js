@@ -17,8 +17,10 @@ const ROUNDS = [1, 3, 5];
 // 24 wedges, clockwise from the top. The page draws the same list.
 const WEDGES = [500, 900, 300, 650, 'BANKRUPT', 400, 700, 350, 550, 800, 'LOSE A TURN', 450,
   600, 1000, 300, 500, 750, 400, 850, 350, 500, 600, 450, 700];
-const KEEP_MS = 6 * 60 * 60 * 1000;   // a game nobody touched for 6 hours is gone
+const KEEP_MS = 60 * 60 * 1000;        // a game nobody touched for an hour is gone
+const OVER_KEEP_MS = 10 * 60 * 1000;   // a finished game stays 10 minutes, to save the score
 const MAX_GAMES = 3000;
+const MAX_PER_OWNER = 10;              // games one address or one profile can have going at once
 
 const games = new Map();
 
@@ -29,19 +31,33 @@ const letters = s => s.replace(/[^A-Z]/g, '');
 const pickFrom = list => list[crypto.randomInt(list.length)];
 
 function sweep(now = Date.now()) {
-  for (const [id, g] of games) if (now - g.touched > KEEP_MS) games.delete(id);
+  for (const [id, g] of games) {
+    if (now - g.touched > KEEP_MS || (g.phase === 'over' && now - g.overAt > OVER_KEEP_MS)) games.delete(id);
+  }
+}
+
+// So one address (or one profile) can't fill the arcade with games: starting
+// one more than its share drops its oldest.
+function makeRoom(ip, profileId) {
+  for (const key of ['ip', 'profileId']) {
+    const value = key === 'ip' ? ip : profileId;
+    if (!value) continue;
+    const mine = [...games.values()].filter(g => g[key] === value).sort((a, b) => a.touched - b.touched);
+    while (mine.length >= MAX_PER_OWNER) games.delete(mine.shift().id);
+  }
 }
 
 // pool: [{ category, answer, pack? }], already checked and allowed for this player.
-function start({ pool, names, rounds, level, adult, packLabel, profileId }) {
+function start({ pool, names, rounds, level, adult, packLabel, profileId, ip }) {
   sweep();
+  makeRoom(ip || null, profileId || null);
   if (games.size >= MAX_GAMES) throw fail('The arcade is busy with lots of games right now. Try again in a little while.', 503);
   if (!pool.length) throw fail('No puzzles here yet.', 404);
   const list = (Array.isArray(names) ? names : []).slice(0, MAX_PLAYERS);
   if (!list.length) list.push('');
   const g = {
     id: crypto.randomBytes(16).toString('hex'),
-    pool, level, adult: !!adult, packLabel: packLabel || '', profileId: profileId || null,
+    pool, level, adult: !!adult, packLabel: packLabel || '', profileId: profileId || null, ip: ip || null, overAt: 0,
     rounds: ROUNDS.includes(Number(rounds)) ? Number(rounds) : 3,
     players: list.map((n, i) => ({ name: String(n || '').trim().slice(0, 16) || `Player ${i + 1}`, round: 0, total: 0 })),
     round: 0, cur: 0, puzzle: null, revealed: new Set(), used: new Set(), strikes: 0,
@@ -66,7 +82,7 @@ function nextRound(g) {
   if (g.phase !== 'turn' && g.phase !== 'roundover') throw fail('Finish this round first.', 409);
   if (g.round && g.phase !== 'roundover') throw fail('Finish this round first.', 409);
   g.round++;
-  if (g.round > g.rounds) { g.phase = 'over'; g.puzzle = null; return; }
+  if (g.round > g.rounds) { g.phase = 'over'; g.overAt = Date.now(); g.puzzle = null; return; }
   let pool = g.pool.filter(p => !g.usedPuzzles.has(p.answer));
   if (!pool.length) { g.usedPuzzles.clear(); pool = g.pool; }
   g.puzzle = pickFrom(pool);
@@ -186,5 +202,5 @@ function view(g) {
 
 module.exports = {
   start, get, view, spin, call, solve, timeUp, nextRound, sweep, games,
-  WEDGES, VOWEL_COST, SOLVE_MIN, MAX_STRIKES, MAX_PLAYERS
+  WEDGES, VOWEL_COST, SOLVE_MIN, MAX_STRIKES, MAX_PLAYERS, MAX_PER_OWNER
 };

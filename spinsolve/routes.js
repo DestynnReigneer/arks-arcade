@@ -106,7 +106,7 @@ module.exports = function spinRoutes({ requireAdmin, notify }) {
       const body = req.body || {};
       const { level, packLabel, pool } = poolFor(body, req);
       const profile = profileOf(req);
-      const g = game.start({ pool, names: body.names, rounds: body.rounds, level, adult: P.LEVELS[level].adult, packLabel, profileId: profile && profile.id });
+      const g = game.start({ pool, names: body.names, rounds: body.rounds, level, adult: P.LEVELS[level].adult, packLabel, profileId: profile && profile.id, ip: req.ip });
       res.status(201).json({ ...game.view(g), level, banter: banter.forLevel(level), wedges: game.WEDGES });
     } catch (e) { next(e); }
   });
@@ -131,13 +131,18 @@ module.exports = function spinRoutes({ requireAdmin, notify }) {
       const g = run(req);
       const v = game.view(g);
       if (!v.canSave) throw fail(v.solo ? 'This game is already saved, or it isn\'t over yet.' : 'Only solo games go on the board.', 409);
+      // The score belongs to whoever started the game: their profile, or the initials typed for a guest.
+      const token = req.get('X-Profile-Token');
+      const now = token ? profileOf(req) : null;
+      if (g.profileId && (!now || now.id !== g.profileId)) throw fail('Only the profile that played this game can save it.', 403);
       const label = (P.LEVELS[g.level] || P.LEVELS.kids).label;
       const out = scores.save('spinsolve', {
         initials: (req.body || {}).initials, score: g.players[0].total, board: g.adult ? 'adult' : 'solo',
         detail: `${g.rounds} rounds · ${label}${g.packLabel ? ` · ${g.packLabel}` : ''}`,
-        profileToken: req.get('X-Profile-Token'), fromServer: true
+        profileToken: g.profileId ? token : null, fromServer: true
       });
       g.saved = true;
+      game.games.delete(g.id);
       res.status(201).json(out);
     } catch (e) { next(e); }
   });
