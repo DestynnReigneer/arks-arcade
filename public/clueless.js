@@ -783,6 +783,31 @@
   // or one that's done, Back goes to the arcade.
   ArcadeBack.setup({ atMenu: () => !run || !!run.paused || !!run.finished, back: () => setPaused(true) });
 
+  // ---- the page's shape --------------------------------------------------------------------------------
+  // Off the TV, the grid and everything you play with are grouped into two columns
+  // (clueless.css lays them out: side by side on a computer, stacked on a phone). The
+  // grid sits in a box that takes the free space; the grid stays square inside it, so
+  // its letters keep sizing themselves from the grid's own width. The TV arranges the
+  // page its own way, so it's left alone there.
+  if (!TV) {
+    const stage = document.createElement('div'); stage.className = 'cl-stage';
+    const fit = document.createElement('div'); fit.className = 'cl-fit';
+    const side = document.createElement('div'); side.className = 'cl-side';
+    const wrap = $('wrap');
+    wrap.before(stage);
+    fit.appendChild(wrap);
+    side.append(...[document.querySelector('.cl-picks'), document.querySelector('body > .hud'), $('clueBar'), $('freeBar'),
+      document.querySelector('.cl-legend'), $('tools'), $('keys'), ...document.querySelectorAll('body > .keys-hint'), $('lists')].filter(Boolean));
+    stage.append(fit, side);
+    // The clue lists, in the top bar's menu on a phone, open over the game.
+    const showClues = on => document.body.classList.toggle('cl-clues-open', on);
+    $('cluesMenuBtn').onclick = () => showClues(true);
+    $('cluesClose').onclick = () => showClues(false);
+    // Picking a clue goes to it on the grid, so the list gets out of the way.
+    $('lists').addEventListener('click', e => { if (e.target.closest('li')) showClues(false); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.body.classList.contains('cl-clues-open')) showClues(false); });
+  }
+
   // ---- start -----------------------------------------------------------------------------------------
   setPencil(false);
   paintLevels();
