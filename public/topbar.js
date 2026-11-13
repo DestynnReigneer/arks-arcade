@@ -159,8 +159,19 @@
     if (phone() && gameHelp) list.push({ icon: '?', label: 'How to play', run: () => gameHelp.click() });
     for (const b of btns) {
       if (b === mute || b === music || b.id === 'helpBtn' || b.hidden || b.style.display === 'none') continue;
+      // A game can keep an item for phones and small tablets only (data-menu="phone",
+      // under 900px wide, where games use the whole screen), or only while a
+      // part of the page is showing (data-when="#game").
+      if (b.dataset.menu === 'phone' && !window.matchMedia('(max-width: 899px)').matches) continue;
+      if (b.dataset.when) { const part = document.querySelector(b.dataset.when); if (!part || part.classList.contains('hidden') || part.hidden) continue; }
       const label = (b.getAttribute('aria-label') || b.title || '').replace(/\s*\(.*?\)\s*$/, '').trim() || b.textContent.trim();
       list.push({ icon: esc(b.textContent.trim()), label: esc(label), run: () => b.click() });
+    }
+    // When a game hides the bug-report button to make room, it's here instead.
+    const tip = document.querySelector('.fb-corner .fb-tip');
+    const corner = document.querySelector('.fb-corner');
+    if (tip && corner && getComputedStyle(corner).display === 'none') {
+      list.push({ icon: '🐞', label: 'Report a problem', run: () => tip.click() });
     }
     return list;
   }
