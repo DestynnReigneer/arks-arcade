@@ -985,6 +985,8 @@ async function run({ base, root }) {
   const troom = async who => (await wl(`/trivia/rooms/${th.code}?playerId=${who.playerId}&token=${who.token}`)).data;
   const tpost = (who, path, body = {}) => wl(`/trivia/rooms/${th.code}/${path}`, 'POST', { playerId: who.playerId, token: who.token, ...body });
   ok('only the host can start', (await tpost(tg, 'start')).status === 403);
+  ok('the host can\'t start until everyone is ready', (await tpost(th, 'start')).status === 409);
+  await tpost(tg, 'lobby-ready', { ready: true });
   await tpost(th, 'start');
   let snapT = await troom(th);
   ok('the game starts on question 1, with no answer key sent', snapT.phase === 'question' && snapT.question.index === 0 &&
@@ -1033,7 +1035,14 @@ async function run({ base, root }) {
   ok('the lobby says where phones should go', /^https?:\/\//.test(lobbyNow.publicUrl));
   await wl(`/trivia/rooms/${lobbyHost.code}/start`, 'POST', { playerId: lobbyHost.playerId, token: lobbyHost.token });
   lobbyNow = (await wl('/lobby')).data;
-  ok('a game that has started shows as playing', lobbyNow.rooms.find(r => r.code === lobbyHost.code).status === 'playing');
+  ok('a game everyone answers together shows as joinable while it goes', lobbyNow.rooms.find(r => r.code === lobbyHost.code).status === 'live');
+  const late = await wl(`/trivia/rooms/${lobbyHost.code}/join`, 'POST', { name: 'Late' });
+  ok('…and someone can join it in progress', late.status === 200);
+  const lateView = (await wl(`/trivia/rooms/${lobbyHost.code}?playerId=${late.data.playerId}&token=${late.data.token}`)).data;
+  ok('…with 0 points, starting from the next question', lateView.players.find(p => p.id === late.data.playerId).score === 0 && lateView.answeringFor === late.data.playerId);
+  const turnsRoom = (await wl('/trivia/rooms', 'POST', { name: 'T', settings: { level: 'kids', count: 5, style: 'turns' } })).data;
+  await wl(`/trivia/rooms/${turnsRoom.code}/start`, 'POST', { playerId: turnsRoom.playerId, token: turnsRoom.token });
+  ok('a game that takes turns can\'t be joined partway', (await wl(`/trivia/rooms/${turnsRoom.code}/join`, 'POST', { name: 'X' })).status === 409);
   const chessFull = (await wl('/chess/rooms', 'POST', { name: 'A' })).data;
   await wl(`/chess/rooms/${chessFull.code}/join`, 'POST', { name: 'B' });
   ok('a chess game with two players shows as full', (await wl('/lobby')).data.rooms.find(r => r.code === chessFull.code).status === 'full');
