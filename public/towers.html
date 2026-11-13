@@ -60,6 +60,29 @@
   .tower-actions { display: flex; gap: 8px; }
   .tower-actions button { flex: 1; justify-content: center; font-weight: 700; }
   .tower-actions button:disabled { opacity: 0.45; cursor: default; }
+  /* On a computer the map sits on the left, as tall as the screen allows, with the
+     map picker, the wave button and the tower panel beside it, so nothing scrolls. */
+  @media (min-width: 900px) {
+    html:not(.tv) body {
+      max-width: none; padding-left: 0; padding-right: 0; padding-bottom: 0;
+      --bar-w: calc(min(1100px, 100vw) - 32px); --gap: 24px; --side: 360px;
+      --map-h: clamp(420px, min(calc(100dvh - 190px), calc((var(--bar-w) - var(--gap) - var(--side)) * 13 / 10)), 1000px);
+    }
+    html:not(.tv) body > header.top, html:not(.tv) body > .hud { width: var(--bar-w); margin-left: auto; margin-right: auto; box-sizing: border-box; }
+    html:not(.tv) .td-play {
+      display: grid; width: var(--bar-w); margin: 0 auto 16px; column-gap: var(--gap);
+      grid-template-columns: calc(var(--map-h) * 10 / 13 + 4px) minmax(0, 1fr);
+      grid-template-rows: auto auto auto auto auto minmax(0, 1fr);
+      grid-template-areas: "map opts" "map wave" "map next" "map info" "map keys" "map .";
+    }
+    html:not(.tv) .td-play > .stage { grid-area: map; align-self: start; }
+    html:not(.tv) .td-play > .options { grid-area: opts; margin: 0 0 10px; }
+    html:not(.tv) .td-play > .wave-bar { grid-area: wave; margin-top: 0; }
+    html:not(.tv) .td-play > .next-up { grid-area: next; }
+    html:not(.tv) .td-play > .info { grid-area: info; }
+    html:not(.tv) .td-play > .keys-hint { grid-area: keys; }
+    html:not(.tv) .td-play > .over-panel, html:not(.tv) .td-play > #overPanel { grid-column: 1 / -1; }
+  }
 </style>
 </head>
 <body>
@@ -84,6 +107,7 @@
   <div><small>Score</small><b id="score">0</b></div>
 </div>
 
+<div class="td-play">
 <div class="options" id="options">
   <div class="map-grid" id="mapSeg" role="group" aria-label="Map"></div>
 </div>
@@ -100,6 +124,7 @@
 <div class="next-up" id="nextUp"></div>
 <div class="panel info" id="info"></div>
 <p class="hint center keys-hint">Keyboard: <b>1-4</b> build on the picked square · <b>U</b> upgrade · <b>S</b> sell · <b>Space</b> call the next wave now · <b>+</b>/<b>−</b> speed · <b>P</b> pause</p>
+</div>
 
 <script src="feedback.js"></script>
 <script src="avatars.js"></script>
