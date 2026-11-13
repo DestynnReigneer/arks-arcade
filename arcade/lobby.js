@@ -59,18 +59,13 @@ function collect(viewer = null) {
     });
   }
 
-  // The party card games share one kind of table.
+  // The party card games share one kind of table. Only rooms this person may join
+  // are listed (anyone, or the people the host picked).
   for (const [game, mod] of [['partdeux', '../partdeux/tables'], ['daredevil', '../daredevil/tables']]) {
-    const t = require(mod);
-    for (const r of t._tables.values()) {
-      if (r.kind !== 'room') continue;
-      const host = r.players.get(r.hostId);
-      const running = r.game && r.game.phase !== 'over';
+    for (const l of require(mod).lobbies(viewer)) {
       add(game, {
-        adult: t.isAdult(r.level), locked: !!r.password,
-        code: r.id, host: host ? host.name : '', players: r.players.size, max: t.MAX_PLAYERS,
-        status: r.players.size >= t.MAX_PLAYERS ? 'full' : running ? 'playing' : 'open',
-        detail: `${r.level[0].toUpperCase() + r.level.slice(1)} deck${r.drinking ? ' · 🍺' : ''}`
+        adult: l.adult, locked: l.locked, code: l.code, host: l.host, players: l.count, max: l.max, status: l.status,
+        detail: `${l.level[0].toUpperCase() + l.level.slice(1)} deck${l.drinking ? ' · 🍺' : ''}${l.who === 'selected' ? ' · People selected' : ''}`
       });
     }
   }
