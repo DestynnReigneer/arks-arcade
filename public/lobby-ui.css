@@ -79,3 +79,18 @@
 .lb-facts div small { display: block; font-size: 11px; letter-spacing: .14em; color: var(--dim); font-weight: 700; }
 .lb-facts div span { display: block; font-size: 16px; }
 .lb-count-line { margin: 2px 0 0; color: var(--muted); }
+
+/* The emoji picker (2026-11-13): a row of groups, then the group's emoji. */
+.lb-emo-btn { flex: none; font-size: 20px; line-height: 1; padding: 0 8px; border-radius: 8px; border: 1px solid var(--border); background: var(--card); cursor: pointer; }
+.lb-emo-btn[aria-expanded="true"] { border-color: #00ffc2; }
+.lb-emo-btn:disabled { opacity: .5; cursor: not-allowed; }
+.lb-emo { margin: 6px 8px 0; border: 1px solid var(--border); border-radius: 10px; background: var(--card); padding: 6px; font-size: 14px; color: var(--muted); }
+.lb-emo-tabs { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+.lb-emo-tabs::-webkit-scrollbar { display: none; }
+.lb-emo-tabs button { flex: none; font-size: 18px; padding: 4px 8px; border-radius: 8px; border: 1px solid transparent; background: transparent; cursor: pointer; }
+.lb-emo-tabs button[aria-pressed="true"] { border-color: #00ffc2; background: rgba(0,255,194,.08); }
+.lb-emo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(38px, 1fr)); max-height: 190px; overflow-y: auto; scrollbar-width: none; padding-top: 6px;
+  -webkit-mask: linear-gradient(#000 85%, transparent); mask: linear-gradient(#000 85%, transparent); }
+.lb-emo-grid::-webkit-scrollbar { display: none; }
+.lb-emo-grid button { font-size: 24px; line-height: 1; padding: 6px 0; border: 0; border-radius: 8px; background: transparent; cursor: pointer; }
+.lb-emo-grid button:hover, .lb-emo-grid button:focus-visible { background: rgba(255,255,255,.08); outline: none; }
