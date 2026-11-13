@@ -105,6 +105,7 @@ function save(game, { initials, score, board, detail, profileToken, fromServer }
     const where = Object.keys(g.boards).length > 1 ? ` (${g.boards[key]})` : '';
     const shout = profile ? require('./profiles').boardName(profile.id).label : who;
     comm.safePost({
+      trophy: { game: g.label, profileId: profile ? profile.id : null, name: shout, score: shown(g, points) + (g.lowerIsBetter ? '' : ' points'), board: Object.keys(g.boards).length > 1 ? g.boards[key] : '', url: `/${game}.html` },
       kind: 'highscore', emoji: '🏆', game,
       title: `${shout} took #1 on ${g.label}${where}`,
       body: `${shout} just set the top score on ${g.label}${where} with ${shown(g, points)}. Think you can beat it?`

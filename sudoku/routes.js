@@ -295,6 +295,7 @@ function save(id, { initials, profileToken }) {
   if (allRank === 1) {
     const shout = profile ? (profiles().boardName(profile.id) || {}).label || profile.name : ini;
     comm.safePost({
+      trophy: { game: 'Sudoku', profileId: profile ? profile.id : null, name: shout, score: clock(run.time_ms), board: label, url: '/sudoku.html' },
       kind: 'highscore', emoji: '🧩', game: 'sudoku',
       title: `${shout} set the fastest Sudoku ${label} time ever`,
       body: `${shout} solved a ${label} Sudoku in ${clock(run.time_ms)}, the quickest anyone has done it. Today's puzzle is waiting if you want a go.`

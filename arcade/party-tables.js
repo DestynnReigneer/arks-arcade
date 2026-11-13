@@ -229,7 +229,8 @@ function makeTables({ game = 'party', title = 'the game', engine, act, levels, m
   function say(code, playerId, token, text) {
     const t = room(code);
     const p = authenticate(t, playerId, token);
-    chat.say(t.id, { seat: p.id, name: p.screen ? 'TV' : p.name, muted: t.muted.has(p.id), family: !isAdult(t.level) }, text);
+    chat.say(t.id, { seat: p.id, name: p.screen ? 'TV' : p.name, muted: t.muted.has(p.id), family: !isAdult(t.level),
+      tell: { to: [...t.players.values()].filter(x => x.profileId && !(x.clients > 0)).map(x => x.profileId), from: p.profileId || null, game: title, url: `${game}.html?join=${t.id}` } }, text);
     touch(t);
   }
   const hostOnly = (t, p) => { if (p.id !== t.hostId) throw fail('Only the host can do that.', 403); };

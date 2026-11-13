@@ -86,7 +86,7 @@ function send({ game, room, from, to, title, href, notify }) {
       .run(game, String(room), from.id, from.name, p.id, title, href, now, buzz ? 1 : 0);
     sent.push({ id: p.id, name: p.name });
     if (buzz && notifier && notify) {
-      try { notifier(p.id, { title: notify.title, body: notify.body, url: href, tag: `inv-${game}-${room}` }); } catch { /* never stops a game */ }
+      try { notifier(p.id, { title: notify.title, body: notify.body, url: href, tag: `inv-${game}-${room}`, kind: 'invite', from: from.id, game: notify.title }); } catch { /* never stops a game */ }
     }
   }
   return sent;

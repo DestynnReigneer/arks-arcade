@@ -59,6 +59,7 @@ function publicEntry(row) {
 function announceTopScore(saved, initials, board) {
   if (!saved.made || saved.rank !== 1) return;
   comm.safePost({
+    trophy: { game: 'Rambler', name: initials, score: `${saved.score} points`, board, url: '/rambler.html' },
     kind: 'highscore', emoji: '🏆', game: 'rambler',
     title: `${initials} took #1 on Rambler ${board}`,
     body: `${initials} just set the top score on the ${board} board with ${saved.score} points. Think you can beat it?`

@@ -178,7 +178,8 @@ function say(code, playerId, token, text) {
   const r = room(code);
   const p = authenticate(r, playerId, token);
   const adult = !!bank.LEVELS[r.settings.level].adult;
-  chat.say(r.code, { seat: p.id, name: p.screen ? 'TV' : p.name, muted: r.muted.has(p.id), family: !adult }, text);
+  chat.say(r.code, { seat: p.id, name: p.screen ? 'TV' : p.name, muted: r.muted.has(p.id), family: !adult,
+    tell: { to: r.players.filter(x => x.profileId && !(x.clients > 0)).map(x => x.profileId), from: p.profileId || null, game: 'Know-It-All', url: `trivia.html?join=${r.code}` } }, text);
   touch(r);
 }
 const hostOnly = (r, p) => { if (p.id !== r.hostId) throw fail('Only the host can do that.', 403); };

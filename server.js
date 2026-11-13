@@ -106,6 +106,9 @@ if (arks) {
   // Invites by name in games with a lobby (arcade/invites.js), and Chess's turns.
   require('./arcade/invites').setNotifier(push.tell);
   require('./chess/rooms').setNotifier(push.tell);
+  // Contract v16: chat messages to people who aren't looking, and new #1s for Discord's #trophies.
+  require('./arcade/room-chat').setNotifier(push.tell);
+  require('./arcade/comm').setTrophyNotifier(push.trophy);
 } else {
   app.get('/api/arksid/me', (req, res) => res.set('Cache-Control', 'no-store').json({ on: false }));
   app.use(require('./arcade/tv').offRoutes());
@@ -479,6 +482,7 @@ app.post('/api/leaderboard', leaderboardLimiter, (req, res) => {
   if (won && result.rank === 1 && !theme.adult) {
     const level = difficulty[0].toUpperCase() + difficulty.slice(1);
     comm.safePost({
+      trophy: { game: 'Wordless', profileId: profile ? profile.id : null, name: shout, score: `${result.score} points`, board: level, url: '/wordless.html' },
       kind: 'highscore', emoji: '🏆', game: 'wordless',
       title: `${shout} took #1 on Wordless ${level}`,
       body: `${shout} just set the top Wordless ${level} score: ${result.score} points in ${guesses} guess${guesses === 1 ? '' : 'es'}. Think you can beat it?`
