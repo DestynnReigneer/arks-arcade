@@ -131,7 +131,7 @@ Validation always uses the full list, so a real word is never rejected as fake â
 
 ### Spin & Solve (`/spinsolve.html`)
 
-A wheel-and-phrase puzzle game that follows the TV show's turns. On your turn you spin, buy a vowel for $250, or solve. Landing on money means calling a consonant, worth that much for every time it's in the puzzle, and finding one means you go again. A letter that isn't there, a wrong answer, Bankrupt (which also takes the round's money) or Lose a Turn passes the turn. Only whoever solves banks the round's money, at least $1,000. Solo gets three strikes a round and goes on the high-score board; 2-4 players pass one phone. 200+ built-in family-friendly puzzles in `public/spin-puzzles.js`.
+A wheel-and-phrase puzzle game that follows the TV show's turns. On your turn you spin, buy a vowel for $250, or solve. Landing on money means calling a consonant, worth that much for every time it's in the puzzle, and finding one means you go again. A letter that isn't there, a wrong answer, Bankrupt (which also takes the round's money) or Lose a Turn passes the turn. Only whoever solves banks the round's money, at least $1,000. Solo gets three strikes a round and goes on the high-score board; 2-4 players pass one phone. 200+ built-in family-friendly puzzles in `spinsolve/kids-puzzles.js`. The game runs on the server (`spinsolve/game.js`): it picks the puzzle, spins the wheel and keeps the answer, and the page only ever gets the board with the hidden letters blank until the round is over. A solo game's total is saved by the server (`POST /api/spinsolve/run/:id/save`), and the shared board refuses a Spin & Solve score posted by a page. The turn clock is the page's, so it decides how long someone may think, never what they score.
 
 - **The turn timer** (30 to 90 seconds, or off) only runs when you owe an answer, like on the show: once the wheel stops (to call a letter), when you buy a vowel, and when you tap Solve. Nothing ticks while you decide what to do next, so it never runs before your first spin.
 - **Sounds** are our own, made in the browser like the rest of the arcade's (`public/blip.js`), in the spirit of a TV wheel game without using any of the show's recordings: a bright ding for each letter that lights up, a low buzzer for a letter that isn't there, a wrong answer or running out of time, a click for every peg the wheel passes, a sting for Bankrupt and a fanfare when the puzzle is solved.
@@ -646,7 +646,7 @@ words/                    Dictionaries, baked into the image (see above)
 public/index.html         The arcade hub
 public/wordless.html/.js  Wordless
 public/rambler.html/.js    Rambler
-public/spinsolve.*        Spin & Solve (puzzles in spin-puzzles.js)
+public/spinsolve.*        Spin & Solve (the game and puzzles live in spinsolve/)
 public/chess.*            Chess (chess-engine.js, chess-worker.js)
 public/dino.*             Dino Dash
 public/snake*, bricks*, blocks*, towers*   Snake, Brick Breaker, Block Drop, Tower Defense (each with an -engine.js for its rules)
