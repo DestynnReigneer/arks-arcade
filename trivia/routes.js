@@ -71,6 +71,14 @@ module.exports = function triviaRoutes({ requireAdmin, notify, whoIs = null }) {
   // ---- rooms ----------------------------------------------------------------------
   const createLimiter = rateLimit({ windowMs: 10 * 60 * 1000, limit: 40, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many new games at once.' } });
   const creds = req => [req.params.code, (req.body || {}).playerId, (req.body || {}).token];
+  // Who someone is in the family comes from the X-Profile-Token header, never the address.
+  const profileOf = req => require('../arcade/profiles').verify(req.get('X-Profile-Token')) || null;
+  const listLimiter = rateLimit({ windowMs: 10 * 60 * 1000, limit: 600, standardHeaders: true, legacyHeaders: false, message: { error: 'Slow down a little, then try again.' } });
+  const seatLimiter = rateLimit({ windowMs: 60 * 1000, limit: 120, standardHeaders: true, legacyHeaders: false, message: { error: 'Slow down a little, then try again.' } });
+  const chatLimiter = rateLimit({ windowMs: 60 * 1000, limit: 40, standardHeaders: true, legacyHeaders: false, message: { error: 'Slow down a little, then try again.' } });
+
+  // List Hosted Games: the rooms this person can see and join.
+  router.get('/lobbies', listLimiter, (req, res) => res.json({ lobbies: rooms.lobbies(profileOf(req)) }));
 
   router.post('/rooms', createLimiter, (req, res, next) => {
     try {
@@ -78,7 +86,8 @@ module.exports = function triviaRoutes({ requireAdmin, notify, whoIs = null }) {
       const settings = rooms.cleanSettings(body.settings || {});
       requireLevel(settings.level, req);
       // screen: this device (a TV) shows the game and doesn't play.
-      res.status(201).json(rooms.create({ name: body.name, settings, password: body.password, screen: body.screen === true }));
+      res.status(201).json(rooms.create({ name: body.name, settings, password: body.password, screen: body.screen === true,
+        profile: profileOf(req), who: body.who, allowed: body.allowed }));
     } catch (e) { next(e); }
   });
   // Guests don't need an ARKS ID adult pass: an adult game's own lobby password lets
@@ -93,14 +102,19 @@ module.exports = function triviaRoutes({ requireAdmin, notify, whoIs = null }) {
         try { me = await whoIs(req); } catch { me = null; }
         if (me && (me.tv || !['admin', 'adult'].includes(me.account.role))) throw fail('This is an adult game, so it\'s only for adult accounts.', 403);
       }
-      res.json(rooms.join(req.params.code, (req.body || {}).name, (req.body || {}).password));
+      res.json(rooms.join(req.params.code, (req.body || {}).name, (req.body || {}).password, profileOf(req)));
     } catch (e) { next(e); }
   });
   // Taking turns: another player on this device, or taking one off again.
   router.post('/rooms/:code/seats', (req, res, next) => { try { res.status(201).json(rooms.addSeat(...creds(req), (req.body || {}).name)); } catch (e) { next(e); } });
   router.post('/rooms/:code/seats/remove', (req, res, next) => { try { rooms.removeSeat(...creds(req), (req.body || {}).seat); res.json({ ok: true }); } catch (e) { next(e); } });
   router.post('/rooms/:code/ready', (req, res, next) => { try { rooms.ready(...creds(req)); res.json({ ok: true }); } catch (e) { next(e); } });
-  router.post('/rooms/:code/start', (req, res, next) => { try { rooms.start(...creds(req)); res.json({ ok: true }); } catch (e) { next(e); } });
+  router.post('/rooms/:code/start', seatLimiter, (req, res, next) => { try { rooms.start(...creds(req)); res.json({ ok: true }); } catch (e) { next(e); } });
+  // The lobby: Ready, the chat, and the host's Mute and Remove Player.
+  router.post('/rooms/:code/lobby-ready', seatLimiter, (req, res, next) => { try { rooms.lobbyReady(...creds(req), (req.body || {}).ready !== false); res.json({ ok: true }); } catch (e) { next(e); } });
+  router.post('/rooms/:code/chat', chatLimiter, (req, res, next) => { try { rooms.say(...creds(req), (req.body || {}).text); res.json({ ok: true }); } catch (e) { next(e); } });
+  router.post('/rooms/:code/mute', seatLimiter, (req, res, next) => { try { rooms.mute(...creds(req), (req.body || {}).seat, !!(req.body || {}).on); res.json({ ok: true }); } catch (e) { next(e); } });
+  router.post('/rooms/:code/remove', seatLimiter, (req, res, next) => { try { rooms.remove(...creds(req), (req.body || {}).seat); res.json({ ok: true }); } catch (e) { next(e); } });
   router.post('/rooms/:code/answer', (req, res, next) => { try { rooms.answer(...creds(req), (req.body || {}).choice, (req.body || {}).seat); res.json({ ok: true }); } catch (e) { next(e); } });
   router.post('/rooms/:code/next', (req, res, next) => { try { rooms.next(...creds(req)); res.json({ ok: true }); } catch (e) { next(e); } });
   router.post('/rooms/:code/leave', (req, res, next) => { try { rooms.leave(...creds(req)); res.json({ ok: true }); } catch (e) { next(e); } });

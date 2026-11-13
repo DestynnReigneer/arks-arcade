@@ -168,7 +168,9 @@
 
   // ---- join a game -----------------------------------------------------------
   // Every room being hosted anywhere in the arcade, refreshed every few seconds.
-  const STATUS = { open: 'Join', playing: 'Playing now', full: 'Full' };
+  const STATUS = { open: 'Join', live: 'Join game in progress?', playing: 'Playing now', full: 'Full' };
+  // Games joined from the list, with no code to type (the maintainer's call, 2026-11-12).
+  const NO_CODE = new Set(['chess', 'trivia']);
 
   async function loadLobby() {
     try {
@@ -189,11 +191,10 @@
           li.querySelector('.l-emoji').appendChild(img);
         } else li.querySelector('.l-emoji').textContent = r.emoji;
         li.querySelector('.l-title').textContent = `${r.adult ? '🔞 ' : ''}${r.label} · ${r.host || 'someone'}'s game${r.locked ? ' 🔒' : ''}`;
-        // Chess lobbies are joined from the list, with no code to type (the maintainer's call, 2026-11-12).
-        li.querySelector('.l-sub').textContent = `${r.game === 'chess' ? '' : `Code ${r.code} · `}${r.players}/${r.max} players · ${r.detail}${r.status === 'playing' ? ' · game in progress' : ''}`;
+        li.querySelector('.l-sub').textContent = `${NO_CODE.has(r.game) ? '' : `Code ${r.code} · `}${r.players}/${r.max} players · ${r.detail}${r.status === 'playing' ? ' · game in progress' : ''}`;
         const join = li.querySelector('.l-join');
         join.textContent = STATUS[r.status];
-        if (r.status === 'open') join.href = r.href;
+        if (r.status === 'open' || r.status === 'live') join.href = r.href;
         else join.classList.add('off');
         list.appendChild(li);
       }
@@ -201,7 +202,7 @@
       $('liveN').textContent = rooms.length;
       $('liveDock').classList.toggle('hidden', !rooms.length);
       $('lobbyEmpty').classList.toggle('hidden', rooms.length > 0);
-      const open = rooms.filter(r => r.status === 'open').length;
+      const open = rooms.filter(r => r.status === 'open' || r.status === 'live').length;
       if (rooms.length && !open) $('lobbyEmpty').classList.remove('hidden');
       $('lobbyEmpty').innerHTML = rooms.length && !open
         ? 'Those games have already started or are full. Please pick another game to play or choose to <b>Host</b> your own.'
