@@ -124,6 +124,15 @@ const ArcadeProfile = (() => {
     .apf-tile{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 6px;border-radius:14px;border:2px solid transparent;background:#2c1350;color:inherit;cursor:pointer;font:inherit;font-size:13px;font-weight:700}
     .apf-tile:hover,.apf-tile.on{border-color:#ffc72c}.apf-tile .lock{font-size:11px;opacity:.7;font-weight:600}
     .apf-row{display:flex;gap:8px;margin-top:10px}.apf-row>*{flex:1}
+    .apf-notify{position:relative;width:100%;box-sizing:border-box;margin-top:10px;display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:10px;border:1px solid #3d2a63;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}
+    .apf-notify[disabled]{cursor:default}
+    .apf-notify .t{flex:1;min-width:0}.apf-notify b{display:block;font-size:15px}.apf-notify small{display:block;font-size:12.5px;color:#c9a8dd;line-height:1.35}.apf-notify small:empty{display:none}
+    .apf-notify.on{border-color:color-mix(in srgb,#00ffc2 55%,#3d2a63)}
+    .apf-sw{flex:none;width:46px;height:26px;border-radius:999px;background:#3d2a63;position:relative;transition:background .2s}
+    .apf-sw::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#c9a8dd;transition:left .2s,background .2s}
+    .apf-notify.on .apf-sw{background:color-mix(in srgb,#00ffc2 70%,#22103f)}.apf-notify.on .apf-sw::after{left:23px;background:#fff}
+    .apf-notify .apf-dot{position:absolute;top:-4px;right:-4px;width:12px;height:12px;border-radius:50%;background:#ff2ec4;box-shadow:0 0 8px #ff2ec4}
+    .apf-steps{margin:0 0 12px;padding-left:20px;font-size:14px;display:grid;gap:6px;text-align:left}.apf-steps b{color:#00ffc2}
     .apf .apf-btn{padding:11px;border-radius:10px;border:1px solid #3d2a63;background:transparent;color:inherit;font:inherit;font-weight:700;cursor:pointer;text-align:center;text-decoration:none}
     .apf button.apf-main{background:#ffc72c;color:#1a0f05;border-color:#ffc72c}
     .apf input{width:100%;box-sizing:border-box;padding:11px;border-radius:10px;border:1px solid #3d2a63;background:#0a0416;color:#fff;font:inherit;font-size:15px;margin:6px 0}
@@ -295,6 +304,7 @@ const ArcadeProfile = (() => {
       c.innerHTML = '<h2>Who&#39;s playing?</h2><div class="apf-grid"></div><p data-who></p>' +
         '<div class="apf-row"><a class="apf-btn" data-account>⚙️ Change my avatar</a><button class="apf-btn" data-out>Sign out</button></div>' +
         '<div class="apf-row"><button class="apf-btn" data-myfb>📬 My feedback</button></div>' +
+        '<div data-notify></div>' +
         closeRow();
       const tile = document.createElement('div');
       tile.className = 'apf-tile on';
@@ -309,6 +319,7 @@ const ArcadeProfile = (() => {
       c.querySelector('[data-account]').onclick = e => { e.preventDefault(); openAccount(); };
       c.querySelector('[data-out]').onclick = signOut;
       c.querySelector('[data-myfb]').onclick = () => showMyFeedback('open');
+      notifySwitch(c.querySelector('[data-notify]'));
       wireClose(c);
       return;
     }
@@ -327,6 +338,86 @@ const ArcadeProfile = (() => {
       c.querySelector('[data-join]').onclick = () => makeAccount(cur && cur.guest ? cur : {}, c);
     }
     wireClose(c);
+  }
+
+  // ---- Notifications on this device (2026-11-13) ----
+  // One switch for every game, for whoever is signed in, on this device
+  // (push-optin.js does the work; it's loaded the first time it's needed). A
+  // pink dot sits on it until it has been turned on or off once on this device.
+  const NUDGE_KEY = 'arcade.notifySeen';
+  const CHECK_KEY = 'arcade.notifyChecked';
+  const remember = (k) => { try { localStorage.setItem(k, '1'); } catch { /* storage off */ } };
+  const remembered = (k) => { try { return localStorage.getItem(k) === '1'; } catch { return true; } };
+  let pushLoad = null;
+  const loadPush = () => pushLoad || (pushLoad = window.ArcadePush ? Promise.resolve(window.ArcadePush) : new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'push-optin.js';
+    s.onload = () => resolve(window.ArcadePush);
+    s.onerror = () => { pushLoad = null; reject(new Error('push-optin.js')); };
+    document.head.appendChild(s);
+  }));
+  async function notifySwitch(box) {
+    if (!box) return;
+    let P, st;
+    try { P = await loadPush(); st = await P.status(); } catch { return; }
+    if (!box.isConnected || st.state === 'none') return;
+    const row = document.createElement('button');
+    row.type = 'button';
+    row.className = 'apf-notify';
+    row.innerHTML = '<span class="t"><b>🔔 Notifications</b><small></small></span><span class="apf-sw" aria-hidden="true"></span>';
+    const small = row.querySelector('small');
+    const msg = document.createElement('div');
+    msg.className = 'apf-msg';
+    msg.setAttribute('aria-live', 'polite');
+    box.replaceChildren(row, msg);
+    const paint = () => {
+      const on = st.state === 'on';
+      row.classList.toggle('on', on);
+      row.setAttribute('role', 'switch');
+      row.setAttribute('aria-checked', String(on));
+      row.disabled = st.state === 'tip' || st.state === 'blocked';
+      row.querySelector('.apf-sw').style.display = row.disabled ? 'none' : '';
+      // Off says nothing under the title: the switch speaks for itself.
+      small.textContent = on ? 'You\'re all set, I\'ll let you know when it\'s your move or someone starts a game with you.'
+        : st.state === 'tip' ? 'iPhones and iPads only get notifications from apps on the Home Screen. Tap Share, then Add to Home Screen, and open the Arcade from its new icon.'
+          : st.state === 'blocked' ? 'Chrome is blocking notifications. Tap the icon left of the address, then Permissions, then Notifications, and choose Allow. Then open this card again.'
+            : '';
+      const dot = row.querySelector('.apf-dot');
+      if (!remembered(NUDGE_KEY) && !row.disabled) { if (!dot) row.insertAdjacentHTML('beforeend', '<span class="apf-dot" aria-hidden="true"></span>'); }
+      else if (dot) dot.remove();
+    };
+    paint();
+    row.onclick = async () => {
+      if (row.disabled) return;
+      msg.textContent = '';
+      row.disabled = true;
+      try {
+        if (st.state === 'on') {
+          await P.turnOff(st.sub);
+          st = { state: 'off', wanted: st.wanted };
+        } else {
+          // The phone asks "Allow notifications?" here.
+          const sub = await P.turnOn(st.wanted);
+          st = { state: 'on', sub, wanted: st.wanted };
+          if (!remembered(CHECK_KEY)) { remember(CHECK_KEY); remember(NUDGE_KEY); paint(); row.disabled = false; return showChromeCheck(); }
+        }
+        remember(NUDGE_KEY);
+      } catch (e) {
+        if (e && e.blocked) { st = { state: 'blocked' }; remember(NUDGE_KEY); } else msg.textContent = e.message;
+      }
+      row.disabled = false;
+      paint();
+    };
+  }
+  // Shown once, right after notifications are first turned on on this device.
+  function showChromeCheck() {
+    const c = card();
+    c.innerHTML = '<h2>One more step in Chrome</h2><p>So notifications pop up on your screen and buzz:</p>' +
+      '<ol class="apf-steps"><li>Open your phone\'s <b>Settings</b>, then <b>Apps</b>, then <b>Chrome</b>, then <b>Notifications</b>.</li>' +
+      '<li>Tap the Arcade\'s address, then turn on <b>Pop on screen</b>, <b>Sound</b> and <b>Vibrate</b>.</li></ol>' +
+      '<div class="apf-row"><button class="apf-btn apf-main" data-ok>Got it</button></div>' +
+      '<p>On an iPhone, add the Arcade to your Home Screen first (Share, then Add to Home Screen), and open it from there.</p>';
+    c.querySelector('[data-ok]').onclick = () => showArksId();
   }
 
   // ---- My feedback (2026-11-01) ----

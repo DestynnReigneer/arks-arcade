@@ -345,21 +345,23 @@ Everything is under `/api/crisscross`. Who's asking goes in headers, never the a
 
 #### Notifications when it's your turn
 
-When the arcade signs in with ARKS ID, a phone can get a notification when it becomes your turn in a game on
-everyone's own phone, or when someone starts a game with you. The card for it is on Words with Family's first screen
-(`public/push-optin.js`): Turn on notifications makes the phone ask "Allow notifications?", and the card says so
-when they're on, with a button to turn them off. Tapping a notification opens that game (`public/sw.js`, the
-arcade's service worker, which only handles notifications and caches nothing). A newer one for the same game
-replaces the older one, and opening the game clears it. Games against the computer and games on one phone never
-send any, and a word from the unfiltered list never shows on the lock screen ("Kim played a word for 34 points. Let's go, loser!").
+When signed in with ARKS ID in the arcade, devices will get notified when it's their turn in a game, or when someone
+starts a game with them. One switch turns them on for every game: tap your avatar to open the profile card, and
+it's the 🔔 Notifications switch (`public/profile.js`, with `public/push-optin.js` doing the work). Turning it on
+makes the device ask "Allow notifications?", and the first time, a short card shows how to check Chrome's settings
+so they pop up on the screen and buzz. A pink dot sits on the switch until it has been used once on that device.
+Tapping a notification opens that game (`public/sw.js`, the arcade's service worker, which only handles
+notifications and caches nothing). A newer one for the same game replaces the older one, and opening the game
+clears it. Games against the computer and games on one device never send any, and a word from the unfiltered list
+never shows on the lock screen ("Kim played a word for 34 points. Let's go, loser!").
 
-ARKS ID does the sending (its contract v15): it keeps each person's phones, shows them on the person's account page
+ARKS ID does the sending (its contract v15): it keeps each person's devices, shows them on the person's account page
 with a Stop button, and encrypts every message so the push services in between can't read it. The arcade's side is
 `arcade/push.js`: `GET /api/push/key` (the key the page subscribes with; `{ on: false }` without ARKS ID), and
 `POST /api/push/subscribe` `{ subscription }` and `POST /api/push/unsubscribe` `{ endpoint }`, both for someone
-signed in. A notification that can't be sent never holds up a move, and signing out on a phone stops its notifications. On an iPhone or iPad, notifications only work
-once the arcade is on the Home Screen (iOS 16.4 or later), so the card says how to add it; the install manifest
-opens the arcade full screen for that.
+signed in. A notification that can't be sent never holds up a move, and signing out on a device stops its
+notifications. On an iPhone or iPad, notifications only work once the arcade is on the Home Screen (iOS 16.4 or
+later), so the switch says how to add it; the install manifest opens the arcade full screen for that.
 
 ### Clueless Crosswords (`/clueless.html`)
 
