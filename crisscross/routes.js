@@ -20,7 +20,7 @@ const body = req => req.body || {};
 const who = req => ({ profile: profiles().verify(req.get('X-Profile-Token')), key: String(req.get('X-Game-Key') || '') });
 const needProfile = req => {
   const w = who(req);
-  if (!w.profile) throw fail('Online games are for people with a profile, so the game knows whose turn it is. Pick your profile first, or play on one phone instead.', 401);
+  if (!w.profile) throw fail('Online games are for people with a profile, so the game knows whose turn it is. Pick your profile first, or play on one device instead.', 401);
   return w;
 };
 // With ARKS ID on, adult levels follow each person's role (see arcade/arksid.js).

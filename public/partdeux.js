@@ -113,7 +113,7 @@
     S.mode = mode;
     for (const b of $('modeSeg').children) b.setAttribute('aria-pressed', String(b.dataset.mode === mode));
     for (const m of ['local', 'host', 'join', 'tvphones', 'tvpass']) $(`${m}Setup`).classList.toggle('hidden', m !== mode);
-    $('goBtn').textContent = mode === 'host' ? 'Get a game code' : mode === 'join' ? 'Join the game'
+    $('goBtn').textContent = mode === 'host' ? 'Create lobby' : mode === 'join' ? 'Join the game'
       : mode.startsWith('tv') ? 'Show the code on the TV' : 'Deal \'em';
     $('levelList').closest('.panel').classList.toggle('hidden', mode === 'join');
     lobby().mode(mode);
@@ -193,7 +193,7 @@
     const { code, playerId, token } = S.table;
     S.es = new EventSource(`${API}/rooms/${code}/events?playerId=${encodeURIComponent(playerId)}&token=${encodeURIComponent(token)}`);
     S.es.addEventListener('state', e => applySnap(JSON.parse(e.data)));
-    S.es.addEventListener('removed', () => { closeRoom(); show('setup'); toast('The host took you out of the game.'); });
+    S.es.addEventListener('removed', () => { closeRoom(); show('setup'); toast('The host removed you from the lobby.'); });
     S.es.onerror = () => {
       fetch(`${API}/rooms/${code}?playerId=${encodeURIComponent(playerId)}&token=${encodeURIComponent(token)}`)
         .then(r => { if (r.status === 404 || r.status === 403) { closeRoom(); show('setup'); toast('That game has ended.'); } }).catch(() => {});
@@ -286,7 +286,7 @@
       const tag = text => { const t = document.createElement('span'); t.className = 'tag'; t.textContent = text; li.appendChild(t); };
       if (p.id === snap.you) tag('you');
       if (p.host) tag('host');
-      if (p.on) tag(`on ${p.on}'s phone`);
+      if (p.on) tag(`on ${p.on}'s device`);
       // Players this phone added can be taken off again before the start.
       if ((snap.mine || []).includes(p.id) && p.id !== snap.you) {
         const x = document.createElement('button');
@@ -350,7 +350,7 @@
     // around in a room does the same, on the turns of the players it holds.
     const passing = local || (shared() && S.snap.mine.includes(g.turn));
     if (passing && g.phase !== 'over' && g.turn !== S.viewer) {
-      $('passTitle').textContent = `Pass the phone to ${nameOf(g.turn)}`;
+      $('passTitle').textContent = `Pass the device to ${nameOf(g.turn)}`;
       const forgot = g.vulnerable && g.vulnerable !== g.turn;
       $('passCatch').classList.toggle('hidden', !forgot);
       if (forgot) {
@@ -419,7 +419,7 @@
         : S.snap.isScreen ? `${nameOf(g.turn).toUpperCase()}'S TURN`
           : `Waiting for ${nameOf(g.turn)}…`;
     $('turnHint').textContent = g.phase === 'over' ? ''
-      : S.snap.isScreen ? (g.pendingDraw ? `+${g.pendingDraw} waiting for ${nameOf(g.turn)}!` : `${nameOf(g.turn)} is playing on their phone.`)
+      : S.snap.isScreen ? (g.pendingDraw ? `+${g.pendingDraw} waiting for ${nameOf(g.turn)}!` : `${nameOf(g.turn)} is playing on their device.`)
       : !viewer ? 'Your cards show up when it\'s your turn.'
       : !myTurn ? `${cards.length} card${cards.length === 1 ? '' : 's'} in your hand`
         : g.pendingDraw ? `Take the +${g.pendingDraw}, or play a ✋ Nope to bounce it.`

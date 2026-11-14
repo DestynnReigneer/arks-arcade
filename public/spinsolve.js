@@ -1068,7 +1068,7 @@
     {
       emoji: '🎮', title: 'Solo or together',
       html: `<p><b>Solo:</b> you get 3 strikes a round: a missing letter, a wrong answer, Bankrupt or Lose a Turn each cost one. Your total goes on the 🏆 board.</p>
-        <p><b>2–4 players:</b> pass the phone. Only whoever solves keeps that round's money.</p>
+        <p><b>2–4 players:</b> pass the device. Only whoever solves keeps that round's money.</p>
         <p><b>Turn timer:</b> pick 30 to 90 seconds (or Off) in setup. Like on the TV show, nothing ticks while you decide whether to spin, buy a vowel or solve. The clock starts once the wheel stops (to call a letter), when you buy a vowel, and when you tap Solve. Run out and your turn passes.</p>
         <p><b>Sound off?</b> Everything you'd hear also shows: letters light up, a wrong letter flashes the board red with a big ✕, and Bankrupt, Lose a Turn and Solved show up over the wheel.</p>
         <p><b>Puzzles:</b> play everything, or pick one theme pack from the list. 💡 Suggest a theme to ask for a new one. Adults can turn up the heat with Cheeky, Spicy or Filthy.</p>

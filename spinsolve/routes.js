@@ -134,7 +134,7 @@ module.exports = function spinRoutes({ requireAdmin, notify }) {
       // The score belongs to whoever started the game: their profile, or the initials typed for a guest.
       const token = req.get('X-Profile-Token');
       const now = token ? profileOf(req) : null;
-      if (g.profileId && (!now || now.id !== g.profileId)) throw fail('Only the profile that played this game can save it.', 403);
+      if (g.profileId && (!now || now.id !== g.profileId)) throw fail('Only the player account that played this game can save this score.', 403);
       const label = (P.LEVELS[g.level] || P.LEVELS.kids).label;
       const out = scores.save('spinsolve', {
         initials: (req.body || {}).initials, score: g.players[0].total, board: g.adult ? 'adult' : 'solo',

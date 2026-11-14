@@ -26,9 +26,9 @@ A dice-and-grid word hunt against the clock. (Boggle-style — "Boggle" is a Has
 - End-of-round reveal showing every word nobody found.
 - Four ways to play:
   - **Solo** — you against the clock.
-  - **Pass & Play** — one phone, 2–8 players, same board each turn.
-  - **Tabletop** — one shared timer, everyone writes on paper, then the lists get typed in for scoring. The phone is just the buzzer and the scorekeeper.
-  - **Own Phones** — a four-letter room code, everyone on their own device, synchronized timer, live word counts (counts only — never the words).
+  - **Pass & Play** — one device, 2–8 players, same board each turn.
+  - **Tabletop** — one shared timer, everyone writes on paper, then the lists get typed in for scoring. The device is just the buzzer and the scorekeeper.
+  - **Own Devices** — a four-letter room code, everyone on their own device, synchronized timer, live word counts (counts only — never the words).
 - Two dictionaries: a **Kids** list with the rude words removed, and an **Unfiltered** list with slang and profanity added on top. Separate leaderboards, so the two never share a scale.
 - **Difficulty** — Easy (three-letter words count, roomier timer, richer boards), Normal (the box rules), Hard (four letters minimum, less time, scores multiplied by 1.35).
 - **Timers up to ten minutes.** Three is the box rule and it is genuinely miserable for a seven-year-old.
@@ -56,7 +56,7 @@ Because of Marathon, boards are rectangular internally. Anything that takes a bo
 
 | Feature | Server | UI |
 |---|---|---|
-| Solo / Pass & Play / Tabletop / Own Phones | done | done |
+| Solo / Pass & Play / Tabletop / Own Devices | done | done |
 | Marathon | done | done |
 | Profiles, streaks, coins, milestones | done | done |
 | Hints | done | done |
@@ -131,7 +131,7 @@ Validation always uses the full list, so a real word is never rejected as fake �
 
 ### Spin & Solve (`/spinsolve.html`)
 
-A wheel-and-phrase puzzle game that follows the TV show's turns. On your turn you spin, buy a vowel for $250, or solve. Landing on money means calling a consonant, worth that much for every time it's in the puzzle, and finding one means you go again. A letter that isn't there, a wrong answer, Bankrupt (which also takes the round's money) or Lose a Turn passes the turn. Only whoever solves banks the round's money, at least $1,000. Solo gets three strikes a round and goes on the high-score board; 2-4 players pass one phone. 200+ built-in family-friendly puzzles in `spinsolve/kids-puzzles.js`. The game runs on the server (`spinsolve/game.js`): it picks the puzzle, spins the wheel and keeps the answer, and the page only ever gets the board with the hidden letters blank until the round is over. A solo game's total is saved by the server (`POST /api/spinsolve/run/:id/save`), and the shared board refuses a Spin & Solve score posted by a page. The turn clock is the page's, so it decides how long someone may think, never what they score.
+A wheel-and-phrase puzzle game that follows the TV show's turns. On your turn you spin, buy a vowel for $250, or solve. Landing on money means calling a consonant, worth that much for every time it's in the puzzle, and finding one means you go again. A letter that isn't there, a wrong answer, Bankrupt (which also takes the round's money) or Lose a Turn passes the turn. Only whoever solves banks the round's money, at least $1,000. Solo gets three strikes a round and goes on the high-score board; 2-4 players pass one device. 200+ built-in family-friendly puzzles in `spinsolve/kids-puzzles.js`. The game runs on the server (`spinsolve/game.js`): it picks the puzzle, spins the wheel and keeps the answer, and the page only ever gets the board with the hidden letters blank until the round is over. A solo game's total is saved by the server (`POST /api/spinsolve/run/:id/save`), and the shared board refuses a Spin & Solve score posted by a page. The turn clock is the page's, so it decides how long someone may think, never what they score.
 
 - **The turn timer** (30 to 90 seconds, or off) only runs when you owe an answer, like on the show: once the wheel stops (to call a letter), when you buy a vowel, and when you tap Solve. Nothing ticks while you decide what to do next, so it never runs before your first spin.
 - **Sounds** are our own, made in the browser like the rest of the arcade's (`public/blip.js`), in the spirit of a TV wheel game without using any of the show's recordings: a bright ding for each letter that lights up, a low buzzer for a letter that isn't there, a wrong answer or running out of time, a click for every peg the wheel passes, a sting for Bankrupt and a fanfare when the puzzle is solved.
@@ -141,9 +141,9 @@ Levels run Kids, Cheeky, Spicy, Filthy like the party card games; the three adul
 
 ### Chess (`/chess.html`)
 
-Against the computer (Easy, Medium, Hard), two players on one phone, or each player on their own phone. The rules engine (`public/chess-engine.js`) runs in the page, in a Web Worker for the computer, and on the server to check two-phone moves; the tests check it against the standard perft counts. Beating the computer scores on the high-score board.
+Against the computer (Easy, Medium, Hard), two players on one device, or each player on their own device. The rules engine (`public/chess-engine.js`) runs in the page, in a Web Worker for the computer, and on the server to check the moves of a game on two devices; the tests check it against the standard perft counts. Beating the computer scores on the high-score board.
 
-**Multiplayer-Multiple devices** (each player on their own phone) starts with **Create a game lobby**. The host chooses their color and **Who can join**: **Anyone at the arcade**, or **Only People Selected**, a list of everyone with a profile to check one, a few or all (the people checked get a notification when the arcade signs in with ARKS ID, and an **Invites** row at the top of the home page). The lobby shows up in **List Hosted Games** and on the home page's Join a game board, only for the people picked when the host picked people. Nobody types a code: tapping a lobby shows its details (who's in, how it plays, your color, whether it's full) and **Join lobby**; without a profile you type a name and join as a guest. Whoever joins sees the host's setting but can't change it and taps **Ready!**; the host's **Players Ready, Start Game!** only lights up once everyone is ready. An open seat says Open with dots that grow while it waits. The lobby and the game have a chat, with quick buttons; every word the kids word list turns away is starred out, and the host can mute someone. The host can **Mute** someone (their chat messages are hidden from everyone) or **Remove Player** from a seat in the lobby. The game is saved on the server, so it survives a restart, waits in the **Continue** row until it's finished, and opening it on another device puts you back in your seat. A game between two profiles that nobody touches for 30 days is cleared, chat and all; a game with a guest in it, one with no moves yet, a finished one and a lobby nobody started are cleared after a quiet day. Each profile can have 5 unfinished games, and a phone's seat follows its profile, so give a profile a PIN if you don't want someone else picking it and opening its games. A repeat invite only buzzes a phone again after 10 minutes, and each room keeps its newest 200 chat messages.
+**Multiplayer-Multiple devices** (each player on their own device) starts with **Create a game lobby**. The host chooses their color and **Who can join**: **Anyone at the arcade**, or **Only People Selected**, a list of everyone with a profile to check one, a few or all (the people checked get a notification when the arcade signs in with ARKS ID, and a **Lobbies for you** row at the top of the home page). The lobby shows up in **List Hosted Games** and on the home page's Join a game board, only for the people picked when the host picked people. Nobody types a code: tapping a lobby shows its details (who's in, how it plays, your color, whether it's full) and **Join lobby**; without a profile you type a name and join as a guest. Whoever joins sees the host's setting but can't change it and taps **Ready!**; the host's **Players Ready, Start Game!** only lights up once everyone is ready. An open seat says Open with dots that grow while it waits. The lobby and the game have a chat, with quick buttons; every word the kids word list turns away is starred out, and the host can mute someone. The host can **Mute** someone (their chat messages are hidden from everyone) or **Remove Player** from a seat in the lobby. The game is saved on the server, so it survives a restart, waits in the **Continue** row until it's finished, and opening it on another device puts you back in your seat. A game between two profiles that nobody touches for 30 days is cleared, chat and all; a game with a guest in it, one with no moves yet, a finished one and a lobby nobody started are cleared after a quiet day. Each profile can have 5 unfinished games, and a device's seat follows its profile, so give a profile a PIN if you don't want someone else picking it and opening its games. Selecting the same person again only buzzes their device again after 10 minutes, and each room keeps its newest 200 chat messages.
 
 ### Dino Dash (`/dino.html`)
 
@@ -232,7 +232,7 @@ The page sends the points to the shared board (`/api/scores/train`, one Points b
 A 3D synthwave time-trial racer, in the spirit of the classic arcade stock-car cabinets. Three laps against the clock:
 you start with 32 seconds and each finished lap adds 24. Eight tracks, each its own place with its own music (some
 with speed pads); there's no brake, so you let off the gas for the turns, and driving off Star Road drops you into
-space until you're beamed back. Steering: on a phone, Touch is **Tap like the keys** (tap or hold the left or right
+space until you're beamed back. Steering: on a touch screen, Touch is **Tap like the keys** (tap or hold the left or right
 half of the game; taps add up and letting go straightens out) or **Slide** (slide a finger), with a dead zone, a
 gentle curve for small corrections and a limit on how fast the wheel turns, and a steering bar along the bottom;
 the keys work like a wheel too. Gas is always on to start with, or held (on the setup screen). The game is `public/cab-racer.js`.
@@ -280,9 +280,9 @@ A word race. Everyone gets the same 6 or 7 letters, mixed up, and races to find 
 
 - **Points by length:** 10 for 3 letters, 20 for 4, 35 for 5, 60 for 6 and 90 for 7, plus 100 for the full word. Any word that uses every letter counts as the full word (LISTEN and SILENT both do). In a room, the first person to find it gets 50 more.
 - **Two dailies:** a **family daily** and an **unfiltered daily**, each four rounds of 75 seconds with letters made from the date alone, so everyone gets the same ones that day. They have different letters and separate high-score boards (today and all time); the word list you pick under Which words count decides which one Daily plays. The family daily's full words are everyday words on the kids list (the same seed as the single daily before November 2026); the unfiltered one is picked the unfiltered way, so now and then its full word is a cheeky one. The first go at each can go on its board, and a profile gets one go at each a day.
-- **A daily you've played fades:** its Daily button goes pale, can't be started again, and says "Come back tomorrow for a new one" on hover, on focus (the TV's highlight) and when tapped (phones have no hover), and free play is picked instead. For a profile the server says which are done (`POST /daily-status`); a guest's device remembers it.
+- **A daily you've played fades:** its Daily button goes pale, can't be started again, and says "Come back tomorrow for a new one" on hover, on focus (the TV's highlight) and when tapped (touch screens have no hover), and free play is picked instead. For a profile the server says which are done (`POST /daily-status`); a guest's device remembers it.
 - **Free play:** new letters every game, 3, 5 or 7 rounds, any round length. These scores don't go on a board.
-- **Rooms, a phone each:** the host gets a four-letter code (and a QR code), picks the rounds, the time and the word list, and everyone races on the same letters at once. Each phone sees how many words the others have found and a star when someone gets the full word, but not their words until the round ends. Latecomers can join mid-game, and rooms show on the Join a game board.
+- **Rooms, a device each:** the host gets a four-letter code (and a QR code), picks the rounds, the time and the word list, and everyone races on the same letters at once. Each device sees how many words the others have found and a star when someone gets the full word, but not their words until the round ends. Latecomers can join mid-game, and rooms show on the Join a game board.
 - **Family words or unfiltered:** the family list is the kids dictionary (`words/blocklist-kids.txt` keeps rude words out). Unfiltered is the full list and follows the arcade's adult rules: an adult's ARKS ID sign-in to play it, and a lobby password the host makes up for a room. Guests get in with the password. Unfiltered rounds sometimes hide a cheeky word from `words/spice-adult.txt`.
 - **The server decides everything** (`scuffle/`): it picks and mixes the letters, starts each round's clock, checks every word (in the letters, on the chosen list, not already found) and adds up every score. The page sends only the words people spell; a score or time in the request is ignored, words after the clock (plus a second and a half for the network) are refused, and a round's words are only sent once it's over.
 - **Phones first:** big letter tiles to tap, Shuffle, Back, Clear and Enter, the words you've found, and a countdown. On a keyboard you can just type. After each round you see the full word and every word you missed.
@@ -309,32 +309,32 @@ Everything is under `/api/scuffle`. `dictionary` is `kids` or `adult` (the adult
 
 ### Words with Family (`/crisscross.html`)
 
-A crossword tile game for 2 to 4 players. Everyone has seven letter tiles, and you take turns laying them on an 11 by 11 board to make words that cross the words already there. It's built for playing on everyone's own phone over a few days: a turn can wait hours, and the arcade's home page says "Your turn in N games" on the Words with Family card.
+A crossword tile game for 2 to 4 players. Everyone has seven letter tiles, and you take turns laying them on an 11 by 11 board to make words that cross the words already there. It's built for playing on everyone's own device over a few days: a turn can wait hours, and the arcade's home page says "Your turn in N games" on the Words with Family card.
 
 It was called Criss Cross until November 2026. Only the name changed: the page is still `crisscross.html`, the API is still `/api/crisscross`, and the tables and saved games are the same, so old links, bookmarks and games in progress keep working. The logo (`public/words-with-family-logo.svg`) is our own: wooden letter tiles spelling the name, each with the point value it has in this game.
 
-- **Each person on their own phone** needs a profile (or ARKS ID), because a game lasts days and has to know who you are. **New game with the family** lists the family's profiles to tick (up to three), and can leave seats open for a share link or QR code that anyone with a profile can join. A game with only invited people starts straight away; one with open seats starts when they fill up, or when the host taps Start with whoever has joined. The game list shows whose turn it is, the last move and how long ago it was, and an open game checks for new moves every few seconds.
-- **On this phone** is pass-and-play, open to guests: two to four names, and the computer can take any seat. Between turns the tiles are hidden behind a "Pass the phone to Sam" screen. Only that device can open the game (it keeps a key).
+- **Each person on their own device** needs a profile (or ARKS ID), because a game lasts days and has to know who you are. **New game with the family** lists the family's profiles to choose from (up to three), and can leave seats open for a share link or QR code that anyone with a profile can join. A game with only chosen people starts straight away; one with open seats starts when they fill up, or when the host taps Start with whoever has joined. The game list shows whose turn it is, the last move and how long ago it was, and an open game checks for new moves every few seconds.
+- **On this device** is pass-and-play, open to guests: two to four names, and the computer can take any seat. Between turns the tiles are hidden behind a "Pass the device to Sam" screen. Only that device can open the game (it keeps a key).
 - **The rules:** the first word covers the star in the middle. After that, a turn's tiles go in one line, across or down, with no gaps, joined onto tiles already on the board, and every new word made (crosses included) has to be on the game's word list. Two-letter words count. Instead of playing you can swap tiles (when 7 or more are left in the bag), pass, or leave. The game ends when the bag is empty and someone uses their last tile (they get everyone else's leftover points, which everyone else loses), or after six scoreless turns in a row (everyone loses their leftovers), or when only one player is left.
 - **Points:** our own 66-tile bag and values: common letters are worth 1, and Q and Z are worth 10. Two blanks can be any letter and score nothing. The board's bonus squares double or triple a letter (2L, 3L) or a word (2W, 3W, and the star in the middle), on the turn a tile lands on them. Using all seven tiles in one turn adds 40.
-- **Words:** family words (the kids list, `words/blocklist-kids.txt` keeps rude words out) or unfiltered. An unfiltered game follows the adult rules for every player, not just the host: each request needs an adult's ARKS ID adult pass, and with ARKS ID on, every invited profile has to belong to an adult's account.
+- **Words:** family words (the kids list, `words/blocklist-kids.txt` keeps rude words out) or unfiltered. An unfiltered game follows the adult rules for every player, not just the host: each request needs an adult's ARKS ID adult pass, and with ARKS ID on, every profile in the game has to belong to an adult's account.
 - **The server decides everything** (`crisscross/`): it keeps the bag and every rack, shows each player only their own rack (everyone's leftovers are shown once the game is over), checks every move and finds every new word, and adds up the score. The page only sends where its tiles went; a score in the request is ignored.
 - **The computer** (`crisscross/bot.js`) plays the best-scoring word it can find with its rack along every row and column. It doesn't use blanks, and when it can't find a word it swaps or passes.
 - **Phones first:** tap a tile and then a square, or drag a tile onto the board; tap a placed tile to take it back. Shuffle, Recall, Swap and Pass, a Zoom button that makes the board bigger and lets it slide around inside its own box, the score of your word before you play it, the last move lit up, and a list of every word played. There's no chat between players, on purpose.
-- **Your turn:** turns show up on the home page and the game list, and with ARKS ID a phone can get a notification too (below).
+- **Your turn:** turns show up on the home page and the game list, and with ARKS ID a device can get a notification too (below).
 
 #### The Words with Family API
 
-Everything is under `/api/crisscross`. Who's asking goes in headers, never the address: `X-Profile-Token` for online games, `X-Game-Key` for a game on one phone, and `X-Adult-Pin` (the adult's ARKS ID adult pass) for an unfiltered game. A refusal because of it says `adult: true`.
+Everything is under `/api/crisscross`. Who's asking goes in headers, never the address: `X-Profile-Token` for online games, `X-Game-Key` for a game on one device, and `X-Adult-Pin` (the adult's ARKS ID adult pass) for an unfiltered game. A refusal because of it says `adult: true`.
 
 | Call | What it does |
 |---|---|
 | `GET /config` | The board size, bonus layout, tile counts and values, and the rules' numbers. |
-| `GET /people` | The profiles you can invite (with `adultOk` when ARKS ID is on). |
+| `GET /people` | The profiles you can play with (with `adultOk` when ARKS ID is on). |
 | `GET /mine` | Your online games, newest first, and how many are waiting on you. |
 | `GET /turns` | Just that count, for the home page. |
 | `POST /games` `{ kind: 'online', invite: [profileId], openSeats, dictionary }` | Starts an online game. |
-| `POST /games` `{ kind: 'local', players: [{ name } \| { bot: true }], dictionary }` | Starts a game on one phone. Returns its `key`, shown once. |
+| `POST /games` `{ kind: 'local', players: [{ name } \| { bot: true }], dictionary }` | Starts a game on one device. Returns its `key`, shown once. |
 | `GET /invite/:code`, `POST /invite/:code/join` | The share link: who's in, and taking a seat. |
 | `GET /games/:id` | The game as you may see it: the board, the scores, your rack, the bag's count, the moves. |
 | `POST /games/:id/preview` `{ placements }` | Checks a play and scores it without making it. |
@@ -369,7 +369,7 @@ It was called Clueless until November 2026. Only the name changed on screen: the
 
 A small crossword every day, the same one for everybody (it's made from the date alone), so the family can race each other for the fastest time. The **Family mini** is a 5 by 5 grid with clues written for kids, and the **Adults** crossword is a 7 by 7 grid with longer words and trickier clues. Both use words from the family word list. There's no unfiltered crossword, because there are no adult-only clue packs to build one from.
 
-- **Playing:** tap a square and type; the word you're on lights up and its clue shows in the bar above the grid. Tap the same square again (or the clue bar) to switch between across and down, and tap any clue in the lists to jump to it. Phones get a keyboard on the page; a laptop's own keyboard works too (arrows, Space to switch direction, Tab for the next clue). **Pencil** puts letters in gray for the ones you're not sure of. Across is blue and down is pink, in the grid, the clue bar and the lists, always next to an arrow (→ or ↓), with a little key under the grid. The grid's rows and columns are fixed equal shares of a square, so typing never changes the size of a square.
+- **Playing:** tap a square and type; the word you're on lights up and its clue shows in the bar above the grid. Tap the same square again (or the clue bar) to switch between across and down, and tap any clue in the lists to jump to it. Touch screens get a keyboard on the page; a laptop's own keyboard works too (arrows, Space to switch direction, Tab for the next clue). **Pencil** puts letters in gray for the ones you're not sure of. Across is blue and down is pink, in the grid, the clue bar and the lists, always next to an arrow (→ or ↓), with a little key under the grid. The grid's rows and columns are fixed equal shares of a square, so typing never changes the size of a square.
 - **Crossing off clues:** when a word is right, its clue is crossed off in the lists with a ✓. The server decides (`POST /run/:id/solved`), and the rule depends on the level: the Family mini crosses a clue off as soon as its word is right, and the Adults crossword waits until the whole line is right (every square in that row for an across clue, in that column for a down clue), so it gives away less. Nothing is ever said about which letter is wrong.
 - **Free play:** a random crossword at either level, made from a random seed instead of the date, and kept by the server the same way (it holds the letters and the clock). Until you type your first letter, **New board** swaps it for another one, as often as you like. Free play times don't go on the board, because everyone gets a different one. Today's puzzle stays fixed all day.
 - **Where the clues come from:** every clue is written by a person or pasted in from a chatbot by the admin; the server never asks an AI for anything. The game ships with about a thousand family clues written for it (`clueless/starter-clues.txt`), and admin can add **crossword clue packs**: copy a prompt with a batch of words from the arcade's everyday list, paste it into any chatbot, and paste the `WORD: clue` lines back. Each clue is checked on the way in: the word must be on the family list (3 to 7 letters, no British spellings), the clue must be 80 characters or fewer, it can't contain its own answer (or a word that starts with it), and it can't use a word the kids blocklist removes. Family clues go in both crosswords; adult clues only in the bigger one.
@@ -405,7 +405,7 @@ A timing game in the style of a coin-op cabinet. A bright light races around a d
 - **Perfect pops:** popping a lock in the middle third of it is a perfect pop. They don't change the score, but the run's perfect pops and best streak show at the end.
 - **Sound off:** every sound has something to see too. Pops, perfect pops, Go and each new wave make the dial glow, a miss turns it red (and shakes it, unless reduced motion is on), and wave news shows across the top of the dial.
 
-- **Controls:** tap anywhere on the dial or the big POP! button on a phone, press Space or Enter on a keyboard, or press a game controller's A, X, R1 or right trigger (through the browser's Gamepad API; Start pauses). The dial is drawn on a canvas at the screen's frame rate. With reduced motion turned on, the glowing trail, the shake and most of the confetti are left out, and the game plays the same.
+- **Controls:** tap anywhere on the dial or the big POP! button on a touch screen, press Space or Enter on a keyboard, or press a game controller's A, X, R1 or right trigger (through the browser's Gamepad API; Start pauses). The dial is drawn on a canvas at the screen's frame rate. With reduced motion turned on, the glowing trail, the shake and most of the confetti are left out, and the game plays the same.
 - **The server works out every score.** Starting a run writes down the moment on the server's clock and hands the page a random seed, which decides where every lock goes. The page and the server run the same small simulation (`public/tumbler-engine.js`): the page plays it live, and when the run ends it sends only the list of its tap times, in whole milliseconds since the run started. The server replays those taps through the simulation and gets the score itself. It refuses taps that couldn't have come from a real run: two taps closer together than 60 milliseconds, taps out of order, more than 4,000 of them, a tap after the run was already over, or times later than the run has really lasted by the server's clock. Opening How to play or leaving the page pauses the run, and there's a countdown before the light moves again.
 - **High-score boards** for today and for all time, counted in locks popped. Every run you save counts, profiles show their name or initials the way they chose, and guests type initials. After a run the game says how many more locks would have passed the next real score on today's board. A new best score ever posts to the Comm Center. Scores from the first version of the game (points over locks that opened) are kept in the database, marked `rules = 1`, but left off the boards, since the two kinds of score can't be compared.
 
@@ -423,7 +423,7 @@ Everything is under `/api/tumbler`.
 
 ### Know-It-All (`/trivia.html`)
 
-Multiple-choice trivia. Solo (high-score board), take turns on one phone, or a room where everyone answers on their own phone at the same time and faster right answers score more. Pick genres, difficulty, how many questions and how long to answer.
+Multiple-choice trivia. Solo (high-score board), take turns on one device, or a room where everyone answers on their own device at the same time and faster right answers score more. Pick genres, difficulty, how many questions and how long to answer.
 
 Questions come from a built-in bank (`trivia/bank.js`), packs built from an AI prompt in the admin Trivia tab (with player topic requests), and Open Trivia DB (opentdb.com, CC BY-SA 4.0), which the server downloads in the background and saves for offline play (`TRIVIA_ONLINE=off` to skip it). Cheeky, Spicy and Filthy levels only open for an adult signed in with ARKS ID, with optional Drinking rules and Couples dares that get spicier with the level.
 
@@ -431,8 +431,8 @@ Questions come from a built-in bank (`trivia/bank.js`), packs built from an AI p
 
 Opened on a TV (a TV app whose browser adds `ARKS-TV/<version>` to its user agent, or any browser with `?tv=1` on the address to try it), the arcade switches to a TV layout: everything is drawn half as big again, it stays inside the edges some TVs cut off, and a thick turquoise ring shows which button the remote is on. The remote's arrows move the ring to the nearest button in that direction, and OK (Enter) presses it. The home page shows the games as big tiles with Know-It-All first. On a TV, Know-It-All's "Who's playing?" offers three ways, and in all of them the TV hosts a room and the server keeps every score:
 
-- **Everyone on their own phone:** the TV shows the code and a QR code to join, the questions, who has locked in and the scores. Everyone answers on their own phone at the same time.
-- **Pass one phone around:** you take turns. Scan the code with the phone you'll pass around and add everyone's names on it. Before each turn the TV says whose turn it is, and the clock starts when they press I'm ready.
+- **Everyone on their own device:** the TV shows the code and a QR code to join, the questions, who has locked in and the scores. Everyone answers on their own device at the same time.
+- **Pass one device around:** you take turns. Scan the code with the phone you'll pass around and add everyone's names on it. Before each turn the TV says whose turn it is, and the clock starts when they press I'm ready.
 - **Play with the remote:** the same turns, with the players added on the TV, and the remote answers. A controller's X, Y and shoulder buttons pick answers A to D too.
 
 The room API gained `screen: true` when making a room (the device shows the game and isn't a player), `settings.style` (`together` or `turns`), `POST /api/trivia/rooms/:code/seats` and `/seats/remove` (more players on one device, for turns), `POST /api/trivia/rooms/:code/ready` (start the clock on a turn), and `seat` on `/answer` (which of the device's players is answering).
@@ -441,15 +441,15 @@ With ARKS ID on, a TV signs itself in with a pairing code that an adult approves
 
 ### Uh-Oh: Part Deux (`/partdeux.html`)
 
-A shedding card game for 2-8: match the top card by color or number and be first to empty your hand. Skips, Draw Twos, Reverses, Nopes (bounce a draw penalty), Gifts (give a card away), Wilds and the 💣 Draw Four wear funny names at every level. Say "Uh-Oh!" before your last card or get caught for +2. One phone or a phone each; adult decks behind the PIN with an optional Drinking mode.
+A shedding card game for 2-8: match the top card by color or number and be first to empty your hand. Skips, Draw Twos, Reverses, Nopes (bounce a draw penalty), Gifts (give a card away), Wilds and the 💣 Draw Four wear funny names at every level. Say "Uh-Oh!" before your last card or get caught for +2. One device or a device each; adult decks behind the PIN with an optional Drinking mode.
 
 ### Dare Devil (`/daredevil.html`)
 
-A party deck for 2-12: draw a card and do the dare, answer the truth, follow the new rule, or chicken out (lose a point, or drink). Family, Cheeky, Spicy and Filthy decks (`daredevil/cards.js`), quick/standard/long games, one phone or a phone each.
+A party deck for 2-12: draw a card and do the dare, answer the truth, follow the new rule, or chicken out (lose a point, or drink). Family, Cheeky, Spicy and Filthy decks (`daredevil/cards.js`), quick/standard/long games, one device or a device each.
 
-Both card games share their one-phone and room plumbing (`arcade/party-tables.js`, `arcade/party-routes.js`).
+Both card games share their one-device and room plumbing (`arcade/party-tables.js`, `arcade/party-routes.js`).
 
-**Playing on everyone's own phone** works like Chess and Know-It-All. The host chooses **Create a game lobby** and picks who can join: anyone at the arcade, or only the people they choose (those people get an invite). Everyone else chooses **List Hosted Games** (or taps the lobby on the home page's Join a game list), sees the lobby's details and joins. There's no code to type; the code and QR code only show when a TV hosts the room. In the lobby each joiner taps **Ready!**, and the host can start once everyone is ready. The lobby and the game have a chat with emoji, and the host can mute someone or take them out with Remove Player. A card game can't be joined once it's dealt, so a game in progress shows on the list until it ends. The page's shared lobby pieces are in `public/party-lobby.js`, and the routes are `GET /api/<game>/lobbies` and `POST /api/<game>/rooms/:code/lobby-ready`, `/chat`, `/mute` and `/remove`.
+**Playing on everyone's own device** works like Chess and Know-It-All. The host chooses **Create a game lobby** and picks who can join: anyone at the arcade, or only the people they choose (those people are told a lobby is open for them). Everyone else chooses **List Hosted Games** (or taps the lobby on the home page's Join a game list), sees the lobby's details and joins. There's no code to type; the code and QR code only show when a TV hosts the room. In the lobby each joiner taps **Ready!**, and the host can start once everyone is ready. The lobby and the game have a chat with emoji, and the host can mute someone or take them out with Remove Player. A card game can't be joined once it's dealt, so a game in progress shows on the list until it ends. The page's shared lobby pieces are in `public/party-lobby.js`, and the routes are `GET /api/<game>/lobbies` and `POST /api/<game>/rooms/:code/lobby-ready`, `/chat`, `/mute` and `/remove`.
 
 #### The party games, word games and puzzles on a TV
 
@@ -457,10 +457,10 @@ These games work on a TV the same way as Know-It-All (see "Know-It-All on a TV" 
 
 | Game | On a TV |
 |---|---|
-| Uh-Oh: Part Deux | **Everyone on their own phone:** the TV shows the table (the pile, everyone's card count, whose turn it is) and each hand stays on its phone. **Pass one phone around:** one phone holds several players and hides the cards between turns. The TV never shows a hand, so there's no remote-only way. |
-| Dare Devil | **Everyone on their own phone** or **one phone passed around:** the card shows up big on the TV, and whoever's turn it is draws and says whether they did it on the phone. **Play with the remote:** the players take turns with the remote right on the TV. |
-| Shuffle Scuffle | **Everyone on their own phone:** the TV shows the letters, the clock and everyone's count, and after each round the full word and every word in the letters. The daily letters and free play also work with the remote alone: the arrows move along the tiles and OK picks one. |
-| Rambler | **Everyone on their own phone:** the TV shows the board big with the clock and everyone's count, and the results after. Tracing words needs a finger, so the TV doesn't play itself. |
+| Uh-Oh: Part Deux | **Everyone on their own device:** the TV shows the table (the pile, everyone's card count, whose turn it is) and each hand stays on its device. **Pass one device around:** one device holds several players and hides the cards between turns. The TV never shows a hand, so there's no remote-only way. |
+| Dare Devil | **Everyone on their own device** or **one device passed around:** the card shows up big on the TV, and whoever's turn it is draws and says whether they did it on the device. **Play with the remote:** the players take turns with the remote right on the TV. |
+| Shuffle Scuffle | **Everyone on their own device:** the TV shows the letters, the clock and everyone's count, and after each round the full word and every word in the letters. The daily letters and free play also work with the remote alone: the arrows move along the tiles and OK picks one. |
+| Rambler | **Everyone on their own device:** the TV shows the board big with the clock and everyone's count, and the results after. Tracing words needs a finger, so the TV doesn't play itself. |
 
 The puzzles and Spin & Solve are played on the TV with the remote alone, and their scores are still decided by the server as before:
 
@@ -468,10 +468,10 @@ The puzzles and Spin & Solve are played on the TV with the remote alone, and the
 |---|---|
 | Wordless | The arrows move along the keyboard on the screen and OK types a letter (or presses Enter or ⌫ on it). |
 | Clueless Crosswords | The arrows move the highlight around the grid, OK picks a square (OK again switches between across and down), and the keyboard on the screen types into it. Arrowing back up from the keyboard lands on the picked square. |
-| Words with Family | Against the computer, or with the remote passed between players: OK on one of your tiles picks it up and sends the highlight to the board, the arrows take it to a square, and OK puts it down. The tiles show on the TV, so for secret tiles play on your own phones. The games on everyone's own phone stay on the phones. |
+| Words with Family | Against the computer, or with the remote passed between players: OK on one of your tiles picks it up and sends the highlight to the board, the arrows take it to a square, and OK puts it down. The tiles show on the TV, so for secret tiles play on your own devices. The games on everyone's own device stay on those devices. |
 | Spin & Solve | One to four players pass the remote around. The arrows move between Spin, Buy a vowel and Solve and across the letters, and solving uses a keyboard on the screen. |
 
-Initials can't be typed on a TV, so a solo score made there only goes on a board when the TV is signed in as a profile; otherwise the page says to play on your own phone for that.
+Initials can't be typed on a TV, so a solo score made there only goes on a board when the TV is signed in as a profile; otherwise the page says to play on your own device for that.
 
 #### The cabinet games and the classics on a TV
 
@@ -486,11 +486,11 @@ Tumbler Rumble, Snake, Dino Dash, Block Drop, Brick Breaker, Tower Defense, Sudo
 | Brick Breaker | The arrows move the paddle, OK launches the ball. | A, X, R1 or the right trigger launches; Start pauses. |
 | Tower Defense | The arrows move a cursor around the map, OK picks the square (to build, or to upgrade or sell a tower), and the highlight goes to the towers to choose from. | X calls the next wave, Y upgrades, L1 and R1 change the speed, Start pauses. |
 | Sudoku | The arrows move around the board, and OK opens the numbers for that square, with Erase, Notes, Undo, Hint and Check. | X erases, Y turns notes on and off, Start pauses. |
-| Chess | Against the computer, or two players sharing the remote: the arrows move square by square, OK picks a piece and then where it goes. The two-phone games stay on phones. | |
+| Chess | Against the computer, or two players sharing the remote: the arrows move square by square, OK picks a piece and then where it goes. The games on two devices stay on those devices. | |
 
 A game controller works in a web browser too, not only on the TV: the D-pad, the sticks and the buttons above go through the browser's Gamepad API (`public/tv-play.js`). In the ARKS TV app the controller's A button arrives as OK and B as Back.
 
-The rooms gained `screen: true` when making one (`POST /api/partdeux/rooms`, `/api/daredevil/rooms`, `/api/scuffle/rooms`, `/api/rambler/rooms`), and `screen` and `isScreen` in what the room sends. The card games also gained `POST /rooms/:code/seats` `{ name }` and `/seats/remove` `{ seat }` (more players on one phone, before the game starts), `as` on `/act` (which of the phone's players is moving), and `mine` (the players this phone holds) and `as` (whose hand the snapshot shows) in the room's state. With ARKS ID on, a phone signed in as a kid, a teen or a TV is turned away from a adults room in all four games, password or not (`arcade/adult-join.js`); guests still get in with the lobby password.
+The rooms gained `screen: true` when making one (`POST /api/partdeux/rooms`, `/api/daredevil/rooms`, `/api/scuffle/rooms`, `/api/rambler/rooms`), and `screen` and `isScreen` in what the room sends. The card games also gained `POST /rooms/:code/seats` `{ name }` and `/seats/remove` `{ seat }` (more players on one device, before the game starts), `as` on `/act` (which of the device's players is moving), and `mine` (the players this device holds) and `as` (whose hand the snapshot shows) in the room's state. With ARKS ID on, a device signed in as a kid, a teen or a TV is turned away from a adults room in all four games, password or not (`arcade/adult-join.js`); guests still get in with the lobby password.
 
 ### Shared
 
@@ -635,7 +635,7 @@ rambler/                   Rambler, self-contained
   rooms.js                In-memory multi-device rooms over Server-Sent Events
   routes.js               Everything under /api/rambler
 
-chess/                    Two-phone chess rooms, saved, with the lobby (/api/chess)
+chess/                    Chess rooms for two devices, saved, with the lobby (/api/chess)
 sudoku/                   Sudoku's puzzle maker (generator.js) and its runs and boards (/api/sudoku)
 scuffle/                  Shuffle Scuffle: letters and points (game.js), solo games and the two daily boards (solo.js), rooms (rooms.js), /api/scuffle
 crisscross/               Words with Family: the rules (engine.js), the computer player (bot.js), games in the database (games.js), /api/crisscross

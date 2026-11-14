@@ -622,7 +622,7 @@
     {
       emoji: '👆', title: 'How to tap',
       html: `<table>
-          <tr><td>📱 Phone</td><td>Tap anywhere on the dial, or the big <b>POP!</b> button under it.</td></tr>
+          <tr><td>📱 Touch screen</td><td>Tap anywhere on the dial, or the big <b>POP!</b> button under it.</td></tr>
           <tr><td>⌨️ Keyboard</td><td><b>Space</b> or <b>Enter</b>.</td></tr>
           <tr><td>🎮 Controller</td><td>The <b>A</b> button pops, and so do <b>X</b>, <b>R1</b> and the right trigger. <b>Start</b> pauses, and starts a new run after a game over.</td></tr>
           <tr><td>📺 TV</td><td>The remote's <b>OK</b> button pops.</td></tr>

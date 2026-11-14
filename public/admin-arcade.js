@@ -628,7 +628,7 @@
         try {
           const image = await squareJpeg(file.files[0]);
           renderTrainCars((await api(`/train-cars/${i + 1}/picture`, { method: 'POST', body: { image } })).cars);
-          say($('trainCarsMsg'), `Car ${i + 1}'s picture is saved. The next game on the train shows it.`);
+          say($('trainCarsMsg'), `Car ${i + 1}'s picture is saved. Live in next new train game.`);
         } catch (e) { say($('trainCarsMsg'), e.message, false); }
       };
       row.append(n, name, kind, pic, pick, file);
@@ -656,7 +656,7 @@
         URL.revokeObjectURL(url);
         resolve(c.toDataURL('image/jpeg', 0.85));
       };
-      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('That file isn\'t a picture the browser can open. Try a JPG or PNG.')); };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('That file isn\'t a picture. Try a JPG or PNG.')); };
       img.src = url;
     });
   }

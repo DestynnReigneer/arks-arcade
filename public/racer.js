@@ -43,7 +43,7 @@
     {
       emoji: '🕹️', title: 'Steering',
       html: `<table>
-          <tr><td>📱 Phone</td><td>With <b>Touch: Tap like the keys</b>, tap or hold the left or right half of the game to steer: a tap is a small nudge, more taps turn more, and letting go straightens out. With <b>Slide</b>, put a finger down and slide it left or right. The arrow and GAS buttons under the game work too.</td></tr>
+          <tr><td>📱 Touch screen</td><td>With <b>Touch: Tap like the keys</b>, tap or hold the left or right half of the game to steer: a tap is a small nudge, more taps turn more, and letting go straightens out. With <b>Slide</b>, put a finger down and slide it left or right. The arrow and GAS buttons under the game work too.</td></tr>
           <tr><td>⌨️ Keyboard</td><td><b>↑</b> or <b>W</b> is the gas, and <b>←</b> <b>→</b> or <b>A</b> <b>D</b> steer. <b>P</b> pauses.</td></tr>
           <tr><td>🎮 Controller</td><td>The D-pad or left stick steers, and <b>A</b> or the right trigger is the gas. <b>Start</b> pauses.</td></tr>
         </table>

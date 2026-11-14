@@ -111,7 +111,7 @@ function makeTables({ game = 'party', title = 'the game', engine, act, levels, m
 
   function room(code) {
     const t = tables.get(String(code || '').toUpperCase());
-    if (!t || t.kind !== 'room') throw fail('No game with that code.', 404);
+    if (!t || t.kind !== 'room') throw fail('That game isn\'t open anymore.', 404);
     return t;
   }
 
@@ -173,7 +173,7 @@ function makeTables({ game = 'party', title = 'the game', engine, act, levels, m
     if (onlySome) {
       try {
         invites.send({ game, room: t.id, from: { id: profile.id, name: host.name }, to: picked, title, href: `${game}.html?join=${t.id}`,
-          notify: { title, body: `${host.name} invited you to ${title}. Get in here!` } });
+          notify: { title, body: `${host.name} started ${/^[aeiou]/i.test(title) ? 'an' : 'a'} ${title} lobby with you. Get in here!` } });
       } catch (e) { close(t); throw e; }
     }
     return { table: t, player: host };
@@ -183,7 +183,7 @@ function makeTables({ game = 'party', title = 'the game', engine, act, levels, m
   function addSeat(code, playerId, token, name) {
     const t = room(code);
     const device = authenticate(t, playerId, token);
-    if (device.screen) throw fail('Players join from their phones.', 400);
+    if (device.screen) throw fail('Players join from their own devices.', 400);
     if (t.game && t.game.phase !== 'over') throw fail('That game has already started. Wait for the next one.', 409);
     if (t.players.size >= maxPlayers) throw fail(`That game is full (${maxPlayers} players).`, 409);
     const seat = addPlayer(t, name, device.id);
@@ -195,7 +195,7 @@ function makeTables({ game = 'party', title = 'the game', engine, act, levels, m
     const t = room(code);
     const device = authenticate(t, playerId, token);
     const seat = t.players.get(String(seatId || ''));
-    if (!seat || seat.owner !== device.id) throw fail('That player isn\'t on this phone.', 403);
+    if (!seat || seat.owner !== device.id) throw fail('That player isn\'t on this device.', 403);
     if (t.game && t.game.phase !== 'over') throw fail('That game has already started.', 409);
     t.players.delete(seat.id);
     touch(t);
@@ -299,7 +299,7 @@ function makeTables({ game = 'party', title = 'the game', engine, act, levels, m
     const device = authenticate(t, playerId, token);
     if (!t.game) throw fail('The game hasn\'t started.', 409);
     const actor = body.as ? String(body.as) : device.screen ? null : device.id;
-    if (!actor || !controlled(t, device).includes(actor)) throw fail('You can only play for the players on your phone.', 403);
+    if (!actor || !controlled(t, device).includes(actor)) throw fail('You can only play for the players on your device.', 403);
     act(t.game, actor, body);
     touch(t);
     return roomSnapshot(t, device.id);

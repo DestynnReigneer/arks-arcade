@@ -135,7 +135,7 @@ test('Uh-Oh: Part Deux: the TV shows the table and one phone is passed around', 
   await phone.locator('#seatName').fill('Sam');
   await phone.locator('#seatAdd').click();
   await expect(phone.locator('#lobbyPlayers')).toContainText('Sam');
-  await expect(page.locator('#lobbyPlayers')).toContainText('on Pat\'s phone');
+  await expect(page.locator('#lobbyPlayers')).toContainText('on Pat\'s device');
 
   // The TV starts with the remote and shows the table, not a hand.
   await press(page, '#startBtn');
@@ -148,7 +148,7 @@ test('Uh-Oh: Part Deux: the TV shows the table and one phone is passed around', 
 
   // The phone hides the cards until the right person has it, then they play.
   await expect(phone.locator('#passCover')).toBeVisible();
-  const who = (await phone.locator('#passTitle').textContent()).replace('Pass the phone to ', '');
+  const who = (await phone.locator('#passTitle').textContent()).replace('Pass the device to ', '');
   await phone.locator('#passReady').click();
   await expect(phone.locator('#turnLine')).toContainText('YOUR TURN');
   await expect(phone.locator('#hand .card')).toHaveCount(7);

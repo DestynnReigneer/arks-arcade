@@ -52,8 +52,8 @@
       <button data-mode="local" aria-pressed="true" class="no-tv">📱 Multiplayer-Single device</button>
       <button data-mode="host" aria-pressed="false" class="no-tv">📱📱 Create a game lobby</button>
       <button data-mode="join" aria-pressed="false" class="no-tv">🔎 List Hosted Games</button>
-      <button data-mode="tvphones" aria-pressed="false" class="tv-only">📱 Everyone on their own phone</button>
-      <button data-mode="tvpass" aria-pressed="false" class="tv-only">🔁 Pass one phone around</button>
+      <button data-mode="tvphones" aria-pressed="false" class="tv-only">📱 Everyone on their own device</button>
+      <button data-mode="tvpass" aria-pressed="false" class="tv-only">🔁 Pass one device around</button>
       <button data-mode="tvremote" aria-pressed="false" class="tv-only">🎮 Play with the remote</button>
     </div>
     <div id="tvphonesSetup" class="hidden">
@@ -63,19 +63,16 @@
       <p class="hint">The TV shows each card big, and one phone does the drawing for everyone. Scan the code on the TV with that phone, add everyone's names on it, and hand it to whoever's turn it is.</p>
     </div>
     <div id="localSetup">
-      <p class="hint" id="localHint">Put the phone in the middle, or pass it around.</p>
+      <p class="hint" id="localHint">Put the device in the middle, or pass it around.</p>
       <div id="nameList"></div>
       <button class="ghost" id="addPlayerBtn">+ Add player</button>
     </div>
     <div id="hostSetup" class="hidden">
-      <p class="hint">Everyone sees the cards on their own phone. You'll get a code to share.</p>
+      <p class="hint">Everyone plays on their own device. Your lobby will show in List Hosted Games and on the Arcade's home page once created.</p>
       <label>Your name<input id="hostName" maxlength="16" placeholder="e.g. Sam"></label>
     </div>
-    <div id="joinSetup" class="hidden">
-      <p class="hint">Get the 4-letter code from whoever is hosting.</p>
-      <label>Game code<input id="joinCode" maxlength="4" placeholder="ABCD" autocapitalize="characters" class="code-input"></label>
-      <label>Your name<input id="joinName" maxlength="16" placeholder="e.g. Alex"></label>
-    </div>
+    <!-- List Hosted Games: party-lobby.js fills this with the lobbies you can join. -->
+    <div id="joinSetup" class="hidden"></div>
     <div class="msg" id="setupMsg"></div>
     <button class="primary big" id="goBtn">I dare you</button>
   </div>
@@ -95,8 +92,8 @@
     <h2>Players <span id="lobbyCount"></span></h2>
     <ul class="people" id="lobbyPlayers"></ul>
     <div id="seatBox" class="hidden">
-      <p class="hint">Passing this phone around? Add everyone who'll share it.</p>
-      <label>Another player on this phone<input id="seatName" maxlength="16" placeholder="e.g. Jordan"></label>
+      <p class="hint">Passing this device around? Add everyone who'll share it.</p>
+      <label>Another player on this device<input id="seatName" maxlength="16" placeholder="e.g. Jordan"></label>
       <button class="ghost" id="seatAdd" style="width:100%;margin-bottom:10px">+ Add player</button>
     </div>
     <div id="hostControls" class="hidden">

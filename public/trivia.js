@@ -254,8 +254,8 @@
     S.details = l;
     $('detailsTitle').textContent = `${l.host}'s Know-It-All lobby`;
     $('dPlayers').textContent = `${l.players.join(', ')} · ${l.count} of ${l.max}`;
-    $('dHow').textContent = l.screen ? 'The questions are on the TV. Everyone answers on their own phone at the same time.'
-      : 'Each player on their own phone. Everyone answers at the same time, and faster right answers score more.';
+    $('dHow').textContent = l.screen ? 'The questions are on the TV. Everyone answers on their own device at the same time.'
+      : 'Each player on their own device. Everyone answers at the same time, and faster right answers score more.';
     $('dStatus').textContent = l.status === 'full' ? 'Full' : l.question ? `Playing, question ${l.question.index} of ${l.question.total}` : 'Waiting for players';
     $('dLate').classList.toggle('hidden', !l.question);
     $('joinBtn').textContent = l.question ? 'Join game in progress?' : 'Join lobby';
@@ -394,7 +394,7 @@
     const { code, playerId, token } = S.room;
     S.es = new EventSource(`/api/trivia/rooms/${code}/events?playerId=${encodeURIComponent(playerId)}&token=${encodeURIComponent(token)}`);
     S.es.addEventListener('state', e => applySnap(JSON.parse(e.data)));
-    S.es.addEventListener('removed', () => { leaveRoom(); show('setup'); toast('The host took you out of the game.'); });
+    S.es.addEventListener('removed', () => { leaveRoom(); show('setup'); toast('The host removed you from the lobby.'); });
     S.es.onerror = () => {
       fetch(`/api/trivia/rooms/${code}?playerId=${encodeURIComponent(playerId)}&token=${encodeURIComponent(token)}`)
         .then(r => { if (r.status === 404 || r.status === 403) { leaveRoom(); show('setup'); toast('That game has ended.'); } }).catch(() => {});
@@ -447,9 +447,9 @@
       const seat = snap.players.find(p => p.id === turn.id) || {};
       $('readyHint').textContent = turn.yours
         ? (snap.isScreen ? `${turn.name}, grab the remote. Press OK when you're ready and the clock starts.`
-          : snap.mine.length > 1 ? `Hand the phone to ${turn.name}. The clock starts when they press I'm ready.` : 'The clock starts when you press I\'m ready.')
+          : snap.mine.length > 1 ? `Hand the device to ${turn.name}. The clock starts when they press I'm ready.` : 'The clock starts when you press I\'m ready.')
         : seat.on === 'screen' ? `${turn.name} answers with the TV remote.`
-          : `Waiting for ${turn.name} to get ready${seat.on ? ` on ${seat.on}'s phone` : ''}.`;
+          : `Waiting for ${turn.name} to get ready${seat.on ? ` on ${seat.on}'s device` : ''}.`;
       $('readyBtn').textContent = turn.yours ? 'I\'m ready' : 'Start the clock';
       $('readyBtn').classList.toggle('hidden', !turn.yours && !snap.host);
       $('nextBtn').classList.add('hidden');
@@ -480,8 +480,8 @@
       } else {
         const n = snap.players.filter(p => p.answered).length;
         const seat = turn && snap.players.find(p => p.id === turn.id);
-        $('qStatus').textContent = turn ? `${turn.name} is answering${seat && seat.on && seat.on !== 'screen' ? ` on ${seat.on}'s phone` : ''}…`
-          : `📱 Answer on your phones! (${n}/${snap.players.length} locked in)`;
+        $('qStatus').textContent = turn ? `${turn.name} is answering${seat && seat.on && seat.on !== 'screen' ? ` on ${seat.on}'s device` : ''}…`
+          : `📱 Answer on your own devices! (${n}/${snap.players.length} locked in)`;
       }
       const total = snap.settings.seconds * 1000;
       runTimer(snap.endsAt - S.skew, total, () => {});
@@ -519,7 +519,7 @@
     $('lobbyHow').textContent = !snap.screen ? ''
       : !turns ? 'Everyone scans the code with their own phone and types their name. You all answer at the same time on your phones, and the questions show up here on the TV.'
         : snap.isScreen ? 'Scan the code with the phone you\'ll pass around and add everyone\'s names on it, or add players right here to play with the remote. Each player gets their own questions, one turn at a time.'
-          : 'You take turns. Add everyone who\'ll share this phone below, and hand it over when it\'s their turn.';
+          : 'You take turns. Add everyone who\'ll share this device below, and hand it over when it\'s their turn.';
     $('lobbyCount').textContent = `(${snap.players.length})`;
     const list = $('lobbyPlayers');
     list.innerHTML = '';
@@ -544,7 +544,7 @@
         }
       }
       if (p.on === 'screen') tag('on the TV');
-      else if (p.on) tag(`on ${p.on}'s phone`);
+      else if (p.on) tag(`on ${p.on}'s device`);
       // Players this device added can be taken off again before the start.
       if (snap.mine.includes(p.id) && p.id !== snap.you) {
         const x = document.createElement('button');
@@ -558,7 +558,7 @@
       list.appendChild(li);
     }
     $('seatBox').classList.toggle('hidden', !turns);
-    $('seatLabel').firstChild.textContent = snap.isScreen ? 'Add a player who uses the remote' : 'Add a player on this phone';
+    $('seatLabel').firstChild.textContent = snap.isScreen ? 'Add a player who uses the remote' : 'Add a player on this device';
     $('startBtn').classList.toggle('hidden', !snap.host);
     // Lights up once someone's in and everyone is ready (the TV starts whenever it's set).
     const canStart = !!snap.players.length && (snap.screen || (snap.players.length > 1 && snap.allReady));
@@ -758,8 +758,8 @@
     { emoji: '🧠', title: 'The goal', html: `<p>Answer multiple-choice questions. Right answers score points: <b>100</b> easy, <b>200</b> medium, <b>300</b> hard, plus up to half again for answering <b>fast</b>.</p><p>Most points at the end knows it all.</p>` },
     { emoji: '🎮', title: 'Ways to play', html: `<table>
         <tr><td>🙂 Solo</td><td>Just you. Get on the 🏆 board.</td></tr>
-        <tr><td>📱 Share a phone</td><td>Take turns; everyone gets their own questions.</td></tr>
-        <tr><td>📡 Host / 🔗 Join</td><td>Everyone answers on their own phone at the same time. Fastest right answer scores most.</td></tr>
+        <tr><td>📱 Multiplayer-Single device</td><td>Take turns; everyone gets their own questions.</td></tr>
+        <tr><td>📱📱 Create a game lobby</td><td>Everyone answers on their own device at the same time. Fastest right answer scores most. Everyone else joins from 🔎 List Hosted Games.</td></tr>
       </table>` },
     { emoji: '🎚️', title: 'Pick what you like', html: `<p>Choose <b>genres</b> (or none for a mix), a <b>difficulty</b>, how many questions, and how long to answer.</p><p>Got an idea for a topic? Tap <b>💡 Suggest a topic</b>.</p>` },
     { emoji: '🔞', title: 'For adults', html: `<p><b>Cheeky</b>, <b>Spicy</b> and <b>Filthy</b> unlock for adults signed in with ARKS ID and get spicier as you go.</p><p>🍺 <b>Drinking</b>: wrong answers drink, three in a row gives drinks, last place finishes theirs.</p><p>💋 <b>Couples dares</b>: miss a question, do a dare. The heat matches the level.</p><div class="tut-tip">Tap <b>?</b> at the top any time to see this again.</div>` }

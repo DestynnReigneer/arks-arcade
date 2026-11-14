@@ -100,7 +100,7 @@ window.LobbyUI = (() => {
     for (const name of invited) {
       if (!open) break;
       const box = make('div', 'lb-seat empty');
-      box.append(avatar(name, true), make('span', 'lb-name', name), make('span', 'lb-tag', 'INVITED'));
+      box.append(avatar(name, true), make('span', 'lb-name', name), make('span', 'lb-tag', 'SELECTED'));
       el.append(box);
       open--;
     }

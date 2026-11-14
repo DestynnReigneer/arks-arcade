@@ -347,7 +347,7 @@ async function run({ base, root, fake, admin: ADMIN }) {
     await chessCall(`/rooms/${hostRoom.code}/invite`, kimCC, { ...seat, to: [samCC.profile.id] });
     await settle();
     const first = fake.pushes.filter(p => p.to === fake.users.sam.id);
-    ok('a Chess invite tells the person invited, with a link to the lobby', first.length === 1 && first[0].body === 'Kim invited you to Chess. Get in here!' &&
+    ok('a Chess invite tells the person invited, with a link to the lobby', first.length === 1 && first[0].body === 'Kim started a Chess lobby with you. Get in here!' &&
       first[0].url === `chess.html?room=${hostRoom.code}`, JSON.stringify(fake.pushes));
     fake.pushes.length = 0;
     for (let i = 0; i < 3; i++) await chessCall(`/rooms/${hostRoom.code}/invite`, kimCC, { ...seat, to: [samCC.profile.id] });

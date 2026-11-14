@@ -102,7 +102,7 @@ function create({ name, settings, password, screen = false, profile = null, who,
     try {
       invites.send({ game: 'trivia', room: r.code, from: { id: profile.id, name: host.name }, to: picked,
         title: 'Know-It-All', href: `trivia.html?join=${r.code}`,
-        notify: { title: 'Know-It-All', body: `${host.name} invited you to Know-It-All. Get in here!` } });
+        notify: { title: 'Know-It-All', body: `${host.name} started a Know-It-All lobby with you. Get in here!` } });
     } catch (e) { close(r); throw e; }
   }
   return { code: r.code, playerId: host.id, token: host.token };
@@ -116,7 +116,7 @@ const joinsLate = r => !turns(r) && (r.phase === 'question' || r.phase === 'reve
 
 function room(code) {
   const r = rooms.get(String(code || '').toUpperCase());
-  if (!r) throw fail('No trivia game with that code.', 404);
+  if (!r) throw fail('That game isn\'t open anymore.', 404);
   return r;
 }
 
