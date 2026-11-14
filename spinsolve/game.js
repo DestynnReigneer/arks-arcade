@@ -3,7 +3,10 @@
 // Spin & Solve's game, run on the server so the server decides every score.
 // The page only draws it: it never sees an answer until the round is over,
 // the wheel lands where the server says, and the total on the board is the
-// one worked out here. Kept in memory (a game lasts minutes, not days).
+// one worked out here. Kept in memory for up to a day after its last move, so
+// a page that reloads (a locked screen, a browser clearing a tab) finds its
+// game again. A restart still ends every game: saving them in the database
+// comes with the saved-games work.
 
 const crypto = require('crypto');
 
@@ -17,7 +20,7 @@ const ROUNDS = [1, 3, 5];
 // 24 wedges, clockwise from the top. The page draws the same list.
 const WEDGES = [500, 900, 300, 650, 'BANKRUPT', 400, 700, 350, 550, 800, 'LOSE A TURN', 450,
   600, 1000, 300, 500, 750, 400, 850, 350, 500, 600, 450, 700];
-const KEEP_MS = 60 * 60 * 1000;        // a game nobody touched for an hour is gone
+const KEEP_MS = 24 * 60 * 60 * 1000;   // a game nobody touched for a day is gone
 const OVER_KEEP_MS = 10 * 60 * 1000;   // a finished game stays 10 minutes, to save the score
 const MAX_GAMES = 3000;
 const MAX_PER_OWNER = 10;              // games one address or one profile can have going at once
@@ -202,5 +205,5 @@ function view(g) {
 
 module.exports = {
   start, get, view, spin, call, solve, timeUp, nextRound, sweep, games,
-  WEDGES, VOWEL_COST, SOLVE_MIN, MAX_STRIKES, MAX_PLAYERS, MAX_PER_OWNER
+  WEDGES, VOWEL_COST, SOLVE_MIN, MAX_STRIKES, MAX_PLAYERS, MAX_PER_OWNER, KEEP_MS
 };

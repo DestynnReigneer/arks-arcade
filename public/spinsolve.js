@@ -164,7 +164,116 @@
     const t = !TV && typeof ArcadeProfile !== 'undefined' ? ArcadeProfile.token() : null;
     return t ? { 'X-Profile-Token': t } : {};
   };
-  const runApi = (path, body) => api(`/api/spinsolve/run/${S.run}${path}`, body, pinHeaders());
+  // Every move goes to the game on the server. If the server no longer has it
+  // (nobody touched it for a day, or the arcade restarted), the page forgets it
+  // and goes back to the setup screen once the move that found out is done.
+  const runApi = async (path, body) => {
+    try { return await api(`/api/spinsolve/run/${S.run}${path}`, body, pinHeaders()); } catch (e) {
+      if (e.status === 404 && S.run) {
+        forgetRun();
+        setTimeout(() => { if (!$('game').classList.contains('hidden')) backToSetup(); }, 0);
+      }
+      throw e;
+    }
+  };
+
+  // ---- picking a game back up --------------------------------------------------------
+  // The game is on the server, so the page only has to remember which one it's
+  // in: on this device, for the profile playing or for a guest. A reload (what
+  // a browser does to a page that sat behind a locked screen) then lands back
+  // in the same game instead of on the setup screen. A TV plays as itself and
+  // always starts fresh.
+  const runKey = () => {
+    const p = typeof ArcadeProfile !== 'undefined' ? ArcadeProfile.get() : null;
+    return `spin.run.${p && p.id ? p.id : 'guest'}`;
+  };
+  let rememberedAs = null;   // the key this game is remembered under
+  function rememberRun() {
+    if (TV || !S.run) return;
+    rememberedAs = runKey();
+    try { localStorage.setItem(rememberedAs, JSON.stringify({ id: S.run, turnSecs: S.turnSecs, pack: S.pack })); } catch { /* storage is off */ }
+  }
+  function forgetRun() {
+    if (TV) return;
+    try { localStorage.removeItem(rememberedAs || runKey()); } catch { /* storage is off */ }
+    rememberedAs = null;
+  }
+  function rememberedRun() {
+    if (TV) return null;
+    try {
+      const r = JSON.parse(localStorage.getItem(runKey()) || 'null');
+      return r && /^[0-9a-f]{32}$/.test(String(r.id)) ? r : null;
+    } catch { return null; }
+  }
+
+  // Asked once, when the page loads. -> true when a game came back.
+  async function pickUpGame() {
+    const saved = rememberedRun();
+    if (!saved || !S.config) return false;
+    rememberedAs = runKey();
+    const ask = () => api(`/api/spinsolve/run/${saved.id}`, undefined, pinHeaders());
+    // The server has no such game anymore: say so. An adult who doesn't unlock it:
+    // forget it quietly. Anything else (no network) can be tried on the next load.
+    const gone = e => {
+      if (e.status === 404) { forgetRun(); toast(e.message); } else if (e.status === 403) forgetRun();
+      return false;
+    };
+    let got;
+    try { got = await ask(); } catch (e) {
+      // An adult game shows again only once an adult has unlocked it on this device.
+      if (e.status !== 403 || !(await unlockAdult())) return gone(e);
+      try { got = await ask(); } catch (again) { return gone(again); }
+    }
+    const st = got.state;
+    // Someone tapped Play while the answer was on its way: the new game wins.
+    if (S.run) return false;
+    if (st.phase === 'over' && !st.canSave) { forgetRun(); return false; }
+    S.run = saved.id;
+    S.level = got.level || 'kids';
+    S.banter = got.banter || null;
+    const timer = [...$('timerSeg').children].find(b => Number(b.dataset.secs) === Number(saved.turnSecs));
+    if (timer) timer.click();
+    apply(st);
+    document.documentElement.classList.toggle('adult-mode', isAdult());
+    $('setup').classList.add('hidden');
+    $('game').classList.remove('hidden');
+    $('overView').classList.add('hidden');
+    if (st.phase === 'over') gameOver();
+    else resumeRound();
+    toast('Welcome back, your game is right where you left it.', 4000);
+    // The setup screen's lists follow the game's level, and unlocking may have
+    // brought the adult packs along, so they're read again.
+    loadConfig().then(() => {
+      if (![...$('packSelect').options].some(o => o.value === String(saved.pack))) return;
+      S.pack = String(saved.pack);
+      $('packSelect').value = S.pack;
+    });
+    return true;
+  }
+
+  // The round as the server has it: mid-turn, owing a letter, or already over.
+  function resumeRound() {
+    const st = S.state;
+    const p = S.players[S.cur];
+    S.wedge = null;
+    S.busy = false;
+    S.heckledThisRound = false;
+    render();
+    requestAnimationFrame(() => Host.home());
+    if (st.phase === 'roundover') {
+      const lost = solo() && S.strikes >= MAX_STRIKES;
+      return showRound(lost ? '😵' : '🎉', lost ? 'Three strikes!' : `${p.name} solved it!`, lost ? 'This round banks nothing.' : '', 0);
+    }
+    if (st.phase === 'letter' && typeof st.wedge === 'number') {
+      // The wheel had already stopped: the letter is still owed, with a full clock.
+      S.wedge = st.wedge;
+      showLanded(money(st.wedge));
+      say(`${money(st.wedge)}! Pick a letter.`);
+      return openLetters('consonant');
+    }
+    say(consonantsLeft() ? `${p.name}, your turn!` : 'No consonants left! Buy a vowel or solve.');
+    resetTurn();
+  }
 
   // The server's view of the game: the players, whose turn, the strikes, the
   // letters called, and the board with every hidden letter as _.
@@ -188,6 +297,7 @@
       S.run = got.id;
       S.banter = got.banter;
       apply(got);
+      rememberRun();
     } catch (e) { toast(e.message); return; }
     $('setup').classList.add('hidden');
     $('game').classList.remove('hidden');
@@ -703,8 +813,10 @@
   // only when you owe an answer: once the wheel stops you have that long to
   // call a consonant, and the same to pick a vowel you're buying or to type
   // your answer when you solve. Running out passes the turn. It pauses while
-  // the host lights up letters and behind a results screen. Jokes and
-  // hecklers never stop it: they're just entertainment while you think.
+  // the host lights up letters, behind a results screen, and while the page is
+  // hidden (a locked screen, another app in front), so putting the device down
+  // never burns a turn. Jokes and hecklers never stop it: they're just
+  // entertainment while you think.
 
   const thinking = Blip.thinker();
   function resetTurn() {
@@ -729,7 +841,7 @@
 
   const overlayOpen = id => !$(id).classList.contains('hidden');
   function clockPaused() {
-    return $('game').classList.contains('hidden') || S.busy || help.isOpen ||
+    return document.hidden || $('game').classList.contains('hidden') || S.busy || help.isOpen ||
       overlayOpen('roundView') || overlayOpen('overView') || overlayOpen('scoresView');
   }
 
@@ -746,14 +858,23 @@
     $('turnTimer').classList.toggle('warn', !!S.clock && secs <= 10);
   }
 
+  // A page that isn't running (the screen locked, the browser put it to sleep)
+  // misses its ticks, and the first one after it wakes would otherwise count
+  // the whole gap. So a late tick counts for a second at most, and coming back
+  // into view starts counting from that moment.
+  const MAX_STEP = 1000;
   let lastTick = Date.now();
+  const wake = () => { lastTick = Date.now(); S.idleSince = lastTick; };
+  document.addEventListener('visibilitychange', wake);
+  window.addEventListener('pagehide', wake);
+  window.addEventListener('pageshow', wake);
   setInterval(() => {
     const now = Date.now();
-    const step = now - lastTick;
+    const step = Math.min(Math.max(0, now - lastTick), MAX_STEP);
     lastTick = now;
     if (!S.puzzle || clockPaused()) {
       S.idleSince += step;
-      if (S.puzzle && S.busy && S.clock) paintClock(true);
+      if (S.puzzle && S.clock && (S.busy || document.hidden)) paintClock(true);
       return;
     }
     if (S.turnSecs && S.clock) {
@@ -967,6 +1088,8 @@
       $('finalList').appendChild(li);
     }
     const canSave = !!S.state.canSave;
+    // Nothing left to come back for, unless there's a score still to save.
+    if (!canSave) forgetRun();
     $('overScore').classList.toggle('hidden', !canSave);
     $('saveScoreBtn').disabled = false;
     $('scoreMsg').textContent = '';
@@ -982,6 +1105,7 @@
       // The server saves the total it worked out; the page only says who.
       const r = await api(`/api/spinsolve/run/${S.run}/save`, { initials: who }, { ...pinHeaders(), ...profileHeaders() });
       initials.remember(who);
+      forgetRun();
       $('overScore').classList.add('hidden');
       openScores(r.id);
       toast(r.rank === 1 ? '🏆 New #1!' : `Saved: #${r.rank}`);
@@ -1022,6 +1146,8 @@
   }
 
   function backToSetup() {
+    // Leaving on purpose: there's no game to come back to.
+    forgetRun();
     S.puzzle = null;
     S.run = null;
     $('overView').classList.add('hidden');
@@ -1148,7 +1274,8 @@
   buildWheel();
   Host.setHost('vee');
   renderNames();
-  loadConfig();
+  // Once the levels are known: a game this page was in the middle of comes back.
+  loadConfig().then(pickUpGame);
   // On a TV, How to play waits for the ? button instead of opening by itself.
   if (!TV) help.autoOpen();
 })();
