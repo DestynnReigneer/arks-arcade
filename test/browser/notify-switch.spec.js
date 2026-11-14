@@ -2,8 +2,9 @@
 
 // The notifications switch in the profile card: someone signed in with ARKS ID
 // sees it, with a pink dot until they've used it once; turning it on the first
-// time shows "One more check in Chrome", and the switch then reads On.
-// The phone's push service is pretended (a test browser has none to talk to).
+// time shows "One more step in Chrome", and the switch then says you're all set.
+// Off, the switch shows its title and nothing under it.
+// The device's push service is pretended (a test browser has none to talk to).
 
 const { test, expect } = require('@playwright/test');
 const { quietFonts, watchProblems } = require('./helpers');
@@ -42,16 +43,16 @@ test('the notifications switch: the pink dot, turning it on, and the Chrome chec
   await page.evaluate(() => { ArcadeProfile.open(); });
   const row = page.locator('.apf-notify');
   await expect(row).toBeVisible();
-  await expect(row).toContainText('Notifications on this phone');
-  await expect(row).toContainText('Off. Turn on to hear when it\'s your turn.');
+  await expect(row.locator('b')).toHaveText('🔔 Notifications');
+  await expect(row.locator('small')).toBeHidden();
   await expect(row.locator('.apf-dot')).toBeVisible();
   await expect(row).toHaveAttribute('aria-checked', 'false');
 
   await row.click();
-  await expect(page.locator('.apf-card h2')).toHaveText('One more check in Chrome');
+  await expect(page.locator('.apf-card h2')).toHaveText('One more step in Chrome');
   await page.getByRole('button', { name: 'Got it' }).click();
   await expect(page.locator('.apf-notify')).toHaveAttribute('aria-checked', 'true');
-  await expect(page.locator('.apf-notify')).toContainText('On. Your turn, invites and new games, from every game.');
+  await expect(page.locator('.apf-notify')).toContainText('You\'re all set, I\'ll let you know when it\'s your move or someone starts a game with you.');
   await expect(page.locator('.apf-notify .apf-dot')).toHaveCount(0);
   expect(await page.evaluate(() => window.__pushOn())).toBe(true);
   expect(problems, problems.join('\n')).toEqual([]);
