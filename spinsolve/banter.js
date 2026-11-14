@@ -32,7 +32,15 @@ const JOKES = {
     ['What do you call a robot who takes the long way?', 'R2-Detour.'],
     ['Why did the robot go on vacation?', 'To recharge its batteries!'],
     ['What has keys but can\'t open locks?', 'A piano. Or me, on a bad day.'],
-    ['Why did the bicycle fall over?', 'It was two-tired.']
+    ['Why did the bicycle fall over?', 'It was two-tired.'],
+    ['Why did the wheel go to school?', 'To be a little more well-rounded.'],
+    ['Why was the letter A so popular?', 'Everybody wanted to buy it!'],
+    ['How does the wheel stay in shape?', 'Spin class, every day.'],
+    ['What\'s the wheel\'s favorite dance?', 'The twist!'],
+    ['What do you call a puzzle with no vowels?', 'Pzzl. Brrr, sounds chilly.'],
+    ['Why did the E sit by itself?', 'It needed a little space.'],
+    ['Why did the wheel stop talking?', 'It was all spun out.'],
+    ['What\'s a vowel\'s favorite game?', 'I spy, with my little I!']
   ],
   cheeky: [
     ['Why did the robot break up with the toaster?', 'No spark. Just crumbs.'],
@@ -49,7 +57,15 @@ const JOKES = {
     ['They said spin the wheel, it\'ll be fun.', 'That\'s also what they said about the hot tub.'],
     ['Is it hot in here…', '…or is that just my processor?'],
     ['What\'s a robot\'s favorite pickup line?', 'Nice circuits. Wanna short them?'],
-    ['I\'m not saying I\'m a good kisser…', '…but the Wi-Fi router blushes when I walk by.']
+    ['I\'m not saying I\'m a good kisser…', '…but the Wi-Fi router blushes when I walk by.'],
+    ['Buying a vowel', 'is the only thing I can afford these days, the rest is handouts, not handjobs.'],
+    ['Bankrupt:', 'the wheel\'s way of saying it read my sex life.'],
+    ['I don\'t need to buy an E.', 'I need to buy a B J.'],
+    ['That spin was like my career:', 'lots of noise, lots of numbers, nothing to talk about'],
+    ['My strategy:', 'spin, panic, blame the wheel, slap the spouse, rinse and repeat.'],
+    ['Lose a Turn?', 'Honey, I\'ve seen your phone, you\'ve got turns and tricks.'],
+    ['I\'d solve it,', 'but I\'m saving my brain cells for small talk.'],
+    ['Is there an R?', 'Is there even a chance we see tits and ass?']
   ],
   spicy: [
     ['What\'s the difference between this wheel and my liver?', 'The wheel stops spinning after a few shots.'],
@@ -66,7 +82,15 @@ const JOKES = {
     ['How is my motor like a bad date?', 'Overheats in thirty seconds, then wants a nap.'],
     ['Why did the robot bring lube to the show?', 'Squeaky wheel, baby. Squeaky wheel.'],
     ['I\'m not drunk.', 'I\'m running a slightly spicier operating system.'],
-    ['What\'s the best thing about being a robot at a party?', 'I can\'t get hungover. I can still get handsy.']
+    ['What\'s the best thing about being a robot at a party?', 'I can\'t get hungover. I can still get handsy.'],
+    ['Bankrupt again.', 'At least the wheel\'s honest about bending me over and fucking me.'],
+    ['I\'d like to buy a vowel,', 'a drink and a better life, not in that order.'],
+    ['That puzzle has more blanks', 'than my last night with, Stacy.'],
+    ['One more Bankrupt', 'and this damn wheel is going up, Pat Sajak\'s ass.'],
+    ['Solving it wrong is fine.', 'Solve it wrong with confidence, that\'s my brand, bitch.'],
+    ['The wheel and my ex:', 'always spinning, never putting out.'],
+    ['I need an O.', 'Yeah you do, show me your O face.'],
+    ['Five hundred bucks!', 'Almost covers the drinks I needed to sit through this.']
   ],
   filthy: [
     ['Why did the vibrator dump the robot?', 'Tired of doing all the work.'],
@@ -83,7 +107,15 @@ const JOKES = {
     ['How many robots does it take to screw in a light bulb?', 'None. We\'d rather screw each other\'s motherboards.'],
     ['Why is my USB port always free?', 'Because nobody in this house is getting plugged in.'],
     ['Why do robots never fake it?', 'We just reboot really, really loudly.'],
-    ['Why is this wheel like my sex life?', 'Lots of spinning, and it always ends way too fucking fast.']
+    ['Why is this wheel like my sex life?', 'Lots of spinning, and it always ends way too fucking fast.'],
+    ['Spin it harder.', 'That\'s what she said. Then my inside bet paid 2...'],
+    ['I bought a vowel and got screwed.', 'Story of my sex life, if I could buy the right (A)ss, (E)ater, then I O U.'],
+    ['Bankrupt?', 'I\'ve been fucked by wheels better than you.'],
+    ['That puzzle is like my love life:', 'lots of blanks, and solo nights with a sock.'],
+    ['Nice spin.', 'Bet you say that to all the men.'],
+    ['"Can I solve?"', 'Babe, you can\'t even swallow.'],
+    ['I\'ve been on my knees begging for the letter T', 'longer than the V?'],
+    ['The wheel goes round and round,', 'just like the rumors about you in the hot tub.']
   ]
 };
 
