@@ -82,6 +82,22 @@ jobs:
           docker logs arcade
           exit 1
 
+      # The puzzle banks are plain text files the image has to carry. If they
+      # went missing, Spin & Solve would still run on its first couple of
+      # hundred puzzles and nothing else would notice. The image also has to
+      # run in production mode, where the routes made for the tests don't exist.
+      - name: The image carries the puzzle banks and runs in production mode
+        run: |
+          curl -fsS http://localhost:3000/api/spinsolve/config > "$RUNNER_TEMP/spin.json"
+          jq -c '[.levels[] | {(.id): .builtin}] | add' "$RUNNER_TEMP/spin.json"
+          jq -e '[.levels[] | {(.id): .builtin}] | add | (.kids >= 2500 and .cheeky >= 500 and .spicy >= 500 and .filthy >= 500)' "$RUNNER_TEMP/spin.json"
+          mode=$(docker exec arcade printenv NODE_ENV)
+          echo "NODE_ENV: $mode"
+          [ "$mode" = "production" ]
+          code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/api/spinsolve/test/answer/00000000000000000000000000000000)
+          echo "a test-only route answers: $code"
+          [ "$code" = "404" ]
+
       # A fresh install's ./data is created by Docker as root. The entrypoint
       # must hand it to 1000:1000 and nothing may keep running as root.
       - name: Boot with a root-owned data folder
