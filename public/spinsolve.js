@@ -215,6 +215,9 @@
     // The server has no such game anymore: say so. An adult who doesn't unlock it:
     // forget it quietly. Anything else (no network) can be tried on the next load.
     const gone = e => {
+      // Someone tapped Play while the answer was on its way: the new game is the one to keep.
+      const now = rememberedRun();
+      if (S.run || (now && now.id !== saved.id)) return false;
       if (e.status === 404) { forgetRun(); toast(e.message); } else if (e.status === 403) forgetRun();
       return false;
     };

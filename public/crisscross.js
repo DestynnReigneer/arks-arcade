@@ -376,7 +376,7 @@
     try {
       showGame(await call(`/games/${encodeURIComponent(id)}`));
     } catch (e) {
-      if (S.key && e.message && /isn't here/.test(e.message)) { saveLocalGames(localGames().filter(g => g.id !== id)); }
+      if (S.key && e.status === 404) { saveLocalGames(localGames().filter(g => g.id !== id)); }
       toast(e.message, 4000);
       home();
     }
