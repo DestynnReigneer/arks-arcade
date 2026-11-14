@@ -204,7 +204,7 @@ function remove(code, playerId, token, target) {
     if (c.playerId !== t.id) continue;
     try { c.res.write('event: removed\ndata: {}\n\n'); c.res.end(); } catch { /* gone */ }
   }
-  chat.note(r.code, `${t.name} was taken out of the game`);
+  chat.note(r.code, `${t.name} was removed from the lobby`);
   touch(r);
 }
 

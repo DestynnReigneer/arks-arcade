@@ -5,7 +5,8 @@
 // night (with its adult pass, never a PIN), and a phone signed in as a kid
 // is turned away from a adults room in Uh-Oh: Part Deux, Dare Devil,
 // Shuffle Scuffle and Rambler, whatever it types. Guests with the lobby
-// password still get in, as before.
+// password still get in, as before. And a host turning a family lobby adult
+// keeps the adults who are signed in, and moves out the kid and the guest.
 
 async function run({ base, fake }) {
   let pass = 0, fail = 0;
@@ -88,6 +89,69 @@ async function run({ base, fake }) {
   console.log('\n-- Back to family --');
   await tv.post('/api/tv/lock');
   ok('the pass stops working, so no new adults room', (await tv.post('/api/partdeux/rooms', { name: 'TV', screen: true, level: 'spicy', password: 'tacos42' }, pin)).status === 403);
+
+  console.log('\n-- a host turns a family lobby adult --');
+  const was = fake.next;
+  const signIn = async key => {
+    const b = browser();
+    fake.next = key;
+    const to = await b.call('/auth/signin?return=%2F');
+    const from = await fetch(to.location, { redirect: 'manual' });
+    const home = new URL(from.headers.get('location'));
+    await b.call(home.pathname + home.search);
+    return b;
+  };
+  const kimPhone = await signIn('kim');
+  const samPhone = await signIn('sam');
+  fake.next = was;
+  const profileOf = async b => ({ 'X-Profile-Token': (await b.call('/api/arksid/me')).data.token });
+  const seatOf = s => ({ playerId: s.playerId, token: s.token });
+  for (const game of ['partdeux', 'daredevil']) {
+    const fam = (await kimPhone.post(`/api/${game}/rooms`, { name: 'Kim', level: 'kids' }, await profileOf(kimPhone))).data;
+    await samPhone.post(`/api/${game}/rooms/${fam.code}/join`, { name: 'Sam' }, await profileOf(samPhone));
+    await kid.post(`/api/${game}/rooms/${fam.code}/join`, { name: 'Milo' }, await profileOf(kid));
+    const guestPhone = browser();
+    await guestPhone.post(`/api/${game}/rooms/${fam.code}/join`, { name: 'Gus' });
+    const inLobby = async () => (await kimPhone.call(`/api/${game}/rooms/${fam.code}?playerId=${fam.playerId}&token=${fam.token}`)).data.players.map(p => p.name).sort().join();
+    ok(`${game}: an adult, a kid and a guest joined the host's family lobby`, (await inLobby()) === 'Gus,Kim,Milo,Sam', await inLobby());
+    const kimPass = { 'X-Adult-Pin': (await kimPhone.post('/api/arksid/adult-pass')).data.pass };
+    const turned = await kimPhone.post(`/api/${game}/rooms/${fam.code}/settings`, { ...seatOf(fam), level: 'spicy', password: 'tacos42' }, kimPass);
+    ok(`${game}: the host turns it adult`, turned.status === 200, JSON.stringify(turned.data));
+    ok(`${game}: the adult signed in with ARKS ID stays, and the kid and the guest are moved out`, (await inLobby()) === 'Kim,Sam', await inLobby());
+    ok(`${game}: the kid can't come back, even with the password`, (await kid.post(`/api/${game}/rooms/${fam.code}/join`, { name: 'Milo', password: 'tacos42' }, await profileOf(kid))).status === 403);
+    ok(`${game}: the guest can, with the password`, (await guestPhone.post(`/api/${game}/rooms/${fam.code}/join`, { name: 'Gus', password: 'tacos42' })).status === 201);
+    await kimPhone.post(`/api/${game}/rooms/${fam.code}/leave`, seatOf(fam));
+  }
+
+  // Who is an adult is asked again at the switch, not remembered from when they joined.
+  {
+    const lobbyOf = async fam => (await kimPhone.call(`/api/partdeux/rooms/${fam.code}?playerId=${fam.playerId}&token=${fam.token}`)).data.players.map(p => p.name).sort().join();
+    const turnAdult = async fam => kimPhone.post(`/api/partdeux/rooms/${fam.code}/settings`, { ...seatOf(fam), level: 'spicy', password: 'tacos42' },
+      { 'X-Adult-Pin': (await kimPhone.post('/api/arksid/adult-pass')).data.pass });
+    // Sam joins as an adult, then signs out of the arcade before the host switches.
+    const one = (await kimPhone.post('/api/partdeux/rooms', { name: 'Kim', level: 'kids' }, await profileOf(kimPhone))).data;
+    const samSeat = (await samPhone.post(`/api/partdeux/rooms/${one.code}/join`, { name: 'Sam' }, await profileOf(samPhone))).data;
+    await samPhone.post('/auth/signout');
+    ok('the host turns the lobby adult after an adult in it signed out', (await turnAdult(one)).status === 200);
+    ok('…and that seat is moved out too, since nobody is signed in on it anymore', (await lobbyOf(one)) === 'Kim', await lobbyOf(one));
+    ok('…and it can\'t read the adult lobby or chat in it', (await browser().call(`/api/partdeux/rooms/${one.code}?playerId=${samSeat.playerId}&token=${samSeat.token}`)).status === 403 &&
+      (await browser().post(`/api/partdeux/rooms/${one.code}/chat`, { playerId: samSeat.playerId, token: samSeat.token, text: 'still here?' })).status === 403);
+    await kimPhone.post(`/api/partdeux/rooms/${one.code}/leave`, seatOf(one));
+
+    // Sam joins as an adult again, and then the account stops being an adult's.
+    const samBack = await signIn('sam');
+    const two = (await kimPhone.post('/api/partdeux/rooms', { name: 'Kim', level: 'kids' }, await profileOf(kimPhone))).data;
+    await samBack.post(`/api/partdeux/rooms/${two.code}/join`, { name: 'Sam' }, await profileOf(samBack));
+    ok('an adult is in the family lobby again', (await lobbyOf(two)) === 'Kim,Sam', await lobbyOf(two));
+    const wasRole = fake.users.sam.role;
+    fake.users.sam.role = 'kid';
+    await signIn('sam');   // another device signing in is how the arcade hears about the change
+    fake.next = was;
+    ok('the host turns the lobby adult after that account became a kid\'s', (await turnAdult(two)).status === 200);
+    ok('…and the seat that joined as an adult is moved out', (await lobbyOf(two)) === 'Kim', await lobbyOf(two));
+    fake.users.sam.role = wasRole;
+    await kimPhone.post(`/api/partdeux/rooms/${two.code}/leave`, seatOf(two));
+  }
 
   return { pass, fail };
 }
