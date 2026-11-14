@@ -12,7 +12,7 @@ const fs = require('node:fs');
 const CABINETS = [
   { game: 'bigswing', board: 'runs', max: 300 },
   // 750 is a perfect game without the jackpot; a jackpot score is checked below
-  { game: 'bucketdrop', board: 'points', max: 750 },
+  { game: 'bucketdrop', board: 'big-fast', max: 750 },
   { game: 'launcher', board: 'points', max: 50000 },
   { game: 'train', board: 'points', max: 100000 }
 ];
@@ -62,13 +62,13 @@ async function run({ base, root }) {
   ok('the jackpot starts at 1,000 or more', start >= 1000, String(start));
   const grown = (await jp('/played', { won: false })).amount;
   ok('every game adds 10 to the jackpot', grown === start + 10, `${start} -> ${grown}`);
-  const fake = await post('bucketdrop', { initials: 'CAB', score: 750 + grown, board: 'points' });
+  const fake = await post('bucketdrop', { initials: 'CAB', score: 750 + grown, board: 'big-fast' });
   ok('a jackpot score nobody won is refused', fake.status === 400, String(fake.status));
   const after = (await jp('/played', { won: true })).amount;
   ok('winning starts the jackpot over at 1,000', after === 1000, String(after));
-  const real = await post('bucketdrop', { initials: 'WIN', score: 750 + grown, board: 'points', detail: 'Jackpot!' });
+  const real = await post('bucketdrop', { initials: 'WIN', score: 750 + grown, board: 'small-wild', detail: 'Jackpot!' });
   ok('the winner can save 750 plus the jackpot they won', real.status === 201, String(real.status));
-  const again = await post('bucketdrop', { initials: 'WIN', score: 750 + grown, board: 'points' });
+  const again = await post('bucketdrop', { initials: 'WIN', score: 750 + grown, board: 'small-wild' });
   ok('the same win can only be saved once', again.status === 400, String(again.status));
   ok('a game with no jackpot says so', (await fetch(`${base}/api/cab-jackpot/bigswing`)).status === 404);
 
@@ -101,6 +101,22 @@ async function run({ base, root }) {
   ok("the game gets the admin's names", now.cars.map(c => c.name).join() === mine.map(c => c.name).join(), JSON.stringify(now.cars.map(c => c.name)));
   const repo = fs.readFileSync(path.join(root, 'public/cab-train.js'), 'utf8');
   ok('the repo only has the made-up names', /\['Comet', 'easy'\]/.test(repo));
+
+  // A picture for a car, shown in its circle on the light board.
+  const picAdmin = (method, n, body, token = 'test-admin-token') => fetch(`${base}/api/comm/admin/train-cars/${n}/picture`, { method, headers: { 'Content-Type': 'application/json', 'X-Admin-Token': token }, body: body ? JSON.stringify(body) : undefined });
+  const jpeg = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(300, 7)]);
+  const image = `data:image/jpeg;base64,${jpeg.toString('base64')}`;
+  ok('no car has a picture to start with', now.cars.every(c => c.picture === null));
+  ok('only the admin can add a picture', (await picAdmin('POST', 2, { image }, 'wrong')).status === 401);
+  ok('a picture that isn\'t a JPEG is refused', (await picAdmin('POST', 2, { image: `data:image/jpeg;base64,${Buffer.from('<svg onload=alert(1)>').toString('base64')}` })).status === 400);
+  ok('…and so is a ninth car', (await picAdmin('POST', 9, { image })).status === 404);
+  const withPic = await (await picAdmin('POST', 2, { image })).json();
+  ok('the admin adds a picture to car 2', /^\/api\/train-cars\/2\/picture\?v=[0-9a-f]{10}$/.test(withPic.cars[1].picture || '') && withPic.cars[0].picture === null, JSON.stringify(withPic.cars[1]));
+  const served = await fetch(base + withPic.cars[1].picture);
+  ok('the game can load it, as a JPEG', served.status === 200 && served.headers.get('content-type') === 'image/jpeg' && Buffer.from(await served.arrayBuffer()).equals(jpeg));
+  ok('a car without a picture has none to load', (await fetch(`${base}/api/train-cars/3/picture`)).status === 404);
+  const noPic = await (await picAdmin('DELETE', 2)).json();
+  ok('the admin can take it off again', noPic.cars[1].picture === null && (await fetch(`${base}/api/train-cars/2/picture`)).status === 404);
 
   console.log(`
   ${pass} passed, ${fail} failed`);

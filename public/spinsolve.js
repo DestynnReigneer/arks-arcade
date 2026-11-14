@@ -3,6 +3,10 @@
 // Spin & Solve: spin the wheel, call a consonant, buy vowels, solve the
 // phrase. Solo plays for the high-score board; 2-4 players share a phone.
 //
+// The game runs on the server (spinsolve/game.js), which spins the wheel,
+// keeps the answer and decides every score. This page draws what it says:
+// hidden letters come as _ on the board until the round is over.
+//
 // On a TV (tv.js), the game shows big and the remote is passed around: the
 // arrows move between Spin, Buy a vowel and Solve and across the letters, OK
 // presses, and solving uses a keyboard on the screen. Adult puzzles need an
@@ -13,7 +17,6 @@
   const TV = !!(window.ArcadeTV && ArcadeTV.on);
   const VOWELS = 'AEIOU';
   const VOWEL_COST = 250;
-  const SOLVE_MIN = 1000;     // solving always banks at least this much
   const MAX_STRIKES = 3;      // solo: three misses and the round is lost
   const COLS = 12;
 
@@ -32,9 +35,8 @@
 
   const S = {
     names: [typeof ArcadeProfile !== 'undefined' && !TV ? ArcadeProfile.name() : '', ''], rounds: 3, players: [], cur: 0, round: 0, puzzle: null,
-    revealed: new Set(), used: new Set(), strikes: 0, wedge: null, busy: false,
-    rotation: 0, usedPuzzles: new Set(),
-    config: null, level: 'kids', pack: 'all', pool: [], banter: null,
+    used: new Set(), strikes: 0, wedge: null, busy: false, rotation: 0, run: null, state: null,
+    config: null, level: 'kids', pack: 'all', banter: null,
     turnSecs: 45, timeLeft: 0, clock: null, idleSince: 0, jokedThisTurn: false, heckledThisRound: false, heckling: false,
     pin: TV ? '' : (() => { try { return sessionStorage.getItem('spin.adultPin') || ''; } catch { return ''; } })(),
     adultOk: !TV && (() => { try { return sessionStorage.getItem('spin.adultOk') === 'yes'; } catch { return false; } })()
@@ -157,45 +159,52 @@
     });
   }
 
+  // The scores are a profile's when someone's signed in (never on a TV, which plays as a guest).
+  const profileHeaders = () => {
+    const t = !TV && typeof ArcadeProfile !== 'undefined' ? ArcadeProfile.token() : null;
+    return t ? { 'X-Profile-Token': t } : {};
+  };
+  const runApi = (path, body) => api(`/api/spinsolve/run/${S.run}${path}`, body, pinHeaders());
+
+  // The server's view of the game: the players, whose turn, the strikes, the
+  // letters called, and the board with every hidden letter as _.
+  function apply(st) {
+    S.state = st;
+    S.players = st.players;
+    S.cur = st.cur;
+    S.round = st.round;
+    S.rounds = st.rounds;
+    S.strikes = st.strikes;
+    S.used = new Set(st.used);
+    if (st.board) S.puzzle = { category: st.category, pack: st.pack, board: st.board, answer: st.answer || '' };
+  }
+
   async function startGame() {
     if (window.ArcadeStats) ArcadeStats.play();
     Blip.unlock();
     try {
-      const q = S.pack === 'all' ? `level=${S.level}` : `pack=${encodeURIComponent(S.pack)}`;
-      const got = await api(`/api/spinsolve/puzzles?${q}`, undefined, pinHeaders());
-      S.pool = got.puzzles;
+      const body = { names: S.names, rounds: S.rounds, ...(S.pack === 'all' ? { level: S.level } : { pack: S.pack }) };
+      const got = await api('/api/spinsolve/run/start', body, { ...pinHeaders(), ...profileHeaders() });
+      S.run = got.id;
       S.banter = got.banter;
+      apply(got);
     } catch (e) { toast(e.message); return; }
-    if (!S.pool.length) { toast('No puzzles here yet.'); return; }
-    S.usedPuzzles.clear();
-    S.players = S.names.map((n, i) => ({ name: n.trim() || `Player ${i + 1}`, round: 0, total: 0 }));
-    S.round = 0;
     $('setup').classList.add('hidden');
     $('game').classList.remove('hidden');
     $('overView').classList.add('hidden');
-    nextRound();
+    beginRound();
   }
 
-  function pickPuzzle() {
-    let pool = S.pool.filter(p => !S.usedPuzzles.has(p.answer));
-    if (!pool.length) { S.usedPuzzles.clear(); pool = S.pool; }
-    const p = pool[Math.floor(Math.random() * pool.length)];
-    S.usedPuzzles.add(p.answer);
-    return p;
-  }
-
-  function nextRound() {
+  async function nextRound() {
     $('roundView').classList.add('hidden');
-    S.round++;
-    if (S.round > S.rounds) return gameOver();
-    S.puzzle = pickPuzzle();
-    S.revealed = new Set();
-    S.used = new Set();
-    S.strikes = 0;
+    try { apply((await runApi('/next', {})).state); } catch (e) { toast(e.message); return; }
+    beginRound();
+  }
+
+  function beginRound() {
+    if (S.state.phase === 'over') return gameOver();
     S.wedge = null;
     S.heckledThisRound = false;
-    S.players.forEach(p => { p.round = 0; });
-    S.cur = (S.round - 1) % S.players.length;
     render();
     say(`${S.players[S.cur].name}, spin the wheel!`);
     requestAnimationFrame(() => {
@@ -226,25 +235,30 @@
     const board = $('puzzleBoard');
     board.style.setProperty('--cols', COLS);
     board.innerHTML = '';
-    const rows = lines(S.puzzle.answer);
-    while (rows.length < 3) rows[rows.length % 2 ? 'push' : 'unshift']('');
-    for (const line of rows) {
+    const rows = lines(S.puzzle.board);
+    // Where each row starts in the answer, so a tile knows its place (data-pos)
+    // when the server says which places a letter is in.
+    const starts = [];
+    let pos = 0;
+    for (const line of rows) { starts.push(pos); pos += line.length + 1; }
+    while (rows.length < 3) { const top = rows.length % 2 === 0; rows[top ? 'unshift' : 'push'](''); starts[top ? 'unshift' : 'push'](-1); }
+    rows.forEach((line, r) => {
       const pad = Math.floor((COLS - line.length) / 2);
       for (let c = 0; c < COLS; c++) {
         const ch = line[c - pad];
         const tile = document.createElement('div');
         tile.style.setProperty('--i', board.children.length);
         if (ch === undefined || ch === ' ') tile.className = 'tile blank';
-        else if (!/[A-Z]/.test(ch) || S.revealed.has(ch)) {
+        else if (ch !== '_') {
           tile.className = 'tile shown' + (flash === ch ? ' flip' : '');
           tile.textContent = ch;
         } else {
           tile.className = 'tile covered';
-          tile.dataset.ch = ch;
+          tile.dataset.pos = starts[r] + c - pad;
         }
         board.appendChild(tile);
       }
-    }
+    });
   }
 
   function renderPlayers() {
@@ -261,11 +275,8 @@
     });
   }
 
-  function remaining(set) {
-    return [...new Set(letters(S.puzzle.answer))].filter(ch => set.includes(ch) && !S.revealed.has(ch));
-  }
-  const consonantsLeft = () => remaining('BCDFGHJKLMNPQRSTVWXYZ');
-  const vowelsLeft = () => remaining(VOWELS);
+  const consonantsLeft = () => !!(S.state && S.state.consonantsLeft);
+  const vowelsLeft = () => !!(S.state && S.state.vowelsLeft);
 
   function render(flash) {
     renderBoard(flash);
@@ -274,8 +285,8 @@
     $('strikes').textContent = solo() ? '❌'.repeat(S.strikes) + '⬜'.repeat(MAX_STRIKES - S.strikes) : '';
     renderPlayers();
     const p = S.players[S.cur];
-    $('spinBtn').disabled = S.busy || !consonantsLeft().length;
-    $('vowelBtn').disabled = S.busy || p.round < VOWEL_COST || !vowelsLeft().length;
+    $('spinBtn').disabled = S.busy || !consonantsLeft();
+    $('vowelBtn').disabled = S.busy || p.round < VOWEL_COST || !vowelsLeft();
     $('solveBtn').disabled = S.busy;
     $('usedLetters').textContent = S.used.size ? 'Called: ' + [...S.used].sort().join(' ') : '';
   }
@@ -382,8 +393,9 @@
 
   // Lights up every hidden copy of a letter, one at a time, with Vee touching
   // each: a ding for every one, and the tile glows as it turns over.
-  async function revealLetter(ch) {
-    const tiles = [...$('puzzleBoard').querySelectorAll(`.tile.covered[data-ch="${ch}"]`)];
+  async function revealLetter(ch, positions) {
+    const board = $('puzzleBoard');
+    const tiles = positions.map(p => board.querySelector(`.tile.covered[data-pos="${p}"]`)).filter(Boolean);
     for (const [i, tile] of tiles.entries()) {
       await Host.walkTo(tile);
       Host.pose('touch');
@@ -408,7 +420,7 @@
       await wait(45);
       tile.classList.remove('covered', 'lit');
       tile.classList.add('shown', 'flip');
-      tile.textContent = tile.dataset.ch;
+      tile.textContent = S.puzzle.answer[Number(tile.dataset.pos)] || '';
     }
     for (const tile of $('puzzleBoard').querySelectorAll('.tile.shown')) tile.classList.add('win');
   }
@@ -497,10 +509,14 @@
 
   const wedgeAt = rot => Math.floor((((360 - rot) % 360) + 360) % 360 / SLICE) % WEDGES.length;
 
-  function spin() {
+  // The server spins; the wheel then turns to where it landed.
+  async function spin() {
     if (S.busy) return;
     Blip.unlock();
     S.busy = true;
+    render();
+    let res;
+    try { res = await runApi('/spin', {}); } catch (e) { S.busy = false; toast(e.message); render(); return; }
     $('landed').classList.add('hidden');
     render();
     Host.talk(Host.line('spin'), 1400);
@@ -512,7 +528,7 @@
     let chase = 0;
     let lastRot = S.rotation;
     let lastT = performance.now();
-    const target = Math.floor(Math.random() * WEDGES.length);
+    const target = res.wedge;
     const jitter = (Math.random() - 0.5) * SLICE * 0.7;
     const want = 360 - (target * SLICE + SLICE / 2) + jitter;
     const startRot = S.rotation;
@@ -548,7 +564,7 @@
         setLeds(() => false);
         wheel.classList.add('won');
         setTimeout(() => { wheel.classList.remove('won'); wheel.classList.add('idle'); }, 1500);
-        landed(WEDGES[wedgeAt(S.rotation)]);
+        landed(res);
       }
     };
     requestAnimationFrame(frame);
@@ -576,16 +592,17 @@
     board.classList.add('buzz');
   }
 
-  function landed(w) {
+  function landed(res) {
+    const w = res.value;
     const p = S.players[S.cur];
     if (w === 'BANKRUPT') {
       showLanded('💸 BANKRUPT', true);
       Host.pose('oops', 1800);
       Host.talk(Host.line('bankrupt'));
       Blip.sting();
-      p.round = 0;
       S.busy = false;
-      return endTurn(`${p.name} went bankrupt!`);
+      apply(res.state);
+      return endTurn(`${p.name} went bankrupt!`, res);
     }
     if (w === 'LOSE A TURN') {
       showLanded('🙅 LOSE A TURN', true);
@@ -593,8 +610,10 @@
       Host.talk(Host.line('lose'));
       Blip.tone([400, 200], 0.3, { type: 'square', volume: 0.08 });
       S.busy = false;
-      return endTurn(`${p.name} loses a turn.`);
+      apply(res.state);
+      return endTurn(`${p.name} loses a turn.`, res);
     }
+    apply(res.state);
     showLanded(money(w));
     Blip.tune([[880, 0.08], [1320, 0.14]], { type: 'triangle' });
     Host.talk(`${money(w)}! Pick a letter.`, 1600);
@@ -628,44 +647,50 @@
   async function callLetter(ch) {
     const p = S.players[S.cur];
     stopClock();
-    S.used.add(ch);
-    const count = letters(S.puzzle.answer).split('').filter(c => c === ch).length;
-    if (letterMode === 'vowel') { p.round -= VOWEL_COST; Host.talk(Host.line('vowel'), 1200); }
+    S.busy = true;
+    let res;
+    try { res = await runApi('/letter', { letter: ch, vowel: letterMode === 'vowel' }); } catch (e) { S.busy = false; toast(e.message); render(); return; }
+    S.busy = false;
+    const count = res.count;
+    if (letterMode === 'vowel') Host.talk(Host.line('vowel'), 1200);
     $('landed').classList.add('hidden');
     if (!count) {
+      apply(res.state);
       buzz(`✕ NO ${ch}`);
       Host.pose('oops', 1500);
       Host.talk(`${Host.line('miss')} No ${ch}.`);
-      return endTurn(`No ${ch}. ${solo() ? 'Strike!' : 'Next player.'}`);
+      return endTurn(`No ${ch}. ${solo() ? 'Strike!' : 'Next player.'}`, res);
     }
-    if (letterMode === 'consonant') p.round += S.wedge * count;
     // Vee walks the wall lighting each one; the buttons wait until she's done.
     S.busy = true;
-    render();
+    if (!res.solved) S.players = res.state.players;
+    S.used.add(ch);
+    renderPlayers();
+    $('spinBtn').disabled = $('vowelBtn').disabled = $('solveBtn').disabled = true;
     say(`${count} ${ch}${count > 1 ? '\'s' : ''}!`);
-    await revealLetter(ch);
-    S.revealed.add(ch);
+    await revealLetter(ch, res.positions);
+    apply(res.state);
     S.busy = false;
+    if (res.solved) return solved(res.won);
     Host.pose('cheer', 900);
     Host.talk(Host.line('hit', count), 1500);
     render();
     say(`${count} ${ch}${count > 1 ? '\'s' : ''}! ${p.name}, go again: spin, buy a vowel, or solve.`);
-    if (!consonantsLeft().length && !vowelsLeft().length) return solved();
-    if (!consonantsLeft().length) say('No consonants left! Buy a vowel or solve.');
+    if (!consonantsLeft()) say('No consonants left! Buy a vowel or solve.');
     resetTurn();
   }
 
-  function endTurn(message) {
+  // After a miss of any kind; the server has already moved the turn on (or
+  // counted the strike), and `res.lost` says the third strike ended the round.
+  function endTurn(message, res = {}) {
     if (solo()) {
-      S.strikes++;
       render();
-      if (S.strikes >= MAX_STRIKES) return roundLost();
+      if (res.lost) return roundLost();
       say(`${message} ${MAX_STRIKES - S.strikes} strike${MAX_STRIKES - S.strikes === 1 ? '' : 's'} left.`);
       resetTurn();
       maybeHeckle();
       return;
     }
-    S.cur = (S.cur + 1) % S.players.length;
     render();
     say(`${message} ${S.players[S.cur].name}, your turn!`);
     resetTurn();
@@ -750,7 +775,7 @@
     }
   }, 250);
 
-  function timeUp() {
+  async function timeUp() {
     S.timeLeft = 0;
     S.clock = null;
     $('letterView').classList.add('hidden');
@@ -759,7 +784,9 @@
     buzz('⏰ TIME\'S UP');
     Host.pose('oops', 1500);
     Host.talk(Host.line('timeup'));
-    endTurn('⏰ Time\'s up!');
+    let res = {};
+    try { res = await runApi('/timeup', {}); apply(res.state); } catch (e) { toast(e.message); }
+    endTurn('⏰ Time\'s up!', res);
   }
 
   // Any tap on the game counts as "doing something", so the host waits for a lull.
@@ -880,37 +907,36 @@
     }
   }
 
-  function trySolve() {
+  async function trySolve() {
     const guess = letters($('solveInput').value.toUpperCase());
     if (!guess) { $('solveMsg').textContent = 'Type your answer first.'; return; }
     $('solveView').classList.add('hidden');
     stopClock();
-    if (guess === letters(S.puzzle.answer)) return solved();
+    let res;
+    try { res = await runApi('/solve', { guess }); } catch (e) { toast(e.message); return; }
+    apply(res.state);
+    if (res.correct) return solved(res.won);
     buzz('✕ NOT QUITE');
     Host.pose('oops', 1500);
     Host.talk(Host.line('wrong'));
-    endTurn('Not quite!');
+    endTurn('Not quite!', res);
   }
 
-  async function solved() {
+  // The server banked `won` for whoever's turn it is; the board still shows
+  // what was hidden, and the whole answer sweeps in.
+  async function solved(won) {
     const p = S.players[S.cur];
-    const won = Math.max(p.round, SOLVE_MIN);
-    p.total += won;
-    S.players.forEach(x => { x.round = 0; });
     S.busy = true;
     renderPlayers();
     Host.talk(Host.line('solved'), 2600);
     Blip.fanfare();
     showLanded('🎉 SOLVED!', false, 2600);
     await revealAll();
-    for (const ch of letters(S.puzzle.answer)) S.revealed.add(ch);
     S.busy = false;
     showRound('🎉', `${p.name} solved it!`, `+${money(won)}`, 1400);
   }
 
   function roundLost() {
-    for (const ch of letters(S.puzzle.answer)) S.revealed.add(ch);
-    S.players.forEach(x => { x.round = 0; });
     render();
     Host.pose('oops', 2000);
     Host.talk('Three strikes! Here\'s the answer.');
@@ -940,7 +966,7 @@
       li.lastChild.textContent = money(p.total);
       $('finalList').appendChild(li);
     }
-    const canSave = solo() && ranked[0].total > 0;
+    const canSave = !!S.state.canSave;
     $('overScore').classList.toggle('hidden', !canSave);
     $('saveScoreBtn').disabled = false;
     $('scoreMsg').textContent = '';
@@ -953,11 +979,8 @@
     if (!who) { $('scoreMsg').textContent = 'Type your initials first.'; return; }
     $('saveScoreBtn').disabled = true;
     try {
-      const packLabel = S.pack === 'all' ? '' : ` · ${$('packSelect').selectedOptions[0].textContent.replace(/ \(\d+\)$/, '')}`;
-      const r = await ArcadeKit.saveScore('spinsolve', {
-        initials: who, score: S.players[0].total, board: isAdult() ? 'adult' : 'solo',
-        detail: `${S.rounds} rounds · ${levelInfo(S.level).label}${packLabel}`
-      });
+      // The server saves the total it worked out; the page only says who.
+      const r = await api(`/api/spinsolve/run/${S.run}/save`, { initials: who }, { ...pinHeaders(), ...profileHeaders() });
       initials.remember(who);
       $('overScore').classList.add('hidden');
       openScores(r.id);
@@ -1000,6 +1023,7 @@
 
   function backToSetup() {
     S.puzzle = null;
+    S.run = null;
     $('overView').classList.add('hidden');
     $('roundView').classList.add('hidden');
     $('game').classList.add('hidden');

@@ -1,8 +1,9 @@
 'use strict';
 
 // /api/spinsolve: puzzle levels and packs, theme requests, and the admin side
-// of building packs (copy a prompt, paste the AI's answer back). The game
-// itself runs in the browser.
+// of building packs (copy a prompt, paste the AI's answer back), and the game
+// itself (game.js): the server spins the wheel, keeps the answer, and decides
+// every score.
 
 const express = require('express');
 const rateLimit = require('express-rate-limit');
@@ -11,6 +12,8 @@ const comm = require('../arcade/comm');
 const adultPin = require('../arcade/adult-pin');
 const P = require('./puzzles');
 const banter = require('./banter');
+const game = require('./game');
+const scores = require('../arcade/scores');
 
 db.db.exec(`
   CREATE TABLE IF NOT EXISTS spin_packs (
@@ -69,24 +72,84 @@ module.exports = function spinRoutes({ requireAdmin, notify }) {
     res.json(adultPin.check(req, res));
   });
 
-  // The puzzles for a game: one pack, or every built-in and pack puzzle at a level.
-  router.get('/puzzles', (req, res, next) => {
+  // The puzzles a game can draw from: one pack, or every built-in and pack puzzle
+  // at a level. They stay on the server; the page only ever gets the board.
+  function poolFor(body, req) {
+    const packId = Number(body.pack);
+    if (packId) {
+      const row = db.db.prepare('SELECT * FROM spin_packs WHERE id = ?').get(packId);
+      if (!row) throw fail('That puzzle pack is gone.', 404);
+      requireLevel(row.level, req);
+      const pack = rowToPack(row, true);
+      return { level: row.level, packLabel: pack.label, pool: pack.puzzles.map(p => ({ ...p, pack: pack.label })) };
+    }
+    const level = P.levelOf(body.level);
+    requireLevel(level, req);
+    const fromPacks = allPacks().filter(r => r.level === level)
+      .flatMap(r => JSON.parse(r.puzzles).map(p => ({ ...p, pack: r.label })));
+    return { level, packLabel: '', pool: [...P.BUILTIN[level], ...fromPacks] };
+  }
+
+  const startLimiter = rateLimit({
+    windowMs: 10 * 60 * 1000, limit: process.env.NODE_ENV === 'test' ? 600 : 60, standardHeaders: true, legacyHeaders: false,
+    message: { error: 'Lots of new games at once. Take a breather, then try again.' }
+  });
+  const moveLimiter = rateLimit({
+    windowMs: 60 * 1000, limit: 300, standardHeaders: true, legacyHeaders: false,
+    message: { error: 'Slow down a little, then try again.' }
+  });
+  const profileOf = req => require('../arcade/profiles').verify(req.get('X-Profile-Token')) || null;
+
+  // A game: start it, then every spin, letter and answer goes through here.
+  router.post('/run/start', startLimiter, (req, res, next) => {
     try {
-      const packId = Number(req.query.pack);
-      if (packId) {
-        const row = db.db.prepare('SELECT * FROM spin_packs WHERE id = ?').get(packId);
-        if (!row) throw fail('That puzzle pack is gone.', 404);
-        requireLevel(row.level, req);
-        const pack = rowToPack(row, true);
-        return res.json({ level: row.level, puzzles: pack.puzzles.map(p => ({ ...p, pack: pack.label })), banter: banter.forLevel(row.level) });
-      }
-      const level = P.levelOf(req.query.level);
-      requireLevel(level, req);
-      const fromPacks = allPacks().filter(r => r.level === level)
-        .flatMap(r => JSON.parse(r.puzzles).map(p => ({ ...p, pack: r.label })));
-      res.json({ level, puzzles: [...P.BUILTIN[level], ...fromPacks], banter: banter.forLevel(level) });
+      const body = req.body || {};
+      const { level, packLabel, pool } = poolFor(body, req);
+      const profile = profileOf(req);
+      const g = game.start({ pool, names: body.names, rounds: body.rounds, level, adult: P.LEVELS[level].adult, packLabel, profileId: profile && profile.id, ip: req.ip });
+      res.status(201).json({ ...game.view(g), level, banter: banter.forLevel(level), wedges: game.WEDGES });
     } catch (e) { next(e); }
   });
+  // An adult game needs the adult pass on every move, so Back to family on a TV ends it at once.
+  const run = req => {
+    const g = game.get(req.params.id);
+    if (g.adult && !unlocked(req)) throw fail('Adult levels need an adult signed in with ARKS ID.', 403);
+    return g;
+  };
+  const act = fn => (req, res, next) => {
+    try { const g = run(req); const out = fn(g, req.body || {}, req); res.json({ ...out, state: game.view(g) }); } catch (e) { next(e); }
+  };
+  router.get('/run/:id', moveLimiter, act(() => ({})));
+  router.post('/run/:id/spin', moveLimiter, act(g => game.spin(g)));
+  router.post('/run/:id/letter', moveLimiter, act((g, b) => game.call(g, b.letter, b.vowel === true)));
+  router.post('/run/:id/solve', moveLimiter, act((g, b) => game.solve(g, b.guess)));
+  router.post('/run/:id/timeup', moveLimiter, act(g => game.timeUp(g)));
+  router.post('/run/:id/next', moveLimiter, act(g => { game.nextRound(g); return {}; }));
+  // Solo games go on the board, with the total the server worked out.
+  router.post('/run/:id/save', moveLimiter, (req, res, next) => {
+    try {
+      const g = run(req);
+      const v = game.view(g);
+      if (!v.canSave) throw fail(v.solo ? 'This game is already saved, or it isn\'t over yet.' : 'Only solo games go on the board.', 409);
+      // The score belongs to whoever started the game: their profile, or the initials typed for a guest.
+      const token = req.get('X-Profile-Token');
+      const now = token ? profileOf(req) : null;
+      if (g.profileId && (!now || now.id !== g.profileId)) throw fail('Only the profile that played this game can save it.', 403);
+      const label = (P.LEVELS[g.level] || P.LEVELS.kids).label;
+      const out = scores.save('spinsolve', {
+        initials: (req.body || {}).initials, score: g.players[0].total, board: g.adult ? 'adult' : 'solo',
+        detail: `${g.rounds} rounds · ${label}${g.packLabel ? ` · ${g.packLabel}` : ''}`,
+        profileToken: g.profileId ? token : null, fromServer: true
+      });
+      g.saved = true;
+      game.games.delete(g.id);
+      res.status(201).json(out);
+    } catch (e) { next(e); }
+  });
+  // Only for the test suite: the answer, so a test can solve.
+  if (process.env.NODE_ENV === 'test') {
+    router.get('/test/answer/:id', (req, res, next) => { try { res.json({ answer: game.get(req.params.id).puzzle.answer }); } catch (e) { next(e); } });
+  }
 
   const requestLimiter = rateLimit({
     windowMs: 60 * 60 * 1000, limit: 10, standardHeaders: true, legacyHeaders: false,

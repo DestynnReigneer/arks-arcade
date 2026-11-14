@@ -7,7 +7,33 @@ to-do list as checkboxes (the rule is in the maintainer's global CLAUDE.md
 and `arks-internal/conventions/sessions.md`): do the checked items in the
 order they were clicked, and keep the rest pinned here.
 
-## Last session (2026-11-13)
+## Last session (2026-11-13, afternoon)
+
+**Finished** (merged and published)
+- **The lobby for Know-It-All (#135) and Uh-Oh: Part Deux and Dare Devil (#136):** Create a game lobby, List Hosted
+  Games with a details card, Who can join, Ready, chat with emoji, Mute and Remove Player, no codes except on the
+  TV. The card games share `public/party-lobby.js`. A security review found three things, all fixed: one seat per
+  profile, a family lobby can't turn adult once people are in, and leftover chat and invites are cleared at startup.
+  API tests in `test/party-lobby.test.js`. A card game can't be joined once dealt.
+- **#137: Spin & Solve runs on the server** (`spinsolve/game.js`): the wheel, the letters, the answer and the total.
+  The page only sees blanks, the shared board refuses a Spin & Solve score from a page, the family puzzles moved to
+  `spinsolve/kids-puzzles.js`, and a game saves only to the profile that started it.
+- **#138:** Tower Defense's panel sits beside the map on a computer. **#139:** the Cheat codes box is gone; the
+  characters sit under INSERT COIN on a phone and dance after 20 idle seconds. **#141:** Bucket Drop has a board
+  per Cups and Speed pair (old scores moved by their detail). **#142:** pictures for the Train Station's cars (admin
+  page, stored in settings). **#143:** built against ARKS ID contract v16 (see the ARKS ID section).
+
+**Open:** #140, the notifications switch in the profile card, is built and green but held for the maintainer's
+wording (the rollup page has every new line).
+
+**Waiting on the maintainer** (rollup: https://claude.ai/artifact/4X2aey17RQfyn9Dv5zkeo1): what Remove Player means
+(blocked until the lobby closes, recommended), whether Spin & Solve's public puzzles matter for the board, the
+notification center preview, the TV screen saver questions, the Hub chat questions, ARKS ID's Discord settings
+screens, the jokes.
+
+**Next up:** Rambler's no-scroll layout (convert its old header first), and the lobby for Rambler and Shuffle Scuffle.
+
+## The session before (2026-11-13, morning)
 
 **Finished** (all merged and published)
 - **#124: the round 4 top bar** on every page: even 30px buttons (28 on a phone), the logo first, a gold
@@ -1358,7 +1384,7 @@ board-name setting and adult PIN are only for copies running without it.
 - **Shared family accounts ("ARKS ID")**: planned and approved. The
   contract is in the private `arks-id` repo (`docs/SPEC.md`); see CLAUDE.md
   for how to use it. The arcade integrates last (after ARKS ID, the Hub's
-  sign-in and passkeys). **Built against ARKS ID contract v15** (2026-11-07): notifications when it's your turn in
+  sign-in and passkeys). **Built against ARKS ID contract v16** (2026-11-13): every notification says its kind (turn, invite, started, chat), who it's from and the game, so ARKS ID can send it to the phone, Discord's #turns or both; chat messages tell the people in the room who aren't looking (never the words); and a new #1 on an all-time board goes to #trophies (`trophy` on a Comm Center post, `push.trophy`). Before that, v15 (2026-11-07): notifications when it's your turn in
   Words with Family (see the top of this file). Before that, v14 (2026-11-01): TVs (the pairing
   code sign-in, adults' night, see the top of this file). Before that, v13 (2026-11-01): game
   switches and the banner from ARKS ID's admin console (see the top of this file). Before

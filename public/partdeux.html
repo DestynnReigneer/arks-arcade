@@ -11,6 +11,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&display=swap">
 <link rel="stylesheet" href="arcade-ui.css">
+<link rel="stylesheet" href="lobby-ui.css">
 <link rel="stylesheet" href="partdeux.css">
 <link rel="stylesheet" href="tutorial.css">
 <link rel="stylesheet" href="adult-mode.css">
@@ -43,9 +44,9 @@
   <div class="panel">
     <h2>How are you playing?</h2>
     <div class="seg" id="modeSeg">
-      <button data-mode="local" aria-pressed="true" class="no-tv">📱 Share a phone</button>
-      <button data-mode="host" aria-pressed="false" class="no-tv">📡 Host</button>
-      <button data-mode="join" aria-pressed="false" class="no-tv">🔗 Join</button>
+      <button data-mode="local" aria-pressed="true" class="no-tv">📱 Multiplayer-Single device</button>
+      <button data-mode="host" aria-pressed="false" class="no-tv">📱📱 Create a game lobby</button>
+      <button data-mode="join" aria-pressed="false" class="no-tv">🔎 List Hosted Games</button>
       <button data-mode="tvphones" aria-pressed="false" class="tv-only">📱 Everyone on their own phone</button>
       <button data-mode="tvpass" aria-pressed="false" class="tv-only">🔁 Pass one phone around</button>
     </div>
@@ -231,6 +232,8 @@
 <script src="arcade-kit.js"></script>
 <script src="arcade-qr.js"></script>
 <script src="room-password.js"></script>
+<script src="lobby-ui.js"></script>
+<script src="party-lobby.js"></script>
 <script src="partdeux.js"></script>
 <script src="banner.js" defer></script>
 </body>

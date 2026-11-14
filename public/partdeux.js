@@ -105,6 +105,10 @@
     });
   }
 
+  // The lobby pieces both party card games share (party-lobby.js).
+  let lobbyRef = null;
+  const lobby = () => lobbyRef || (lobbyRef = PartyLobby.attach({ game: 'partdeux', title: 'Uh-Oh: Part Deux', enterRoom: r => enterRoom(r), creds: () => S.table }));
+
   function setMode(mode) {
     S.mode = mode;
     for (const b of $('modeSeg').children) b.setAttribute('aria-pressed', String(b.dataset.mode === mode));
@@ -112,6 +116,7 @@
     $('goBtn').textContent = mode === 'host' ? 'Get a game code' : mode === 'join' ? 'Join the game'
       : mode.startsWith('tv') ? 'Show the code on the TV' : 'Deal \'em';
     $('levelList').closest('.panel').classList.toggle('hidden', mode === 'join');
+    lobby().mode(mode);
   }
 
   function renderNames() {
@@ -148,16 +153,13 @@
         return applySnap(r);
       }
       if (S.mode === 'host') {
+        const hostExtra = lobby().hostBody();
+        if (!hostExtra) return;
         const r = await RoomPassword.withPassword(password =>
-          api('/rooms', { method: 'POST', body: { name: $('hostName').value, level: S.level, drinking, password }, headers: pinHeaders() }));
+          api('/rooms', { method: 'POST', body: { ...hostExtra, name: $('hostName').value, level: S.level, drinking, password }, headers: { ...pinHeaders(), ...lobby().headers() } }));
         if (r) enterRoom(r);
         return;
       }
-      const code = $('joinCode').value.trim().toUpperCase();
-      if (code.length !== 4) { $('setupMsg').textContent = 'Codes are 4 letters.'; return; }
-      const r = await RoomPassword.withPassword(password =>
-        api(`/rooms/${code}/join`, { method: 'POST', body: { name: $('joinName').value, password } }));
-      if (r) enterRoom(r);
     } catch (e) { $('setupMsg').textContent = e.message; }
   }
 
@@ -191,6 +193,7 @@
     const { code, playerId, token } = S.table;
     S.es = new EventSource(`${API}/rooms/${code}/events?playerId=${encodeURIComponent(playerId)}&token=${encodeURIComponent(token)}`);
     S.es.addEventListener('state', e => applySnap(JSON.parse(e.data)));
+    S.es.addEventListener('removed', () => { closeRoom(); show('setup'); toast('The host took you out of the game.'); });
     S.es.onerror = () => {
       fetch(`${API}/rooms/${code}?playerId=${encodeURIComponent(playerId)}&token=${encodeURIComponent(token)}`)
         .then(r => { if (r.status === 404 || r.status === 403) { closeRoom(); show('setup'); toast('That game has ended.'); } }).catch(() => {});
@@ -230,11 +233,12 @@
     S.snap = snap;
     document.documentElement.classList.toggle('adult-mode', levelInfo(snap.level).adult);
     document.body.classList.toggle('tv-screen', !!snap.isScreen);
-    if (snap.kind === 'room' && !snap.game) return renderLobby(snap);
+    if (snap.kind === 'room' && !snap.game) { renderLobby(snap); return lobby().render(snap); }
     // A move on the TV's table counts as a game being played (adults' night keeps going).
     if (TV && snap.game && `${snap.game.turn}|${snap.game.deckCount}|${snap.game.top && snap.game.top.id}` !== before) ArcadeTV.played();
     if (snap.kind === 'room' && snap.game.phase === 'over' && S.overShown && !$('overView').classList.contains('hidden')) { /* keep results */ }
     show('game');
+    lobby().game(snap);
     renderGame();
     reactTo(snap.game);
   }
@@ -633,7 +637,6 @@
   for (const b of $('modeSeg').children) b.onclick = () => setMode(b.dataset.mode);
   $('addPlayerBtn').onclick = () => { if (S.names.length < 8) { S.names.push(''); renderNames(); } };
   $('goBtn').onclick = go;
-  $('joinCode').onkeydown = e => { if (e.key === 'Enter') go(); };
   $('drawBtn').onclick = () => { Blip.tone(330, 0.06, { type: 'triangle' }); send({ action: 'draw' }); };
   $('drawPile').onclick = () => $('drawBtn').click();
   $('keepBtn').onclick = () => send({ action: 'pass' });
@@ -679,7 +682,7 @@
     renderNames();
     setMode(S.mode);
     const join = new URLSearchParams(location.search).get('join');
-    if (join && !TV) { setMode('join'); $('joinCode').value = join.toUpperCase().slice(0, 4); }
+    if (join && !TV) lobby().openFromLink(join.toUpperCase().slice(0, 4));
     try {
       const saved = JSON.parse(sessionStorage.getItem('pd.room') || 'null');
       if (saved && saved.code) { S.table = saved; connect(); }

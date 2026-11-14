@@ -48,7 +48,7 @@ test('playing Bucket Drop and saving the points', async ({ page, isMobile }) => 
   for (const [i, c] of ['B', 'D', 'R'].entries()) await boxes.nth(i).fill(c);
   await page.locator('.over-panel .save-btn').click();
   await expect.poll(async () => {
-    const list = await (await page.request.get('/api/scores/bucketdrop?board=points')).json();
+    const list = await (await page.request.get('/api/scores/bucketdrop?board=big-fast')).json();
     return list.some(r => r.initials === 'BDR' && r.score === points);
   }).toBe(true);
   expect(problems).toEqual([]);

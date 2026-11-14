@@ -15,4 +15,4 @@ function act(game, actorId, body) {
 
 const cleanOptions = o => ({ length: Object.keys(engine.LENGTHS).includes(o.length) ? o.length : 'standard' });
 
-module.exports = makeTables({ engine, act, levels: cards.LEVELS, minPlayers: 2, maxPlayers: 12, cleanOptions });
+module.exports = makeTables({ game: 'daredevil', title: 'Dare Devil', engine, act, levels: cards.LEVELS, minPlayers: 2, maxPlayers: 12, cleanOptions });

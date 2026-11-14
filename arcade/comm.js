@@ -112,7 +112,11 @@ function post({ kind = 'announcement', emoji = '📣', title, body = '', game = 
 
 // Never let a message-board hiccup break the thing that triggered it: a top
 // score must still save even if its shout-out cannot.
+// entry.trophy (a new #1 on an all-time board) also goes to Discord's #trophies channel, through
+// ARKS ID (arcade/push.js), when the arcade signs in with it.
+let trophyNotifier = null;
 function safePost(entry) {
+  if (entry.trophy && trophyNotifier) { try { trophyNotifier(entry.trophy); } catch { /* never stops a game */ } }
   try { return post(entry); } catch (e) { console.warn('Comm Center post failed:', e.message); return null; }
 }
 
@@ -400,6 +404,12 @@ function adminRouter(requireAdmin) {
   admin.post('/train-cars', (req, res, next) => {
     try { res.json({ cars: trainCars.set((req.body || {}).cars) }); } catch (e) { next(e); }
   });
+  admin.post('/train-cars/:n/picture', (req, res, next) => {
+    try { res.json({ cars: trainCars.setPicture(req.params.n, (req.body || {}).image) }); } catch (e) { next(e); }
+  });
+  admin.delete('/train-cars/:n/picture', (req, res, next) => {
+    try { res.json({ cars: trainCars.clearPicture(req.params.n) }); } catch (e) { next(e); }
+  });
 
   // Whether adult levels are on (only with ARKS ID), for the admin page's Adult levels card.
   admin.get('/adult-pin', (req, res) => res.json(adultPin.status()));
@@ -420,5 +430,5 @@ router.use((err, req, res, next) => {
   res.status(err.status || 500).json({ error: err.message });
 });
 
-module.exports = { router, adminRouter, post, safePost, listPosts, STATUSES, setFeedbackNotify: fn => { onFeedback = fn; }, setAdminCheck: fn => { adminCheck = fn; },
+module.exports = { router, adminRouter, post, safePost, listPosts, STATUSES, setTrophyNotifier: fn => { trophyNotifier = fn; }, setFeedbackNotify: fn => { onFeedback = fn; }, setAdminCheck: fn => { adminCheck = fn; },
   setInbox: v => { inbox = v; } };

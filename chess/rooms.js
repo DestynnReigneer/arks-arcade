@@ -270,7 +270,8 @@ function invite(code, playerId, token, to) {
 function say(code, playerId, token, text) {
   const r = room(code);
   const p = authenticate(r, playerId, token);
-  chat.say(r.code, { seat: p.id, name: p.name, muted: r.muted.has(p.id), family: true }, text);
+  chat.say(r.code, { seat: p.id, name: p.name, muted: r.muted.has(p.id), family: true,
+    tell: { to: r.players.filter(x => x.profileId && !(x.clients > 0)).map(x => x.profileId), from: p.profileId || null, game: 'Chess', url: `chess.html?room=${r.code}` } }, text);
   r.lastActivity = Date.now();
   broadcast(r);
   return { ok: true };
@@ -368,7 +369,7 @@ function tellTurn(r, mover) {
   const next = r.players.find(p => p.color === r.state.turn);
   if (!notifier || !next || !next.profileId || next.clients > 0 || r.ended) return;
   try {
-    notifier(next.profileId, { title: 'Chess', body: `${mover.name} moved. Your move!`, url: `chess.html?room=${r.code}`, tag: `chess-${r.code}` });
+    notifier(next.profileId, { title: 'Chess', body: `${mover.name} moved. Your move!`, url: `chess.html?room=${r.code}`, tag: `chess-${r.code}`, kind: 'turn', from: mover.profileId || null, game: 'Chess' });
   } catch { /* a notification never stops a game */ }
 }
 
