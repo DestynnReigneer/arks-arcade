@@ -6,7 +6,8 @@
   var CAB = window.CAB, V3 = CAB.V3, S = CAB.sound;
   // TOP is the turntable's surface. The cups are straight, clear cylinders with walls TW thick.
   var RING = 3.35, GUT = 5.4, TOP = -0.02, H = 1.45, BR = 0.24, TW = 0.06, G = 22, TABLE = 5.05;
-  var SIZES = { big: 1.38, normal: 1.15, small: 0.95 }, SPEEDS = { chill: 0.7, normal: 1.0, fast: 1.35, wild: 1.8 };
+  // The game is played one way: big cups on a fast turntable. (It had a Cups and a Speed choice until 2026-11-14.)
+  var CUP = 1.38, SPIN = 1.35;
   // Points, like the other games: 10 for each ball you catch, 25 more for every 5 in a row, and the jackpot for all 50.
   var PER = 10, STREAK = 25, JACK0 = 1000;
   function rr(x, x0, y0, w, h, r) { x.beginPath(); x.moveTo(x0 + r, y0); x.arcTo(x0 + w, y0, x0 + w, y0 + h, r); x.arcTo(x0 + w, y0 + h, x0, y0 + h, r); x.arcTo(x0, y0 + h, x0, y0, r); x.arcTo(x0, y0, x0 + w, y0, r); x.closePath(); }
@@ -47,10 +48,6 @@
     id: 'bucketdrop', name: 'Bucket Drop', track: 'techno',
     tvHint: 'Press OK to drop a ball into a cup. On a game controller, A, X, R1 or the right trigger drops one too, and Start pauses.',
     pad: [['DROP', 'press']],
-    options: [
-      { id: 'size', label: 'Cups', def: 'big', choices: [['big', 'Big'], ['normal', 'Normal'], ['small', 'Small']] },
-      { id: 'speed', label: 'Speed', def: 'fast', choices: [['chill', 'Chill'], ['normal', 'Normal'], ['fast', 'Fast'], ['wild', 'Wild']] }
-    ],
     init: function () {
       var s = this.scene = CAB.scene({ bg: 0x0c0418, near: 18, far: 48, span: 9 });
       var cam = this.cam = new THREE.PerspectiveCamera(44, 1, 0.1, 200);
@@ -154,7 +151,7 @@
     // Five clear, straight cups with a dark rim and a colored glow band, like the real ones.
     buildBuckets: function () {
       var grp = this.bucketGroup; while (grp.children.length) grp.remove(grp.children[0]);
-      var R = this.R = SIZES[(this.opt && this.opt.size) || 'big'];
+      var R = this.R = CUP;
       var cols = [0xff2ec4, 0x00e6b0, 0xffc21f, 0x8a5cff, 0xff6a2e];
       this.buckets = [];
       for (var k = 0; k < 5; k++) {
@@ -170,9 +167,7 @@
       }
       if (this.scene) CAB.shade(this.scene);
     },
-    setOption: function (id) { if (id === 'size') this.buildBuckets(); },
     reset: function () {
-      if (this.R !== SIZES[this.opt.size]) this.buildBuckets();
       this.buckets.forEach(function (b) { for (var i = b.children.length - 1; i >= b.userData.keep; i--) b.remove(b.children[i]); b.userData.n = 0; });
       while (this.loose.children.length) this.loose.remove(this.loose.children[0]);
       this.sparks.clear(); this.pop.clear();
@@ -241,7 +236,7 @@
     },
     update: function (dt, live) {
       this.t += dt; this.lights.update(this.t);
-      var w = SPEEDS[this.opt.speed] * (1 + (live && this.started ? (30 - this.time) * 0.011 : 0));
+      var w = SPIN * (1 + (live && this.started ? (30 - this.time) * 0.011 : 0));
       this.rot += w * dt; this.table.rotation.y = -this.rot;
       if (live && this.started) this.time = Math.max(0, this.time - dt);
       this.rimT = Math.max(0, this.rimT - dt);
@@ -324,10 +319,10 @@
           if (d && Number.isFinite(d.amount)) { self.jackpot = d.amount; self.screenTex.redraw(); }
         }).catch(function () { /* the board still takes the score */ });
     },
-    // What goes on the board when the run ends, with the settings it was played on.
+    // What goes on the board when the run ends. The board keeps the name it had when each Cups and Speed pair had
+    // its own ("big-fast"), so the scores already on it stay where they are.
     final: function () {
-      var cups = { big: 'Big cups', normal: 'Normal cups', small: 'Small cups' }[this.opt.size] || '', speed = { chill: 'chill', normal: 'normal', fast: 'fast', wild: 'wild' }[this.opt.speed] || '';
-      return { score: this.score || 0, board: (this.opt.size || 'big') + '-' + (this.opt.speed || 'fast'), detail: (this.caught === 50 ? 'Jackpot! ' : '') + this.caught + ' of 50, ' + cups + ', ' + speed };
+      return { score: this.score || 0, board: 'big-fast', detail: (this.caught === 50 ? 'Jackpot! ' : '') + this.caught + ' of 50' };
     },
     hud: function () { return [['Score', this.score || 0], ['Caught', this.caught || 0], ['Balls', this.left], ['Time', this.started ? this.time.toFixed(1) : '30.0'], ['Jackpot', this.jackpot]]; }
   };

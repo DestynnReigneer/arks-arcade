@@ -996,6 +996,9 @@ async function run({ base, root }) {
     spinAgain.banter.jokes.length >= 20 && ('answer' in spinAgain.state) === (spinAgain.state.phase === 'roundover'),
     JSON.stringify(spinAgain).slice(0, 200));
   const spinNow = spinAgain.state;
+  ok('…and nothing may keep a copy of it', (await fetch(`${base}/api/spinsolve/run/${solo.id}`)).headers.get('cache-control') === 'no-store');
+  const oddLevel = await spinPost('/run/start', { level: 'constructor', names: ['Kim'] });
+  ok('a made-up level name starts a family game', oddLevel.status === 201 && oddLevel.data.level === 'kids' && oddLevel.data.adult === false, JSON.stringify(oddLevel.data).slice(0, 120));
   if (spinNow.phase === 'letter') await spinPost(`/run/${solo.id}/timeup`);
   const now = (await (await fetch(`${base}/api/spinsolve/run/${solo.id}`)).json()).state;
   if (now.phase === 'turn') {
@@ -1049,6 +1052,11 @@ async function run({ base, root }) {
   const patGame = (await asPat('/run/start', { level: 'kids', names: ['Pat'], rounds: 1 })).data;
   await playOut(patGame.id, asPat);
   ok('a profile\'s game can\'t be saved by someone else', (await spinPost(`/run/${patGame.id}/save`, { initials: 'ZZ' })).status === 403);
+  const other = await wl('/profiles', 'POST', { name: 'Spin Lee', avatar: 'shiba:2' });
+  await asAdmin(`/profiles/admin/${other.data.id}/approve`, 'POST', {});
+  const leeToken = (await wl(`/profiles/${other.data.id}/use`, 'POST', {})).data.token;
+  const asLee = await fetch(`${base}/api/spinsolve/run/${patGame.id}/save`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Profile-Token': leeToken }, body: '{}' });
+  ok('…and not by another profile either', asLee.status === 403);
   ok('…only by that profile', (await asPat(`/run/${patGame.id}/save`, {})).status === 201);
 
   // An adult game, solved and saved, lands on the Adult board.

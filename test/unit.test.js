@@ -267,6 +267,33 @@ async function run() {
   ok('a finished game waits ten minutes for its score to be saved', doneGame.phase === 'over' && spinGame.games.has(doneGame.id));
   spinGame.sweep(Date.now() + 11 * 60 * 1000);
   ok('…and then it is cleared', !spinGame.games.has(doneGame.id));
+  // One visitor's share of games is counted the way the rate limiter counts
+  // visitors: a whole IPv6 network is one, so changing addresses inside it
+  // doesn't get more than ten.
+  const fewPuzzles = puzzles.slice(0, 5);
+  const startFrom = ip => spinGame.start({ pool: fewPuzzles, names: ['Kim'], rounds: 3, level: 'kids', ip });
+  spinGame.games.clear();
+  for (let i = 1; i <= 12; i++) startFrom(`2001:db8:1:2::${i.toString(16)}`);
+  ok('twelve games from one IPv6 network leave it the ten it may have', spinGame.games.size === spinGame.MAX_PER_OWNER);
+  for (let i = 0; i < 12; i++) startFrom('203.0.113.7');
+  ok('…and one IPv4 address gets its own ten', spinGame.games.size === 2 * spinGame.MAX_PER_OWNER);
+  startFrom('2001:db8:9:9::1');
+  ok('a different IPv6 network is a different visitor', spinGame.games.size === 2 * spinGame.MAX_PER_OWNER + 1);
+  // A full arcade makes room by dropping the game that has sat untouched the
+  // longest, instead of turning the new player away.
+  spinGame.games.clear();
+  const sat = startFrom('10.0.0.1');
+  sat.touched -= 60 * 1000;
+  for (let i = 1; i < spinGame.MAX_GAMES; i++) startFrom(`10.${1 + (i >> 16)}.${(i >> 8) & 255}.${i & 255}`);
+  ok('the arcade can hold its full number of games', spinGame.games.size === spinGame.MAX_GAMES && spinGame.games.has(sat.id));
+  const oneMore = startFrom('10.200.0.1');
+  ok('one more still gets in, and the longest-idle game makes room for it',
+    spinGame.games.size === spinGame.MAX_GAMES && spinGame.games.has(oneMore.id) && !spinGame.games.has(sat.id));
+  ok('every game uses the one list of puzzles it was handed, not a copy', [...spinGame.games.values()].every(g => g.pool === fewPuzzles));
+  spinGame.games.clear();
+  ok('a level is only ever one of the real ones', spinBanks.levelOf('constructor') === 'kids' && spinBanks.levelOf('__proto__') === 'kids' &&
+    spinBanks.levelOf('spicy') === 'spicy' && spinBanks.levelOf(undefined) === 'kids' &&
+    spinBanks.levelOf({ toString: 1 }) === 'kids' && spinBanks.levelOf(['spicy']) === 'kids');
 
   console.log('\n-- know-it-all --');
   const tbank = require(path.join(ROOT, 'trivia/bank.js'));
