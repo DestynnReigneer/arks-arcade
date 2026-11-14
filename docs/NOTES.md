@@ -57,6 +57,17 @@ order they were clicked, and keep the rest pinned here.
   anywhere the pass was copied to. Signing out also clears what unlocked them in that tab (`forgetAdultUnlocks` in
   `public/profile.js`). A second device signed in as the same adult keeps its own pass. Tests in
   `test/arksid.test.js` and `test/browser/adult-signout.spec.js`.
+- **#149: Spin & Solve's limits, ahead of the bigger puzzle bank.**
+  - A visitor's ten games are counted the way the rate limiter counts visitors (`ipKeyGenerator`, so a whole IPv6
+    network is one), and a full arcade (3,000 games) drops its longest-idle game instead of turning people away.
+  - Each level's list of puzzles, and each pack's, is put together once and shared by every game (`pooled` in
+    `spinsolve/routes.js`). It's rebuilt when the packs change. Before, every game carried its own copy, which
+    would not have fit in memory with thousands of puzzles.
+  - Small ones: a level's name is looked up with `Object.hasOwn` (Spin & Solve and the card games), a game's
+    answers are sent `no-store`, the page only forgets the game it asked about (not one started meanwhile), and
+    Words with Family's page decides a game is gone from the 404 instead of the wording.
+- **Known flake:** `test/clueless.test.js` "New board ... gives a different crossword, not today's" fails once
+  in a great while, when a random mini crossword happens to be today's. It passes on a rerun.
 
 **Next up** (the maintainer's order from 2026-11-14)
 1. Bucket Drop loses its Cups and Speed choice: Big cups and Fast are the game, and only that board shows. The
