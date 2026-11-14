@@ -232,6 +232,23 @@ async function run() {
   ok('each adult level has its own bank', ['cheeky', 'spicy', 'filthy'].every(l => spinBanks.BUILTIN[l].length >= 30));
   ok('no puzzle uses a British spelling',
     puzzles.every(p => p.answer.split(' ').every(w => !dictionary.isBritish(w.replace(/[^A-Z]/g, '')))));
+  // A game nobody touches is kept for a day, so a page that reloads after a
+  // locked screen finds it again; after that it's cleared.
+  const spinGame = require(path.join(ROOT, 'spinsolve/game.js'));
+  const HOUR = 60 * 60 * 1000;
+  const keptGame = spinGame.start({ pool: puzzles.slice(0, 5), names: ['Kim'], rounds: 3, level: 'kids' });
+  ok('a game is kept for 24 hours after its last move', spinGame.KEEP_MS === 24 * HOUR);
+  spinGame.sweep(Date.now() + 23 * HOUR);
+  ok('a game nobody touched for 23 hours is still there', spinGame.games.has(keptGame.id));
+  spinGame.sweep(Date.now() + 25 * HOUR);
+  ok('…and after a day without a move it is cleared', !spinGame.games.has(keptGame.id));
+  const doneGame = spinGame.start({ pool: puzzles.slice(0, 5), names: ['Kim'], rounds: 1, level: 'kids' });
+  spinGame.solve(doneGame, doneGame.puzzle.answer);
+  spinGame.nextRound(doneGame);
+  spinGame.sweep(Date.now() + 5 * 60 * 1000);
+  ok('a finished game waits ten minutes for its score to be saved', doneGame.phase === 'over' && spinGame.games.has(doneGame.id));
+  spinGame.sweep(Date.now() + 11 * 60 * 1000);
+  ok('…and then it is cleared', !spinGame.games.has(doneGame.id));
 
   console.log('\n-- know-it-all --');
   const tbank = require(path.join(ROOT, 'trivia/bank.js'));

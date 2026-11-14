@@ -37,6 +37,32 @@ order they were clicked, and keep the rest pinned here.
   Deux (`partdeux/banter.js`) and Spin & Solve (`spinsolve/banter.js`), next to the ones already there and in the
   maintainer's own words. Each file keeps its own quoting (curly apostrophes in Uh-Oh's, escaped straight ones in
   Spin & Solve's).
+- **#147: Spin & Solve keeps your game.** The maintainer locked a device mid-game and found the setup screen when
+  it was unlocked: the browser had reloaded the page, and the page never remembered which game it was in.
+  - The page now stores the game's id on the device (`spin.run.<profile id>` or `spin.run.guest` in
+    `localStorage`, never on a TV) and asks the server for it when it loads (`GET /api/spinsolve/run/:id`, which
+    now also sends the level and the jokes). It comes back mid-turn, owing a letter, on a round's result or on
+    the final results with the score still to save, and says "Welcome back, your game is right where you left
+    it."
+  - The turn clock stands still while the page is hidden, and a late tick counts for a second at most, so a page
+    that slept doesn't wake up out of time.
+  - The server keeps an untouched game for 24 hours (it was one hour). An adult game still needs the adult pass
+    to come back.
+  - Leaving on purpose, saving the score, or a game the server no longer has all forget it. A restart of the
+    arcade still ends every game: keeping them in the database is the saved-games work below.
+  - Browser tests in `test/browser/spin-resume.spec.js`.
+
+**Next up** (the maintainer's order from 2026-11-14)
+1. Bucket Drop loses its Cups and Speed choice: Big cups and Fast are the game, and only that board shows. The
+   other boards' scores stay in the database.
+2. A host can switch a lobby to an adult level at any time. Adult levels still need an adult signed in with ARKS
+   ID, so anyone who isn't is moved out of the lobby with a message saying why.
+3. Spin & Solve goes from 342 puzzles to 4,000.
+4. The rest of the saved games: the party games, the solo word games and the action games.
+5. The notification bell in the waffle menu, once ARKS ID keeps the list.
+6. Previews before building: kick and ban for hosts, 8-Bit avatars, more easter eggs.
+7. No-scroll layouts for the remaining games (Rambler's old header converts first), then the lobby for Rambler
+   and Shuffle Scuffle, then the small repairs (a same-origin check on `/api` writes, Rambler's guest photos).
 
 ## The session before (2026-11-13, afternoon)
 
