@@ -126,7 +126,7 @@ const ArcadeProfile = (() => {
     .apf-row{display:flex;gap:8px;margin-top:10px}.apf-row>*{flex:1}
     .apf-notify{position:relative;width:100%;box-sizing:border-box;margin-top:10px;display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:10px;border:1px solid #3d2a63;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}
     .apf-notify[disabled]{cursor:default}
-    .apf-notify .t{flex:1;min-width:0}.apf-notify b{display:block;font-size:15px}.apf-notify small{display:block;font-size:12.5px;color:#c9a8dd;line-height:1.35}
+    .apf-notify .t{flex:1;min-width:0}.apf-notify b{display:block;font-size:15px}.apf-notify small{display:block;font-size:12.5px;color:#c9a8dd;line-height:1.35}.apf-notify small:empty{display:none}
     .apf-notify.on{border-color:color-mix(in srgb,#00ffc2 55%,#3d2a63)}
     .apf-sw{flex:none;width:46px;height:26px;border-radius:999px;background:#3d2a63;position:relative;transition:background .2s}
     .apf-sw::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#c9a8dd;transition:left .2s,background .2s}
@@ -340,8 +340,8 @@ const ArcadeProfile = (() => {
     wireClose(c);
   }
 
-  // ---- Notifications on this phone (2026-11-13) ----
-  // One switch for every game, for whoever is signed in, on this phone
+  // ---- Notifications on this device (2026-11-13) ----
+  // One switch for every game, for whoever is signed in, on this device
   // (push-optin.js does the work; it's loaded the first time it's needed). A
   // pink dot sits on it until it has been turned on or off once on this device.
   const NUDGE_KEY = 'arcade.notifySeen';
@@ -364,7 +364,7 @@ const ArcadeProfile = (() => {
     const row = document.createElement('button');
     row.type = 'button';
     row.className = 'apf-notify';
-    row.innerHTML = '<span class="t"><b>🔔 Notifications on this phone</b><small></small></span><span class="apf-sw" aria-hidden="true"></span>';
+    row.innerHTML = '<span class="t"><b>🔔 Notifications</b><small></small></span><span class="apf-sw" aria-hidden="true"></span>';
     const small = row.querySelector('small');
     const msg = document.createElement('div');
     msg.className = 'apf-msg';
@@ -377,10 +377,11 @@ const ArcadeProfile = (() => {
       row.setAttribute('aria-checked', String(on));
       row.disabled = st.state === 'tip' || st.state === 'blocked';
       row.querySelector('.apf-sw').style.display = row.disabled ? 'none' : '';
-      small.textContent = on ? 'On. Your turn, invites and new games, from every game.'
-        : st.state === 'tip' ? 'iPhones and iPads only show notifications for apps on the Home Screen. Tap the Share button, choose Add to Home Screen, then open the Arcade from its new icon.'
-          : st.state === 'blocked' ? 'Chrome is blocking them. Tap the icon to the left of the address, then Permissions (or Site settings), then Notifications, and choose Allow. Then open this card again.'
-            : 'Off. Turn on to hear when it\'s your turn.';
+      // Off says nothing under the title: the switch speaks for itself.
+      small.textContent = on ? 'You\'re all set, I\'ll let you know when it\'s your move or someone starts a game with you.'
+        : st.state === 'tip' ? 'iPhones and iPads only get notifications from apps on the Home Screen. Tap Share, then Add to Home Screen, and open the Arcade from its new icon.'
+          : st.state === 'blocked' ? 'Chrome is blocking notifications. Tap the icon left of the address, then Permissions, then Notifications, and choose Allow. Then open this card again.'
+            : '';
       const dot = row.querySelector('.apf-dot');
       if (!remembered(NUDGE_KEY) && !row.disabled) { if (!dot) row.insertAdjacentHTML('beforeend', '<span class="apf-dot" aria-hidden="true"></span>'); }
       else if (dot) dot.remove();
@@ -411,11 +412,11 @@ const ArcadeProfile = (() => {
   // Shown once, right after notifications are first turned on on this device.
   function showChromeCheck() {
     const c = card();
-    c.innerHTML = '<h2>One more check in Chrome</h2><p>So they pop up on your screen and buzz, not only sit in the list:</p>' +
+    c.innerHTML = '<h2>One more step in Chrome</h2><p>So notifications pop up on your screen and buzz:</p>' +
       '<ol class="apf-steps"><li>Open your phone\'s <b>Settings</b>, then <b>Apps</b>, then <b>Chrome</b>, then <b>Notifications</b>.</li>' +
-      '<li>Tap the arcade\'s address and turn on <b>Pop on screen</b>, <b>Sound</b> and <b>Vibrate</b>.</li></ol>' +
+      '<li>Tap the Arcade\'s address, then turn on <b>Pop on screen</b>, <b>Sound</b> and <b>Vibrate</b>.</li></ol>' +
       '<div class="apf-row"><button class="apf-btn apf-main" data-ok>Got it</button></div>' +
-      '<p>On an iPhone, add the arcade to your Home Screen first (Share, then Add to Home Screen) and open it from there.</p>';
+      '<p>On an iPhone, add the Arcade to your Home Screen first (Share, then Add to Home Screen), and open it from there.</p>';
     c.querySelector('[data-ok]').onclick = () => showArksId();
   }
 
