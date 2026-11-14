@@ -123,6 +123,36 @@ async function run({ base, fake }) {
     await kimPhone.post(`/api/${game}/rooms/${fam.code}/leave`, seatOf(fam));
   }
 
+  // Who is an adult is asked again at the switch, not remembered from when they joined.
+  {
+    const lobbyOf = async fam => (await kimPhone.call(`/api/partdeux/rooms/${fam.code}?playerId=${fam.playerId}&token=${fam.token}`)).data.players.map(p => p.name).sort().join();
+    const turnAdult = async fam => kimPhone.post(`/api/partdeux/rooms/${fam.code}/settings`, { ...seatOf(fam), level: 'spicy', password: 'tacos42' },
+      { 'X-Adult-Pin': (await kimPhone.post('/api/arksid/adult-pass')).data.pass });
+    // Sam joins as an adult, then signs out of the arcade before the host switches.
+    const one = (await kimPhone.post('/api/partdeux/rooms', { name: 'Kim', level: 'kids' }, await profileOf(kimPhone))).data;
+    const samSeat = (await samPhone.post(`/api/partdeux/rooms/${one.code}/join`, { name: 'Sam' }, await profileOf(samPhone))).data;
+    await samPhone.post('/auth/signout');
+    ok('the host turns the lobby adult after an adult in it signed out', (await turnAdult(one)).status === 200);
+    ok('…and that seat is moved out too, since nobody is signed in on it anymore', (await lobbyOf(one)) === 'Kim', await lobbyOf(one));
+    ok('…and it can\'t read the adult lobby or chat in it', (await browser().call(`/api/partdeux/rooms/${one.code}?playerId=${samSeat.playerId}&token=${samSeat.token}`)).status === 403 &&
+      (await browser().post(`/api/partdeux/rooms/${one.code}/chat`, { playerId: samSeat.playerId, token: samSeat.token, text: 'still here?' })).status === 403);
+    await kimPhone.post(`/api/partdeux/rooms/${one.code}/leave`, seatOf(one));
+
+    // Sam joins as an adult again, and then the account stops being an adult's.
+    const samBack = await signIn('sam');
+    const two = (await kimPhone.post('/api/partdeux/rooms', { name: 'Kim', level: 'kids' }, await profileOf(kimPhone))).data;
+    await samBack.post(`/api/partdeux/rooms/${two.code}/join`, { name: 'Sam' }, await profileOf(samBack));
+    ok('an adult is in the family lobby again', (await lobbyOf(two)) === 'Kim,Sam', await lobbyOf(two));
+    const wasRole = fake.users.sam.role;
+    fake.users.sam.role = 'kid';
+    await signIn('sam');   // another device signing in is how the arcade hears about the change
+    fake.next = was;
+    ok('the host turns the lobby adult after that account became a kid\'s', (await turnAdult(two)).status === 200);
+    ok('…and the seat that joined as an adult is moved out', (await lobbyOf(two)) === 'Kim', await lobbyOf(two));
+    fake.users.sam.role = wasRole;
+    await kimPhone.post(`/api/partdeux/rooms/${two.code}/leave`, seatOf(two));
+  }
+
   return { pass, fail };
 }
 
