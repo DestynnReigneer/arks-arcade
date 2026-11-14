@@ -295,6 +295,7 @@ function save(id, { initials, profileToken }) {
   if (allRank === 1 && g.total > 0) {
     const shout = profile ? (profiles().boardName(profile.id) || {}).label || profile.name : ini;
     comm.safePost({
+      trophy: { game: 'Shuffle Scuffle', profileId: profile ? profile.id : null, name: shout, score: `${g.total.toLocaleString('en-US')} points`, board: `${LIST_NAME[g.dictionary]} daily`, url: '/scuffle.html' },
       kind: 'highscore', emoji: '🔀', game: 'scuffle',
       title: `${shout} set the best Shuffle Scuffle ${LIST_NAME[g.dictionary]} daily score ever`,
       body: `${shout} scored ${g.total.toLocaleString('en-US')} on the ${LIST_NAME[g.dictionary]} daily set, the highest anyone has managed. Today's letters are waiting if you want a go.`

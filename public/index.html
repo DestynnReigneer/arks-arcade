@@ -296,21 +296,7 @@
   .help-body { margin: 12px 0 16px; font-size: 14px; line-height: 1.55; color: var(--muted); }
   .help-body p { margin: 0 0 10px; }
 
-  /* ---- cheat codes ---- */
-  .cheat-line { display: flex; align-items: center; gap: 8px; margin-top: 10px; padding: 8px 12px; border-radius: 10px;
-    background: var(--card-2); border: 1px solid var(--border); font-family: ui-monospace, Consolas, monospace; cursor: text; }
-  .cheat-line span { color: #3ddc84; font-size: 14px; }
-  .cheat-line input { flex: 1; min-width: 0; background: none; border: 0; outline: none; color: var(--text); font: 14px ui-monospace, Consolas, monospace; }
-  .cheat-line:focus-within { border-color: #3ddc84; }
-  .cheat-tip { margin-top: 8px; font-size: 12.5px; color: var(--muted); opacity: 0; max-height: 0; overflow: hidden; transition: opacity .25s, max-height .25s; }
-  .cheats:hover .cheat-tip, .cheats:focus-within .cheat-tip { opacity: 1; max-height: 40px; }
-  .cheat-list { list-style: none; margin: 10px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 6px; }
-  .cheat-list button { width: 100%; text-align: left; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border);
-    background: var(--card-2); color: var(--muted); font: 12.5px var(--font); cursor: pointer; }
-  .cheat-list button b { color: #3ddc84; font-family: ui-monospace, Consolas, monospace; margin-right: 6px; }
-  .cheat-list button:hover { border-color: #3ddc84; color: var(--text); }
-
-  /* ---- clickable characters ---- */
+  /* ---- the pixel characters ---- */
   .wall { position: absolute; left: 0; top: 0; width: 100%; height: 0; pointer-events: none; }
   .wall .pal { position: absolute; pointer-events: auto; }
   .pal { width: 52px; height: 52px; padding: 0; border: 0; background: none; cursor: pointer;
@@ -319,7 +305,15 @@
   .pal:hover { transform: translateY(-4px) scale(1.08); }
   .pal.hop { animation: hop .5s ease-out; }
   @keyframes hop { 30% { transform: translateY(-18px) rotate(-8deg); } 60% { transform: translateY(0) rotate(6deg); } }
-  .sprite-row { display: none; justify-content: space-around; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .sprite-row { display: none; justify-content: center; flex-wrap: wrap; gap: 14px; margin-top: 8px; }
+  .sprite-row .pal { width: 34px; height: 34px; }
+  /* While nobody's touched the page for a while, a character breaks into a little dance. */
+  .pal.jig { animation: jig 1.6s ease-in-out; }
+  @keyframes jig {
+    10% { transform: translateY(-10px) rotate(-10deg); } 25% { transform: translateY(0) rotate(8deg); }
+    40% { transform: translateY(-12px) rotate(10deg) scale(1.08); } 55% { transform: translateY(0) rotate(-8deg); }
+    70% { transform: translateY(-8px) rotate(-6deg); } 85% { transform: translateY(0) rotate(4deg); }
+  }
   @media (max-width: 999px) { .wall { display: none; } .sprite-row { display: flex; } }
 
   /* ---- footer logo ---- */
@@ -342,7 +336,7 @@
     h1 { font-size: 26px; }
   }
   @media (prefers-reduced-motion: reduce) {
-    .spin-turn, .pal.hop, body.dancing .lockup { animation: none; }
+    .spin-turn, .pal.hop, .pal.jig, body.dancing .lockup { animation: none; }
     .insert-coin, .comm-head h2 .live { animation: none; }
     body.dancing .game, body.dancing h1, body.dancing .comm, body.barrel { animation: none; }
   }
@@ -373,6 +367,8 @@
 <div class="marquee">
   <div class="quote" id="quote"></div>
   <div class="insert-coin" id="insertCoin" role="button" tabindex="0" title="Insert a coin">INSERT COIN</div>
+  <!-- On a phone the pixel characters line up here; on a computer they stand on the side walls. -->
+  <div class="sprite-row" id="spriteRow"></div>
 </div>
 
 <!-- The games whoever is playing on this device has in progress. It only shows when there are some. -->
@@ -429,14 +425,6 @@
   <p class="lobby-empty" id="lobbyEmpty">Nobody's hosting right now. Pick a game below and choose <b>Host</b> to start one; it shows up here for everyone.</p>
 </section>
 
-<!-- Cheat codes: the easter-egg commands -->
-<section class="lobby cheats" aria-label="Cheat codes">
-  <div class="lobby-head"><h2>🕹️ CHEAT CODES</h2></div>
-  <label class="cheat-line"><span>&gt;</span><input id="cheatInput" type="text" maxlength="30" placeholder="type a command and press Enter" autocomplete="off" spellcheck="false" aria-describedby="cheatTip"></label>
-  <div class="cheat-tip" id="cheatTip">Try /dance, or type /secret for a list of fun easter-egg commands.</div>
-  <ul class="cheat-list hidden" id="cheatList"></ul>
-  <div class="sprite-row" id="spriteRow"></div>
-</section>
 
 <h2 class="tv-only tv-title">Pick a game with the arrows, then press OK</h2>
 <div class="games">

@@ -880,16 +880,26 @@ async function run({ base, root }) {
   const spinCfg = (await wl('/spinsolve/config')).data;
   ok('Spin & Solve has the four levels', spinCfg.levels.map(l => l.id).join() === 'kids,cheeky,spicy,filthy');
   ok('…with built-in puzzles at every level', spinCfg.levels.every(l => l.builtin >= 30));
-  const kidsPuzzles = await wl('/spinsolve/puzzles?level=kids');
-  ok('kids puzzles need no PIN', kidsPuzzles.status === 200 && kidsPuzzles.data.puzzles.length >= 150);
-  ok('adult puzzles need the PIN', (await wl('/spinsolve/puzzles?level=filthy')).status === 403);
-  ok('a wrong PIN is refused', (await pinGet('/spinsolve/puzzles?level=filthy', '0000')).status === 403);
-  ok('the right PIN opens them', (await pinGet('/spinsolve/puzzles?level=filthy', '246810')).data.puzzles.length >= 30);
+  // The game runs on the server: a game is started there, and the page only gets the board.
+  const spinPost = async (p, body, pin) => {
+    const res = await fetch(base + '/api/spinsolve' + p, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(pin ? { 'X-Adult-Pin': pin } : {}) }, body: JSON.stringify(body || {}) });
+    return { status: res.status, data: await res.json().catch(() => null) };
+  };
+  const kidsPuzzles = await spinPost('/run/start', { level: 'kids', names: ['Kim'] });
+  ok('a kids game needs no PIN', kidsPuzzles.status === 201 && /_/.test(kidsPuzzles.data.board), JSON.stringify(kidsPuzzles.data).slice(0, 200));
+  ok('…and the page never gets the answer', !('answer' in kidsPuzzles.data) && !/[A-Z]/.test(kidsPuzzles.data.board.replace(/[^A-Z_]/g, '')));
+  ok('the old puzzle list is gone', (await wl('/spinsolve/puzzles?level=kids')).status === 404);
+  ok('the family puzzles aren\'t served to the page', (await fetch(base + '/spin-puzzles.js')).status === 404);
+  ok('adult games need the PIN', (await spinPost('/run/start', { level: 'filthy' })).status === 403);
+  ok('a wrong PIN is refused', (await spinPost('/run/start', { level: 'filthy' }, '0000')).status === 403);
+  const filthyRun = await spinPost('/run/start', { level: 'filthy', names: ['Kim'] }, '246810');
+  ok('the right PIN opens them', filthyRun.status === 201 && filthyRun.data.adult === true);
+  ok('…and every move in an adult game needs it too', (await spinPost(`/run/${filthyRun.data.id}/spin`)).status === 403);
   const kidsBanter = kidsPuzzles.data.banter;
   ok('kids games come with jokes and hecklers', kidsBanter.jokes.length >= 20 && kidsBanter.heckles.length >= 5);
   ok('…and no rude gestures or swearing', !kidsBanter.comebacks.some(c => c.startsWith('🖕')) &&
     !JSON.stringify(kidsBanter).match(/fuck|shit|damn|hell\b/i));
-  const filthyBanter = (await pinGet('/spinsolve/puzzles?level=filthy', '246810')).data.banter;
+  const filthyBanter = filthyRun.data.banter;
   ok('filthy games get the adult jokes and the finger', filthyBanter.comebacks.every(c => c.startsWith('🖕')) &&
     filthyBanter.jokes.some(([a, b]) => /fuck/i.test(a + b)));
   ok('the unlock check works', (await wl('/spinsolve/unlock', 'POST', { pin: '246810' })).data.ok === true &&
@@ -929,9 +939,8 @@ async function run({ base, root }) {
   ok('…skipping ones too long for the board or British', kidPack.data.skipped.length === 2);
   ok('…which closes the request', !(await asAdmin('/spinsolve/admin/requests')).data.some(r => r.topic === 'Camping'));
   ok('…and is announced on the home page', (await wl('/comm/posts')).data.some(p => p.title.includes('Camping')));
-  const packPlay = (await wl(`/spinsolve/puzzles?pack=${kidPack.data.pack.id}`)).data;
-  ok('you can play just that pack', packPlay.puzzles.length === 6 && packPlay.puzzles.every(p => p.pack === 'Camping'));
-  ok('…and its puzzles join the full kids list', (await wl('/spinsolve/puzzles?level=kids')).data.puzzles.some(p => p.answer === 'HAPPY CAMPER'));
+  const packPlay = (await spinPost('/run/start', { pack: kidPack.data.pack.id, names: ['Kim'] })).data;
+  ok('you can play just that pack', packPlay.pack === 'Camping');
 
   const adultPack = await asAdmin('/spinsolve/admin/packs', 'POST', {
     label: 'Hen Night', emoji: '👰', level: 'spicy', puzzles: campPuzzles.slice(0, 6)
@@ -939,11 +948,103 @@ async function run({ base, root }) {
   ok('an adult pack can be made', adultPack.status === 201);
   ok('adult packs are hidden from the kids', !(await wl('/spinsolve/config')).data.packs.some(p => p.label === 'Hen Night'));
   ok('…shown once unlocked', (await pinGet('/spinsolve/config', '246810')).data.packs.some(p => p.label === 'Hen Night'));
-  ok('…locked when played without the PIN', (await wl(`/spinsolve/puzzles?pack=${adultPack.data.pack.id}`)).status === 403);
+  ok('…locked when played without the PIN', (await spinPost('/run/start', { pack: adultPack.data.pack.id })).status === 403);
   ok('…and never announced', !(await wl('/comm/posts')).data.some(p => p.title.includes('Hen Night')));
   ok('too few good puzzles is refused', (await asAdmin('/spinsolve/admin/packs', 'POST', { label: 'X', puzzles: [{ answer: 'HI THERE' }] })).status === 400);
 
-  await wl('/scores/spinsolve', 'POST', { initials: 'XXX', score: 99999, board: 'adult' });
+  // ---- Spin & Solve: the server plays the game and decides the score ---------------
+  const answerOf = async id => (await wl(`/spinsolve/test/answer/${id}`)).data.answer;
+  const lettersIn = a => [...new Set(a.replace(/[^A-Z]/g, ''))];
+  const solo = (await spinPost('/run/start', { level: 'kids', names: ['Kim'], rounds: 1 })).data;
+  ok('a solo game starts at round 1 of 1 with nothing banked', solo.round === 1 && solo.rounds === 1 && solo.players[0].total === 0 && solo.solo);
+  ok('you can\'t call a consonant before spinning', (await spinPost(`/run/${solo.id}/letter`, { letter: 'T' })).status === 409);
+  ok('…or buy a vowel with no money', (await spinPost(`/run/${solo.id}/letter`, { letter: 'A', vowel: true })).status === 409);
+  const ans = await answerOf(solo.id);
+  // Spin until the wheel lands on money (Bankrupt and Lose a Turn are strikes; stop before the third).
+  let landedOn = null, spins = 0, state = solo;
+  while (!landedOn && state.strikes < 2 && spins < 20) {
+    const r = await spinPost(`/run/${solo.id}/spin`);
+    spins++;
+    state = r.data.state;
+    if (typeof r.data.value === 'number') landedOn = r.data;
+  }
+  if (landedOn) {
+    ok('the wheel landed where the server says', landedOn.state.wedge === landedOn.value && landedOn.state.phase === 'letter');
+    ok('…and a second spin waits for the letter', (await spinPost(`/run/${solo.id}/spin`)).status === 409);
+    const hit = lettersIn(ans).find(c => !'AEIOU'.includes(c));
+    const before = landedOn.state.players[0].round;
+    const r = await spinPost(`/run/${solo.id}/letter`, { letter: hit });
+    const count = [...ans].filter(c => c === hit).length;
+    ok('a consonant in the puzzle earns the wedge for every one, worked out by the server',
+      r.data.count === count && (r.data.solved || r.data.state.players[0].round === before + landedOn.value * count) &&
+      r.data.positions.every(p => ans[p] === hit), JSON.stringify(r.data).slice(0, 200));
+    if (!r.data.solved) {
+      ok('…and it shows on the board', r.data.state.board.includes(hit));
+      ok('calling it again is refused', (await spinPost(`/run/${solo.id}/letter`, { letter: hit })).status === 400);
+    }
+  }
+  const spinNow = (await (await fetch(`${base}/api/spinsolve/run/${solo.id}`)).json()).state;
+  if (spinNow.phase === 'letter') await spinPost(`/run/${solo.id}/timeup`);
+  const now = (await (await fetch(`${base}/api/spinsolve/run/${solo.id}`)).json()).state;
+  if (now.phase === 'turn') {
+    const wrong = await spinPost(`/run/${solo.id}/solve`, { guess: 'NOT THE ANSWER AT ALL' });
+    ok('a wrong answer is a strike', wrong.data.correct === false && wrong.data.state.strikes === now.strikes + 1);
+  }
+  let after = (await (await fetch(`${base}/api/spinsolve/run/${solo.id}`)).json()).state;
+  if (after.phase === 'turn') {
+    const right = await spinPost(`/run/${solo.id}/solve`, { guess: ans.toLowerCase() });
+    ok('the right answer banks at least $1,000', right.data.correct && right.data.won >= 1000 && right.data.state.players[0].total === right.data.won);
+    ok('…and the answer shows once the round is over', right.data.state.answer === ans && right.data.state.phase === 'roundover');
+    after = right.data.state;
+  }
+  ok('a game can\'t be saved before it\'s over', (await spinPost(`/run/${solo.id}/save`, { initials: 'KIM' })).status === 409);
+  const over = (await spinPost(`/run/${solo.id}/next`)).data.state;
+  ok('after the last round the game is over', over.phase === 'over');
+  if (over.canSave) {
+    const saved = await spinPost(`/run/${solo.id}/save`, { initials: 'KIM', score: 199999 });
+    ok('the server saves its own total, not one the page sends', saved.status === 201 && saved.data.score === over.players[0].total);
+    ok('…once, and the game is gone after', (await spinPost(`/run/${solo.id}/save`, { initials: 'KIM' })).status === 404);
+  }
+  ok('the page can\'t post a Spin & Solve score itself', (await wl('/scores/spinsolve', 'POST', { initials: 'BAD', score: 150000, board: 'solo' })).status === 403);
+  ok('…not even by claiming to be the server', (await wl('/scores/spinsolve', 'POST', { initials: 'BAD', score: 150000, board: 'solo', fromServer: true })).status === 403);
+  const duo = (await spinPost('/run/start', { level: 'kids', names: ['Kim', 'Lee'], rounds: 1 })).data;
+  ok('a game for two isn\'t solo', !duo.solo && duo.players.map(p => p.name).join() === 'Kim,Lee');
+  const duoAns = await answerOf(duo.id);
+  const duoMiss = await spinPost(`/run/${duo.id}/solve`, { guess: 'XYZ' });
+  ok('a miss with two players passes the turn, with no strikes', duoMiss.data.state.cur === 1 && duoMiss.data.state.strikes === 0);
+  await spinPost(`/run/${duo.id}/solve`, { guess: duoAns });
+  await spinPost(`/run/${duo.id}/next`);
+  ok('…and a game for two never goes on the board', (await spinPost(`/run/${duo.id}/save`, { initials: 'KIM' })).status === 409);
+  ok('a made-up game is refused', (await spinPost('/run/' + 'f'.repeat(32) + '/spin')).status === 404);
+  // One address can't fill the arcade with games: an eleventh drops its oldest.
+  const spinMany = [];
+  for (let i = 0; i < 11; i++) spinMany.push((await spinPost('/run/start', { level: 'kids', names: ['Kim'] })).data.id);
+  ok('one address keeps at most 10 games going', (await wl(`/spinsolve/run/${spinMany[0]}`)).status === 404 && (await wl(`/spinsolve/run/${spinMany[10]}`)).status === 200);
+  // A guest's game can't be handed to a profile afterwards.
+  const prof = await wl('/profiles', 'POST', { name: 'Spin Pat', avatar: 'shiba:1' });
+  await asAdmin(`/profiles/admin/${prof.data.id}/approve`, 'POST', {});
+  const patToken = (await wl(`/profiles/${prof.data.id}/use`, 'POST', {})).data.token;
+  const asPat = async (p, body) => {
+    const res = await fetch(base + '/api/spinsolve' + p, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Profile-Token': patToken }, body: JSON.stringify(body || {}) });
+    return { status: res.status, data: await res.json().catch(() => null) };
+  };
+  const playOut = async (id, post) => { await post(`/run/${id}/solve`, { guess: await answerOf(id) }); await post(`/run/${id}/next`); };
+  const guestGame = (await spinPost('/run/start', { level: 'kids', names: ['G'], rounds: 1 })).data;
+  await playOut(guestGame.id, spinPost);
+  const handed = await asPat(`/run/${guestGame.id}/save`, { initials: 'GG' });
+  ok('a guest\'s game saves under the initials, never a profile sent at the end', handed.status === 201 &&
+    !(await wl('/scores/spinsolve?board=solo&limit=100')).data.find(r => r.id === handed.data.id).profileName);
+  const patGame = (await asPat('/run/start', { level: 'kids', names: ['Pat'], rounds: 1 })).data;
+  await playOut(patGame.id, asPat);
+  ok('a profile\'s game can\'t be saved by someone else', (await spinPost(`/run/${patGame.id}/save`, { initials: 'ZZ' })).status === 403);
+  ok('…only by that profile', (await asPat(`/run/${patGame.id}/save`, {})).status === 201);
+
+  // An adult game, solved and saved, lands on the Adult board.
+  const adultRun = (await spinPost('/run/start', { level: 'spicy', names: ['X'], rounds: 1 }, '246810')).data;
+  const adultAns = (await pinGet(`/spinsolve/test/answer/${adultRun.id}`, '246810')).data.answer;
+  await spinPost(`/run/${adultRun.id}/solve`, { guess: adultAns }, '246810');
+  await spinPost(`/run/${adultRun.id}/next`, {}, '246810');
+  ok('an adult game saves to the Adult board', (await spinPost(`/run/${adultRun.id}/save`, { initials: 'XXX' }, '246810')).data.board === 'adult');
   ok('the adult score board is open to everyone', (await wl('/scores/spinsolve?board=adult')).data.some(r => r.initials === 'XXX'));
   ok('…and adult #1s are never announced', !(await wl('/comm/posts')).data.some(p => p.title.includes('XXX took #1 on Spin')));
 
@@ -1066,6 +1167,8 @@ async function run({ base, root }) {
   const pdGuest = (await party('partdeux', `/rooms/${pdRoom.code}/join`, 'POST', { name: 'Pal', password: 'lime' })).data;
   ok('…and lets a guest in with it', !!pdGuest.playerId);
   ok('Uh-Oh rooms show on the arcade lobby, locked', (await wl('/lobby')).data.rooms.some(r => r.game === 'partdeux' && r.code === pdRoom.code && r.locked && r.adult));
+  ok('Uh-Oh: the host can\'t start until everyone is ready', (await party('partdeux', `/rooms/${pdRoom.code}/start`, 'POST', { playerId: pdRoom.playerId, token: pdRoom.token })).status === 409);
+  await party('partdeux', `/rooms/${pdRoom.code}/lobby-ready`, 'POST', { playerId: pdGuest.playerId, token: pdGuest.token, ready: true });
   await party('partdeux', `/rooms/${pdRoom.code}/start`, 'POST', { playerId: pdRoom.playerId, token: pdRoom.token });
   const pdSnap = (await party('partdeux', `/rooms/${pdRoom.code}?playerId=${pdGuest.playerId}&token=${pdGuest.token}`)).data;
   ok('Uh-Oh: each phone sees only its own hand', pdSnap.game.hand.length === 7 && pdSnap.game.hands === undefined && pdSnap.game.drinking === true);

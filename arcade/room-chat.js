@@ -81,6 +81,10 @@ function familyFilter(text) {
 const recent = new Map();    // `${game}|${room}|${seat}` -> send times
 const clean = t => String(t == null ? '' : t).replace(/[\u0000-\u001f\u007f]+/g, ' ').replace(/\s+/g, ' ').trim();
 
+// Who to tell about a message (arcade/push.js), set by server.js with ARKS ID on.
+let notifier = null;
+function setNotifier(fn) { notifier = fn; }
+
 // One game's chat.
 function create(game) {
   const toMessage = (row, viewerSeat) => ({
@@ -94,7 +98,8 @@ function create(game) {
   }
 
   // A player's message. muted: the host turned them off. family: filter it.
-  function say(room, { seat, name, muted, family }, raw) {
+  // tell: { to: [profile ids not looking at the game], from: the sender's profile id, game: its name, url }.
+  function say(room, { seat, name, muted, family, tell }, raw) {
     let text = clean(raw);
     if (!text) throw fail('Type something first.');
     if (text.length > MAX_TEXT) text = text.slice(0, MAX_TEXT);
@@ -109,6 +114,15 @@ function create(game) {
     db.db.prepare('INSERT INTO room_chat (game, room, at, seat, name, text) VALUES (?, ?, ?, ?, ?, ?)')
       .run(game, String(room), now, String(seat), clean(name).slice(0, 30), text);
     trim(room);
+    if (notifier && tell && Array.isArray(tell.to)) {
+      const who = clean(name).slice(0, 30) || 'Someone';
+      for (const to of new Set(tell.to.filter(Boolean))) {
+        if (to === tell.from) continue;
+        try {
+          notifier(to, { title: tell.game, body: `${who} sent a chat message in ${tell.game}.`, url: tell.url, tag: `chat-${game}-${room}`, kind: 'chat', from: tell.from || null, game: tell.game });
+        } catch { /* never stops a game */ }
+      }
+    }
   }
 
   // A room keeps its newest STORE messages, however long it lasts.
@@ -130,7 +144,9 @@ function create(game) {
     for (const k of [...recent.keys()]) if (k.startsWith(`${game}|${room}|`)) recent.delete(k);
   }
 
-  return { list, say, note, clear };
+  // Every room's chat for this game, for games whose rooms don't survive a restart.
+  const clearAll = () => db.db.prepare('DELETE FROM room_chat WHERE game = ?').run(game);
+  return { list, say, note, clear, clearAll };
 }
 
-module.exports = { create, familyFilter, isBlocked, MAX_TEXT, STORE };
+module.exports = { create, familyFilter, isBlocked, MAX_TEXT, STORE, setNotifier };

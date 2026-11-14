@@ -86,13 +86,18 @@ function send({ game, room, from, to, title, href, notify }) {
       .run(game, String(room), from.id, from.name, p.id, title, href, now, buzz ? 1 : 0);
     sent.push({ id: p.id, name: p.name });
     if (buzz && notifier && notify) {
-      try { notifier(p.id, { title: notify.title, body: notify.body, url: href, tag: `inv-${game}-${room}` }); } catch { /* never stops a game */ }
+      try { notifier(p.id, { title: notify.title, body: notify.body, url: href, tag: `inv-${game}-${room}`, kind: 'invite', from: from.id, game: notify.title }); } catch { /* never stops a game */ }
     }
   }
   return sent;
 }
 
 // Someone got in, or the room is gone.
+// Every invite for a game, for games whose rooms don't survive a restart.
+function clearGame(game) {
+  db.db.prepare('DELETE FROM arcade_invites WHERE game = ?').run(game);
+}
+
 function clear(game, room, profileId) {
   if (profileId) db.db.prepare('DELETE FROM arcade_invites WHERE game = ? AND room = ? AND to_profile = ?').run(game, String(room), String(profileId));
   else db.db.prepare('DELETE FROM arcade_invites WHERE game = ? AND room = ?').run(game, String(room));
@@ -141,4 +146,4 @@ function allProfiles(ids) {
   return ids.every(id => typeof id === 'string' && id.length <= 64 && !!q.get(id));
 }
 
-module.exports = { register, send, clear, pending, mine, people, allProfiles, routes, setNotifier, MAX_TO };
+module.exports = { register, send, clear, clearGame, pending, mine, people, allProfiles, routes, setNotifier, MAX_TO };

@@ -62,7 +62,8 @@ const SUITES = [
   ['housekeeping', require('./housekeeping.test.js')],
   ['boards', require('./boards.test.js')],
   ['tv', require('./tv.test.js')],
-  ['tv-party', require('./tv-party.test.js')]
+  ['tv-party', require('./tv-party.test.js')],
+  ['party-lobby', require('./party-lobby.test.js')]
 ];
 
 // A throwaway brand/ and media/ folder, so the tests can check what the

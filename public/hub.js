@@ -170,7 +170,7 @@
   // Every room being hosted anywhere in the arcade, refreshed every few seconds.
   const STATUS = { open: 'Join', live: 'Join game in progress?', playing: 'Playing now', full: 'Full' };
   // Games joined from the list, with no code to type (the maintainer's call, 2026-11-12).
-  const NO_CODE = new Set(['chess', 'trivia']);
+  const NO_CODE = new Set(['chess', 'trivia', 'partdeux', 'daredevil']);
 
   async function loadLobby() {
     try {
@@ -416,12 +416,12 @@
     setTimeout(() => document.body.classList.remove(cls), ms);
   }
 
-  // Commands work from the Cheat codes box (so phones get them too) or typed
-  // anywhere on the page with a keyboard. The owner's clips (custom-media.js)
-  // each become a command too: rickroll.mp4 plays with /rickroll.
+  // What the pixel characters do when tapped. The Cheat codes box and typing
+  // commands were taken out (the maintainer's call, 2026-11-13); the characters
+  // carry them now. A character picture named after one of the owner's clips
+  // (custom-media.js) plays that clip.
   const COMMANDS = {
     '/help': () => $('helpModal').classList.remove('hidden'),
-    '/secret': () => toggleCheatList(),
     '/feedback': () => ArcadeFeedback.open(),
     '/dance': () => { bodyEffect('dancing', 4000); toast('💃 /dance 🕺'); },
     '/gg': () => { rain(['🤝', 'GG', '🏆', '✨']); toast('GG WP 🤝'); },
@@ -443,35 +443,6 @@
     'leeroy': () => toast('LEEEEROOOOY JENKIIIINS! 🐔', 3000),
     'rickroll': () => ArcadeMedia.play('rickroll') || toast('🎵 Never gonna give you up… 🎵', 3500)
   };
-  // What /secret lists. The true secrets above stay off the list.
-  const LISTED = [
-    ['/dance', 'Everything dances'], ['/gg', 'Good game!'], ['/glhf', 'Good luck, have fun'],
-    ['/roll', 'Roll a 20-sided die'], ['/f', 'Pay respects'], ['/wave', 'Say hi'],
-    ['/flex', 'Show off'], ['/afk', 'Be right back'], ['/respawn', 'Start the page over'],
-    ['/feedback', 'Tell us about a bug or an idea']
-  ];
-  function toggleCheatList() {
-    const ul = $('cheatList');
-    if (!ul.children.length) {
-      for (const [cmd, what] of LISTED) {
-        const li = document.createElement('li');
-        const b = document.createElement('button');
-        b.type = 'button';
-        b.innerHTML = '<b></b><span></span>';
-        b.firstChild.textContent = cmd;
-        b.lastChild.textContent = what;
-        b.onclick = () => runCommand(cmd);
-        li.appendChild(b);
-        ul.appendChild(li);
-      }
-    }
-    ul.classList.toggle('hidden');
-    if (!ul.classList.contains('hidden')) toast('Psst… a few more aren\'t on the list. 🤫', 3000);
-  }
-  // Typed-anywhere triggers, checked against the end of what was typed.
-  const TYPED = ['gg', 'iddqd', 'idkfa', 'xyzzy', 'hesoyam', 'barrelroll', 'thecakeisalie', 'leeroy', 'rickroll',
-    '/dance', '/gg', '/glhf', '/help', '/roll', '/afk', '/wave', '/flex', '/feedback'];
-
   function runCommand(raw) {
     const cmd = raw.trim().toLowerCase().replace(/\s+/g, '');
     if (COMMANDS[cmd]) { COMMANDS[cmd](); return true; }
@@ -480,7 +451,6 @@
 
   const KONAMI = ['arrowup', 'arrowup', 'arrowdown', 'arrowdown', 'arrowleft', 'arrowright', 'arrowleft', 'arrowright', 'b', 'a'];
   let keys = [];
-  let typed = '';
 
   function onKey(e) {
     if (e.target.closest('input, textarea, select')) return;
@@ -496,11 +466,6 @@
       return;
     }
 
-    if (k.length !== 1) return;
-    typed = (typed + k).slice(-20);
-    // Longest match first, so "/gg" is not swallowed by "gg".
-    const hit = TYPED.filter(c => typed.endsWith(c)).sort((a, b) => b.length - a.length)[0];
-    if (hit) { typed = ''; runCommand(hit); }
   }
 
   // Five quick taps on the title.
@@ -578,7 +543,7 @@
   }
 
   // ---- clickable characters --------------------------------------------------
-  // Little pixel friends on the wall (in the Cheat codes box on a phone). Each
+  // Little pixel friends on the side walls (under INSERT COIN on a phone). Each
   // one runs a command. Pictures in the owner's media/sprites folder take their
   // place; one named after a command (dance-hero.gif) always runs it.
   const PAL = { G: '#3ddc84', W: '#ffffff', K: '#12111c', R: '#ff5e8a', A: '#ffc72c', B: '#8fa3c7', Y: '#2e9bff', P: '#c86bff', S: '#c9d1e0', O: '#ff8a3d' };
@@ -626,6 +591,21 @@
       $('spriteRow').appendChild(friendButton(f));
     });
   }
+
+  // While nobody's touched the page for 20 seconds, a character (one you can see)
+  // breaks into a little dance every few seconds, until someone moves again.
+  let idleSince = Date.now();
+  for (const ev of ['pointerdown', 'keydown', 'scroll', 'mousemove']) addEventListener(ev, () => { idleSince = Date.now(); }, { passive: true });
+  setInterval(() => {
+    if (document.hidden || Date.now() - idleSince < 20000 || Math.random() < 0.4) return;
+    const seen = [...document.querySelectorAll('.pal')].filter(p => p.offsetParent && p.getBoundingClientRect().bottom > 0 && p.getBoundingClientRect().top < innerHeight);
+    const p = seen[Math.floor(Math.random() * seen.length)];
+    if (!p) return;
+    p.classList.remove('jig');
+    void p.offsetWidth;
+    p.classList.add('jig');
+    setTimeout(() => p.classList.remove('jig'), 1700);
+  }, 3000);
 
   // ---- INSERT COIN -----------------------------------------------------------
   // A coin drops in. The third coin in a row gets an announcer: one of the
@@ -700,13 +680,6 @@
     if (e.key === 'Escape') document.querySelectorAll('.modal').forEach(m => m.classList.add('hidden'));
   });
 
-  $('cheatInput').addEventListener('keydown', e => {
-    if (e.key !== 'Enter') return;
-    const value = e.target.value;
-    e.target.value = '';
-    if (!value.trim()) return;
-    if (!runCommand(value)) toast('Nothing happened… try /secret. 🤔');
-  });
   document.addEventListener('keydown', onKey);
   $('arcadeTitle').addEventListener('click', onTitleTap);
   $('lockup').addEventListener('click', onTitleTap);

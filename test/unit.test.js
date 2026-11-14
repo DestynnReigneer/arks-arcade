@@ -220,7 +220,7 @@ async function run() {
   ok('promotion makes the piece you pick', Chess.play(promo, { from: 'a7', to: 'a8', promo: 'n' }).san === 'a8=N');
 
   console.log('\n-- spin & solve --');
-  const puzzles = require(path.join(ROOT, 'public/spin-puzzles.js'));
+  const puzzles = require(path.join(ROOT, 'spinsolve/kids-puzzles.js'));
   ok('there are plenty of puzzles', puzzles.length >= 150, String(puzzles.length));
   ok('every word fits on the board (12 letters max)',
     puzzles.every(p => p.answer.split(' ').every(w => w.length <= 12)));
@@ -286,17 +286,22 @@ async function run() {
   const PDB = require(path.join(ROOT, 'partdeux/banter.js'));
   ok('the kids table only hears clean jokes', PDB.jokesFor('kids').every(j => PDB.JOKES.kids.includes(j)));
   ok('adult tables still hear some clean jokes', PDB.jokesFor('filthy').some(j => PDB.JOKES.kids.includes(j)));
-  const jg = PD.createGame({ players: [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }, { id: 'c', name: 'C' }], level: 'kids' });
-  let moves = 0, lastJoke = 0, closest = Infinity;
-  while (jg.phase !== 'over' && moves < 3000) {
-    const me = jg.players[jg.turn];
-    const pick = PD.snapshot(jg, me.id).playable.find(id => jg.cards[id].kind !== 'gift');
-    if (pick) PD.play(jg, me.id, pick, jg.cards[pick].kind.startsWith('wild') ? { color: 'red' } : {});
-    else { PD.draw(jg, me.id); if (jg.drew) PD.pass(jg, me.id); }
-    moves++;
-    if (jg.jokeSeq > lastJoke) { if (lastJoke) closest = Math.min(closest, moves - jg._lastJokeAt); jg._lastJokeAt = moves; lastJoke = jg.jokeSeq; }
+  // A short game can end before a joke is due, so play up to five and look for one.
+  let jokes = 0, closest = Infinity;
+  for (let gameNo = 0; gameNo < 5 && !jokes; gameNo++) {
+    const jg = PD.createGame({ players: [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }, { id: 'c', name: 'C' }], level: 'kids' });
+    let moves = 0, lastJoke = 0;
+    while (jg.phase !== 'over' && moves < 3000) {
+      const me = jg.players[jg.turn];
+      const pick = PD.snapshot(jg, me.id).playable.find(id => jg.cards[id].kind !== 'gift');
+      if (pick) PD.play(jg, me.id, pick, jg.cards[pick].kind.startsWith('wild') ? { color: 'red' } : {});
+      else { PD.draw(jg, me.id); if (jg.drew) PD.pass(jg, me.id); }
+      moves++;
+      if (jg.jokeSeq > lastJoke) { if (lastJoke) closest = Math.min(closest, moves - jg._lastJokeAt); jg._lastJokeAt = moves; lastJoke = jg.jokeSeq; }
+    }
+    jokes = jg.jokeSeq;
   }
-  ok('jokes pop up during a game', jg.jokeSeq > 0);
+  ok('jokes pop up during a game', jokes > 0);
   ok('…but never closer than six moves apart', closest >= 6, String(closest));
   const rv = PD.createGame({ players: [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }, { id: 'c', name: 'C' }] });
   const rvCard = Object.values(rv.cards).find(c => c.kind === 'reverse');

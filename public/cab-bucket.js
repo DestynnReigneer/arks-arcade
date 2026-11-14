@@ -327,7 +327,7 @@
     // What goes on the board when the run ends, with the settings it was played on.
     final: function () {
       var cups = { big: 'Big cups', normal: 'Normal cups', small: 'Small cups' }[this.opt.size] || '', speed = { chill: 'chill', normal: 'normal', fast: 'fast', wild: 'wild' }[this.opt.speed] || '';
-      return { score: this.score || 0, board: 'points', detail: (this.caught === 50 ? 'Jackpot! ' : '') + this.caught + ' of 50, ' + cups + ', ' + speed };
+      return { score: this.score || 0, board: (this.opt.size || 'big') + '-' + (this.opt.speed || 'fast'), detail: (this.caught === 50 ? 'Jackpot! ' : '') + this.caught + ' of 50, ' + cups + ', ' + speed };
     },
     hud: function () { return [['Score', this.score || 0], ['Caught', this.caught || 0], ['Balls', this.left], ['Time', this.started ? this.time.toFixed(1) : '30.0'], ['Jackpot', this.jackpot]]; }
   };

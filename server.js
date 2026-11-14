@@ -106,6 +106,9 @@ if (arks) {
   // Invites by name in games with a lobby (arcade/invites.js), and Chess's turns.
   require('./arcade/invites').setNotifier(push.tell);
   require('./chess/rooms').setNotifier(push.tell);
+  // Contract v16: chat messages to people who aren't looking, and new #1s for Discord's #trophies.
+  require('./arcade/room-chat').setNotifier(push.tell);
+  require('./arcade/comm').setTrophyNotifier(push.trophy);
 } else {
   app.get('/api/arksid/me', (req, res) => res.set('Cache-Control', 'no-store').json({ on: false }));
   app.use(require('./arcade/tv').offRoutes());
@@ -212,6 +215,13 @@ app.use('/api/scores', require('./arcade/scores').router);
 app.use('/api/cab-jackpot', require('./arcade/cab-jackpot').router);
 // ARKS Train Station's car names, set on the admin page (the repo only has made-up ones)
 app.get('/api/train-cars', (req, res) => res.json({ cars: require('./arcade/train-cars').get() }));
+// A car's picture. The address carries a version, so the browser may keep it.
+app.get('/api/train-cars/:n/picture', (req, res) => {
+  let jpeg = null;
+  try { jpeg = require('./arcade/train-cars').picture(req.params.n); } catch { /* not a car */ }
+  if (!jpeg) return res.status(404).json({ error: 'No picture for that car.' });
+  res.set({ 'Content-Type': 'image/jpeg', 'Cache-Control': 'public, max-age=31536000, immutable', 'X-Content-Type-Options': 'nosniff' }).send(jpeg);
+});
 app.use('/api/stats', stats.routes({ requireAdmin }));
 
 // ---- the owner's own logos, characters, sounds and clips (optional) ----
@@ -479,6 +489,7 @@ app.post('/api/leaderboard', leaderboardLimiter, (req, res) => {
   if (won && result.rank === 1 && !theme.adult) {
     const level = difficulty[0].toUpperCase() + difficulty.slice(1);
     comm.safePost({
+      trophy: { game: 'Wordless', profileId: profile ? profile.id : null, name: shout, score: `${result.score} points`, board: level, url: '/wordless.html' },
       kind: 'highscore', emoji: '🏆', game: 'wordless',
       title: `${shout} took #1 on Wordless ${level}`,
       body: `${shout} just set the top Wordless ${level} score: ${result.score} points in ${guesses} guess${guesses === 1 ? '' : 'es'}. Think you can beat it?`

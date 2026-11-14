@@ -124,7 +124,14 @@
           x.fillStyle = '#120626'; x.fillRect(0, 0, w, h);
           x.strokeStyle = col; x.lineWidth = 14; x.strokeRect(7, 7, w - 14, h - 14);
           x.fillStyle = col; x.beginPath(); x.arc(w / 2, 128, 82, 0, 7); x.fill();
-          x.fillStyle = '#120626'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.font = '900 104px Orbitron, sans-serif'; x.fillText(cdef[0][0], w / 2, 134);
+          var pic = self0.carPics && self0.carPics[i];
+          if (pic) {
+            // the car's picture in the circle, inside a ring of the car's color
+            x.save(); x.beginPath(); x.arc(w / 2, 128, 74, 0, 7); x.clip(); x.drawImage(pic, w / 2 - 74, 54, 148, 148); x.restore();
+          } else {
+            x.fillStyle = '#120626'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.font = '900 104px Orbitron, sans-serif'; x.fillText(cdef[0][0], w / 2, 134);
+          }
+          x.textAlign = 'center'; x.textBaseline = 'middle';
           x.font = '800 40px Orbitron, sans-serif'; x.fillStyle = '#ffffff'; var nm = cdef[0].toUpperCase(), fs = 40; while (x.measureText(nm).width > w - 30) { fs -= 2; x.font = '800 ' + fs + 'px Orbitron, sans-serif'; } x.fillText(nm, w / 2, 254);
           x.font = '800 36px Orbitron, sans-serif'; x.fillStyle = col; x.fillText(sz[1] + ' PTS', w / 2, 306);
         });

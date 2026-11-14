@@ -11,10 +11,20 @@ const comm = require('./comm');
 
 // Each game's boards and the highest score that could honestly be reached,
 // so a typo'd or tampered post can't sit at #1 forever.
+// Bucket Drop's twelve boards: three cup sizes, four speeds.
+function bucketBoards() {
+  const out = {};
+  for (const [size, sizeLabel] of [['big', 'Big'], ['normal', 'Normal'], ['small', 'Small']]) {
+    for (const [speed, speedLabel] of [['chill', 'Chill'], ['normal', 'Normal'], ['fast', 'Fast'], ['wild', 'Wild']]) out[`${size}-${speed}`] = `${sizeLabel} cups, ${speedLabel}`;
+  }
+  return out;
+}
+
 const GAMES = {
   // Adult boards are open to read like every other board (the maintainer's call, 2026-11-11); their #1s are never
   // announced. Playing the adult levels still needs an adult's ARKS ID sign-in.
-  spinsolve: { label: 'Spin & Solve', boards: { solo: 'Solo', adult: 'Adult' }, adultBoards: ['adult'], max: 200000 },
+  // Spin & Solve runs on the server (spinsolve/game.js), which saves the total itself; the page can't post one.
+  spinsolve: { label: 'Spin & Solve', boards: { solo: 'Solo', adult: 'Adult' }, adultBoards: ['adult'], max: 200000, serverOnly: true },
   chess: { label: 'Chess', boards: { easy: 'vs Easy', medium: 'vs Medium', hard: 'vs Hard' }, max: 5000 },
   dino: { label: 'Dino Dash', boards: { run: 'Distance' }, max: 9999999 },
   trivia: { label: 'Know-It-All', boards: { solo: 'Family', adult: 'Adult' }, adultBoards: ['adult'], max: 30000 },
@@ -24,8 +34,9 @@ const GAMES = {
   // The 3D cabinet games send their own score (the deliberate exception to "the server decides"); the max is the
   // highest score a real game could reach, so anything above it is refused.
   bigswing: { label: 'Big Swing', boards: { runs: 'Runs' }, max: 300 },
-  // Bucket Drop's best normal game is 750; above that, the score must be 750 plus a jackpot really won here.
-  bucketdrop: { label: 'Bucket Drop', boards: { points: 'Points' }, max: 1000000, check: points => require('./cab-jackpot').check('bucketdrop', points) },
+  // Bucket Drop's best normal game is 750; above that, the score must be 750 plus a jackpot really won here. One board
+  // for each Cups and Speed setting (the maintainer's call, 2026-11-13), keyed "big-fast".
+  bucketdrop: { label: 'Bucket Drop', boards: bucketBoards(), max: 1000000, check: points => require('./cab-jackpot').check('bucketdrop', points) },
   launcher: { label: 'ARKS Launcher', boards: { points: 'Points' }, max: 50000 },
   train: { label: 'ARKS Train Station', boards: { points: 'Points' }, max: 100000 },
   // ARKS Racer keeps finishing times in thousandths of a second, fastest first, one board per track. Three laps take
@@ -53,6 +64,12 @@ db.db.exec(`
 // Scores credited to an arcade profile show its name and avatar.
 for (const col of ['profile_id TEXT', 'profile_name TEXT', 'profile_avatar TEXT']) {
   try { db.db.exec(`ALTER TABLE arcade_scores ADD COLUMN ${col}`); } catch { /* already there */ }
+}
+// Bucket Drop's scores from when it had one Points board move to the board for the settings
+// written in their detail ("12 of 50, Big cups, fast"). Runs once; a row it can't read stays put.
+for (const r of db.db.prepare("SELECT id, detail FROM arcade_scores WHERE game = 'bucketdrop' AND board = 'points'").all()) {
+  const m = /(Big|Normal|Small) cups, (chill|normal|fast|wild)/.exec(r.detail || '');
+  if (m) db.db.prepare('UPDATE arcade_scores SET board = ? WHERE id = ?').run(`${m[1].toLowerCase()}-${m[2]}`, r.id);
 }
 const initialsOf = name => (String(name).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 3) || 'P');
 
@@ -83,8 +100,9 @@ function list(game, board, limit = 25) {
   });
 }
 
-function save(game, { initials, score, board, detail, profileToken }) {
+function save(game, { initials, score, board, detail, profileToken, fromServer }) {
   const { g, key } = boardOf(game, board);
+  if (g.serverOnly && !fromServer) throw fail(`${g.label} saves its scores from the game itself.`, 403);
   // Playing as a profile: the score is theirs, no initials needed.
   const profile = profileToken ? require('./profiles').verify(profileToken) : null;
   const who = profile ? profile.initials || initialsOf(profile.name) : String(initials || '').toUpperCase().trim();
@@ -103,6 +121,7 @@ function save(game, { initials, score, board, detail, profileToken }) {
     const where = Object.keys(g.boards).length > 1 ? ` (${g.boards[key]})` : '';
     const shout = profile ? require('./profiles').boardName(profile.id).label : who;
     comm.safePost({
+      trophy: { game: g.label, profileId: profile ? profile.id : null, name: shout, score: shown(g, points) + (g.lowerIsBetter ? '' : ' points'), board: Object.keys(g.boards).length > 1 ? g.boards[key] : '', url: `/${game}.html` },
       kind: 'highscore', emoji: '🏆', game,
       title: `${shout} took #1 on ${g.label}${where}`,
       body: `${shout} just set the top score on ${g.label}${where} with ${shown(g, points)}. Think you can beat it?`
@@ -126,7 +145,8 @@ router.get('/:game', (req, res, next) => {
 });
 
 router.post('/:game', saveLimiter, (req, res, next) => {
-  try { res.status(201).json(save(req.params.game, req.body || {})); } catch (e) { next(e); }
+  // fromServer is only ever set by a game's own server code, never by a request.
+  try { res.status(201).json(save(req.params.game, { ...(req.body || {}), fromServer: false })); } catch (e) { next(e); }
 });
 
 router.use((err, req, res, next) => {
