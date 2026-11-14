@@ -16,7 +16,7 @@ const LEVELS = {
   filthy: { id: 'filthy', label: 'Filthy', emoji: '🌶️🌶️🌶️', adult: true, blurb: 'No holds barred. Adults who know each other well.' }
 };
 // Only a level's own name counts: "constructor" and the like are on every object.
-const levelOf = id => (Object.hasOwn(LEVELS, String(id)) ? String(id) : 'kids');
+const levelOf = id => (typeof id === 'string' && Object.hasOwn(LEVELS, id) ? id : 'kids');
 
 const bank = groups => Object.entries(groups).flatMap(([category, answers]) => answers.map(answer => ({ category, answer })));
 

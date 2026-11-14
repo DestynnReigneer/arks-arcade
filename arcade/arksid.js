@@ -304,6 +304,8 @@ function createArksId({ client, now = Date.now, profiles }) {
     if (user.kind === 'tv') noteAdultMode(user.id, traded.adultMode);
     const token = crypto.randomBytes(32).toString('base64url');
     db.db.prepare('DELETE FROM arcade_signins WHERE expires_at < ?').run(now() - DEVICE_MS);
+    // A TV is one device, so signing it in again leaves no earlier record of it behind.
+    if (user.kind === 'tv') db.db.prepare('DELETE FROM arcade_signins WHERE user_id = ?').run(user.id);
     db.db.prepare('INSERT INTO arcade_signins (token_hash, session_id, user_id, expires_at, checked_at, used_at) VALUES (?, ?, ?, ?, ?, ?)')
       .run(hash(token), traded.sessionId, user.id, Number(traded.expiresAt) || now() + CHECK_MS, now(), now());
     return { token };
@@ -328,7 +330,7 @@ function createArksId({ client, now = Date.now, profiles }) {
       let s = null;
       try { s = await client.session(row.session_id, true); } catch { /* unreachable */ }
       const user = s && s.valid ? cleanUser(s.user) : null;
-      if (s && (!s.valid || !user || user.id !== row.user_id)) { tvAdult.delete(row.user_id); end(token); return null; }
+      if (s && (!s.valid || !user || user.id !== row.user_id)) { tvAdult.delete(row.user_id); end(token); endSession(row.session_id); return null; }
       // Losing touch with ARKS ID puts a TV back in family mode.
       if (!s) tvAdult.delete(row.user_id);
       if (user) {
@@ -347,6 +349,13 @@ function createArksId({ client, now = Date.now, profiles }) {
   }
   function end(token) {
     if (token) db.db.prepare('DELETE FROM arcade_signins WHERE token_hash = ?').run(hash(token));
+  }
+  // One sign-in can have more than one record here: the cookie ran out and the
+  // page signed in again by itself, or someone followed Sign in twice. When the
+  // sign-in ends, all of its records go together, so nothing of it is left to
+  // keep an adult pass working.
+  function endSession(sessionId) {
+    if (sessionId) db.db.prepare('DELETE FROM arcade_signins WHERE session_id = ?').run(sessionId);
   }
 
   // ---- The adult pass ----
@@ -464,6 +473,7 @@ function createArksId({ client, now = Date.now, profiles }) {
         try { await client.appCall('POST', '/push/unsubscribe', { session: row.session_id }); } catch { /* ARKS ID away: it drops them when the session ends everywhere */ }
       }
       end(token);
+      if (row) endSession(row.session_id);
       // The admin page's cookie goes with the sign-in.
       require('./admin-session').end(req, res);
       res.clearCookie(COOKIE, { path: '/' }).set('Cache-Control', 'no-store')
