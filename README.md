@@ -188,11 +188,13 @@ A 3D drop cabinet, in the spirit of the ones where clear cups ride a spinning tu
 seconds (the clock starts on the first tap), and each tap drops a ball from the clear tube above the cups. The
 turntable speeds up as the time runs down. A catch is 10 points and every 5 in a row adds 25, so a perfect game
 without the jackpot is 750. Catching all 50 wins **the arcade's jackpot**, shown in red LED letters on the big screen:
-it starts at 1,000 and grows by 10 after every game anyone plays, until somebody wins it. Cups (big, normal, small)
-and Speed (chill to wild) are picked on the setup screen before the game, saved on the device and written into the score's detail. The game is
+it starts at 1,000 and grows by 10 after every game anyone plays, until somebody wins it. Everyone plays it the same
+way, with big cups on a fast turntable, so there are no settings to pick and one board to climb. The game is
 `public/cab-bucket.js`.
 
-The page sends the points to the shared board (`/api/scores/bucketdrop`, one Points board). Up to 750 is accepted;
+The page sends the points to the shared board (`/api/scores/bucketdrop`, one Points board, stored as `big-fast`
+from when each Cups and Speed pair had a board of its own; the other pairs' old scores stay in the database but
+aren't shown). Up to 750 is accepted;
 above that, the score must be exactly 750 plus a jackpot won here in the last 15 minutes, and each win can be saved
 once (`arcade/cab-jackpot.js`, which also serves `GET /api/cab-jackpot/bucketdrop` and
 `POST /api/cab-jackpot/bucketdrop/played` with `{ won }`, 12 a minute from one address).

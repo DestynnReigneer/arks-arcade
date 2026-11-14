@@ -6,28 +6,24 @@
 (() => {
   const $ = id => document.getElementById(id);
   const game = CAB.games[0];
-  // One board for each Cups and Speed setting, keyed "big-fast" (arcade/scores.js has the same list).
-  const choices = id => game.options.find(o => o.id === id).choices;
-  const boards = {};
-  for (const [size, sizeLabel] of choices('size')) for (const [speed, speedLabel] of choices('speed')) boards[`${size}-${speed}`] = `${sizeLabel} cups, ${speedLabel}`;
+  // One board. It keeps the key it had when each Cups and Speed pair had its own (arcade/scores.js).
+  const BOARD = 'big-fast';
 
   const shell = GameShell.create({
-    game: 'bucketdrop', boards, mount: $('cab'),
-    onAgain: () => frame.start(),
-    onSetup: () => frame.setup()
+    game: 'bucketdrop', boards: { [BOARD]: 'Points' }, mount: $('cab'),
+    onAgain: () => frame.start()
   });
 
   const frame = CabFrame.run({
     game, root: $('cab'), muteBtn: $('muteBtn'), musicBtn: $('musicBtn'),
     onStart: () => shell.hideOver(),
-    onSetup: () => shell.hideOver(),
     onOver: g => {
       const f = g.final();
       setTimeout(() => shell.over({ score: f.score, board: f.board, detail: f.detail, title: g.caught === 50 ? 'JACKPOT! All 50! 🏆' : `${g.caught} of 50 caught` }), 1600);
     }
   });
 
-  $('scoresBtn').addEventListener('click', () => shell.openScores(`${game.opt.size}-${game.opt.speed}`));
+  $('scoresBtn').addEventListener('click', () => shell.openScores(BOARD));
   Blip.muteButton($('muteBtn'));
   Blip.musicButton($('musicBtn'));
 
@@ -46,10 +42,6 @@
       emoji: '💯', title: 'Points and the jackpot',
       html: `<p>Every ball you catch is <b>10 points</b>, and every 5 in a row adds <b>25 more</b>. A ball that hits a rim or misses rolls off into the gutter and breaks your streak.</p>
         <p>Catch <b>all 50</b> to win the <b>jackpot</b> on the big screen. It's the whole arcade's jackpot: it starts at 1,000 and grows by 10 every game until somebody wins it.</p>`
-    },
-    {
-      emoji: '⚙️', title: 'Make it easier or harder',
-      html: `<p><b>Cups</b> sets how big the cups are, and <b>Speed</b> sets how fast the turntable spins. They're saved on this device, and each pair has its own board, so you're only up against people who played the same way.</p>`
     }
   ]);
   $('helpBtn').addEventListener('click', () => { frame.pause(); help.open(); });
