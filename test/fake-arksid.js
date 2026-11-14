@@ -118,6 +118,20 @@ function startFakeArksId({ secret, arcadeBase, port = 0 }) {
       if (fresh) res.setHeader('Set-Cookie', `fake_browser=${browser}; Path=/; HttpOnly`);
       return back(res, to.href);
     }
+    // Its own sign-out page, where the arcade sends a browser after signing it out:
+    // that browser's sign-ins end here too, so signing in again starts a new one.
+    if (req.method === 'GET' && u.pathname === '/signout') {
+      const browser = (/(?:^|;\s*)fake_browser=([0-9a-f]{16})/.exec(req.headers.cookie || '') || [])[1];
+      if (browser) {
+        for (const [who, id] of sessionOfBrowser) {
+          if (!who.startsWith(`${browser} `)) continue;
+          if (fake.sessions.has(id)) fake.sessions.get(id).valid = false;
+          sessionOfBrowser.delete(who);
+        }
+      }
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      return res.end('<!doctype html><title>Signed out</title><p>Signed out.</p>');
+    }
     if (req.method === 'GET' && pictures[u.pathname]) {
       fake.photoFetches++;
       const [type, body] = pictures[u.pathname];

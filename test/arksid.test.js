@@ -504,6 +504,23 @@ async function run({ base, root, fake, admin: ADMIN }) {
     ok('…and its pass works', (await checks(latePass)) === true);
     await longTime.call('/auth/signout', { method: 'POST', follow: false });
     ok('signing out ends the pass, with nothing left over from the first cookie', (await checks(latePass)) === false);
+
+    // A sign-in can also end on ARKS ID's side (signed out there, or from another app)
+    // while a game sits open in a tab that never asks who's signed in. Using the pass
+    // makes the arcade ask ARKS ID in the background, so it stops soon after.
+    const openTab = browser();
+    await openTab.call('/auth/signin?return=%2F');
+    const tabPass = (await openTab.call('/api/arksid/adult-pass', { method: 'POST' })).data.pass;
+    ok('a pass for a game left open in a tab works', (await checks(tabPass)) === true);
+    const before = new Set(fake.sessions.keys());
+    const mine = [...fake.sessions].filter(([, v]) => v.key === 'kim' && v.valid).map(([id]) => id).pop();
+    fake.sessions.get(mine).valid = false;
+    await new Promise(r => setTimeout(r, 1200));
+    ok('the sign-in ended at ARKS ID, and nothing was made in its place', before.size === fake.sessions.size && fake.sessions.get(mine).valid === false);
+    await checks(tabPass);   // this use sets the check going
+    await new Promise(r => setTimeout(r, 400));
+    ok('…so the pass stops, without that tab loading a page', (await checks(tabPass)) === false);
+    ok('…for picking up or starting an adult game too', (await spin('/run/start', { body: { level: 'filthy', names: ['Kim'] }, key: tabPass })).status === 403);
     fake.next = 'milo';
   }
 

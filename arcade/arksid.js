@@ -44,6 +44,8 @@ const COOKIE_MS = 15 * 24 * 60 * 60 * 1000;   // the longest a sign-in lasts; AR
 const CHECK_MS = 3 * 60 * 1000;               // re-check with ARKS ID this often
 const DEVICE_MS = 24 * 60 * 60 * 1000;        // how long "whose device is this?" is remembered
 const PASS_MS = 12 * 60 * 60 * 1000;          // how long an adult pass works
+// How old a sign-in's last check may be before using its pass asks ARKS ID again (the tests use a short one).
+const PASS_CHECK_MS = (process.env.NODE_ENV === 'test' && Number(process.env.TEST_PASS_CHECK_MS)) || CHECK_MS;
 const TIMEOUT_MS = 5000;
 const PHOTO_MAX = 2 * 1024 * 1024;              // ARKS ID's photos are 256 px, team pictures 512 px
 const PHOTO_KEEP_MS = 10 * 60 * 1000;           // a fetched photo is kept in memory this long
@@ -370,14 +372,32 @@ function createArksId({ client, now = Date.now, profiles }) {
     const body = `ap.${profile.id}.${exp}.${signinKey(sessionId)}`;
     return `${body}.${sign(body)}`;
   }
+  // A pass can be used from a page that never asks who's signed in (a game left
+  // open in a tab), so a sign-in that ended at ARKS ID would go unnoticed there.
+  // Using a pass is therefore also a moment to ask ARKS ID about its sign-in,
+  // when nobody has for a few minutes. That happens in the background: this
+  // request is answered as things stand, and a sign-in that turns out to be
+  // over is gone before the next one.
+  const checking = new Set();
+  function checkSoon(sessionId, checkedAt) {
+    if (!client || now() - checkedAt <= PASS_CHECK_MS || checking.has(sessionId)) return;
+    checking.add(sessionId);
+    client.session(sessionId, false).then(s => {
+      if (s && !s.valid) endSession(sessionId);
+      else if (s) db.db.prepare('UPDATE arcade_signins SET checked_at = ? WHERE session_id = ?').run(now(), sessionId);
+    }).catch(() => { /* ARKS ID is away: the sign-in keeps working until it would have ended anyway */ })
+      .finally(() => checking.delete(sessionId));
+  }
   function passOk(pass) {
     const m = /^(ap\.([0-9a-f]{16})\.(\d{10,16})\.([0-9a-f]{24}))\.([A-Za-z0-9_-]{43})$/.exec(String(pass || ''));
     if (!m || Number(m[3]) < now() || !sameSig(m[5], sign(m[1]))) return false;
     const row = db.db.prepare(`SELECT a.role, a.kind, a.user_id FROM arcade_profiles p JOIN arcade_id_accounts a ON a.user_id = p.arksid_user
       WHERE p.id = ? AND p.status = 'approved'`).get(m[2]);
     if (!row) return false;
-    const signins = db.db.prepare('SELECT session_id FROM arcade_signins WHERE user_id = ? AND expires_at > ?').all(row.user_id, now());
-    if (!signins.some(s => signinKey(s.session_id) === m[4])) return false;
+    const signins = db.db.prepare('SELECT session_id, checked_at FROM arcade_signins WHERE user_id = ? AND expires_at > ?').all(row.user_id, now())
+      .filter(s => signinKey(s.session_id) === m[4]);
+    if (!signins.length) return false;
+    checkSoon(signins[0].session_id, Math.max(...signins.map(s => s.checked_at)));
     // A TV's pass works only while its adults' night is on.
     if (row.kind === 'tv') return !!adultModeOf(row.user_id);
     return GROWN_UP.includes(row.role);
