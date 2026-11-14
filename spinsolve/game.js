@@ -9,6 +9,7 @@
 // comes with the saved-games work.
 
 const crypto = require('crypto');
+const { ipKeyGenerator } = require('express-rate-limit');
 
 const VOWELS = 'AEIOU';
 const CONSONANTS = 'BCDFGHJKLMNPQRSTVWXYZ';
@@ -40,7 +41,10 @@ function sweep(now = Date.now()) {
 }
 
 // So one address (or one profile) can't fill the arcade with games: starting
-// one more than its share drops its oldest.
+// one more than its share drops its oldest. An address is counted the way the
+// rate limiter counts it (a whole IPv6 network is one visitor), so changing
+// addresses inside one network doesn't get around the share.
+const ownerOf = ip => (ip ? ipKeyGenerator(String(ip)) : null);
 function makeRoom(ip, profileId) {
   for (const key of ['ip', 'profileId']) {
     const value = key === 'ip' ? ip : profileId;
@@ -52,15 +56,22 @@ function makeRoom(ip, profileId) {
 
 // pool: [{ category, answer, pack? }], already checked and allowed for this player.
 function start({ pool, names, rounds, level, adult, packLabel, profileId, ip }) {
-  sweep();
-  makeRoom(ip || null, profileId || null);
-  if (games.size >= MAX_GAMES) throw fail('The arcade is busy with lots of games right now. Try again in a little while.', 503);
   if (!pool.length) throw fail('No puzzles here yet.', 404);
+  const owner = ownerOf(ip);
+  sweep();
+  makeRoom(owner, profileId || null);
+  // Full: the game nobody has touched for the longest makes room, so a pile of
+  // abandoned games can never keep someone from starting one.
+  while (games.size >= MAX_GAMES) {
+    let idle = null;
+    for (const g of games.values()) if (!idle || g.touched < idle.touched) idle = g;
+    games.delete(idle.id);
+  }
   const list = (Array.isArray(names) ? names : []).slice(0, MAX_PLAYERS);
   if (!list.length) list.push('');
   const g = {
     id: crypto.randomBytes(16).toString('hex'),
-    pool, level, adult: !!adult, packLabel: packLabel || '', profileId: profileId || null, ip: ip || null, overAt: 0,
+    pool, level, adult: !!adult, packLabel: packLabel || '', profileId: profileId || null, ip: owner, overAt: 0,
     rounds: ROUNDS.includes(Number(rounds)) ? Number(rounds) : 3,
     players: list.map((n, i) => ({ name: String(n || '').trim().slice(0, 16) || `Player ${i + 1}`, round: 0, total: 0 })),
     round: 0, cur: 0, puzzle: null, revealed: new Set(), used: new Set(), strikes: 0,
@@ -205,5 +216,5 @@ function view(g) {
 
 module.exports = {
   start, get, view, spin, call, solve, timeUp, nextRound, sweep, games,
-  WEDGES, VOWEL_COST, SOLVE_MIN, MAX_STRIKES, MAX_PLAYERS, MAX_PER_OWNER, KEEP_MS
+  WEDGES, VOWEL_COST, SOLVE_MIN, MAX_STRIKES, MAX_PLAYERS, MAX_PER_OWNER, MAX_GAMES, KEEP_MS
 };

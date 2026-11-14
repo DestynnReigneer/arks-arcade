@@ -74,20 +74,33 @@ module.exports = function spinRoutes({ requireAdmin, notify }) {
 
   // The puzzles a game can draw from: one pack, or every built-in and pack puzzle
   // at a level. They stay on the server; the page only ever gets the board.
+  // Each list is put together once and shared by every game that draws from it
+  // (a game never changes its list), and put together again when the packs change.
+  let pools = { stamp: '', made: new Map() };
+  function pooled(key, build) {
+    const packs = db.db.prepare('SELECT COUNT(*) AS n, COALESCE(MAX(id), 0) AS newest, COALESCE(SUM(LENGTH(puzzles)), 0) AS size FROM spin_packs').get();
+    const stamp = `${packs.n}.${packs.newest}.${packs.size}`;
+    if (pools.stamp !== stamp) pools = { stamp, made: new Map() };
+    if (!pools.made.has(key)) pools.made.set(key, Object.freeze(build()));
+    return pools.made.get(key);
+  }
   function poolFor(body, req) {
     const packId = Number(body.pack);
     if (packId) {
-      const row = db.db.prepare('SELECT * FROM spin_packs WHERE id = ?').get(packId);
+      const row = db.db.prepare('SELECT id, level, label FROM spin_packs WHERE id = ?').get(packId);
       if (!row) throw fail('That puzzle pack is gone.', 404);
       requireLevel(row.level, req);
-      const pack = rowToPack(row, true);
-      return { level: row.level, packLabel: pack.label, pool: pack.puzzles.map(p => ({ ...p, pack: pack.label })) };
+      const pool = pooled(`pack:${row.id}`, () => {
+        const pack = rowToPack(db.db.prepare('SELECT * FROM spin_packs WHERE id = ?').get(row.id), true);
+        return pack.puzzles.map(p => ({ ...p, pack: pack.label }));
+      });
+      return { level: row.level, packLabel: row.label, pool };
     }
     const level = P.levelOf(body.level);
     requireLevel(level, req);
-    const fromPacks = allPacks().filter(r => r.level === level)
-      .flatMap(r => JSON.parse(r.puzzles).map(p => ({ ...p, pack: r.label })));
-    return { level, packLabel: '', pool: [...P.BUILTIN[level], ...fromPacks] };
+    const pool = pooled(`level:${level}`, () => [...P.BUILTIN[level], ...allPacks().filter(r => r.level === level)
+      .flatMap(r => JSON.parse(r.puzzles).map(p => ({ ...p, pack: r.label })))]);
+    return { level, packLabel: '', pool };
   }
 
   const startLimiter = rateLimit({
@@ -101,6 +114,8 @@ module.exports = function spinRoutes({ requireAdmin, notify }) {
   const profileOf = req => require('../arcade/profiles').verify(req.get('X-Profile-Token')) || null;
 
   // A game: start it, then every spin, letter and answer goes through here.
+  // What comes back is this game as it stands right now, so nothing may keep a copy.
+  router.use('/run', (req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
   router.post('/run/start', startLimiter, (req, res, next) => {
     try {
       const body = req.body || {};
