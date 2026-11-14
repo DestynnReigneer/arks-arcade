@@ -69,7 +69,8 @@ function makeRoutes({ tables, config }) {
     try {
       const body = req.body || {};
       await adultJoin.refuseKids(req, tables.isAdult(tables.room(req.params.code).level));
-      const { table, player } = tables.joinRoom(req.params.code, body.name, body.password, profileOf(req));
+      // Whether this device belongs to an adult is kept with the seat, for the day the host turns the lobby adult.
+      const { table, player } = tables.joinRoom(req.params.code, body.name, body.password, profileOf(req), await adultJoin.isAdult(req));
       res.status(201).json({ code: table.id, playerId: player.id, token: player.token });
     } catch (e) { next(e); }
   });

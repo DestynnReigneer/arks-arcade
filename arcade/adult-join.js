@@ -9,6 +9,7 @@
 //
 //   use(whoIs)                 whoIs(req) -> { account, tv } or null (server.js)
 //   await refuseKids(req, adult)   throws a 403 for those phones when adult is true
+//   await isAdult(req)         true when this device is signed in as an adult
 
 let whoIs = null;
 function use(fn) { whoIs = typeof fn === 'function' ? fn : null; }
@@ -22,4 +23,13 @@ async function refuseKids(req, adult) {
   }
 }
 
-module.exports = { use, refuseKids };
+// Is this device signed in with ARKS ID as an adult (or an admin)? A TV never
+// is, and with sign-in off nobody is, because nobody can be told apart then.
+async function isAdult(req) {
+  if (!whoIs) return false;
+  let me = null;
+  try { me = await whoIs(req); } catch { me = null; }
+  return !!(me && !me.tv && me.account && ['admin', 'adult'].includes(me.account.role));
+}
+
+module.exports = { use, refuseKids, isAdult };

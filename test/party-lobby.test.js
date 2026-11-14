@@ -2,7 +2,8 @@
 
 // The party card games' lobby (Uh-Oh: Part Deux and Dare Devil share it):
 // who can join, the list, one seat per profile, Ready, the chat, the host's
-// Mute and Remove Player, and a family lobby staying family once people join.
+// Mute and Remove Player, and the host turning a family lobby adult (which
+// moves out everyone the arcade doesn't know to be an adult).
 
 async function run({ base }) {
   let pass = 0, fail = 0;
@@ -58,14 +59,42 @@ async function run({ base }) {
     await api(`${room(host.code)}/mute`, 'POST', { ...seat(host), seat: bob.playerId, on: true });
     ok('a muted player\'s chat is refused', (await api(`${room(host.code)}/chat`, 'POST', { ...seat(bob), text: 'hey' })).status === 403);
     await api(`${room(host.code)}/mute`, 'POST', { ...seat(host), seat: bob.playerId, on: false });
-    ok('the family lobby can\'t turn adult once someone has joined',
-      (await api(`${room(host.code)}/settings`, 'POST', { ...seat(host), level: 'filthy', password: 'lime' }, { 'X-Adult-Pin': '246810' })).status === 409);
     await api(`${room(host.code)}/lobby-ready`, 'POST', { ...seat(bob), ready: true });
     const s = (await view(game, host.code, host)).data;
     ok('Ready shows for the host', s.allReady === true);
     await api(`${room(host.code)}/remove`, 'POST', { ...seat(host), seat: bob.playerId });
     ok('the host can remove a player, whose seat stops working', (await api(`${room(host.code)}/chat`, 'POST', { ...seat(bob), text: 'still here?' })).status === 403);
     ok('…and who\'s gone from the lobby', !(await view(game, host.code, host)).data.players.some(p => p.id === bob.playerId));
+    ok('…and the chat says so in the words the player sees', (await view(game, host.code, host)).data.chat.some(m => m.system && /Bob was removed from the lobby/.test(m.text)));
+
+    // It's the host's lobby, so the host can turn it adult with people in it. This arcade
+    // has no ARKS ID sign-in, so nobody is known to be an adult: everyone else is moved out,
+    // with the players they added on their own device, and can come back with the password.
+    console.log(`\n-- ${game}: the host turns a family lobby adult --`);
+    const fam = (await api(`/${game}/rooms`, 'POST', { name: 'Ann', level: 'kids' }, Ann.h)).data;
+    const calIn = (await api(`${room(fam.code)}/join`, 'POST', { name: 'Cal' }, Cal.h)).data;
+    const gusIn = (await api(`${room(fam.code)}/join`, 'POST', { name: 'Gus' })).data;
+    await api(`${room(fam.code)}/seats`, 'POST', { ...seat(gusIn), name: 'Gus Jr' });
+    const asAdult = { 'X-Adult-Pin': '246810' };
+    ok('without a lobby password the switch is refused, and nobody moves',
+      (await api(`${room(fam.code)}/settings`, 'POST', { ...seat(fam), level: 'filthy' }, asAdult)).status === 400 &&
+      (await view(game, fam.code, fam)).data.players.length === 4);
+    ok('someone who isn\'t the host can\'t switch it', (await api(`${room(fam.code)}/settings`, 'POST', { ...seat(calIn), level: 'filthy', password: 'lime' }, asAdult)).status === 403);
+    ok('the host can\'t either without being allowed adult levels', (await api(`${room(fam.code)}/settings`, 'POST', { ...seat(fam), level: 'filthy', password: 'lime' })).status === 403 &&
+      (await view(game, fam.code, fam)).data.players.length === 4);
+    const turned = await api(`${room(fam.code)}/settings`, 'POST', { ...seat(fam), level: 'filthy', password: 'lime' }, asAdult);
+    ok('the host turns a family lobby adult with people in it', turned.status === 200, JSON.stringify(turned.data));
+    const now = (await view(game, fam.code, fam)).data;
+    ok('…and everyone else is moved out, with the players on their device', now.players.length === 1 && now.players[0].id === fam.playerId, JSON.stringify(now.players.map(p => p.name)));
+    ok('…their seats stop working', (await api(`${room(fam.code)}/chat`, 'POST', { ...seat(calIn), text: 'hello?' })).status === 403 &&
+      (await view(game, fam.code, gusIn)).status === 403);
+    ok('…the chat says who was moved out and why', now.chat.some(m => m.system && /Cal, Gus and Gus Jr were moved out, because the host switched to an adult level/.test(m.text)), JSON.stringify(now.chat.slice(-2)));
+    ok('…the lobby is locked', now.locked === true && (await api(`/${game}/lobbies`)).data.lobbies.find(l => l.code === fam.code).locked === true);
+    ok('…and coming back takes the lobby password', (await api(`${room(fam.code)}/join`, 'POST', { name: 'Gus' })).status === 401 &&
+      (await api(`${room(fam.code)}/join`, 'POST', { name: 'Gus', password: 'lime' })).status === 201);
+    ok('switching back to a family level moves nobody', (await api(`${room(fam.code)}/settings`, 'POST', { ...seat(fam), level: 'kids' })).status === 200 &&
+      (await view(game, fam.code, fam)).data.players.length === 2);
+    await api(`${room(fam.code)}/leave`, 'POST', seat(fam));
 
     console.log(`\n-- ${game}: an adult lobby --`);
     const adult = (await api(`/${game}/rooms`, 'POST', { name: 'Ann', level: 'filthy', password: 'lime' }, { ...Ann.h, 'X-Adult-Pin': '246810' })).data;
