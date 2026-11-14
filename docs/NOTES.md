@@ -33,6 +33,10 @@ order they were clicked, and keep the rest pinned here.
     and Join. Rambler and Shuffle Scuffle keep their room codes until they get the lobby.
   - **For new text:** no "invite", no code to type outside the TV's QR screen, and "device" unless it's about a
     phone.
+- **#146: the maintainer's 64 new jokes.** Eight more in each set (Family, Cheeky, Spicy, Filthy) of Uh-Oh: Part
+  Deux (`partdeux/banter.js`) and Spin & Solve (`spinsolve/banter.js`), next to the ones already there and in the
+  maintainer's own words. Each file keeps its own quoting (curly apostrophes in Uh-Oh's, escaped straight ones in
+  Spin & Solve's).
 
 ## The session before (2026-11-13, afternoon)
 
