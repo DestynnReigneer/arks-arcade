@@ -28,6 +28,7 @@
 const crypto = require('node:crypto');
 const roomPassword = require('./room-password');
 const invites = require('./invites');
+const adultJoin = require('./adult-join');
 const roomChat = require('./room-chat');
 
 const TTL_MS = 6 * 60 * 60 * 1000;
@@ -201,18 +202,18 @@ function makeTables({ game = 'party', title = 'the game', engine, act, levels, m
     touch(t);
   }
 
-  // adultAccount: this device is signed in with ARKS ID as an adult (arcade/adult-join.js).
-  function joinRoom(code, name, password, profile = null, adultAccount = false) {
+  // adultSignin: the sign-in this device has, when it's an adult's (arcade/adult-join.js). Kept on the server only.
+  function joinRoom(code, name, password, profile = null, adultSignin = null) {
     const t = room(code);
     if (!mayJoin(t, profile)) throw fail('This game is only for the people the host picked.', 403);
     roomPassword.check(t, password);
     // One seat per profile: joining again (another device, or after a reload) gets the same seat back.
     const mine = profile && [...t.players.values()].find(p => p.token && p.profileId === profile.id);
-    if (mine) { mine.adultAccount = mine.adultAccount && !!adultAccount; touch(t); return { table: t, player: mine }; }
+    if (mine) { mine.adultSignin = adultSignin || null; touch(t); return { table: t, player: mine }; }
     if (t.game && t.game.phase !== 'over') throw fail('That game has already started. Wait for the next one.', 409);
     if (t.players.size >= maxPlayers) throw fail(`That game is full (${maxPlayers} players).`, 409);
     const p = addPlayer(t, name, null, profile);
-    p.adultAccount = !!adultAccount;
+    p.adultSignin = adultSignin || null;
     if (profile) invites.clear(game, t.id, profile.id);
     chat.note(t.id, `${p.name} joined`);
     touch(t);
@@ -264,9 +265,11 @@ function makeTables({ game = 'party', title = 'the game', engine, act, levels, m
   // The lobby just turned adult. Adult levels are only for adults, so everyone the
   // arcade doesn't know to be one leaves, with the players they added on their own
   // device, and their page is told why. The host stays, and so does anyone signed
-  // in with ARKS ID as an adult. A guest can come back with the lobby password.
+  // in with ARKS ID as an adult: that's asked again now, not remembered from when
+  // they joined, so someone who signed out since, or whose account stopped being
+  // an adult's, goes too. A guest can come back with the lobby password.
   function moveOutForAdultLevel(t) {
-    const going = [...t.players.values()].filter(p => p.token && p.id !== t.hostId && !p.adultAccount);
+    const going = [...t.players.values()].filter(p => p.token && p.id !== t.hostId && !adultJoin.stillAdult(p.adultSignin));
     const names = [];
     for (const x of going) {
       for (const id of controlled(t, x)) { names.push(t.players.get(id).name); t.players.delete(id); }
@@ -276,6 +279,8 @@ function makeTables({ game = 'party', title = 'the game', engine, act, levels, m
         try { c.res.write('event: moved\ndata: {"why":"adult"}\n\n'); c.res.end(); } catch { /* gone */ }
       }
     }
+    // People who were selected but hadn't joined yet stop seeing this lobby on their home page.
+    invites.clear(game, t.id);
     if (!names.length) return;
     const who = names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
     chat.note(t.id, `${who} ${names.length === 1 ? 'was' : 'were'} moved out, because the host switched to an adult level`);

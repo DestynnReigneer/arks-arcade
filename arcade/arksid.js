@@ -383,6 +383,14 @@ function createArksId({ client, now = Date.now, profiles }) {
     return GROWN_UP.includes(row.role);
   }
 
+  // Is this sign-in still on record here, and is its account still an adult's
+  // (never a TV)? Asked for a seat in a lobby its host is turning adult.
+  function adultSignin(sessionId) {
+    const row = db.db.prepare(`SELECT a.role, a.kind FROM arcade_signins s JOIN arcade_id_accounts a ON a.user_id = s.user_id
+      WHERE s.session_id = ? AND s.expires_at > ? LIMIT 1`).get(String(sessionId || ''), now());
+    return !!row && row.kind !== 'tv' && GROWN_UP.includes(row.role);
+  }
+
   // ---- Whose device is this? (for guest play) ----
   // Remembered in a signed cookie for a day: known, and the owner's role.
   function deviceCookie(result) {
@@ -539,7 +547,7 @@ function createArksId({ client, now = Date.now, profiles }) {
     return router;
   }
 
-  return { routes, current, remember, start, end, passOk, passFor, deviceFrom, client, noteAdultMode, adultModeOf, signinCookie };
+  return { routes, current, remember, start, end, passOk, passFor, adultSignin, deviceFrom, client, noteAdultMode, adultModeOf, signinCookie };
 }
 
 module.exports = { settings, problem, createClient, createArksId, cleanUser, photoPath, photoAvatar, isPhotoAvatar, COOKIE, DEVICE_COOKIE, GROWN_UP };
