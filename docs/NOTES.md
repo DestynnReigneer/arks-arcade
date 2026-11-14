@@ -64,8 +64,14 @@ order they were clicked, and keep the rest pinned here.
   - `test/fake-arksid.js` now keeps one session id per browser, the way the real service does. Before, it made
     a new one every time, which is why the tests couldn't see this.
   - Signing out also forgets the seat the tab held in a game room (`*.room`).
-  - **Still open:** a sign-in ended on the service's side keeps its pass until that device next opens an arcade
-    page; and a tab holding a pass that has ended shows the adult levels as open until it's reloaded.
+  - **#154:** using a pass also asks the sign-in service about its sign-in, in the background, when nobody has
+    for three minutes (`checkSoon` in `arcade/arksid.js`). So a sign-in that ended on the service's side stops
+    its pass after at most one more request, even from a game left open in a tab that never asks who's signed
+    in. And a tab still holding an unlock from a sign-in that's over forgets it on its next load and loads once
+    more, with the levels locked (`dropDeadUnlocks` in `public/profile.js`); one tap unlocks them again for an
+    adult who's signed in. The pretend service in the tests gained its own sign-out page.
+  - **Still open:** a tab that isn't loaded again keeps showing the adult levels as open after its unlock
+    ended. The server refuses them, and the page says so, but it doesn't offer the unlock again until a reload.
 
 **Next up** (the maintainer's order from 2026-11-14)
 1. Bucket Drop loses its Cups and Speed choice: Big cups and Fast are the game, and only that board shows. The

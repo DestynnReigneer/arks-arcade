@@ -57,3 +57,54 @@ test('signing out locks the adult levels for whoever uses the device next', asyn
   await expect(page.locator('#levelList .l-lock')).toHaveCount(3);
   await ctx.close();
 });
+
+test('a tab that still holds an ended unlock locks itself on its next load, and can unlock again', async ({ browser }) => {
+  test.skip(test.info().project.name !== 'laptop', 'once is enough');
+  test.setTimeout(60000);
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const first = await ctx.newPage();
+  await quietFonts(first);
+  const closeHelp = async page => { const x = page.locator('.tut-x'); if (await x.isVisible().catch(() => false)) await x.click(); };
+
+  // Alex unlocks Filthy in one tab.
+  expect((await fake('/test/next-once', { as: 'alex' })).ok).toBe(true);
+  await first.goto('/auth/signin?return=/spinsolve.html');
+  await first.waitForURL(u => new URL(u).pathname === '/spinsolve.html');
+  await first.waitForLoadState('networkidle');
+  await closeHelp(first);
+  await first.locator('#levelList .level', { hasText: 'Filthy' }).click();
+  await expect(first.locator('#levelList .level[aria-pressed=true]')).toContainText('Filthy', { timeout: 15000 });
+  const old = await first.evaluate(() => sessionStorage.getItem('spin.adultPin'));
+  expect(old).toBeTruthy();
+
+  // In a second tab of the same browser, Alex signs out and back in. The first tab's unlock is now from a sign-in that's over.
+  const second = await ctx.newPage();
+  await quietFonts(second);
+  await second.goto('/');
+  await second.waitForLoadState('networkidle');
+  await second.evaluate(() => { ArcadeProfile.open(); });
+  await second.locator('.apf [data-out]').click();
+  await second.waitForURL(u => new URL(u).pathname === '/signout');
+  expect((await fake('/test/next-once', { as: 'alex' })).ok).toBe(true);
+  await second.goto('/auth/signin?return=/');
+  await second.waitForURL(u => new URL(u).pathname === '/');
+  await second.close();
+
+  // The first tab is loaded again: it drops the old unlock by itself and shows the levels locked...
+  await first.reload();
+  // (The page loads itself once more while it does, so a read that lands mid-load is tried again.)
+  await expect.poll(() => first.evaluate(() => sessionStorage.getItem('spin.adultPin')).catch(() => 'loading'), { timeout: 15000 }).toBeNull();
+  await first.waitForLoadState('networkidle');
+  await closeHelp(first);
+  await expect(first.locator('#levelList .l-lock')).toHaveCount(3);
+  // ...and one tap unlocks them again, with a new pass.
+  await first.locator('#levelList .level', { hasText: 'Filthy' }).click();
+  await expect(first.locator('#levelList .level[aria-pressed=true]')).toContainText('Filthy', { timeout: 15000 });
+  const fresh = await first.evaluate(() => sessionStorage.getItem('spin.adultPin'));
+  expect(fresh).toBeTruthy();
+  expect(fresh).not.toBe(old);
+  while (await first.locator('#nameList .name-row').count() > 1) await first.locator('#nameList .name-row:last-child button').click();
+  await first.locator('#goBtn').click();
+  await expect(first.locator('#game')).toBeVisible();
+  await ctx.close();
+});
