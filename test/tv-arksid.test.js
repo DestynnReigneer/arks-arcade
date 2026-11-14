@@ -128,6 +128,32 @@ async function run({ base, fake }) {
   await sleep(1600);
   ok('ended from a phone: the TV goes back to family on its next check', (await tv.call('/api/tv/state?waiting=1')).data.adultMode === null);
 
+  console.log('\n-- a TV that is paired again --');
+  {
+    // Adults' night, and a pass from it.
+    const night = (await tv.post('/api/tv/unlock')).data;
+    fake.approveUnlock(night.userCode, 'kim');
+    await sleep(1600);
+    await tv.call('/api/tv/state?waiting=1');
+    const earlier = (await tv.post('/api/arksid/adult-pass')).data.pass;
+    const opens = key => tv.call('/api/trivia/questions?level=spicy&count=5', { headers: { 'X-Adult-Pin': key } }).then(r => r.status === 200);
+    ok('a pass from adults\' night works', typeof earlier === 'string' && await opens(earlier));
+    // The TV is paired again without signing out first, then adults' night comes back on.
+    const pairing = (await tv.post('/api/tv/pair')).data;
+    fake.approvePair(pairing.userCode);
+    let state = { status: 'pending' };
+    for (let i = 0; i < 12 && state.status === 'pending'; i++) { await sleep(500); state = (await tv.call('/api/tv/pair')).data; }
+    ok('the TV is paired again', state.status === 'approved', JSON.stringify(state));
+    const nightAgain = (await tv.post('/api/tv/unlock')).data;
+    fake.approveUnlock(nightAgain.userCode, 'kim');
+    await sleep(1600);
+    ok('adults\' night is back on', !!(await tv.call('/api/tv/state?waiting=1')).data.adultMode);
+    ok('the pass from before the new pairing stays refused', !(await opens(earlier)));
+    const newer = (await tv.post('/api/arksid/adult-pass')).data.pass;
+    ok('…and a new one works', typeof newer === 'string' && await opens(newer));
+    await tv.post('/api/tv/lock');
+  }
+
   console.log('\n-- only TVs --');
   ok('a person\'s phone can\'t ask for adults\' night', (await kidPhone.post('/api/tv/unlock')).status === 403);
   ok('Back to family from a person\'s phone does nothing', (await kidPhone.post('/api/tv/lock')).data.adultMode === null);

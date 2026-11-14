@@ -66,10 +66,20 @@ async function run({ base, root }) {
   ok('a jackpot score nobody won is refused', fake.status === 400, String(fake.status));
   const after = (await jp('/played', { won: true })).amount;
   ok('winning starts the jackpot over at 1,000', after === 1000, String(after));
-  const real = await post('bucketdrop', { initials: 'WIN', score: 750 + grown, board: 'small-wild', detail: 'Jackpot!' });
+  const real = await post('bucketdrop', { initials: 'WIN', score: 750 + grown, board: 'big-fast', detail: 'Jackpot!' });
   ok('the winner can save 750 plus the jackpot they won', real.status === 201, String(real.status));
-  const again = await post('bucketdrop', { initials: 'WIN', score: 750 + grown, board: 'small-wild' });
+  const again = await post('bucketdrop', { initials: 'WIN', score: 750 + grown, board: 'big-fast' });
   ok('the same win can only be saved once', again.status === 400, String(again.status));
+  // Bucket Drop is played one way now, so it has one board. A page still asking for one of
+  // the old Cups and Speed boards gets that one board, and so does a made-up name.
+  const oldBoard = await post('bucketdrop', { initials: 'OLD', score: 120, board: 'small-wild', detail: 'old page' });
+  const oneBoard = await (await fetch(`${base}/api/scores/bucketdrop?board=small-wild&limit=100`)).json();
+  ok('a score sent for an old Cups and Speed board lands on the one board', oldBoard.status === 201 &&
+    oneBoard.some(r => r.initials === 'OLD' && r.board === 'big-fast') &&
+    (await (await fetch(`${base}/api/scores/bucketdrop?board=big-fast&limit=100`)).json()).some(r => r.initials === 'OLD'));
+  const odd = await post('bucketdrop', { initials: 'ODD', score: 110, board: 'constructor', detail: 'made-up board' });
+  ok('…and so does one sent for a made-up board', odd.status === 201 &&
+    (await (await fetch(`${base}/api/scores/bucketdrop?board=big-fast&limit=100`)).json()).some(r => r.initials === 'ODD' && r.board === 'big-fast'));
   ok('a game with no jackpot says so', (await fetch(`${base}/api/cab-jackpot/bigswing`)).status === 404);
 
   console.log('\n-- cabinet games: the Racer\'s times (fastest first) --');

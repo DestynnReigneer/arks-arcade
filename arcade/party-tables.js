@@ -50,7 +50,7 @@ function makeTables({ game = 'party', title = 'the game', engine, act, levels, m
   // These rooms live only in memory, so chat and invites left from before a restart go.
   chat.clearAll();
   invites.clearGame(game);
-  const levelOf = id => (levels[id] ? id : Object.keys(levels)[0]);
+  const levelOf = id => (typeof id === 'string' && Object.hasOwn(levels, id) ? id : Object.keys(levels)[0]);
   const isAdult = level => !!levels[levelOf(level)].adult;
 
   function makeCode() {
