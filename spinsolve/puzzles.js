@@ -5,6 +5,8 @@
 // (on the server only, so the page can't read the answers); the adult banks
 // live only here and are served behind an ARKS ID adult pass.
 
+const fs = require('fs');
+const path = require('path');
 const dictionary = require('../rambler/dictionary');
 const KIDS = require('./kids-puzzles');
 
@@ -77,7 +79,34 @@ const ADULT = {
   })
 };
 
-const BUILTIN = { kids: KIDS, ...ADULT };
+// Most of the built-in puzzles are plain text, so they're easy to read and add
+// to: every .txt file in bank/<level>/ holds one answer to a line, under
+// "# Category" headings. They join the lists above, and an answer that's
+// already there is skipped. (test/unit.test.js checks that every one of them
+// fits the board.)
+function fromBank(level) {
+  const dir = path.join(__dirname, 'bank', level);
+  let files = [];
+  try { files = fs.readdirSync(dir).filter(f => f.endsWith('.txt')).sort(); } catch { return []; }
+  const out = [];
+  for (const file of files) {
+    let category = 'Phrase';
+    for (const line of fs.readFileSync(path.join(dir, file), 'utf8').split(/\r?\n/)) {
+      const text = line.trim();
+      if (!text) continue;
+      if (text.startsWith('#')) { category = text.slice(1).trim().slice(0, 24) || 'Phrase'; continue; }
+      out.push({ category, answer: text.toUpperCase() });
+    }
+  }
+  return out;
+}
+function withBank(level, list) {
+  const seen = new Set(list.map(p => p.answer));
+  const more = fromBank(level).filter(p => !seen.has(p.answer) && !!seen.add(p.answer));
+  return [...list, ...more];
+}
+
+const BUILTIN = Object.fromEntries(Object.entries({ kids: KIDS, ...ADULT }).map(([level, list]) => [level, withBank(level, list)]));
 
 // ---- checking puzzles ----------------------------------------------------------
 
