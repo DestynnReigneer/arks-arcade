@@ -274,7 +274,8 @@ async function run() {
   ok('every game uses the one list of puzzles it was handed, not a copy', [...spinGame.games.values()].every(g => g.pool === fewPuzzles));
   spinGame.games.clear();
   ok('a level is only ever one of the real ones', spinBanks.levelOf('constructor') === 'kids' && spinBanks.levelOf('__proto__') === 'kids' &&
-    spinBanks.levelOf('spicy') === 'spicy' && spinBanks.levelOf(undefined) === 'kids');
+    spinBanks.levelOf('spicy') === 'spicy' && spinBanks.levelOf(undefined) === 'kids' &&
+    spinBanks.levelOf({ toString: 1 }) === 'kids' && spinBanks.levelOf(['spicy']) === 'kids');
 
   console.log('\n-- know-it-all --');
   const tbank = require(path.join(ROOT, 'trivia/bank.js'));

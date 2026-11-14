@@ -73,6 +73,10 @@ function startFakeArksId({ secret, arcadeBase, port = 0 }) {
     adminReply(id, text) { fake.notes.find(n => n.id === id).replies.push({ id: 99, fromAdmin: true, name: 'Sam', body: text, at: Date.now() }); },
     setStage(id, stage) { fake.notes.find(n => n.id === id).stage = stage; } };
   const codes = new Map(), deviceCodes = new Map();
+  // The real ARKS ID gives one browser the same session each time it signs in
+  // (until that session ends), so the pretend one does too: a cookie on its own
+  // /signin says which browser this is.
+  const browserOfCode = new Map(), sessionOfBrowser = new Map();
   const tvAdult = sessionId => { const a = fake.adult.get(sessionId); return a && a.until > Date.now() ? a : null; };
   const code = () => crypto.randomBytes(24).toString('base64url');
   const json = (res, status, body) => { res.writeHead(status, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(body)); };
@@ -103,10 +107,15 @@ function startFakeArksId({ secret, arcadeBase, port = 0 }) {
       const who = u.pathname === '/signin' && q.get('silent') !== '1' && fake.once ? fake.once : fake.next;
       if (who === fake.once) fake.once = null;
       if (u.pathname === '/signin') codes.set(c, who); else deviceCodes.set(c, fake.deviceOwner);
+      let browser = (/(?:^|;\s*)fake_browser=([0-9a-f]{16})/.exec(req.headers.cookie || '') || [])[1];
+      const fresh = !browser;
+      if (fresh) browser = crypto.randomBytes(8).toString('hex');
+      if (u.pathname === '/signin') browserOfCode.set(c, browser);
       const to = new URL('/auth/callback', arcadeBase);
       to.searchParams.set(u.pathname === '/signin' ? 'code' : 'device', c);
       to.searchParams.set('return', q.get('return') || '/');
       if (q.get('state')) to.searchParams.set('state', q.get('state'));
+      if (fresh) res.setHeader('Set-Cookie', `fake_browser=${browser}; Path=/; HttpOnly`);
       return back(res, to.href);
     }
     if (req.method === 'GET' && pictures[u.pathname]) {
@@ -136,7 +145,12 @@ function startFakeArksId({ secret, arcadeBase, port = 0 }) {
       const key = codes.get(b.code);
       codes.delete(b.code);
       if (!key) return json(res, 400, { error: 'bad code' });
-      const sessionId = 's_' + crypto.randomBytes(12).toString('hex');
+      // The same browser signing the same person in again gets the session it already has.
+      const browser = browserOfCode.get(b.code);
+      browserOfCode.delete(b.code);
+      const known = browser ? sessionOfBrowser.get(`${browser} ${key}`) : null;
+      const sessionId = known && (fake.sessions.get(known) || {}).valid ? known : 's_' + crypto.randomBytes(12).toString('hex');
+      if (browser) sessionOfBrowser.set(`${browser} ${key}`, sessionId);
       // Signing a TV in again ends its old sign-in (and any adults' night).
       if (users[key].kind === 'tv') for (const [id, s] of fake.sessions) if (s.key === key) { s.valid = false; fake.adult.delete(id); }
       fake.sessions.set(sessionId, { key, valid: true });
