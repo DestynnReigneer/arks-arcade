@@ -163,7 +163,7 @@ const mayJoin = (r, profile) => r.settings.who !== 'selected' ||
 
 function room(code) {
   const r = rooms.get(String(code || '').toUpperCase());
-  if (!r) throw fail('No chess game with that code.', 404);
+  if (!r) throw fail('That game isn\'t open anymore.', 404);
   return r;
 }
 
@@ -252,12 +252,12 @@ function invite(code, playerId, token, to) {
   const r = room(code);
   const h = host(r, playerId, token);
   if (r.phase !== 'lobby') throw fail('The game has already started.', 409);
-  if (!h.profileId) throw fail('Pick your profile first, so the people you invite know who it\'s from.', 401);
+  if (!h.profileId) throw fail('Choose your profile first, so the people you select know who it\'s from.', 401);
   const seated = new Set(r.players.map(p => p.profileId).filter(Boolean));
   const sent = invites.send({
     game: 'chess', room: r.code, from: { id: h.profileId, name: h.name }, to: (Array.isArray(to) ? to : []).filter(id => !seated.has(String(id))),
     title: 'Chess', href: `chess.html?room=${r.code}`,
-    notify: { title: 'Chess', body: `${h.name} invited you to Chess. Get in here!` }
+    notify: { title: 'Chess', body: `${h.name} started a Chess lobby with you. Get in here!` }
   });
   // In a lobby for picked people only, someone invited later is let in too.
   if (r.settings.who === 'selected') {

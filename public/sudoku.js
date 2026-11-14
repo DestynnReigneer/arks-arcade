@@ -605,7 +605,7 @@
     },
     {
       emoji: '⏱️', title: 'The clock and the boards',
-      html: `<p>The clock starts when you tap <b>Start</b> and the arcade keeps the time, not your phone. <b>Pause</b> (or leaving the page) stops it and hides the board until you come back.</p>
+      html: `<p>The clock starts when you tap <b>Start</b> and the arcade keeps the time, not your device. <b>Pause</b> (or leaving the page) stops it and hides the board until you come back.</p>
         <p>Finish the puzzle to put your time on the 🏆 board for today, and the all-time board for that level. Only your <b>first finish of the day</b> counts, because a second go at the same puzzle would be easy. If you're playing as a profile, the puzzle follows you: open it on another device and your clock, your numbers and your pencil marks carry on from where you left them.</p>`
     },
     {

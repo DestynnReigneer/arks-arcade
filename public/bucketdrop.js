@@ -37,7 +37,7 @@
       emoji: '🪣', title: 'Drop the balls in the cups',
       html: `<p>Five clear cups ride around on a spinning turntable. Every <b>tap</b> drops one ball from the clear tube above them, and you want each one to land in a cup. You have <b>50 balls</b> and <b>30 seconds</b>, and the clock starts on your first tap. The turntable speeds up as the time runs down.</p>
         <table>
-          <tr><td>📱 Phone</td><td>Tap the game or the big Drop button.</td></tr>
+          <tr><td>📱 Touch screen</td><td>Tap the game or the big Drop button.</td></tr>
           <tr><td>⌨️ Keyboard</td><td><b>Space</b> drops a ball. <b>P</b> pauses.</td></tr>
           <tr><td>🎮 Controller</td><td><b>A</b>, <b>X</b>, <b>R1</b> or the right trigger. <b>Start</b> pauses.</td></tr>
         </table>`

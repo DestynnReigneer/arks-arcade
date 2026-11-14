@@ -47,8 +47,8 @@
       <button data-mode="local" aria-pressed="true" class="no-tv">📱 Multiplayer-Single device</button>
       <button data-mode="host" aria-pressed="false" class="no-tv">📱📱 Create a game lobby</button>
       <button data-mode="join" aria-pressed="false" class="no-tv">🔎 List Hosted Games</button>
-      <button data-mode="tvphones" aria-pressed="false" class="tv-only">📱 Everyone on their own phone</button>
-      <button data-mode="tvpass" aria-pressed="false" class="tv-only">🔁 Pass one phone around</button>
+      <button data-mode="tvphones" aria-pressed="false" class="tv-only">📱 Everyone on their own device</button>
+      <button data-mode="tvpass" aria-pressed="false" class="tv-only">🔁 Pass one device around</button>
     </div>
     <div id="tvphonesSetup" class="hidden">
       <p class="hint">The TV shows the table: the card on top of the pile, how many cards everyone has, and whose turn it is. Everyone scans the code on the TV with their own phone and plays their hand there, where nobody else can see it.</p>
@@ -57,19 +57,16 @@
       <p class="hint">The TV shows the table, and one phone holds everyone's hands. Scan the code on the TV with that phone, add everyone's names on it, and hand it to whoever's turn it is. The phone hides the cards between turns.</p>
     </div>
     <div id="localSetup">
-      <p class="hint">Pass the phone around. The screen hides your hand between turns.</p>
+      <p class="hint">Pass the device around. The screen hides your hand between turns.</p>
       <div id="nameList"></div>
       <button class="ghost" id="addPlayerBtn">+ Add player</button>
     </div>
     <div id="hostSetup" class="hidden">
-      <p class="hint">Everyone plays on their own phone. You'll get a code to share.</p>
+      <p class="hint">Everyone plays on their own device. Your lobby will show in List Hosted Games and on the Arcade's home page once created.</p>
       <label>Your name<input id="hostName" maxlength="16" placeholder="e.g. Sam"></label>
     </div>
-    <div id="joinSetup" class="hidden">
-      <p class="hint">Get the 4-letter code from whoever is hosting.</p>
-      <label>Game code<input id="joinCode" maxlength="4" placeholder="ABCD" autocapitalize="characters" class="code-input"></label>
-      <label>Your name<input id="joinName" maxlength="16" placeholder="e.g. Alex"></label>
-    </div>
+    <!-- List Hosted Games: party-lobby.js fills this with the lobbies you can join. -->
+    <div id="joinSetup" class="hidden"></div>
     <div class="msg" id="setupMsg"></div>
     <button class="primary big" id="goBtn">Deal 'em</button>
   </div>
@@ -90,8 +87,8 @@
     <h2>Players <span id="lobbyCount"></span></h2>
     <ul class="people" id="lobbyPlayers"></ul>
     <div id="seatBox" class="hidden">
-      <p class="hint">Passing this phone around? Add everyone who'll share it, and it shows each person their own cards on their turn.</p>
-      <label>Another player on this phone<input id="seatName" maxlength="16" placeholder="e.g. Jordan"></label>
+      <p class="hint">Passing this device around? Add everyone who'll share it, and it shows each person their own cards on their turn.</p>
+      <label>Another player on this device<input id="seatName" maxlength="16" placeholder="e.g. Jordan"></label>
       <button class="ghost" id="seatAdd" style="width:100%;margin-bottom:10px">+ Add player</button>
     </div>
     <div id="hostControls" class="hidden">
@@ -145,7 +142,7 @@
 <div class="overlay hidden" id="passCover">
   <div class="card-panel center">
     <div class="big-emoji">📱</div>
-    <h2 id="passTitle">Pass the phone</h2>
+    <h2 id="passTitle">Pass the device</h2>
     <p class="hint">No peeking, everyone else.</p>
     <div id="passCatch" class="hidden">
       <p class="catch-note" id="passCatchText"></p>

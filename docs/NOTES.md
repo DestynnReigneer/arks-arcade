@@ -14,6 +14,25 @@ order they were clicked, and keep the rest pinned here.
   is "🔔 Notifications" with nothing under it while it's off, "You're all set..." once it's on, and "One more step
   in Chrome" the first time. The old per-game card in `push-optin.js` is gone; that file now only answers where
   this device stands and turns notifications on and off for the switch.
+- **#145: the maintainer's wording for the lobbies, and three sweeps of everything people read.**
+  - The maintainer's lines: "There aren't any Dare Devil lobbies right now. Create one!" (every game with a lobby),
+    "Choose your profile, or type your name to join as a guest.", "This game already started, you can join when a
+    new lobby opens or you can create your own.", "The host removed you from the lobby.", "Only the player account
+    that played this game can save this score." and the train car picture messages.
+  - **No "invite" on any screen.** The arcade has no inviting: people create a lobby or join one. The home page's
+    row is **📨 LOBBIES FOR YOU**, a selected person's empty seat says SELECTED, and the notification reads
+    "Kim started a Chess lobby with you. Get in here!". Names in the code stay (`arcade/invites.js`,
+    `/api/invites`, the `arcade_invites` table, the `invite` kind sent to ARKS ID, Words with Family's `invite`
+    field and `/invite/:code` routes).
+  - **"Device", not "phone",** wherever a line isn't about something only a phone does. "Phone" stays for scanning
+    a QR code (the TV's join screens, Phone QR), Android's Chrome settings and an iPhone's Home Screen. The
+    controls tables say **Touch screen**, and Rambler's Own Phones is **Own Devices**.
+  - **No leftover codes** in the games that have the lobby: the card games' host button said "Get a game code"
+    (now "Create lobby") and their pages still carried the old code box; "No game with that code." became "That
+    game isn't open anymore."; the home page's help and Know-It-All's How to play name the lobby instead of Host
+    and Join. Rambler and Shuffle Scuffle keep their room codes until they get the lobby.
+  - **For new text:** no "invite", no code to type outside the TV's QR screen, and "device" unless it's about a
+    phone.
 
 ## The session before (2026-11-13, afternoon)
 

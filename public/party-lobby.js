@@ -39,7 +39,7 @@ window.PartyLobby = (() => {
     const chosen = new Set();
     let people = null;
     const hostSetup = $('hostSetup');
-    hostSetup.querySelector('.hint').textContent = 'Everyone plays on their own phone. Your lobby shows up in List Hosted Games and on the arcade\'s home page.';
+    hostSetup.querySelector('.hint').textContent = 'Everyone plays on their own device. Your lobby will show in List Hosted Games and on the Arcade\'s home page once created.';
     const nameRow = $('hostName').closest('label');
     const whoLabel = make('div', 'lb-section-label', 'Who can join');
     const whoSeg = make('div', 'seg');
@@ -61,7 +61,7 @@ window.PartyLobby = (() => {
 
     // ---- List Hosted Games ----
     const joinSetup = $('joinSetup');
-    joinSetup.innerHTML = `<h2>Available ${title} lobbies</h2><ul class="lb-rows"></ul><p class="hint hidden">Nobody has a ${title} lobby open right now. Create one and invite someone.</p>`;
+    joinSetup.innerHTML = `<h2>Available ${title} lobbies</h2><ul class="lb-rows"></ul><p class="hint hidden">There aren't any ${title} lobbies right now. Create one!</p>`;
     const rows = joinSetup.querySelector('.lb-rows');
     const empty = joinSetup.querySelector('p');
     let timer = null;
@@ -77,7 +77,7 @@ window.PartyLobby = (() => {
         if (l.status !== 'open') b.setAttribute('aria-disabled', 'true');
         const main = make('span', 'lb-row-main');
         main.append(make('b', '', `${l.adult ? '🔞 ' : ''}${l.host}'s lobby`),
-          make('small', '', l.status === 'playing' ? 'Game started · join when it ends' : 'Multiplayer-Multiple devices'));
+          make('small', '', l.status === 'playing' ? 'Game started' : 'Multiplayer-Multiple devices'));
         b.append(main, make('span', 'lb-count', `${l.count}/${l.max}`));
         if (l.status === 'full') b.append(make('span', 'lb-full', 'FULL'));
         b.addEventListener('click', () => details(l));
@@ -101,7 +101,7 @@ window.PartyLobby = (() => {
       <div><small>PLAYERS</small><span data-players></span></div>
       <div><small>HOW</small><span data-how></span></div>
       <div><small>STATUS</small><span data-status></span></div></div>
-      <div data-guest class="hidden"><p class="hint">Pick your profile to enter, or type your name to join as a guest.</p>
+      <div data-guest class="hidden"><p class="hint">Choose your profile, or type your name to join as a guest.</p>
       <label>Your name<input data-name maxlength="16" placeholder="e.g. Alex"></label></div>
       <div class="msg" data-msg></div>
       <div class="stack"><button class="primary" data-join>Join lobby</button><button class="ghost" data-close>Not now</button></div></div>`;
@@ -112,8 +112,8 @@ window.PartyLobby = (() => {
       current = l;
       q('h2').textContent = `${l.host}'s ${title} lobby`;
       q('[data-players]').textContent = `${l.players.join(', ')} · ${l.count} of ${l.max}`;
-      q('[data-how]').textContent = l.screen ? 'The table is on the TV, and your cards stay on your phone.' : 'Each player on their own phone; your cards stay on yours.';
-      q('[data-status]').textContent = l.status === 'full' ? 'Full' : l.status === 'playing' ? 'Playing now. You can join when this game ends.' : 'Waiting for players';
+      q('[data-how]').textContent = l.screen ? 'The table is on the TV, and your cards stay on your device.' : 'Each player on their own device; your cards stay on yours.';
+      q('[data-status]').textContent = l.status === 'full' ? 'Full' : l.status === 'playing' ? 'This game already started, you can join when a new lobby opens or you can create your own.' : 'Waiting for players';
       q('[data-join]').disabled = l.status !== 'open';
       q('[data-guest]').classList.toggle('hidden', !!token());
       q('[data-msg]').textContent = '';

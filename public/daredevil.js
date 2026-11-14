@@ -98,11 +98,11 @@
     // The remote plays for everyone on the TV: the same list of names as sharing a phone.
     const panel = mode === 'tvremote' ? 'local' : mode;
     for (const m of ['local', 'host', 'join', 'tvphones', 'tvpass']) $(`${m}Setup`).classList.toggle('hidden', m !== panel);
-    $('goBtn').textContent = mode === 'host' ? 'Get a game code' : mode === 'join' ? 'Join the game'
+    $('goBtn').textContent = mode === 'host' ? 'Create lobby' : mode === 'join' ? 'Join the game'
       : mode === 'tvphones' || mode === 'tvpass' ? 'Show the code on the TV' : 'I dare you';
     $('localHint').textContent = mode === 'tvremote'
       ? 'Take turns with the remote: the TV shows each card big, and whoever\'s turn it is presses OK to draw and says whether they did it. Add everyone\'s names (or leave them as they are).'
-      : 'Put the phone in the middle, or pass it around.';
+      : 'Put the device in the middle, or pass it around.';
     $('levelList').closest('.panel').classList.toggle('hidden', mode === 'join');
     lobby().mode(mode);
   }
@@ -176,7 +176,7 @@
     const { code, playerId, token } = S.table;
     S.es = new EventSource(`${API}/rooms/${code}/events?playerId=${encodeURIComponent(playerId)}&token=${encodeURIComponent(token)}`);
     S.es.addEventListener('state', e => applySnap(JSON.parse(e.data)));
-    S.es.addEventListener('removed', () => { closeRoom(); show('setup'); toast('The host took you out of the game.'); });
+    S.es.addEventListener('removed', () => { closeRoom(); show('setup'); toast('The host removed you from the lobby.'); });
     S.es.onerror = () => {
       fetch(`${API}/rooms/${code}?playerId=${encodeURIComponent(playerId)}&token=${encodeURIComponent(token)}`)
         .then(r => { if (r.status === 404 || r.status === 403) { closeRoom(); show('setup'); toast('That game has ended.'); } }).catch(() => {});
@@ -237,7 +237,7 @@
       const tag = text => { const t = document.createElement('span'); t.className = 'tag'; t.textContent = text; li.appendChild(t); };
       if (p.id === snap.you) tag('you');
       if (p.host) tag('host');
-      if (p.on) tag(`on ${p.on}'s phone`);
+      if (p.on) tag(`on ${p.on}'s device`);
       // Players this phone added can be taken off again before the start.
       if ((snap.mine || []).includes(p.id) && p.id !== snap.you) {
         const x = document.createElement('button');
@@ -316,7 +316,7 @@
       $('dcBtns').classList.toggle('hidden', !myTurn);
       $('doneBtn').textContent = `✅ Did it! +${card.points}`;
       $('chickenBtn').textContent = g.drinking ? '🐔 Chicken out (drink 3)' : '🐔 Chicken out (−1)';
-      $('dcWait').textContent = myTurn ? '' : S.snap.isScreen ? `${nameOf(g.turn)} says whether they did it, on their phone.` : `Waiting for ${nameOf(g.turn)}…`;
+      $('dcWait').textContent = myTurn ? '' : S.snap.isScreen ? `${nameOf(g.turn)} says whether they did it, on their device.` : `Waiting for ${nameOf(g.turn)}…`;
     }
 
     timeCard(card, g, myTurn);

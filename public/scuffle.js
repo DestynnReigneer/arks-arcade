@@ -84,7 +84,7 @@
   const HINTS = {
     daily: 'Today\'s letters are the same for everyone: four rounds of 75 seconds. Your first go of the day can go on the 🏆 board.',
     free: 'New letters every time, as many games as you like. Free play scores don\'t go on the board.',
-    host: 'Everyone plays on their own phone at the same time. You\'ll get a four-letter code for the others to type in.',
+    host: 'Everyone plays on their own device at the same time. You\'ll get a four-letter code for the others to type in.',
     join: 'Type the four-letter code from whoever is hosting. If a game is already going, you can jump in on the next word.',
     tvphones: 'The TV shows the letters, the clock and how many words everyone has found. Everyone scans the code on the TV with their own phone and races on the same letters at the same time.'
   };
@@ -559,7 +559,7 @@
     const gotFull = S.found.some(f => f.word.length === S.letters.length);
     const count = S.room ? S.snap.round.wordCount : S.solo.round.wordCount;
     $('goal').innerHTML = onScreen()
-      ? `There are <b>${count}</b> words of 3 or more letters hiding in here, and the full word uses all <b>${S.letters.length}</b> letters. Find them on your phones!`
+      ? `There are <b>${count}</b> words of 3 or more letters hiding in here, and the full word uses all <b>${S.letters.length}</b> letters. Find them on your own devices!`
       : `There are <b>${count}</b> words of 3 or more letters hiding in here. You've found <b>${S.found.length}</b>. ` +
       (gotFull ? '<span class="got">★ You found the full word!</span>' : `The full word uses all <b>${S.letters.length}</b> letters.`);
     if (S.room) {
@@ -770,7 +770,7 @@
           <tr><td>7 letters</td><td>90 points</td></tr>
           <tr><td>★ The full word</td><td>100 extra points</td></tr>
         </table>
-        <p>In a room, whoever finds the full word <b>first</b> gets another 50 on top. The arcade checks every word and keeps the score, so nobody's phone can fudge it.</p>`
+        <p>In a room, whoever finds the full word <b>first</b> gets another 50 on top. The arcade checks every word and keeps the score, so nobody's device can fudge it.</p>`
     },
     {
       emoji: '⏱️', title: 'Rounds and the clock',
@@ -786,7 +786,7 @@
     },
     {
       emoji: '📡', title: 'Playing together',
-      html: `<p><b>Host</b> a game to get a four-letter code, and everyone else taps <b>Join</b> on their own phone and types it in (or scans the QR code). The host picks the rounds, the time and which words count, and everyone races on the same letters at the same time.</p>
+      html: `<p><b>Host</b> a game to get a four-letter code, and everyone else taps <b>Join</b> on their own device and types it in (or scans the QR code). The host picks the rounds, the time and which words count, and everyone races on the same letters at the same time.</p>
         <p>You'll see how many words each player has found and a ★ when someone gets the full word, but not their words until the round is over.</p>`
     },
     {

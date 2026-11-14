@@ -394,7 +394,7 @@
     {
       emoji: '👆', title: 'Moving',
       html: `<table>
-          <tr><td>📱 Phone</td><td>Slide your finger anywhere on the game. Tap to launch the ball.</td></tr>
+          <tr><td>📱 Touch screen</td><td>Slide your finger anywhere on the game. Tap to launch the ball.</td></tr>
           <tr><td>🖱️ Computer</td><td>Move the mouse, click to launch. Or <b>← →</b> and <b>Space</b>.</td></tr>
         </table>
         <div class="tut-tip">Where the ball hits the paddle matters: the ends send it off at a steep angle.</div>`

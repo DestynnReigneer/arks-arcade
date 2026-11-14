@@ -360,7 +360,7 @@
     {
       emoji: '🕹️', title: 'Steering',
       html: `<table>
-          <tr><td>📱 Phone</td><td>Swipe on the board, or use the arrow buttons under it.</td></tr>
+          <tr><td>📱 Touch screen</td><td>Swipe on the board, or use the arrow buttons under it.</td></tr>
           <tr><td>⌨️ Keyboard</td><td><b>Arrow keys</b> or <b>WASD</b>. <b>P</b> pauses.</td></tr>
         </table>
         <div class="tut-tip">Quick double turns work: tap ▼ then ◀ fast to U-turn.</div>`

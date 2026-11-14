@@ -449,7 +449,7 @@ function showGate() {
   $('gateName').textContent = player.name;
   $('gateNote').textContent = S.turnIndex === 0
     ? "Everyone gets the same board. Don't peek before your turn."
-    : `Same board as before. ${S.duration / 60 >= 1 ? '' : ''}Hand the phone over.`;
+    : `Same board as before. ${S.duration / 60 >= 1 ? '' : ''}Hand the device over.`;
   screen('gate');
 }
 

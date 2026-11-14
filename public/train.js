@@ -53,7 +53,7 @@
       emoji: '🚂', title: 'Drop the ball into the train',
       html: `<p>A train of eight cars circles the track. Each <b>tap</b> lets a ball go down the spiral and along the ramp, and it drops off the end onto the track. Time it so it lands in a car. The ball takes a few seconds to get there, so you're aiming for the car that's coming, not the one under the ramp.</p>
         <table>
-          <tr><td>📱 Phone</td><td>Tap the game or the big button.</td></tr>
+          <tr><td>📱 Touch screen</td><td>Tap the game or the big button.</td></tr>
           <tr><td>⌨️ Keyboard</td><td><b>Space</b> drops a ball. <b>P</b> pauses.</td></tr>
           <tr><td>🎮 Controller</td><td><b>A</b>, <b>X</b>, <b>R1</b> or the right trigger. <b>Start</b> pauses.</td></tr>
         </table>`

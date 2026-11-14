@@ -133,7 +133,7 @@ function nextRound(r) {
 function word(code, playerId, token, raw) {
   const r = room(code);
   const p = authenticate(r, playerId, token);
-  if (p.screen) throw fail('The TV shows the game; words come from the phones.', 403);
+  if (p.screen) throw fail('The TV shows the game; words come from everyone\'s own devices.', 403);
   if (r.phase !== 'playing' || Date.now() > r.endsAt + GRACE_MS) throw fail('Time\'s up for this round.', 409);
   if (p.found.size >= MAX_WORDS) throw fail('That\'s every word this round can hold.', 409);
   const def = r.rounds[r.index];

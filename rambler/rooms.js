@@ -283,7 +283,7 @@ function startRound(code, id, suppliedToken) {
 function submitWords(code, id, suppliedToken, words) {
   const room = requireRoom(code);
   const player = authenticate(room, id, suppliedToken);
-  if (player.screen) throw fail('The TV shows the board; words come from the phones.', 403);
+  if (player.screen) throw fail('The TV shows the board; words come from everyone\'s own devices.', 403);
   if (room.state !== 'playing') throw fail('No round in progress.', 409);
   if (Date.now() > room.endsAt + GRACE_MS) throw fail('Time is up.', 409);
 

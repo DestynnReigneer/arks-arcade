@@ -84,7 +84,7 @@
   <div class="panel">
     <h2>Set Chess Settings</h2>
     <div class="lb-section-label">How Multiplayer works</div>
-    <p class="hint">Each player uses their own phone. You'll get a notification when it's your move (if notifications are turned on), so a game can take days.</p>
+    <p class="hint">Each player uses their own device. You'll get a notification when it's your move (if notifications are turned on), so a game can take days.</p>
     <label id="hostNameRow">Your name<input id="hostName" maxlength="16" placeholder="e.g. Sam"></label>
 
     <div class="lb-section-label">Who can join</div>
@@ -114,7 +114,7 @@
   <div class="panel">
     <h2>Available Chess lobbies</h2>
     <ul class="lb-rows" id="lobbyRows"></ul>
-    <p class="hint hidden" id="findEmpty">Nobody has a Chess lobby open right now. Create one and invite someone.</p>
+    <p class="hint hidden" id="findEmpty">There aren't any Chess lobbies right now. Create one!</p>
     <button class="ghost big" id="findBack">Back</button>
   </div>
 </section>
@@ -187,12 +187,12 @@
     <h2 id="detailsTitle">Dest's Chess lobby</h2>
     <div class="lb-facts">
       <div><small>PLAYERS</small><span id="dPlayers"></span></div>
-      <div><small>HOW</small><span>Each player on their own phone. You'll get a notification when it's your move.</span></div>
+      <div><small>HOW</small><span>Each player on their own device. You'll get a notification when it's your move.</span></div>
       <div><small>YOU PLAY</small><span id="dYou"></span></div>
       <div><small>STATUS</small><span id="dStatus"></span></div>
     </div>
     <div id="dGuest" class="hidden">
-      <p class="hint">Pick your profile to enter, or type your name to join as a guest.</p>
+      <p class="hint">Choose your profile, or type your name to join as a guest.</p>
       <label>Your name<input id="joinName" maxlength="16" placeholder="e.g. Alex"></label>
     </div>
     <div class="msg" id="detailsMsg"></div>

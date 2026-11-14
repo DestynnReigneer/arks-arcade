@@ -47,17 +47,17 @@
     <button class="primary big" id="newOnlineBtn">📱 New game with the family</button>
   </div>
   <div class="panel no-tv" id="noProfile">
-    <h2>Playing on everyone's own phone</h2>
-    <p class="hint">A game can last a few days, with each person taking their turn whenever they're free, so the arcade needs to know who you are. Pick your profile to start one or to see the games you've been invited to.</p>
+    <h2>Playing on everyone's own device</h2>
+    <p class="hint">A game can last a few days, with each person taking their turn whenever they're free, so the arcade needs to know who you are. Pick your profile to start one or to see the games you're in.</p>
     <button class="primary big" id="pickProfileBtn">Pick my profile</button>
   </div>
   <div class="panel">
-    <h2 class="no-tv">On this phone</h2>
-    <p class="hint no-tv">Pass one phone around the table, or play against the computer. Guests are welcome.</p>
+    <h2 class="no-tv">On this device</h2>
+    <p class="hint no-tv">Pass one device around the table, or play against the computer. Guests are welcome.</p>
     <h2 class="tv-only">On the TV</h2>
-    <p class="hint tv-only">Play against the computer with the remote, or pass the remote between players. The tiles show on the TV, so everyone in the room can see them. For secret tiles, start a game with the family on your own phones.</p>
+    <p class="hint tv-only">Play against the computer with the remote, or pass the remote between players. The tiles show on the TV, so everyone in the room can see them. For secret tiles, start a game with the family on your own devices.</p>
     <ul class="cc-list" id="localList"></ul>
-    <button class="ghost big" id="newLocalBtn" data-tv-start>🤝 <span class="no-tv">Play on this phone</span><span class="tv-only">Play on the TV</span></button>
+    <button class="ghost big" id="newLocalBtn" data-tv-start>🤝 <span class="no-tv">Play on this device</span><span class="tv-only">Play on the TV</span></button>
   </div>
 </section>
 
@@ -87,7 +87,7 @@
 <section id="newLocal" class="hidden">
   <div class="panel">
     <h2>Who's playing?</h2>
-    <p class="hint">Two to four players take turns on this phone. Between turns the tiles are hidden, so you can pass it along without peeking.</p>
+    <p class="hint">Two to four players take turns on this device. Between turns the tiles are hidden, so you can pass it along without peeking.</p>
     <div id="localPlayers"></div>
     <div class="row-btns">
       <button class="ghost" id="addPerson">➕ Add a person</button>
@@ -126,7 +126,7 @@
 <section id="invite" class="hidden">
   <div class="panel center">
     <img class="cc-logo" src="words-with-family-logo.svg" alt="" width="203" height="107">
-    <h2 id="inviteTitle">You're invited</h2>
+    <h2 id="inviteTitle">Join the game</h2>
     <p class="hint" id="inviteText"></p>
     <div class="msg" id="inviteMsg"></div>
     <button class="primary big" id="inviteJoin">Join the game</button>
@@ -184,7 +184,7 @@
 <div class="overlay hidden" id="handoff">
   <div class="card-panel center">
     <div class="big-emoji">📲</div>
-    <h2 id="handoffTitle">Pass the phone</h2>
+    <h2 id="handoffTitle">Pass the device</h2>
     <p class="hint" id="handoffText"></p>
     <button class="primary big" id="handoffGo">Show my tiles</button>
   </div>
