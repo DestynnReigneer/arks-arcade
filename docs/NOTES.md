@@ -1,13 +1,21 @@
 # Status and to-dos
 
-Last updated 2026-11-13. Update this file whenever a piece of work lands or
+Last updated 2026-11-14. Update this file whenever a piece of work lands or
 a plan changes, so the next session can pick up from here. When the
 maintainer says "I'm back", start from "Last session" below, then show the
 to-do list as checkboxes (the rule is in the maintainer's global CLAUDE.md
 and `arks-internal/conventions/sessions.md`): do the checked items in the
 order they were clicked, and keep the rest pinned here.
 
-## Last session (2026-11-13, afternoon)
+## Last session (2026-11-14)
+
+**Finished** (merged and published)
+- **#140: one notifications switch for every game, in the profile card,** with the maintainer's wording: the title
+  is "🔔 Notifications" with nothing under it while it's off, "You're all set..." once it's on, and "One more step
+  in Chrome" the first time. The old per-game card in `push-optin.js` is gone; that file now only answers where
+  this device stands and turns notifications on and off for the switch.
+
+## The session before (2026-11-13, afternoon)
 
 **Finished** (merged and published)
 - **The lobby for Know-It-All (#135) and Uh-Oh: Part Deux and Dare Devil (#136):** Create a game lobby, List Hosted
@@ -22,9 +30,6 @@ order they were clicked, and keep the rest pinned here.
   characters sit under INSERT COIN on a phone and dance after 20 idle seconds. **#141:** Bucket Drop has a board
   per Cups and Speed pair (old scores moved by their detail). **#142:** pictures for the Train Station's cars (admin
   page, stored in settings). **#143:** built against ARKS ID contract v16 (see the ARKS ID section).
-
-**Open:** #140, the notifications switch in the profile card, is built and green but held for the maintainer's
-wording (the rollup page has every new line).
 
 **Waiting on the maintainer** (rollup: https://claude.ai/artifact/4X2aey17RQfyn9Dv5zkeo1): what Remove Player means
 (blocked until the lobby closes, recommended), whether Spin & Solve's public puzzles matter for the board, the
@@ -276,15 +281,15 @@ other apps can use the same thing. The README's Words with Family section has ho
 - **`arcade/push.js`** passes the phone's subscription to ARKS ID with the person's session, and asks it to send to
   the ARKS ID account linked to a profile. Sending happens in the background, never throws, and a profile without an
   ARKS ID account is skipped. `games.setNotifier()` is only wired up with ARKS ID on.
-- **The browser:** `public/push-optin.js` (the card, and `ArcadePush.clear(tag)`, which Words with Family calls when
-  a game opens) and `public/sw.js` (shows a notification; a tap opens or reuses a window on this arcade only). The
+- **The browser:** `public/push-optin.js` (its own card until #140 moved turning them on to the profile card's
+  switch, and `ArcadePush.clear(tag)`, which Words with Family calls when a game opens) and `public/sw.js` (shows a notification; a tap opens or reuses a window on this arcade only). The
   install manifest's `display` is now `standalone`, because an iPhone only gives a Home Screen app notifications when
   it opens full screen; added to a Home Screen, the arcade now opens without the browser's bar on every phone.
 - **Signing out stops them:** `/auth/signout` asks ARKS ID to drop this phone's subscriptions for that person
   (unsubscribe without an address) before the sign-in ends. ARKS ID also drops them on Sign out everywhere, a PIN
   reset, and when a device is signed out, moved or forgotten. Turning them on and off is limited to 30 times in 10
   minutes from one address, and ARKS ID limits each person too.
-- A private or incognito window can't get notifications at all (Chrome refuses), and the card says so in plain
+- A private or incognito window can't get notifications at all (Chrome refuses), and the switch says so in plain
   words.
 - **Tests:** the ARKS ID suite (`test/arksid.test.js`, against the pretend ARKS ID, which gained the push calls):
   turning them on and off, a signed-out phone refused, an invite and a turn telling the right person with the right

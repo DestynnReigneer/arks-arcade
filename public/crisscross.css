@@ -165,8 +165,6 @@ html.tv .cc-cell:focus { z-index: 3; }
 .cc-logo { display: block; width: min(220px, 62vw); height: auto; margin: 4px auto 14px; filter: drop-shadow(0 6px 14px rgba(0, 0, 0, .35)); }
 
 /* Notifications when it's your turn (push-optin.js) */
-.push-card button { margin-top: 4px; }
-.push-card .push-err:empty { display: none; }
 
 /* ---- No scrolling while you play (2026-11-12) -------------------------------------
    While a game is on screen, everything fits between the top bar and the bottom of
