@@ -478,6 +478,33 @@ async function run({ base, root, fake, admin: ADMIN }) {
     ok('a pass in the old shape, with no sign-in in it, opens nothing', (await checks(phonePass.split('.').filter((part, i) => i !== 3).join('.'))) === false);
     await kimCB.call('/auth/signout', { method: 'POST', follow: false });
     ok('…and once that one signs out too, nothing of Kim\'s opens an adult level', (await checks(phonePass)) === false);
+
+    // One browser signing in twice has one sign-in (ARKS ID hands it the same session),
+    // which the arcade holds two records of. Signing out ends both.
+    const twice = browser();
+    fake.next = 'kim';
+    await twice.call('/auth/signin?return=%2F');
+    await twice.call('/auth/signin?return=%2F');
+    const twicePass = (await twice.call('/api/arksid/adult-pass', { method: 'POST' })).data.pass;
+    ok('a browser that signed in twice gets a pass that works', (await checks(twicePass)) === true);
+    await twice.call('/auth/signout', { method: 'POST', follow: false });
+    ok('…and signing out ends it, though the arcade held two records of that sign-in', (await checks(twicePass)) === false);
+    ok('…for starting an adult game too', (await spin('/run/start', { body: { level: 'filthy', names: ['Kim'] }, key: twicePass })).status === 403);
+
+    // The arcade's own cookie runs out before ARKS ID's sign-in does; the page then signs
+    // in again by itself, which leaves the old record behind. Signing out ends that one too.
+    const longTime = browser();
+    await longTime.call('/auth/signin?return=%2F');
+    const arcadeHost = new URL(base).host;
+    ok('the arcade set its sign-in cookie', longTime.jar.delete(`${arcadeHost} arcade_me`));
+    ok('…and without it the browser counts as signed out', (await longTime.me()).signedIn === false);
+    await longTime.call('/auth/signin?silent=1&return=%2F');
+    ok('the page signs in again by itself', (await longTime.me()).signedIn === true);
+    const latePass = (await longTime.call('/api/arksid/adult-pass', { method: 'POST' })).data.pass;
+    ok('…and its pass works', (await checks(latePass)) === true);
+    await longTime.call('/auth/signout', { method: 'POST', follow: false });
+    ok('signing out ends the pass, with nothing left over from the first cookie', (await checks(latePass)) === false);
+    fake.next = 'milo';
   }
 
   console.log('\n-- the admin page: wrong recovery tries pause --');

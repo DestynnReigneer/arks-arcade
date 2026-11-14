@@ -92,13 +92,15 @@ const ArcadeProfile = (() => {
       fetch('/api/arksid/me?fresh=1', { cache: 'no-store' }).catch(() => null).then(() => location.reload());
     }, 500);
   }
-  // What unlocked the adult levels in this tab goes with the sign-in, so the
-  // next person to use it starts with them locked. (The server stops taking
-  // the pass too; this keeps the pages from showing them as open.)
+  // What unlocked the adult levels in this tab goes with the sign-in, and so
+  // does the seat this tab was holding in a game room, so the next person to
+  // use it starts with the levels locked and isn't put back in someone else's
+  // seat. (The server stops taking the pass too; this keeps the pages from
+  // showing the levels as open.)
   function forgetAdultUnlocks() {
     try {
       for (const key of Object.keys(sessionStorage)) {
-        if (/\.(adult|adultOk|adultPin|pin)$/.test(key)) sessionStorage.removeItem(key);
+        if (/\.(adult|adultOk|adultPin|pin|room)$/.test(key)) sessionStorage.removeItem(key);
       }
     } catch { /* storage is off */ }
   }

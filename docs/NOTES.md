@@ -57,6 +57,15 @@ order they were clicked, and keep the rest pinned here.
   anywhere the pass was copied to. Signing out also clears what unlocked them in that tab (`forgetAdultUnlocks` in
   `public/profile.js`). A second device signed in as the same adult keeps its own pass. Tests in
   `test/arksid.test.js` and `test/browser/adult-signout.spec.js`.
+  - One sign-in can have two records in `arcade_signins` (the 15-day cookie ran out and the page signed in
+    again by itself, or Sign in was followed twice), because the sign-in service hands a browser the same
+    session id each time. Signing out now ends every record of that sign-in (`endSession`), and so does hearing
+    from the service that it's over. A TV that's paired again drops its earlier record.
+  - `test/fake-arksid.js` now keeps one session id per browser, the way the real service does. Before, it made
+    a new one every time, which is why the tests couldn't see this.
+  - Signing out also forgets the seat the tab held in a game room (`*.room`).
+  - **Still open:** a sign-in ended on the service's side keeps its pass until that device next opens an arcade
+    page; and a tab holding a pass that has ended shows the adult levels as open until it's reloaded.
 
 **Next up** (the maintainer's order from 2026-11-14)
 1. Bucket Drop loses its Cups and Speed choice: Big cups and Fast are the game, and only that board shows. The
