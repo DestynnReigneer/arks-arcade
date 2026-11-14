@@ -182,7 +182,9 @@ function resetTestDb() {
     fake = await startFakeArksId({ secret, arcadeBase: ID_BASE });
     // FEEDBACK_PICTURES_MAX_BYTES: a tiny cap, to try what happens when the
     // feedback pictures folder is full (only read when NODE_ENV is test).
-    server2 = await startServer(ID_PORT, { ARKS_ID_URL: fake.base, ARKS_ID_SECRET: secret, RAMBLER_DB: 'test-arksid.db', FEEDBACK_PICTURES_MAX_BYTES: '1' });
+    // TEST_PASS_CHECK_MS: using an adult pass asks ARKS ID about its sign-in when nobody has
+    // for this long (three minutes outside the tests).
+    server2 = await startServer(ID_PORT, { ARKS_ID_URL: fake.base, ARKS_ID_SECRET: secret, RAMBLER_DB: 'test-arksid.db', FEEDBACK_PICTURES_MAX_BYTES: '1', TEST_PASS_CHECK_MS: '1000' });
     await waitForHealth(ID_BASE);
     console.log(`\n${'='.repeat(60)}\n  arksid\n${'='.repeat(60)}`);
     const result = await require('./arksid.test.js').run({ base: ID_BASE, root: ROOT, fake, admin: 'test-admin-token' });
