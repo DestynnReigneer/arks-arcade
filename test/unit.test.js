@@ -248,6 +248,22 @@ async function run() {
   const swears = /\b(FUCK\w*|SHIT\w*|ASSHOLE|BITCH\w*|COCK|PUSSY|BONER|PORN\w*|SEX|SEXY)\b/;
   const swearingForKids = spinBanks.BUILTIN.kids.filter(q => swears.test(q.answer)).map(q => q.answer);
   ok('…or any swearing', swearingForKids.length === 0, swearingForKids.slice(0, 8).join(', '));
+  // A line that can't go on the board is left out when the bank is read, not turned into a puzzle.
+  const parsed = spinBanks.parseBank(['# Thing', 'red balloon', 'ROUTE 66', 'SUPERCALIFRAGILISTIC', '', '# ', 'ICE CREAM', `${'A'.repeat(60)} ${'B'.repeat(60)}`, 'COLOUR WHEEL'].join('\n'));
+  ok('reading a bank keeps the lines that fit, in capitals, under their category',
+    parsed.puzzles.map(q => `${q.category}: ${q.answer}`).join(' | ') === 'Thing: RED BALLOON | Phrase: ICE CREAM', JSON.stringify(parsed.puzzles));
+  ok('…and counts the ones it left out (a number, a word too long, a British spelling)', parsed.skipped === 4, String(parsed.skipped));
+  const bankDir = path.join(ROOT, 'spinsolve/bank');
+  const nodeFs = require('node:fs');
+  const unfit = nodeFs.readdirSync(bankDir).flatMap(level => nodeFs.readdirSync(path.join(bankDir, level)).filter(f => f.endsWith('.txt')).flatMap(f => {
+    let category = 'Phrase';
+    return nodeFs.readFileSync(path.join(bankDir, level, f), 'utf8').split(/\r?\n/).map(l => l.trim()).filter(Boolean).flatMap(l => {
+      if (l.startsWith('#')) { category = l.slice(1).trim(); return []; }
+      const res = spinBanks.checkPuzzle({ category, answer: l });
+      return res.error || res.puzzle.answer !== l ? [`${level}/${f}: ${l} (${res.error || 'not in capitals'})`] : [];
+    });
+  }));
+  ok('every line in the bank files is a puzzle that fits, written in capitals', unfit.length === 0, unfit.slice(0, 6).join('; '));
   ok('no puzzle uses a British spelling',
     puzzles.every(p => p.answer.split(' ').every(w => !dictionary.isBritish(w.replace(/[^A-Z]/g, '')))));
   // A game nobody touches is kept for a day, so a page that reloads after a
