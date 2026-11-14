@@ -378,14 +378,25 @@ function createArksId({ client, now = Date.now, profiles }) {
   // when nobody has for a few minutes. That happens in the background: this
   // request is answered as things stand, and a sign-in that turns out to be
   // over is gone before the next one.
+  // What ARKS ID answers is taken in the same way current() takes it: a sign-in
+  // that's over (or isn't this person's anymore) ends, and otherwise the
+  // person's latest role and name are kept, so a role change arrives this way
+  // too. If ARKS ID can't be reached, it isn't asked again for half a minute.
   const checking = new Set();
+  let askAgainAt = 0;
   function checkSoon(sessionId, checkedAt) {
-    if (!client || now() - checkedAt <= PASS_CHECK_MS || checking.has(sessionId)) return;
+    if (!client || now() - checkedAt <= PASS_CHECK_MS || now() < askAgainAt || checking.has(sessionId)) return;
     checking.add(sessionId);
     client.session(sessionId, false).then(s => {
-      if (s && !s.valid) endSession(sessionId);
-      else if (s) db.db.prepare('UPDATE arcade_signins SET checked_at = ? WHERE session_id = ?').run(now(), sessionId);
-    }).catch(() => { /* ARKS ID is away: the sign-in keeps working until it would have ended anyway */ })
+      const held = db.db.prepare('SELECT user_id FROM arcade_signins WHERE session_id = ? LIMIT 1').get(sessionId);
+      if (!s || !held) return;
+      const user = s.valid ? cleanUser(s.user) : null;
+      if (!user || user.id !== held.user_id) { tvAdult.delete(held.user_id); endSession(sessionId); return; }
+      remember(user);
+      if (user.kind === 'tv') noteAdultMode(user.id, s.adultMode);
+      db.db.prepare('UPDATE arcade_signins SET expires_at = COALESCE(?, expires_at), checked_at = ? WHERE session_id = ?')
+        .run(Number(s.expiresAt) || null, now(), sessionId);
+    }).catch(() => { askAgainAt = now() + 30 * 1000; /* ARKS ID is away: the sign-in keeps working until it would have ended anyway */ })
       .finally(() => checking.delete(sessionId));
   }
   function passOk(pass) {
@@ -479,6 +490,14 @@ function createArksId({ client, now = Date.now, profiles }) {
       try { traded = await client.token(code); } catch { return res.redirect(303, '/?signin=unreachable'); }
       const started = traded && start(traded);
       if (!started) return res.redirect(303, '/?signin=failed');
+      // This browser's new sign-in takes the place of the one its cookie pointed to. If
+      // that was a different sign-in at ARKS ID, nothing of the old one is kept here.
+      const before = readCookie(req, COOKIE);
+      if (before && before.length <= 100) {
+        const old = db.db.prepare('SELECT session_id FROM arcade_signins WHERE token_hash = ?').get(hash(before));
+        end(before);
+        if (old && old.session_id !== traded.sessionId) endSession(old.session_id);
+      }
       res.cookie(COOKIE, started.token, cookieOpts(req, { maxAge: COOKIE_MS }));
       res.redirect(303, back);
     });
