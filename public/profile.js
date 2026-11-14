@@ -92,9 +92,20 @@ const ArcadeProfile = (() => {
       fetch('/api/arksid/me?fresh=1', { cache: 'no-store' }).catch(() => null).then(() => location.reload());
     }, 500);
   }
+  // What unlocked the adult levels in this tab goes with the sign-in, so the
+  // next person to use it starts with them locked. (The server stops taking
+  // the pass too; this keeps the pages from showing them as open.)
+  function forgetAdultUnlocks() {
+    try {
+      for (const key of Object.keys(sessionStorage)) {
+        if (/\.(adult|adultOk|adultPin|pin)$/.test(key)) sessionStorage.removeItem(key);
+      }
+    } catch { /* storage is off */ }
+  }
   async function signOut() {
     let next = '/';
     try { next = (await (await fetch('/auth/signout', { method: 'POST' })).json()).next || '/'; } catch { /* go home */ }
+    forgetAdultUnlocks();
     set(null);
     location.href = next;
   }

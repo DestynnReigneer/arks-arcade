@@ -51,6 +51,12 @@ order they were clicked, and keep the rest pinned here.
   - Leaving on purpose, saving the score, or a game the server no longer has all forget it. A restart of the
     arcade still ends every game: keeping them in the database is the saved-games work below.
   - Browser tests in `test/browser/spin-resume.spec.js`.
+- **#148: an adult pass ends with the sign-in it was made for.** A pass used to work for its full 12 hours whatever
+  happened. It now names its sign-in (`ap.<profile>.<expires>.<sign-in>.<signature>`, `arcade/arksid.js`), and
+  `passOk` refuses it once that sign-in is gone, so signing out locks the adult levels at once, on that device and
+  anywhere the pass was copied to. Signing out also clears what unlocked them in that tab (`forgetAdultUnlocks` in
+  `public/profile.js`). A second device signed in as the same adult keeps its own pass. Tests in
+  `test/arksid.test.js` and `test/browser/adult-signout.spec.js`.
 
 **Next up** (the maintainer's order from 2026-11-14)
 1. Bucket Drop loses its Cups and Speed choice: Big cups and Fast are the game, and only that board shows. The
