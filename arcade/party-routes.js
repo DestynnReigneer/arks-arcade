@@ -68,8 +68,12 @@ function makeRoutes({ tables, config }) {
   router.post('/rooms/:code/join', limiter, async (req, res, next) => {
     try {
       const body = req.body || {};
-      await adultJoin.refuseKids(req, tables.isAdult(tables.room(req.params.code).level));
-      const { table, player } = tables.joinRoom(req.params.code, body.name, body.password, profileOf(req));
+      // Who this device is gets looked up once. After that nothing waits: the check for a
+      // kid's device, the lobby's level and the join happen together, so the lobby can't turn
+      // adult in between. An adult's sign-in is kept with the seat, for the day the host does.
+      const me = await adultJoin.who(req);
+      adultJoin.refuse(me, tables.isAdult(tables.room(req.params.code).level));
+      const { table, player } = tables.joinRoom(req.params.code, body.name, body.password, profileOf(req), adultJoin.signinOf(me));
       res.status(201).json({ code: table.id, playerId: player.id, token: player.token });
     } catch (e) { next(e); }
   });
