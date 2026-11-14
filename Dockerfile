@@ -3,7 +3,7 @@
 # An exact version, not node:26-alpine: Dependabot can only offer an update
 # for a version it can see. Node 26 became long-term support on
 # 2026-10-28 (26.13.0). Dependabot proposes newer 26.x releases weekly.
-FROM node:26.13.0-alpine
+FROM node:26.13.1-alpine
 
 # Tini reaps zombies and forwards signals, so `docker compose stop` actually
 # stops the process instead of waiting out the 10s kill timeout.
