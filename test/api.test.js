@@ -895,6 +895,12 @@ async function run({ base, root }) {
   const filthyRun = await spinPost('/run/start', { level: 'filthy', names: ['Kim'] }, '246810');
   ok('the right PIN opens them', filthyRun.status === 201 && filthyRun.data.adult === true);
   ok('…and every move in an adult game needs it too', (await spinPost(`/run/${filthyRun.data.id}/spin`)).status === 403);
+  // Picking an adult game back up after a reload needs the pass again, and only then come its level and jokes.
+  const filthyNoPass = await wl(`/spinsolve/run/${filthyRun.data.id}`);
+  ok('an adult game can\'t be picked back up without the pass', filthyNoPass.status === 403 && !filthyNoPass.data.state && !filthyNoPass.data.banter);
+  const filthyAgain = await pinGet(`/spinsolve/run/${filthyRun.data.id}`, '246810');
+  ok('…and with it, the game comes back with its level and its jokes', filthyAgain.status === 200 && filthyAgain.data.level === 'filthy' &&
+    filthyAgain.data.state.adult === true && filthyAgain.data.banter.jokes.some(([a, b]) => /fuck/i.test(a + b)));
   const kidsBanter = kidsPuzzles.data.banter;
   ok('kids games come with jokes and hecklers', kidsBanter.jokes.length >= 20 && kidsBanter.heckles.length >= 5);
   ok('…and no rude gestures or swearing', !kidsBanter.comebacks.some(c => c.startsWith('🖕')) &&
@@ -983,7 +989,13 @@ async function run({ base, root }) {
       ok('calling it again is refused', (await spinPost(`/run/${solo.id}/letter`, { letter: hit })).status === 400);
     }
   }
-  const spinNow = (await (await fetch(`${base}/api/spinsolve/run/${solo.id}`)).json()).state;
+  // A page that reloads asks for its game again: the same game, its level and its jokes,
+  // and the answer only if the round is already over.
+  const spinAgain = await (await fetch(`${base}/api/spinsolve/run/${solo.id}`)).json();
+  ok('asking for a game again gives what a page needs to pick it back up', spinAgain.state.id === solo.id && spinAgain.level === 'kids' &&
+    spinAgain.banter.jokes.length >= 20 && ('answer' in spinAgain.state) === (spinAgain.state.phase === 'roundover'),
+    JSON.stringify(spinAgain).slice(0, 200));
+  const spinNow = spinAgain.state;
   if (spinNow.phase === 'letter') await spinPost(`/run/${solo.id}/timeup`);
   const now = (await (await fetch(`${base}/api/spinsolve/run/${solo.id}`)).json()).state;
   if (now.phase === 'turn') {

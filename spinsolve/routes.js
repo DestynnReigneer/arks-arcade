@@ -119,7 +119,8 @@ module.exports = function spinRoutes({ requireAdmin, notify }) {
   const act = fn => (req, res, next) => {
     try { const g = run(req); const out = fn(g, req.body || {}, req); res.json({ ...out, state: game.view(g) }); } catch (e) { next(e); }
   };
-  router.get('/run/:id', moveLimiter, act(() => ({})));
+  // The game as it stands, with its level and jokes: what a page needs to pick its game back up after a reload.
+  router.get('/run/:id', moveLimiter, act(g => ({ level: g.level, banter: banter.forLevel(g.level) })));
   router.post('/run/:id/spin', moveLimiter, act(g => game.spin(g)));
   router.post('/run/:id/letter', moveLimiter, act((g, b) => game.call(g, b.letter, b.vowel === true)));
   router.post('/run/:id/solve', moveLimiter, act((g, b) => game.solve(g, b.guess)));
