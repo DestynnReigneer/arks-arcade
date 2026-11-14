@@ -64,7 +64,7 @@ function createPush({ arks }) {
     const signedIn = async (req, res) => {
       let me = null;
       try { me = await arks.current(req); } catch { /* treated as signed out */ }
-      if (!me || me.tv) { res.status(401).json({ error: 'Sign in on this phone first, so we know whose turns to tell you about.' }); return null; }
+      if (!me || me.tv) { res.status(401).json({ error: 'Sign in on this device first, so we know whose turns to tell you about.' }); return null; }
       return me;
     };
     const fromService = (res, r) => (r.status === 200 ? res.json({ ok: true })

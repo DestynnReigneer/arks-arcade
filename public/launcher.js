@@ -33,7 +33,7 @@
       html: `<p><b>Press and hold</b> to fill the power bar, <b>let it go</b> to launch. A white line marks your last pull.</p>
         <p>The ball pushes through the clear gates on the way up, but they won't let it back down. When it stops, the last gate it passed is what you win.</p>
         <table>
-          <tr><td>📱 Phone</td><td>Hold the game or the big button, and let go.</td></tr>
+          <tr><td>📱 Touch screen</td><td>Hold the game or the big button, and let go.</td></tr>
           <tr><td>⌨️ Keyboard</td><td>Hold <b>Space</b> and let go. <b>P</b> pauses.</td></tr>
           <tr><td>🎮 Controller</td><td>Hold <b>A</b>, <b>X</b>, <b>R1</b> or the right trigger. <b>Start</b> pauses.</td></tr>
         </table>`

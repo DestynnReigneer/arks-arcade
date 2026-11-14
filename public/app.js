@@ -632,7 +632,7 @@
     // A TV has no keyboard for initials: the score goes on the board from your own phone.
     const noBoard = TV && !mine;
     document.getElementById('initialsHint').textContent = noBoard
-      ? 'Scores from the TV don\'t go on the board, because there\'s no keyboard for initials. Play on your own phone to get on it.'
+      ? 'Scores from the TV don\'t go on the board, because there\'s no keyboard for initials. Play on your own device to get on it.'
       : 'Enter your initials';
     document.getElementById('initialsHint').classList.toggle('hidden', !!mine);
     document.getElementById('initialsBoxes').classList.toggle('hidden', !!mine || noBoard);

@@ -575,7 +575,7 @@
     $('savePart').classList.toggle('hidden', run.saved || run.free);
     $('iniRow').classList.toggle('hidden', !!p || noBoard);
     $('saveBtn').classList.toggle('hidden', noBoard);
-    $('saveHint').textContent = noBoard ? 'Times solved on the TV don\'t go on the board, because there\'s no keyboard for initials. Solve it on your own phone to get on it.'
+    $('saveHint').textContent = noBoard ? 'Times solved on the TV don\'t go on the board, because there\'s no keyboard for initials. Solve it on your own device to get on it.'
       : p ? `Saving as ${p.name}.` : 'Type your initials to put your time on today\'s board and see where you stack up.';
     $('saveMsg').textContent = '';
     $('saveBtn').disabled = false;
@@ -774,14 +774,14 @@
       emoji: '👆', title: 'Filling it in',
       html: `<p>Tap a square and type. The word you're on is highlighted, and its clue shows in the bar above the grid. <b>Tap the same square again</b> (or the clue bar) to switch between across and down.</p>
         <p>Across words light up in <b style="color: var(--across)">blue (→)</b> and down words in <b style="color: var(--down)">pink (↓)</b>, in the grid, the clue bar and the lists, so you can always tell which way you're typing.</p>
-        <p>On a phone, use the keyboard under the grid; the ⌫ key erases. The ‹ and › arrows beside the clue jump to the previous or next clue, and you can tap any clue in the lists at the bottom too.</p>
+        <p>On a touch screen, use the keyboard under the grid; the ⌫ key erases. The ‹ and › arrows beside the clue jump to the previous or next clue, and you can tap any clue in the lists at the bottom too.</p>
         <table>
           <tr><td>⌨️ Keyboard</td><td>Type letters, <b>arrows</b> to move, <b>Space</b> to switch direction, <b>Tab</b> for the next clue, <b>Backspace</b> to erase.</td></tr>
         </table>`
     },
     {
       emoji: '✅', title: 'Crossing off clues',
-      html: `<p>When you get a word right, its clue is crossed off in the lists under the grid, with a ✓. The arcade decides, not your phone, and it never says which letter is wrong.</p>
+      html: `<p>When you get a word right, its clue is crossed off in the lists under the grid, with a ✓. The arcade decides, not your device, and it never says which letter is wrong.</p>
         <table>
           <tr><td>👪 Family mini</td><td>A clue is crossed off as soon as its word is right.</td></tr>
           <tr><td>🧠 Big</td><td>A clue waits until its <b>whole line</b> is right: an across clue once every square in its row is right, and a down clue once every square in its column is. So a crossed-off clue gives away a bit less.</td></tr>
@@ -793,7 +793,7 @@
     },
     {
       emoji: '⏱️', title: 'The clock and the boards',
-      html: `<p>The clock starts when you tap <b>Start</b>, and the arcade keeps the time, not your phone. <b>Pause</b> (or leaving the page) stops it and hides the grid until you come back.</p>
+      html: `<p>The clock starts when you tap <b>Start</b>, and the arcade keeps the time, not your device. <b>Pause</b> (or leaving the page) stops it and hides the grid until you come back.</p>
         <p>As soon as every square is filled, the arcade checks it. If it's all right, you're done and your time can go on the 🏆 board for today and for all time. Only your <b>first finish of the day</b> counts, because a second go at the same puzzle would be easy. Free play crosswords don't go on the board.</p>`
     },
     {

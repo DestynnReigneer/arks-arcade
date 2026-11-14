@@ -86,7 +86,7 @@ This gives you `https://arcade.example.com` instead of an IP and port.
    - Turn on **Websockets Support** and **Block Common Exploits**.
 3. **SSL tab:** request a Let's Encrypt certificate (a DNS challenge works even
    if nothing is reachable from the internet), and turn on **Force SSL**.
-4. **Advanced tab:** paste this so live updates (room codes, two-phone games,
+4. **Advanced tab:** paste this so live updates (room codes, games on two devices,
    the Join a game list) aren't held back by buffering:
 
    ```nginx
@@ -116,8 +116,8 @@ WireGuard):
 ## 6. Parties: getting guests in
 
 - On the home page, **📱 Phone QR** shows a code that opens the arcade (or one
-  game) on a guest's phone. Every hosted game's lobby has its own
-  scan-to-join code too.
+  game) on a guest's phone. A game hosted on a TV shows its own scan-to-join
+  code too.
 - **📡 Join a game** on the home page lists every game being hosted right now.
   Guests tap **Join**. Full or already-running games say so.
 - **Adult games** show on that list with 🔞 and 🔒. Hosting one needs the adult

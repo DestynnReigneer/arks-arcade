@@ -89,8 +89,8 @@
       <button data-mode="local" aria-pressed="false" class="no-tv">📱 Multiplayer-Single device</button>
       <button data-mode="host" aria-pressed="false" class="no-tv">📱📱 Create a game lobby</button>
       <button data-mode="join" aria-pressed="false" class="no-tv">🔎 List Hosted Games</button>
-      <button data-mode="tvphones" aria-pressed="false" class="tv-only">📱 Everyone on their own phone</button>
-      <button data-mode="tvpass" aria-pressed="false" class="tv-only">🔁 Pass one phone around</button>
+      <button data-mode="tvphones" aria-pressed="false" class="tv-only">📱 Everyone on their own device</button>
+      <button data-mode="tvpass" aria-pressed="false" class="tv-only">🔁 Pass one device around</button>
       <button data-mode="tvremote" aria-pressed="false" class="tv-only">🎮 Play with the remote</button>
     </div>
     <div id="soloSetup"><p class="hint">Just you. Score high to get on the 🏆 board.</p></div>
@@ -100,7 +100,7 @@
       <button class="ghost" id="addPlayerBtn">+ Add player</button>
     </div>
     <div id="hostSetup" class="hidden">
-      <p class="hint">Everyone answers on their own phone at the same time. Your lobby shows up in List Hosted Games and on the arcade's home page.</p>
+      <p class="hint">Everyone answers on their own device at the same time. Your lobby will show in List Hosted Games and on the Arcade's home page once created.</p>
       <label id="hostNameRow">Your name<input id="hostName" maxlength="16" placeholder="e.g. Sam"></label>
       <div class="lb-section-label">Who can join</div>
       <div class="seg" id="whoSeg">
@@ -118,7 +118,7 @@
     <div id="joinSetup" class="hidden">
       <h2>Available Know-It-All lobbies</h2>
       <ul class="lb-rows" id="lobbyRows"></ul>
-      <p class="hint hidden" id="findEmpty">Nobody has a Know-It-All lobby open right now. Create one and invite someone.</p>
+      <p class="hint hidden" id="findEmpty">There aren't any Know-It-All lobbies right now. Create one!</p>
     </div>
     <div class="msg" id="setupMsg"></div>
     <button class="primary big" id="goBtn">Let's play</button>
@@ -137,7 +137,7 @@
          style="width:150px;height:150px;background:#fff;padding:6px;border-radius:10px;margin:10px auto 2px;display:block">
     <div class="join-link" id="joinLink" style="font-size:11px;opacity:0.65;text-align:center;word-break:break-all"></div>
     <div style="font-size:12px;opacity:0.75;text-align:center">Scan to join from another phone</div>
-    <div class="hint">On the other phones: Know-It-All → List Hosted Games.</div>
+    <div class="hint">On other devices: Know-It-All → List Hosted Games.</div>
     </div>
     <div class="hint" id="lobbyLevel"></div>
     <p class="hint" id="lobbyHow"></p>
@@ -146,7 +146,7 @@
     <h2>Players <span id="lobbyCount"></span></h2>
     <ul class="people" id="lobbyPlayers"></ul>
     <div id="seatBox" class="hidden">
-      <label id="seatLabel">Add a player on this phone<input id="seatName" maxlength="16" placeholder="e.g. Jordan"></label>
+      <label id="seatLabel">Add a player on this device<input id="seatName" maxlength="16" placeholder="e.g. Jordan"></label>
       <button class="ghost" id="seatAdd" style="width:100%;margin-bottom:10px">+ Add player</button>
     </div>
     <button class="primary big hidden" id="startBtn">Start the game</button>
@@ -169,7 +169,7 @@
     </div>
     <p class="hint hidden" id="dLate">You'll join at the next question with 0 points.</p>
     <div id="dGuest" class="hidden">
-      <p class="hint">Pick your profile to enter, or type your name to join as a guest.</p>
+      <p class="hint">Choose your profile, or type your name to join as a guest.</p>
       <label>Your name<input id="joinName" maxlength="16" placeholder="e.g. Alex"></label>
     </div>
     <div class="msg" id="detailsMsg"></div>
@@ -220,7 +220,7 @@
   <div class="card-panel center">
     <div class="big-emoji">📱</div>
     <h2 id="passTitle"></h2>
-    <p class="hint">Hand over the phone. Ready when they are.</p>
+    <p class="hint">Hand over the device. Ready when they are.</p>
     <button class="primary big" id="passOk">I'm ready</button>
   </div>
 </div>
