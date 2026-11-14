@@ -65,13 +65,25 @@ order they were clicked, and keep the rest pinned here.
     a new one every time, which is why the tests couldn't see this.
   - Signing out also forgets the seat the tab held in a game room (`*.room`).
   - **#154:** using a pass also asks the sign-in service about its sign-in, in the background, when nobody has
-    for three minutes (`checkSoon` in `arcade/arksid.js`). So a sign-in that ended on the service's side stops
-    its pass after at most one more request, even from a game left open in a tab that never asks who's signed
-    in. And a tab still holding an unlock from a sign-in that's over forgets it on its next load and loads once
-    more, with the levels locked (`dropDeadUnlocks` in `public/profile.js`); one tap unlocks them again for an
-    adult who's signed in. The pretend service in the tests gained its own sign-out page.
-  - **Still open:** a tab that isn't loaded again keeps showing the adult levels as open after its unlock
-    ended. The server refuses them, and the page says so, but it doesn't offer the unlock again until a reload.
+    for three minutes (`checkSoon` in `arcade/arksid.js`), and takes in whatever it says: a sign-in that's
+    over ends here too, and a changed role or name arrives. So a sign-in that ended on the service's side
+    stops its pass within a few minutes, even from a game left open in a tab that never asks who's signed in.
+    A tab still holding an unlock from a sign-in that's over forgets it on its next load and loads once more,
+    with the levels locked (`dropDeadUnlocks` in `public/profile.js`); one tap unlocks them again for an adult
+    who's signed in. Signing in again in a browser replaces the record its old cookie pointed to. The pretend
+    service in the tests gained its own sign-out page.
+- **#149: Spin & Solve's limits, ahead of the bigger puzzle bank.**
+  - A visitor's ten games are counted the way the rate limiter counts visitors (`ipKeyGenerator`, so a whole IPv6
+    network is one), and a full arcade (3,000 games) drops its longest-idle game instead of turning people away.
+  - Each level's list of puzzles, and each pack's, is put together once and shared by every game (`pooled` in
+    `spinsolve/routes.js`). It's rebuilt when the packs change. Before, every game carried its own copy, which
+    would not have fit in memory with thousands of puzzles.
+  - Small ones: a level's name has to be a string and is looked up with `Object.hasOwn` (Spin & Solve and the
+    card games), a game's
+    answers are sent `no-store`, the page only forgets the game it asked about (not one started meanwhile), and
+    Words with Family's page decides a game is gone from the 404 instead of the wording.
+- **Known flake:** `test/clueless.test.js` "New board ... gives a different crossword, not today's" fails once
+  in a great while, when a random mini crossword happens to be today's. It passes on a rerun.
 
 **Next up** (the maintainer's order from 2026-11-14)
 1. Bucket Drop loses its Cups and Speed choice: Big cups and Fast are the game, and only that board shows. The

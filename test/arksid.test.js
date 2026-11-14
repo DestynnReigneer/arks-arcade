@@ -521,6 +521,44 @@ async function run({ base, root, fake, admin: ADMIN }) {
     await new Promise(r => setTimeout(r, 400));
     ok('…so the pass stops, without that tab loading a page', (await checks(tabPass)) === false);
     ok('…for picking up or starting an adult game too', (await spin('/run/start', { body: { level: 'filthy', names: ['Kim'] }, key: tabPass })).status === 403);
+
+    // That same background check also brings news about the person: an account that
+    // stops being an adult's loses its pass, even while the pass is in steady use.
+    const roleTab = browser();
+    await roleTab.call('/auth/signin?return=%2F');
+    const rolePass = (await roleTab.call('/api/arksid/adult-pass', { method: 'POST' })).data.pass;
+    ok('an adult\'s pass works', (await checks(rolePass)) === true);
+    fake.users.kim.role = 'kid';
+    await new Promise(r => setTimeout(r, 1200));
+    await checks(rolePass);   // sets the check going
+    await new Promise(r => setTimeout(r, 400));
+    ok('after the account became a kid\'s, the pass in use is refused', (await checks(rolePass)) === false);
+    ok('…and the arcade says kid when that device asks who\'s signed in', (await roleTab.me()).role === 'kid');
+    fake.users.kim.role = 'adult';
+
+    // Two records of one sign-in, and the sign-in ends at ARKS ID: the next time that
+    // browser asks who's signed in, both records go, so the pass has nothing left to stand on.
+    const pair = browser();
+    await pair.call('/auth/signin?return=%2F');
+    const arcadeCookie = `${new URL(base).host} arcade_me`;
+    const firstCookie = pair.jar.get(arcadeCookie);
+    pair.jar.delete(arcadeCookie);
+    await pair.call('/auth/signin?silent=1&return=%2F');
+    ok('the browser has a second record of the same sign-in', pair.jar.get(arcadeCookie) && pair.jar.get(arcadeCookie) !== firstCookie);
+    const pairPass = (await pair.call('/api/arksid/adult-pass', { method: 'POST' })).data.pass;
+    const pairSession = [...fake.sessions].filter(([, v]) => v.key === 'kim' && v.valid).map(([id]) => id).pop();
+    fake.sessions.get(pairSession).valid = false;
+    await new Promise(r => setTimeout(r, 5200));
+    ok('the browser hears it is signed out when it asks', (await pair.call('/api/arksid/me?fresh=1')).data.signedIn === false);
+    ok('…and the pass is refused straight away, with no record of that sign-in left', (await checks(pairPass)) === false);
+
+    // Signing in again in a browser replaces the record its cookie pointed to.
+    const again = browser();
+    await again.call('/auth/signin?return=%2F');
+    await again.call('/auth/signin?return=%2F');
+    const againPass = (await again.call('/api/arksid/adult-pass', { method: 'POST' })).data.pass;
+    await again.call('/auth/signout', { method: 'POST', follow: false });
+    ok('signing in twice and out once leaves nothing behind', (await checks(againPass)) === false);
     fake.next = 'milo';
   }
 

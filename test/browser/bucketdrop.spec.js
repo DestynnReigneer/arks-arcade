@@ -16,16 +16,15 @@ test('playing Bucket Drop and saving the points', async ({ page, isMobile }) => 
   const close = page.locator('.tut-x');
   if (await close.isVisible().catch(() => false)) await close.click();
 
-  // The settings are on a setup screen before the game, never beside it while it's played.
-  await expect(page.locator('.cab-setup')).toBeVisible();
-  await expect(page.locator('.cab-stage')).toBeHidden();
-  await page.locator('.cab-go').click();
-  await expect(page.locator('.cab-setup')).toBeHidden();
+  // Everyone plays it the same way, so there's no setup screen and nothing to choose: the game is right there.
   await expect(page.locator('.cab-stage canvas')).toBeVisible();
+  await expect(page.locator('.cab-setup')).toBeHidden();
+  await expect(page.locator('.cab-opts select, .cab-opts button')).toHaveCount(0);
   if (isMobile) {
     const pad = await page.locator('.cab-pad button').first().boundingBox();
     expect(pad.height).toBeGreaterThanOrEqual(100);
   }
+  await page.locator('.cab-go').click();
   const before = (await (await page.request.get('/api/cab-jackpot/bucketdrop')).json()).amount;
 
   await page.evaluate(() => CabTest.manual(true));
