@@ -453,6 +453,33 @@ async function run({ base, root, fake, admin: ADMIN }) {
   ok('signing out ends the arcade sign-in and goes on to ARKS ID\'s sign-out', out.data.next === `${fake.base}/signout?app=arcade&return=%2F`);
   ok('…and the device is signed out', (await milo.me()).signedIn === false);
 
+  console.log('\n-- an adult pass ends with the sign-in it was made for --');
+  {
+    const spin = (p, { body, key } = {}) => fetch(`${base}/api/spinsolve${p}`, {
+      method: body ? 'POST' : 'GET', headers: { ...(key ? { 'X-Adult-Pin': key } : {}), ...(body ? { 'Content-Type': 'application/json' } : {}) },
+      body: body ? JSON.stringify(body) : undefined
+    }).then(async r => ({ status: r.status, data: await r.json().catch(() => null) }));
+    const checks = key => visitor.call('/api/adult-check', { method: 'POST', body: { pin: key } }).then(r => r.data.ok);
+    // Kim is signed in on two devices, and each one gets a pass of its own.
+    const kimTablet = browser();
+    fake.next = 'kim';
+    await kimTablet.call('/auth/signin?return=%2F');
+    const phonePass = (await kimCB.call('/api/arksid/adult-pass', { method: 'POST' })).data.pass;
+    const tabletPass = (await kimTablet.call('/api/arksid/adult-pass', { method: 'POST' })).data.pass;
+    const game = await spin('/run/start', { body: { level: 'filthy', names: ['Kim'] }, key: tabletPass });
+    ok('while the adult is signed in, the pass opens an adult game', game.status === 201 && game.data.adult === true, JSON.stringify(game.data).slice(0, 120));
+    ok('…and both devices\' passes work', (await checks(phonePass)) === true && (await checks(tabletPass)) === true);
+    await kimTablet.call('/auth/signout', { method: 'POST', follow: false });
+    ok('signing out on one device ends that device\'s pass', (await checks(tabletPass)) === false);
+    ok('…so it can\'t start an adult game anymore', (await spin('/run/start', { body: { level: 'filthy', names: ['Kim'] }, key: tabletPass })).status === 403);
+    ok('…or pick one back up', (await spin(`/run/${game.data.id}`, { key: tabletPass })).status === 403);
+    ok('…and it gets no jokes or puzzles with it', !JSON.stringify((await spin(`/run/${game.data.id}`, { key: tabletPass })).data).includes('banter'));
+    ok('the device still signed in keeps its pass', (await checks(phonePass)) === true && (await spin(`/run/${game.data.id}`, { key: phonePass })).status === 200);
+    ok('a pass in the old shape, with no sign-in in it, opens nothing', (await checks(phonePass.split('.').filter((part, i) => i !== 3).join('.'))) === false);
+    await kimCB.call('/auth/signout', { method: 'POST', follow: false });
+    ok('…and once that one signs out too, nothing of Kim\'s opens an adult level', (await checks(phonePass)) === false);
+  }
+
   console.log('\n-- the admin page: wrong recovery tries pause --');
   {
     // Last in this suite: it pauses this address on purpose.
