@@ -11,15 +11,6 @@ const comm = require('./comm');
 
 // Each game's boards and the highest score that could honestly be reached,
 // so a typo'd or tampered post can't sit at #1 forever.
-// Bucket Drop's twelve boards: three cup sizes, four speeds.
-function bucketBoards() {
-  const out = {};
-  for (const [size, sizeLabel] of [['big', 'Big'], ['normal', 'Normal'], ['small', 'Small']]) {
-    for (const [speed, speedLabel] of [['chill', 'Chill'], ['normal', 'Normal'], ['fast', 'Fast'], ['wild', 'Wild']]) out[`${size}-${speed}`] = `${sizeLabel} cups, ${speedLabel}`;
-  }
-  return out;
-}
-
 const GAMES = {
   // Adult boards are open to read like every other board (the maintainer's call, 2026-11-11); their #1s are never
   // announced. Playing the adult levels still needs an adult's ARKS ID sign-in.
@@ -34,9 +25,10 @@ const GAMES = {
   // The 3D cabinet games send their own score (the deliberate exception to "the server decides"); the max is the
   // highest score a real game could reach, so anything above it is refused.
   bigswing: { label: 'Big Swing', boards: { runs: 'Runs' }, max: 300 },
-  // Bucket Drop's best normal game is 750; above that, the score must be 750 plus a jackpot really won here. One board
-  // for each Cups and Speed setting (the maintainer's call, 2026-11-13), keyed "big-fast".
-  bucketdrop: { label: 'Bucket Drop', boards: bucketBoards(), max: 1000000, check: points => require('./cab-jackpot').check('bucketdrop', points) },
+  // Bucket Drop's best normal game is 750; above that, the score must be 750 plus a jackpot really won here. The game
+  // is played one way, Big cups and Fast (the maintainer's call, 2026-11-14), so it has one board. The board keeps the
+  // key from when each Cups and Speed pair had its own; the other pairs' scores stay in the database with no board.
+  bucketdrop: { label: 'Bucket Drop', boards: { 'big-fast': 'Points' }, max: 1000000, check: points => require('./cab-jackpot').check('bucketdrop', points) },
   launcher: { label: 'ARKS Launcher', boards: { points: 'Points' }, max: 50000 },
   train: { label: 'ARKS Train Station', boards: { points: 'Points' }, max: 100000 },
   // ARKS Racer keeps finishing times in thousandths of a second, fastest first, one board per track. Three laps take
@@ -80,7 +72,7 @@ function fail(message, status) {
 function boardOf(game, board) {
   const g = GAMES[game];
   if (!g) throw fail('Unknown game.', 404);
-  const key = board && g.boards[board] ? board : Object.keys(g.boards)[0];
+  const key = board && Object.hasOwn(g.boards, String(board)) ? String(board) : Object.keys(g.boards)[0];
   return { g, key };
 }
 
