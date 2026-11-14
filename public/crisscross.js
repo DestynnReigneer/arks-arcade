@@ -155,7 +155,7 @@
       $('mineTitle').textContent = r.yourTurn ? `Your turn in ${r.yourTurn} game${r.yourTurn === 1 ? '' : 's'}` : 'Your games';
       $('mineHint').textContent = r.games.length
         ? 'Tap a game to open it. Games you\'re waiting on update by themselves.'
-        : 'You aren\'t in any games yet. Start one and invite the family, and it shows up here for everyone in it.';
+        : 'You aren\'t in any games yet. Start one with the family, and it shows up here for everyone in it.';
       list.innerHTML = '';
       for (const g of r.games) list.appendChild(gameItem(g));
     } catch (e) {
@@ -204,7 +204,7 @@
       const li = document.createElement('li');
       li.innerHTML = '<span class="cc-li-main"><div class="cc-li-title"></div><div class="cc-li-sub"></div></span><button class="cc-x" title="Forget this game" aria-label="Forget this game">✕</button>';
       li.querySelector('.cc-li-title').textContent = `${g.dictionary === 'adult' ? '🔞 ' : ''}${names(g.names)}`;
-      li.querySelector('.cc-li-sub').textContent = `Started ${ago(g.at)} on this phone`;
+      li.querySelector('.cc-li-sub').textContent = `Started ${ago(g.at)} on this device`;
       li.onclick = () => openGame(g.id, g.key);
       li.querySelector('.cc-x').onclick = e => {
         e.stopPropagation();
@@ -349,7 +349,7 @@
     $('inviteMsg').textContent = '';
     try {
       const r = await call(`/invite/${encodeURIComponent(code)}`);
-      $('inviteTitle').textContent = `${r.players[0]} invited you`;
+      $('inviteTitle').textContent = `Join ${r.players[0]}'s game`;
       $('inviteText').textContent = `${names(r.players)} ${r.players.length === 1 ? 'is' : 'are'} playing Words with Family, with ${r.seats - r.players.length} seat${r.seats - r.players.length === 1 ? '' : 's'} left, on ${r.dictionary === 'adult' ? 'the unfiltered word list (adults only)' : 'family words'}.` +
         (me() ? '' : ' Pick your profile first, so the game knows whose turn is whose.');
       $('inviteJoin').textContent = me() ? 'Join the game' : 'Pick my profile';
@@ -361,7 +361,7 @@
         } catch (e) { $('inviteMsg').textContent = e.message; }
       };
     } catch (e) {
-      $('inviteTitle').textContent = 'That invite has ended';
+      $('inviteTitle').textContent = 'That game isn\'t open anymore';
       $('inviteText').textContent = e.message;
       $('inviteJoin').classList.add('hidden');
     }
@@ -656,7 +656,7 @@
     $('rack').style.visibility = need ? 'hidden' : '';
     if (!need) return;
     const name = g.players[g.turn].name;
-    $('handoffTitle').textContent = `Pass the ${TV ? 'remote' : 'phone'} to ${name}`;
+    $('handoffTitle').textContent = `Pass the ${TV ? 'remote' : 'device'} to ${name}`;
     $('handoffText').textContent = `It's ${possessive(name)} turn. Only ${name} should look at the tiles that come up next.`;
     $('handoffGo').textContent = `I'm ${name}, show my tiles`;
     $('handoffGo').onclick = () => { S.handoffSeen = key; handoff(); };
@@ -1066,8 +1066,8 @@
     },
     {
       emoji: '📱', title: 'Playing with the family',
-      html: `<p><b>New game with the family</b> lets each person play on their own phone. Choose who to play with, and the game shows up in their list. There's no rush: a turn can wait hours, and the arcade's home page says when it's your turn. You can also leave a seat open and share a link or QR code.</p>
-        <p><b>Play on this phone</b> is for passing one phone around, or playing against the computer. The tiles are hidden between turns so nobody peeks.</p>
+      html: `<p><b>New game with the family</b> lets each person play on their own device. Choose who to play with, and the game shows up in their list. There's no rush: a turn can wait hours, and the arcade's home page says when it's your turn. You can also leave a seat open and share a link or QR code.</p>
+        <p><b>Play on this device</b> is for passing one device around, or playing against the computer. The tiles are hidden between turns so nobody peeks.</p>
         <p><b>Family words</b> leaves rude words out. <b>Unfiltered</b> counts every word on the list, and everyone in the game has to be an adult signed in with ARKS ID.</p>`
     }
   ]);

@@ -73,7 +73,7 @@ function send({ game, room, from, to, title, href, notify }) {
   });
   const now = Date.now();
   const times = (recentSends.get(from.id) || []).filter(t => now - t < 60 * 60 * 1000);
-  if (times.length + people.length > PER_HOUR) throw fail('That\'s a lot of invites in an hour. Give people a chance to answer first.', 429);
+  if (times.length + people.length > PER_HOUR) throw fail('You\'ve selected a lot of people in the last hour. Give them a chance to join first.', 429);
   for (const p of people) times.push(now);
   recentSends.set(from.id, times);
   const sent = [];
@@ -134,7 +134,7 @@ function routes() {
   router.get('/api/invites/people', limit, (req, res) => {
     res.set('Cache-Control', 'no-store');
     const profile = profiles().verify(req.get('X-Profile-Token'));
-    if (!profile) return res.status(401).json({ error: 'Pick your profile first, so the game knows who\'s inviting.' });
+    if (!profile) return res.status(401).json({ error: 'Choose your profile first, so the game knows who\'s hosting.' });
     res.json({ people: people(profile.id) });
   });
   return router;

@@ -184,7 +184,7 @@ test('a phone joins a game the TV hosts', async ({ page, browser }) => {
   await expect(page.locator('#lobbyPlayers')).toContainText('Pat');
   await press(page, '#startBtn');
   await expect(page.locator('#qText')).not.toBeEmpty();
-  await expect(page.locator('#qStatus')).toContainText('Answer on your phones');
+  await expect(page.locator('#qStatus')).toContainText('Answer on your own devices');
   // The TV shows the question but doesn't answer it.
   await expect(page.locator('#answers button:not([disabled])')).toHaveCount(0);
   await expect(phone.locator('#qText')).toHaveText(await page.locator('#qText').textContent());

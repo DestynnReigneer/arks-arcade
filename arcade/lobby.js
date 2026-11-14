@@ -55,7 +55,7 @@ function collect(viewer = null) {
     add('trivia', {
       adult: l.adult, locked: l.locked, code: l.code, host: l.host, players: l.count, max: l.max,
       status: l.status === 'full' ? 'full' : l.status === 'playing' ? 'live' : 'open',
-      detail: l.question ? `Game started · question ${l.question.index} of ${l.question.total}` : `${l.adult ? l.level : 'Everyone on their own phone'}${l.who === 'selected' ? ' · People selected' : ''}`
+      detail: l.question ? `Game started · question ${l.question.index} of ${l.question.total}` : `${l.adult ? l.level : 'Everyone on their own device'}${l.who === 'selected' ? ' · People selected' : ''}`
     });
   }
 

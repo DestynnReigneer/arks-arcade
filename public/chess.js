@@ -355,7 +355,7 @@
       $('lobbyStart').textContent = !full ? 'Waiting on players to join...' : !snap.allReady ? 'Waiting on players to be ready...' : 'Players Ready, Start Game!';
     } else {
       const theirs = snap.settings.color === 'random' ? null : COLOR_WORDS[other(snap.settings.color)];
-      $('lobbySettings').textContent = `${theirs ? `You play ${theirs}.` : 'Your color is picked at random when the game starts.'} Each player on their own phone. No clock.`;
+      $('lobbySettings').textContent = `${theirs ? `You play ${theirs}.` : 'Your color is picked at random when the game starts.'} Each player on their own device. No clock.`;
       const me = snap.seats.find(x => x.you);
       const ready = !!(me && me.ready);
       $('readyHint').classList.toggle('hidden', ready);
@@ -388,7 +388,7 @@
     S.es = new EventSource(`/api/chess/rooms/${code}/events?playerId=${encodeURIComponent(playerId)}&token=${encodeURIComponent(token)}`);
     S.es.addEventListener('state', e => applySnap(JSON.parse(e.data)));
     S.es.addEventListener('closed', () => { leaveRoom(); show('setup'); toast('The host closed the lobby.'); });
-    S.es.addEventListener('removed', () => { leaveRoom(); show('setup'); toast('The host took you out of the lobby.'); });
+    S.es.addEventListener('removed', () => { leaveRoom(); show('setup'); toast('The host removed you from the lobby.'); });
     S.es.onerror = () => {
       // A room that no longer exists (server restarted, game expired) can't come back.
       fetch(`/api/chess/rooms/${code}?playerId=${encodeURIComponent(playerId)}&token=${encodeURIComponent(token)}`)
@@ -909,7 +909,7 @@
       html: `<table>
           <tr><td>🤖 VS Computer</td><td>Easy, Medium or Hard. Win to get on the 🏆 board.</td></tr>
           <tr><td>📱 Multiplayer-Single device</td><td>Two players take turns sharing this device. The board turns to face whoever's move it is.</td></tr>
-          <tr><td>📱📱 Create a game lobby</td><td>Each player on their own phone. Choose who can join, then start once everyone taps Ready. There's a chat under the board, and the game is saved until you finish it.</td></tr>
+          <tr><td>📱📱 Create a game lobby</td><td>Each player on their own device. Choose who can join, then start once everyone taps Ready. There's a chat under the board, and the game is saved until you finish it.</td></tr>
           <tr><td>🔎 List Hosted Games</td><td>The lobbies waiting for players. Tap one to see who's in and join.</td></tr>
         </table>
         <div class="tut-tip">Tap <b>?</b> at the top any time to see this again.</div>`

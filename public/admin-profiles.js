@@ -102,7 +102,7 @@
   $('unlockDevicesBtn').onclick = async () => {
     try {
       await api('/unlock-devices', { method: 'POST', body: {} });
-      $('unlockDevicesMsg').textContent = 'Done. Every phone and computer can try PINs again.';
+      $('unlockDevicesMsg').textContent = 'Done. Every device can try PINs again.';
     } catch (e) { $('unlockDevicesMsg').textContent = e.message; }
   };
 

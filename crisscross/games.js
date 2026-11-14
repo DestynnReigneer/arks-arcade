@@ -162,7 +162,7 @@ function createOnline({ host, invite, openSeats, dictionary, adultOk }, now = Da
   const ids = [...new Set((Array.isArray(invite) ? invite : []).map(String))].filter(id => id !== host.id);
   const open = Math.max(0, Math.min(3, Number(openSeats) || 0));
   const seats = 1 + ids.length + open;
-  if (seats < 2) throw fail('Invite at least one person, or leave a seat open for a share link.');
+  if (seats < 2) throw fail('Choose at least one person to play with, or leave a seat open for a share link.');
   if (seats > E.MAX_PLAYERS) throw fail('A game has room for 4 players at most.');
   const busy = db.db.prepare(`SELECT COUNT(*) AS n FROM crisscross_seats s JOIN crisscross_games g ON g.id = s.game_id
     WHERE s.profile_id = ? AND g.status != 'over'`).get(host.id).n;
@@ -174,7 +174,7 @@ function createOnline({ host, invite, openSeats, dictionary, adultOk }, now = Da
   });
   if (dict === 'adult' && adultOk) {
     const kid = people.find(p => !adultOk(p.id));
-    if (kid) throw fail(`${kid.name} can't be invited to a game on the unfiltered list. Everyone in it has to be an adult.`, 403);
+    if (kid) throw fail(`${kid.name} can't be in a game on the unfiltered list. Everyone in it has to be an adult.`, 403);
   }
   const players = [{ name: host.name, profileId: host.id }, ...people.map(p => ({ name: p.name, profileId: p.id }))];
   const id = newId();
@@ -228,7 +228,7 @@ function runBots(state, now = Date.now()) {
 
 function byCode(code) {
   const row = db.db.prepare("SELECT * FROM crisscross_games WHERE join_code = ? AND status = 'waiting'").get(String(code || ''));
-  if (!row) throw fail('That invite has been used up, or the game has already started.', 404);
+  if (!row) throw fail('That link has been used up, or the game has already started.', 404);
   return { row, state: JSON.parse(row.state) };
 }
 

@@ -32,7 +32,7 @@
       html: `<p>A ball rolls down from the pitching machine and along the track to your bat at home plate. <b>Hold</b> the game or the big button to pull the bat back, and <b>let go</b> to swing. The longer you hold, the harder the swing (the Power bar shows it).</p>
         <p>Timing aims the hit: swing early and the ball goes left, late and it goes right.</p>
         <table>
-          <tr><td>📱 Phone</td><td>Hold the game or the big button, and let go to swing.</td></tr>
+          <tr><td>📱 Touch screen</td><td>Hold the game or the big button, and let go to swing.</td></tr>
           <tr><td>⌨️ Keyboard</td><td>Hold <b>Space</b> and let go. <b>P</b> pauses.</td></tr>
           <tr><td>🎮 Controller</td><td>Hold <b>A</b>, <b>X</b>, <b>R1</b> or the right trigger. <b>Start</b> pauses.</td></tr>
         </table>`
