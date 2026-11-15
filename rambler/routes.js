@@ -430,6 +430,18 @@ router.post('/rooms/:code/join', async (req, res, next) => {
   }
 });
 
+// The room as one of its members sees it. A page asks when its live updates drop, to tell a
+// room that's gone from an arcade that's away for a moment.
+router.get('/rooms/:code', (req, res, next) => {
+  try {
+    const room = rooms.requireRoom(req.params.code);
+    const player = rooms.authenticate(room, req.query.playerId, req.query.token);
+    res.set('Cache-Control', 'no-store').json(rooms.snapshot(room, player.id));
+  } catch (e) {
+    next(e);
+  }
+});
+
 router.get('/rooms/:code/events', (req, res, next) => {
   try {
     rooms.subscribe(req.params.code, req.query.playerId, req.query.token, res);

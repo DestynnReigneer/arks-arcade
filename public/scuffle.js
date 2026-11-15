@@ -470,10 +470,14 @@
       paintSetup();
       toast('The host switched the game mode to adult, you have been removed. Only Adults can join.', 8000);
     });
-    S.es.onerror = () => {
+    // The game is gone (or this seat is): back to the setup screen. Anything else is the arcade being
+    // away for a moment, and the live updates start again, by the browser or by live.js.
+    const es = S.es;
+    const again = () => ArcadeLive.retry(es, () => S.es === es, connect);
+    es.onerror = () => {
       fetch(`/api/scuffle/rooms/${code}?${q}`).then(r => {
-        if (r.status === 404 || r.status === 403) { leaveRoom(); show('setup'); paintSetup(); toast('That game has ended.'); }
-      }).catch(() => {});
+        if (r.status === 404 || r.status === 403) { leaveRoom(); show('setup'); paintSetup(); toast('That game has ended.'); } else again();
+      }).catch(again);
     };
   }
 

@@ -146,7 +146,14 @@ function create(game) {
 
   // Every room's chat for this game, for games whose rooms don't survive a restart.
   const clearAll = () => db.db.prepare('DELETE FROM room_chat WHERE game = ?').run(game);
-  return { list, say, note, clear, clearAll };
+  // After a restart: the chat stays for the rooms that came back, and goes for the rest.
+  function keepOnly(rooms) {
+    const keep = new Set(rooms);
+    for (const row of db.db.prepare('SELECT DISTINCT room FROM room_chat WHERE game = ?').all(game)) {
+      if (!keep.has(row.room)) clear(row.room);
+    }
+  }
+  return { list, say, note, clear, clearAll, keepOnly };
 }
 
 module.exports = { create, familyFilter, isBlocked, MAX_TEXT, STORE, setNotifier };

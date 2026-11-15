@@ -3,7 +3,9 @@
 // A restart in the middle of things. The arcade is stopped the hard way (the
 // way a power cut or a new image stops it) and started again on the same
 // database, and the games it keeps have to come back exactly as they were:
-// Spin & Solve games, and Shuffle Scuffle and Rambler rooms with a round going.
+// Spin & Solve games, Shuffle Scuffle and Rambler rooms with a round going, a
+// Know-It-All room in the middle of a question, and card games in the middle
+// of a hand (in a room, and on one device).
 
 const path = require('node:path');
 
@@ -44,6 +46,15 @@ async function run({ base, root, restart }) {
         if (m) return { status: 200, state: JSON.parse(m[1]) };
       }
     } catch { return { status: 0 }; } finally { clearTimeout(timer); ac.abort(); }
+  }
+  // A device that stays connected to a room's live updates (until the arcade stops, or stop() is called).
+  function connected(url) {
+    const ac = new AbortController();
+    fetch(base + url, { signal: ac.signal }).then(async res => {
+      const reader = res.body.getReader();
+      for (;;) { const { done } = await reader.read(); if (done) break; }
+    }).catch(() => { /* the arcade stopped, or the test let go */ });
+    return () => ac.abort();
   }
   const ADMIN = { 'X-Admin-Token': 'test-admin-token' };
   const PIN = { 'X-Adult-Pin': '246810' };
@@ -98,6 +109,52 @@ async function run({ base, root, restart }) {
   ok('Rambler: a round is going, with words sent in', rbStarted.state === 'playing' && rbWords.length === 3 &&
     !!rbBefore && rbBefore.players.find(p => p.name === 'Bo').wordCount === 3, JSON.stringify(rbBefore && rbBefore.players));
 
+  // Know-It-All: a room on its second question. One of the two has answered it, and there's a message in the chat.
+  const kiRoom = p => `/api/trivia/rooms/${p}`;
+  const ki = (await api('/api/trivia/rooms', 'POST', { name: 'Sam', settings: { level: 'kids', count: 5, seconds: 30 } })).data;
+  const kiAlex = (await api(kiRoom(`${ki.code}/join`), 'POST', { name: 'Alex' })).data;
+  await api(kiRoom(`${ki.code}/lobby-ready`), 'POST', { ...seat(kiAlex), ready: true });
+  await api(kiRoom(`${ki.code}/start`), 'POST', seat(ki));
+  const kiSee = who => api(kiRoom(`${ki.code}?playerId=${who.playerId}&token=${who.token}`));
+  const kiAnswer = (who, choice) => api(kiRoom(`${ki.code}/answer`), 'POST', { ...seat(who), choice });
+  // With nobody else connected, one answer is everyone's, so question 1 ends with the host's answer.
+  await kiAnswer(ki, 0);
+  await api(kiRoom(`${ki.code}/next`), 'POST', seat(ki));    // on to question 2
+  // The host's device is connected now, so the question waits for the host after the other player answers.
+  connected(kiRoom(`${ki.code}/events?playerId=${ki.playerId}&token=${ki.token}`));
+  await wait(300);
+  await kiAnswer(kiAlex, 0);
+  await api(kiRoom(`${ki.code}/chat`), 'POST', { ...seat(kiAlex), text: 'see you after the break' });
+  const kiBefore = (await kiSee(ki)).data;
+  const kiTally = snap => snap.players.map(q => `${q.name}:${q.score}:${q.streak}`).join();
+  ok('Know-It-All: on question 2, and one of the two has answered it', kiBefore.phase === 'question' && kiBefore.question.index === 1 &&
+    kiBefore.players.find(q => q.name === 'Alex').answered === true && kiBefore.players.find(q => q.name === 'Sam').answered === false,
+    JSON.stringify(kiBefore.players));
+
+  // The card games: a room in the middle of a hand, and a game on one device.
+  const cards = {};
+  for (const [game, options] of [['partdeux', {}], ['daredevil', { length: 'quick' }]]) {
+    const at = p => `/api/${game}/${p}`;
+    const host = (await api(at('rooms'), 'POST', { name: 'Host', level: 'kids', options })).data;
+    const pal = (await api(at(`rooms/${host.code}/join`), 'POST', { name: 'Pal' })).data;
+    await api(at(`rooms/${host.code}/lobby-ready`), 'POST', { ...seat(pal), ready: true });
+    await api(at(`rooms/${host.code}/start`), 'POST', seat(host));
+    const see = who => api(at(`rooms/${host.code}?playerId=${who.playerId}&token=${who.token}`));
+    // Whoever's turn it is draws a card, so the table isn't as it was dealt.
+    const turn = (await see(host)).data.game.turn;
+    const drew = await api(at(`rooms/${host.code}/act`), 'POST', { ...seat(turn === host.playerId ? host : pal), action: 'draw' });
+    await api(at(`rooms/${host.code}/chat`), 'POST', { ...seat(pal), text: 'deal me in after the break' });
+    const local = (await api(at('local'), 'POST', { names: ['Ann', 'Bo', 'Cy'], level: 'kids', options })).data;
+    const key = { 'X-Table-Token': local.token };
+    const localDrew = await api(at(`local/${local.id}/act`), 'POST', { action: 'draw', as: local.game.turn }, key);
+    cards[game] = {
+      at, host, pal, see, local, key,
+      beforeHost: (await see(host)).data, beforePal: (await see(pal)).data, beforeLocal: (await api(at(`local/${local.id}`), 'GET', null, key)).data
+    };
+    ok(`${game}: a room and a one-device game are in the middle of a hand`, drew.status === 200 && localDrew.status === 200 &&
+      !!cards[game].beforeHost.game && cards[game].beforeHost.game.phase !== 'over', JSON.stringify(drew.data).slice(0, 200));
+  }
+
   // A room is written down within a moment of changing. Then the plug is pulled,
   // and the arcade stays away for a few seconds, long enough to tell a clock that
   // stood still from one that kept running.
@@ -106,6 +163,7 @@ async function run({ base, root, restart }) {
   await restart({ downMs: DOWN_MS });
   const scAfter = await scSee(scAlex);
   const rbAfter = (await rbEvents(rbBo)).state;
+  const kiAfter = (await kiSee(ki)).data;
 
   console.log('\n-- restart: Spin & Solve --');
   const after = await look(mine.id, kim);
@@ -179,6 +237,57 @@ async function run({ base, root, restart }) {
     rbListed.some(l => l.code === rbLobby.code && l.status === 'open' && l.host === 'Cy' && l.size === 5), JSON.stringify(rbListed).slice(0, 300));
   ok('a lobby nobody had started can still be joined', (await api(rbRoom(`${rbLobby.code}/join`), 'POST', { name: 'Late' })).status === 201);
 
+  console.log('\n-- restart: Know-It-All --');
+  ok('a room comes back on the question it was on',
+    kiAfter.phase === 'question' && kiAfter.question.index === 1 && kiAfter.question.question === kiBefore.question.question &&
+    JSON.stringify(kiAfter.question.answers) === JSON.stringify(kiBefore.question.answers), JSON.stringify(kiAfter).slice(0, 200));
+  ok('…with the scores from the question before', kiTally(kiAfter) === kiTally(kiBefore), kiTally(kiAfter));
+  const kiLeft = kiAfter.endsAt - kiAfter.serverNow;
+  ok('…and that question starts over: a full clock, and nobody\'s answer in yet',
+    kiAfter.players.every(q => !q.answered) && kiAfter.yourChoice === null && kiLeft > 25000 && kiLeft <= 30000, `${kiLeft} ms left`);
+  ok('the chat is still there', kiAfter.chat.some(m => m.text === 'see you after the break'), JSON.stringify(kiAfter.chat));
+  await kiAnswer(ki, 0);
+  await kiAnswer(kiAlex, 0);
+  const kiShown = (await kiSee(kiAlex)).data;
+  ok('the game plays on: both answer, and the answer shows', kiShown.phase === 'reveal' && kiShown.reveal.results.length === 2 &&
+    Number.isInteger(kiShown.reveal.correctIndex), JSON.stringify(kiShown.reveal).slice(0, 200));
+  ok('the room is still in List Hosted Games, as a game that\'s going',
+    (await api('/api/trivia/lobbies')).data.lobbies.some(l => l.code === ki.code && l.status === 'playing' && l.count === 2));
+
+  console.log('\n-- restart: the card games --');
+  for (const [game, name] of [['partdeux', 'Uh-Oh: Part Deux'], ['daredevil', 'Dare Devil']]) {
+    const c = cards[game];
+    const afterHost = (await c.see(c.host)).data, afterPal = (await c.see(c.pal)).data;
+    const afterLocal = (await api(c.at(`local/${c.local.id}`), 'GET', null, c.key));
+    ok(`${name}: a room comes back exactly as it was for each player, hands, turn and chat`,
+      JSON.stringify(afterHost) === JSON.stringify(c.beforeHost) && JSON.stringify(afterPal) === JSON.stringify(c.beforePal),
+      JSON.stringify(afterHost).slice(0, 300));
+    ok(`${name}: a game on one device comes back exactly as it was`, afterLocal.status === 200 && JSON.stringify(afterLocal.data) === JSON.stringify(c.beforeLocal),
+      JSON.stringify(afterLocal.data).slice(0, 200));
+    ok(`${name}: the wrong token still isn't let in`, (await api(c.at(`local/${c.local.id}`), 'GET', null, { 'X-Table-Token': 'nope' })).status === 403 &&
+      (await api(c.at(`rooms/${c.host.code}?playerId=${c.pal.playerId}&token=nope`))).status === 403);
+    ok(`${name}: the room is still in List Hosted Games, as a game that's going`,
+      (await api(c.at('lobbies'))).data.lobbies.some(l => l.code === c.host.code && l.status === 'playing' && l.count === 2));
+  }
+  // Dare Devil plays on: whoever drew does the dare, and the turn passes.
+  {
+    const c = cards.daredevil;
+    const turn = c.beforeHost.game.turn;
+    const done = await api(c.at(`rooms/${c.host.code}/act`), 'POST', { ...seat(turn === c.host.playerId ? c.host : c.pal), action: 'done' });
+    ok('Dare Devil: the hand plays on, and the turn passes', done.status === 200 && done.data.game.turn !== turn, JSON.stringify(done.data).slice(0, 200));
+    const localDone = await api(c.at(`local/${c.local.id}/act`), 'POST', { action: 'done', as: c.beforeLocal.game.turn }, c.key);
+    ok('Dare Devil: and so does the game on one device', localDone.status === 200 && localDone.data.game.turn !== c.beforeLocal.game.turn);
+  }
+  // Uh-Oh plays on: whoever's turn it is draws (or passes after the draw they already made).
+  {
+    const c = cards.partdeux;
+    const turn = c.beforeHost.game.turn;
+    const who = turn === c.host.playerId ? c.host : c.pal;
+    const again = await api(c.at(`rooms/${c.host.code}/act`), 'POST', { ...seat(who), action: 'pass' });
+    const more = again.status === 200 ? again : await api(c.at(`rooms/${c.host.code}/act`), 'POST', { ...seat(who), action: 'draw' });
+    ok('Uh-Oh: Part Deux: the hand plays on', more.status === 200 && !!more.data.game, JSON.stringify(more.data).slice(0, 200));
+  }
+
   console.log('\n-- restart: played on, and stopped again --');
   // Spin & Solve: played on to the end.
   const solved = await spin(`/${mine.id}/solve`, { guess: answer }, kim);
@@ -219,6 +328,11 @@ async function run({ base, root, restart }) {
   ok('a saved Spin & Solve game stays gone after another restart', (await look(mine.id, kim)).status === 404);
   ok('…and the others are still there', (await look(guests.id)).status === 200 && (await look(untouched.id)).status === 200);
   ok('rooms that closed stay closed', (await scSee(sc)).status === 404 && (await api(rbRoom(`${rb.code}/join`), 'POST', { name: 'X' })).status === 404);
+  const kiLater = await kiSee(ki);
+  ok('the Know-It-All room is still there after three restarts, with its scores', kiLater.status === 200 && kiLater.data.players.length === 2 &&
+    kiLater.data.players.reduce((a, q) => a + q.score, 0) >= kiBefore.players.reduce((a, q) => a + q.score, 0), JSON.stringify(kiLater.data).slice(0, 200));
+  ok('…and so are both card rooms, with their chat', (await cards.partdeux.see(cards.partdeux.host)).data.chat.some(m => m.text === 'deal me in after the break') &&
+    (await cards.daredevil.see(cards.daredevil.pal)).data.chat.some(m => m.text === 'deal me in after the break'));
   ok('a room whose host left before the restart came back with its new host',
     (await api('/api/scuffle/lobbies')).data.lobbies.some(l => l.code === scLobby.code && l.host === 'Late'));
 
