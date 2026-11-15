@@ -242,7 +242,7 @@ test('Shuffle Scuffle: the TV shows the letters while a phone races', async ({ p
   await expect(page.locator('#joinQr')).toHaveAttribute('data-code', /^[A-Z2-9]{4}$/);
   const code = await page.locator('#joinQr').getAttribute('data-code');
   await expect(page.locator('#lobbyCode')).toHaveCount(0);
-  await expect(page.locator('#lobbyHow')).toContainText('own phone');
+  await expect(page.locator('#lobbyHow')).toContainText('Scan the code to join');
   const { ctx, phone, problems: phoneProblems } = await phoneJoins(browser, '/scuffle.html', code);
   // The QR opens that lobby's details: type a name and join (no code to type).
   await expect(phone.locator('#detailsView')).toBeVisible();
