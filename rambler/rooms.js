@@ -142,6 +142,9 @@ function restore(now = Date.now()) {
       hostId: data.hostId, onFinish: null, password: data.password || null,
       screen: data.screen ? { id: String(data.screen.id), token: String(data.screen.token), name: cleanName(data.screen.name, 'TV'), clients: 0, screen: true } : null
     };
+    // An unfiltered room always has its password, and a family one never does.
+    if (room.settings.profile === 'adult' && !room.password) return false;
+    if (room.settings.profile !== 'adult') room.password = null;
     for (const p of data.players) {
       room.players.set(String(p.id), {
         id: String(p.id), token: String(p.token), name: cleanName(p.name, 'Player'), words: Array.isArray(p.words) ? p.words : [],
