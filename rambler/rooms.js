@@ -147,7 +147,7 @@ function restore(now = Date.now()) {
     for (const p of data.players) {
       room.players.set(String(p.id), {
         id: String(p.id), token: String(p.token), name: cleanName(p.name, 'Player'), words: Array.isArray(p.words) ? p.words : [],
-        ready: !!p.ready, clients: 0, joinedAt: Number(p.joinedAt) || now, kid: !!p.kid
+        ready: !!p.ready, clients: 0, joinedAt: Number(p.joinedAt) || now, kid: oldKid(p)
       });
     }
     if (!room.players.has(room.hostId) && !(room.screen && room.screen.id === room.hostId)) {
@@ -211,6 +211,9 @@ function addPlayer(room, rawName) {
 
 const roomPassword = require('../arcade/room-password');
 const adultJoin = require('../arcade/adult-join');
+// A seat saved before kids were marked (2026-11-15) has no kid field. One that
+// also had no adult's sign-in may be a kid's, so it counts as one.
+const oldKid = p => ('kid' in p ? !!p.kid : !p.adultSignin);
 const store = require('../arcade/room-store')('rambler');
 const clock = require('../arcade/room-clock');
 

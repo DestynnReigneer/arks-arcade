@@ -32,6 +32,22 @@ app.use(security.headers);
 // bigger limit (arcade/comm.js). Everything else stays small.
 const smallJson = express.json({ limit: '200kb' });
 app.use((req, res, next) => (req.method === 'POST' && req.path === '/api/comm/feedback' ? next() : smallJson(req, res, next)));
+// A kid's or a teen's device never plays adult games (the maintainer, 2026-11-15),
+// whatever adult pass it sends: a pass anyone can get as a guest is no gate on its
+// own. So a request from such a device has its pass taken away here, before any
+// game looks at it, wherever it carries it (arcade/adult-join.js says who's a kid).
+app.use('/api', async (req, res, next) => {
+  const body = req.body && typeof req.body === 'object' ? req.body : null;
+  const carries = req.get('X-Adult-Pin') || (body && (body.adultPin || (body.pin && /\/(unlock|adult-check)$/.test(req.path))));
+  if (!carries) return next();
+  try {
+    if (await require('./arcade/adult-join').kid(req)) {
+      delete req.headers['x-adult-pin'];
+      if (body) { delete body.adultPin; if (/\/(unlock|adult-check)$/.test(req.path)) delete body.pin; }
+    }
+  } catch { /* the games still check the pass itself */ }
+  next();
+});
 // Stats and the error log: see every server error answer on its way out.
 const stats = require('./arcade/stats');
 stats.watchProcess();

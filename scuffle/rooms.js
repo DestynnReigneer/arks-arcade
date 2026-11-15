@@ -16,6 +16,9 @@ const crypto = require('node:crypto');
 const game = require('./game');
 const roomPassword = require('../arcade/room-password');
 const adultJoin = require('../arcade/adult-join');
+// A seat saved before kids were marked (2026-11-15) has no kid field. One that
+// also had no adult's sign-in may be a kid's, so it counts as one.
+const oldKid = p => ('kid' in p ? !!p.kid : !p.adultSignin);
 const store = require('../arcade/room-store')('scuffle');
 const clock = require('../arcade/room-clock');
 
@@ -112,7 +115,7 @@ function restore(now = Date.now()) {
       players: data.players.map(p => ({
         id: String(p.id), token: String(p.token), name: cleanName(p.name, 'Player'), score: Number(p.score) || 0,
         found: new Map(Array.isArray(p.found) ? p.found : []), roundScore: Number(p.roundScore) || 0, done: !!p.done,
-        clients: 0, joinedAt: Number(p.joinedAt) || now, kid: !!p.kid
+        clients: 0, joinedAt: Number(p.joinedAt) || now, kid: oldKid(p)
       })),
       screen: data.screen ? { id: String(data.screen.id), token: String(data.screen.token), name: cleanName(data.screen.name, 'TV'), clients: 0, screen: true } : null,
       rounds: Array.isArray(data.rounds) ? data.rounds : [], index: Number.isInteger(data.index) ? data.index : -1,
