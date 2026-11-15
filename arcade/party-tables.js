@@ -108,8 +108,8 @@ function makeTables({ game = 'party', title = 'the game', engine, act, levels, m
   // Brings the tables back when the arcade starts. The chat stays for the rooms
   // that came back. -> how many came back.
   function restore(now = Date.now()) {
-    let back = 0;
-    for (const { code, data, savedAt } of saved.all()) {
+    // A table that can't be put back together is left out and removed (room-store.js), so it can't stop the arcade from starting.
+    const back = saved.restoreEach(({ code, data, savedAt }) => {
       const lastActivity = Number(data.lastActivity) || savedAt;
       let t = null;
       if (data.id === code && !tables.has(code) && !allCodes.has(code) && now - lastActivity <= TTL_MS) {
@@ -137,11 +137,11 @@ function makeTables({ game = 'party', title = 'the game', engine, act, levels, m
           if (!t.hostId || (isAdult(t.level) && !t.password)) t = null;
         }
       }
-      if (!t) { saved.remove(code); continue; }
+      if (!t) return false;
       tables.set(code, t);
       if (t.kind === 'room') allCodes.add(code);
-      back++;
-    }
+      return true;
+    });
     chat.keepOnly([...tables.values()].filter(t => t.kind === 'room').map(t => t.id));
     return back;
   }
