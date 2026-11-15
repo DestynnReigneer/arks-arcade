@@ -214,6 +214,20 @@ async function run({ base, root }) {
     (await api('/mine', 'GET', null, Ben.h)).data.games.length === 0);
   await api(`/games/${named.data.id}/resign`, 'POST', {}, Ana.h);
   ok('the host leaving closes the lobby', !(await hosted()).some(l => l.code === named.data.game.joinCode));
+  // Everyone sees a waiting lobby, so one person can only have five of them waiting.
+  const cysBefore = (await hosted()).filter(l => l.host === 'CC Cy').length;
+  const cys = [];
+  for (let k = 0; k < 7; k++) cys.push(await api('/games', 'POST', { kind: 'online', seats: 2 }, Cy.h));
+  ok('one person can have five lobbies waiting, and a sixth is refused with the reason',
+    cysBefore === 0 && cys.slice(0, 5).every(r => r.status === 201) && cys[5].status === 429 && cys[6].status === 429 &&
+    cys[5].data.error === 'You already have 5 lobbies waiting for players. Call one off first.', JSON.stringify(cys.map(r => r.status)));
+  ok('…so the lists never hold more than five of one person\'s',
+    (await hosted()).filter(l => l.host === 'CC Cy').length === 5 && (await api('/api/lobby')).data.rooms.filter(r => r.game === 'crisscross' && r.host === 'CC Cy').length === 5);
+  await api(`/games/${cys[0].data.id}/resign`, 'POST', {}, Cy.h);
+  const sixth = await api('/games', 'POST', { kind: 'online', seats: 2 }, Cy.h);
+  ok('calling one off makes room for another', sixth.status === 201);
+  for (const r of [...cys.slice(1, 5), sixth]) await api(`/games/${r.data.id}/resign`, 'POST', {}, Cy.h);
+  ok('…and with all of them called off, none is left in the list', (await hosted()).filter(l => l.host === 'CC Cy').length === 0);
   const benIn = await api(`/lobby/${lobbyCode}/join`, 'POST', {}, Ben.h);
   ok('Ben finds it and joins, which fills the seats and starts the game', benIn.status === 200 && benIn.data.game.status === 'playing' && benIn.data.game.you === 1);
   ok('a game that has started is off the lists', !(await hosted()).some(l => l.code === lobbyCode) && !(await api('/api/lobby')).data.rooms.some(r => r.code === lobbyCode));

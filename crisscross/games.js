@@ -49,6 +49,7 @@ const DAY = 24 * 60 * 60 * 1000;
 const KEEP_LOCAL = 30 * DAY;        // a pass-and-play game nobody touched for a month is forgotten
 const KEEP_WAITING = 14 * DAY;      // so is an online game that never got its players
 const MAX_OPEN_PER_PROFILE = 30;    // unfinished online games one profile can be in
+const MAX_WAITING_PER_HOST = 5;     // lobbies one profile can have waiting at once: everyone sees those, on two lists
 const MAX_LOCAL = 5000;
 const fail = E.fail;
 const profiles = () => require('../arcade/profiles');
@@ -169,6 +170,10 @@ function createOnline({ host, seats, openSeats, dictionary }, now = Date.now()) 
   const busy = db.db.prepare(`SELECT COUNT(*) AS n FROM crisscross_seats s JOIN crisscross_games g ON g.id = s.game_id
     WHERE s.profile_id = ? AND g.status != 'over'`).get(host.id).n;
   if (busy >= MAX_OPEN_PER_PROFILE) throw fail(`You're in ${busy} unfinished games already. Finish or leave some first.`, 429);
+  // A game in progress is only seen by its players, but a waiting lobby is listed for
+  // everyone, in the game and on the home page. So those get a much smaller share.
+  const waiting = db.db.prepare("SELECT COUNT(*) AS n FROM crisscross_games WHERE kind = 'online' AND status = 'waiting' AND host_profile = ?").get(host.id).n;
+  if (waiting >= MAX_WAITING_PER_HOST) throw fail(`You already have ${waiting} lobbies waiting for players. Call one off first.`, 429);
   const players = [{ name: host.name, profileId: host.id }];
   const id = newId();
   const code = crypto.randomBytes(9).toString('base64url');
