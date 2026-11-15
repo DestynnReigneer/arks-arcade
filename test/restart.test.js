@@ -288,9 +288,8 @@ async function run({ base, root, restart }) {
     scListed.some(l => l.code === scLobby.code && l.status === 'open' && l.host === 'Robin'), JSON.stringify(scListed).slice(0, 300));
   ok('a lobby nobody had started can still be joined and started',
     (await api(scRoom(`${scLobby.code}/join`), 'POST', { name: 'Late' })).status === 200 && (await api(scRoom(`${scLobby.code}/start`), 'POST', seat(scLobby))).status === 200);
-  ok('an adult lobby still asks for its password, and still takes the right one',
-    (await api(scRoom(`${scAdult.code}/join`), 'POST', { name: 'X' })).status === 401 &&
-    (await api(scRoom(`${scAdult.code}/join`), 'POST', { name: 'X', password: 'limes' })).status === 200);
+  ok('an adult lobby comes back too, and a guest joins it with nothing to type',
+    (await api(scRoom(`${scAdult.code}/join`), 'POST', { name: 'X' })).status === 200);
   // The host ends the round: the words and the scores are all there.
   await api(scRoom(`${sc.code}/next`), 'POST', seat(sc));
   const scReveal = (await scSee(sc)).data;

@@ -239,7 +239,7 @@
     try {
       if (adult.requiresPin) {
         const r = await apiPost('/api/adult-check', { pin });
-        if (!r.ok) { err.textContent = 'Adult levels need an adult signed in with ARKS ID.'; PinPad.clear(document.getElementById('adultPinInput')); return; }
+        if (!r.ok) { err.textContent = 'Adult games aren\'t available on this device.'; PinPad.clear(document.getElementById('adultPinInput')); return; }
       }
       setAdult(true, pin);
       document.getElementById('adultOverlay').classList.add('hidden');

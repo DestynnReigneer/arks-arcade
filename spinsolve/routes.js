@@ -58,7 +58,7 @@ function rowToPack(r, withPuzzles = false) {
 const allPacks = () => db.db.prepare('SELECT * FROM spin_packs ORDER BY created_at DESC, id DESC').all();
 
 function requireLevel(level, req) {
-  if (P.LEVELS[level].adult && !unlocked(req)) throw fail('Adult levels need an adult signed in with ARKS ID.', 403);
+  if (P.LEVELS[level].adult && !unlocked(req)) throw fail('Adult games aren\'t available on this device.', 403);
 }
 
 module.exports = function spinRoutes({ requireAdmin, notify }) {
@@ -168,7 +168,7 @@ module.exports = function spinRoutes({ requireAdmin, notify }) {
   // An adult game needs the adult pass on every move, so Back to family on a TV ends it at once.
   const run = req => {
     const g = game.get(req.params.id);
-    if (g.adult && !unlocked(req)) throw fail('Adult levels need an adult signed in with ARKS ID.', 403);
+    if (g.adult && !unlocked(req)) throw fail('Adult games aren\'t available on this device.', 403);
     return g;
   };
   const act = fn => (req, res, next) => {
