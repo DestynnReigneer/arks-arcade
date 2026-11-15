@@ -124,8 +124,10 @@ order they were clicked, and keep the rest pinned here.
   - **No code on any screen.** The lobby says whose it is ("Your Rambler lobby", "Sam's Shuffle Scuffle
     lobby"), and Rambler's round says "Sam's lobby" where it said "Room ABCD". The TV's lobby in Know-It-All,
     Uh-Oh: Part Deux, Dare Devil, Shuffle Scuffle and Rambler shows the QR code to scan and no four-letter
-    code, since there's nowhere left to type one. The home page's list shows no code for any game
-    (`NO_CODE` is gone from `public/hub.js`).
+    code, since there's nowhere left to type one. The address that used to sit under the QR code is gone
+    too, because it carried the code. The home page's list shows no code for any game (`NO_CODE` is gone
+    from `public/hub.js`), and a row whose button is long ("Join game in progress?") puts the button under
+    the text on a narrow screen.
   - A link with `?join=CODE` (the TV's QR code, or the home page's list) opens that lobby's card. If it's
     gone, the page opens List Hosted Games and says "This game isn't available. Here are the ones that are."
   - **Server:** `GET /api/scuffle/lobbies` and `GET /api/rambler/lobbies` (`lobbies()` in each `rooms.js`),

@@ -220,7 +220,7 @@
   function renderLobby(snap) {
     show('lobby');
     // The QR code is only drawn for a TV's lobby. (Drawing it finishes a moment later and would show it on a device's lobby.)
-    if (snap.screen && $('joinQr').dataset.code !== snap.code) { $('joinQr').dataset.code = snap.code; ArcadeQR.forGame($('joinQr'), 'daredevil.html', snap.code, $('joinLink')); }
+    if (snap.screen && $('joinQr').dataset.code !== snap.code) { $('joinQr').dataset.code = snap.code; ArcadeQR.forGame($('joinQr'), 'daredevil.html', snap.code); }
     const lv = levelInfo(snap.level);
     $('lobbyInfo').textContent = `${lv.emoji} ${lv.label} · ${(snap.options && snap.options.length) || 'standard'} game` + (snap.drinking ? ' · 🍺 Drinking' : '') +
       (snap.lobbyPassword ? ` · 🔒 Password: ${snap.lobbyPassword}` : snap.locked ? ' · 🔒 Locked' : '');
