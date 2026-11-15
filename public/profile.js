@@ -354,7 +354,7 @@ const ArcadeProfile = (() => {
       n.textContent = cur.name;
       tile.appendChild(n);
       c.querySelector('.apf-grid').appendChild(tile);
-      c.querySelector('[data-who]').textContent = `You're signed in with ARKS ID as ${cur.name}. Your name, your avatar, your PIN and whether the high-score boards show your name or initials are all set on your ARKS ID account page.`;
+      c.querySelector('[data-who]').textContent = `You're signed in with ARKS ID as ${cur.name}. Your name, your avatar and how you show on the high-score boards are set on your ARKS ID account page.`;
       c.querySelector('[data-account]').href = me.accountUrl;
       c.querySelector('[data-account]').onclick = e => { e.preventDefault(); openAccount(); };
       c.querySelector('[data-out]').onclick = signOut;
