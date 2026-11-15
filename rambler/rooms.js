@@ -118,7 +118,7 @@ function pack(room) {
     code: room.code, createdAt: room.createdAt, lastActivity: room.lastActivity, state: room.state, settings: room.settings,
     built: room.built || null, boardId: room.boardId, startedAt: room.startedAt, endsAt: room.endsAt,
     players: [...room.players.values()].map(p => ({
-      id: p.id, token: p.token, name: p.name, words: p.words, ready: p.ready, joinedAt: p.joinedAt, adultSignin: p.adultSignin || null
+      id: p.id, token: p.token, name: p.name, words: p.words, ready: p.ready, joinedAt: p.joinedAt, kid: !!p.kid
     })),
     hostId: room.hostId, password: room.password, results: room.results,
     screen: room.screen ? { id: room.screen.id, token: room.screen.token, name: room.screen.name } : null
@@ -143,12 +143,11 @@ function restore(now = Date.now()) {
       screen: data.screen ? { id: String(data.screen.id), token: String(data.screen.token), name: cleanName(data.screen.name, 'TV'), clients: 0, screen: true } : null
     };
     // An unfiltered room always has its password, and a family one never does.
-    if (room.settings.profile === 'adult' && !room.password) return false;
-    if (room.settings.profile !== 'adult') room.password = null;
+    room.password = null;
     for (const p of data.players) {
       room.players.set(String(p.id), {
         id: String(p.id), token: String(p.token), name: cleanName(p.name, 'Player'), words: Array.isArray(p.words) ? p.words : [],
-        ready: !!p.ready, clients: 0, joinedAt: Number(p.joinedAt) || now, adultSignin: p.adultSignin || null
+        ready: !!p.ready, clients: 0, joinedAt: Number(p.joinedAt) || now, kid: !!p.kid
       });
     }
     if (!room.players.has(room.hostId) && !(room.screen && room.screen.id === room.hostId)) {
@@ -282,15 +281,15 @@ function requireHost(room, player) {
   if (room.hostId !== player.id) throw fail('Only the host can do that.', 403);
 }
 
-// adultSignin: the sign-in this device has, when it's an adult's (arcade/adult-join.js). Kept on the server only.
-function joinRoom(code, name, password, adultSignin = null) {
+// kid: this device is a kid's or a teen's (arcade/adult-join.js), so it leaves if the game turns adult.
+function joinRoom(code, name, password, kid = false) {
   const room = requireRoom(code);
   roomPassword.check(room, password);
   if (room.players.size >= MAX_PLAYERS) {
     throw fail(`Room is full (${MAX_PLAYERS} players).`, 409);
   }
   const player = addPlayer(room, name);
-  player.adultSignin = adultSignin || null;
+  player.kid = !!kid;
   broadcast(room);
   return { room, player };
 }
@@ -343,7 +342,7 @@ function updateSettings(code, id, suppliedToken, settings) {
 // now, not remembered from when they joined). A guest can come back with the
 // password the host just made up.
 function moveOutForAdultWords(room) {
-  const going = [...room.players.values()].filter(p => p.id !== room.hostId && !adultJoin.stillAdult(p.adultSignin));
+  const going = [...room.players.values()].filter(p => p.id !== room.hostId && p.kid);
   if (!going.length) return;
   for (const p of going) {
     room.players.delete(p.id);

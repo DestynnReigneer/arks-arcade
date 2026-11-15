@@ -135,8 +135,7 @@ function restore(now = Date.now()) {
     };
     if (!member(r, r.hostId)) r.hostId = r.screen ? r.screen.id : r.players[0].id;
     // An adult level always has its password; a room that lost it doesn't come back.
-    if (bank.LEVELS[r.settings.level].adult ? !r.password : false) return false;
-    if (!bank.LEVELS[r.settings.level].adult) r.password = null;
+    r.password = null;
     // A game with no question behind it can't be shown: back to the lobby, with everyone still in their seat.
     const going = ['ready', 'question', 'reveal'].includes(r.phase);
     if ((going && !r.questions[r.qIndex]) || (r.phase === 'reveal' && !r.reveal) || (r.phase === 'over' && !r.finale)) {

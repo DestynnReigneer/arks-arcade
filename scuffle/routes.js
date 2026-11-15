@@ -19,7 +19,7 @@ const fail = (message, status = 400) => Object.assign(new Error(message), { stat
 function assertDictionary(dictionary, req) {
   if (game.profileOf(dictionary) !== 'adult') return;
   const supplied = req.get('X-Adult-Pin') || (req.body && req.body.adultPin) || '';
-  if (!adultPin.matches(supplied)) throw fail('Adult levels need an adult signed in with ARKS ID.', 403);
+  if (!adultPin.matches(supplied)) throw fail('Adult games aren\'t available on this device.', 403);
 }
 
 function nextMidnight(now = new Date()) {
@@ -81,9 +81,9 @@ router.post('/rooms/:code/join', roomLimit, async (req, res, next) => {
   try {
     // Who this device is gets looked up once, and then nothing waits, so the room can't
     // switch to the unfiltered list between the check and the join.
-    const me = await adultJoin.who(req);
-    adultJoin.refuse(me, rooms.room(req.params.code).settings.dictionary === 'adult');
-    res.json(rooms.join(req.params.code, body(req).name, body(req).password, adultJoin.signinOf(me)));
+    const kid = await adultJoin.kid(req);
+    adultJoin.refuse(kid, rooms.room(req.params.code).settings.dictionary === 'adult');
+    res.json(rooms.join(req.params.code, body(req).name, body(req).password, kid));
   } catch (e) { next(e); }
 });
 router.post('/rooms/:code/settings', (req, res, next) => {

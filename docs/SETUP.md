@@ -120,10 +120,8 @@ WireGuard):
   code too.
 - **📨 Lobbies** on the home page lists every game being hosted right now.
   Guests tap **Join**. Full or already-running games say so.
-- **Adult games** show on that list with 🔞 and 🔒. Hosting one needs the adult
-  PIN; the host then makes up a **lobby password** for that game and tells
-  their guests. Guests only need that password, not the PIN, so a curious kid
-  hits a wall.
+- **Adult games** show on that list with 🔞. Anyone can host or join one
+  except a kid's or a teen's device, which ARKS ID knows. There's no password.
 - Guests on your Wi-Fi need to reach the arcade's address. If you use a local
   DNS name, make sure guest devices use your DNS (or give them the IP-based
   QR code).
@@ -199,7 +197,7 @@ What's already done for you:
 
 What's up to you:
 
-- Set a long `ADMIN_PASSWORD`. Adult levels only open for adults signed in with ARKS ID, so there's no adult PIN to set.
+- Set a long `ADMIN_PASSWORD`. Adult levels need ARKS ID to tell a kid's device apart, so without it they stay off, and there's no adult PIN to set.
 - Anyone who isn't the admin and opens `/admin.html` gets a "not the admin" card. Put a picture named `not-admin.jpg` in the `brand/` folder to show it on that card; without one it shows a lock.
 - Keep the arcade on your home network; use Tailscale/WireGuard from outside.
 - Put HTTPS in front (Nginx Proxy Manager does it in a few clicks): the admin

@@ -52,7 +52,7 @@
       b.innerHTML = '<div class="l-name"></div><div class="l-blurb"></div>';
       b.querySelector('.l-name').textContent = `${l.emoji} ${l.label}`;
       b.querySelector('.l-blurb').textContent = l.blurb;
-      if (l.adult && !unlocked()) b.insertAdjacentHTML('beforeend', TV && !ArcadeTV.adult() ? '<div class="l-lock">🔞 Needs an adults\' night</div>' : '<div class="l-lock">🔞 Adults only</div>');
+      if (l.adult && !unlocked()) b.insertAdjacentHTML('beforeend', '<div class="l-lock">🔞 Adults only</div>');
       b.onclick = () => pickLevel(l.id);
       list.appendChild(b);
     }
@@ -126,7 +126,7 @@
       const done = ok => { $('pinView').classList.add('hidden'); $('pinCancel').onclick = null; resolve(ok); };
       const tryPin = async pin => {
         const r = await api('/api/trivia/unlock', { pin }).catch(() => ({ ok: false }));
-        if (!r.ok) { $('pinMsg').textContent = 'Adult levels need an adult signed in with ARKS ID.'; PinPad.clear($('pinInput')); return; }
+        if (!r.ok) { $('pinMsg').textContent = 'Adult games aren\'t available on this device.'; PinPad.clear($('pinInput')); return; }
         S.pin = pin;
         try { sessionStorage.setItem('trivia.adultPin', pin); } catch { /* unavailable */ }
         done(true);

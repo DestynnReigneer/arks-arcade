@@ -92,8 +92,8 @@ if (arks) {
   adultPin.usePasses(arks.passOk);
   // Signed in with an ARKS ID admin account = straight into the admin page (arcade/admin-session.js).
   adminSession.useArksId(async req => { const me = await arks.current(req); return !!(me && !me.tv && me.account && me.account.role === 'admin'); });
-  // A kid's, a teen's or a TV's phone can't join a adults room (arcade/adult-join.js).
-  require('./arcade/adult-join').use(req => arks.current(req), sessionId => arks.adultSignin(sessionId));
+  // A kid's or a teen's device can't join an adult game (arcade/adult-join.js).
+  require('./arcade/adult-join').use(req => arks.current(req), req => arks.deviceFrom(req));
   app.use(arks.routes());
   // The arcade on a TV (contract v14): setting a TV up with a pairing code,
   // and adults' night (arcade/tv.js).

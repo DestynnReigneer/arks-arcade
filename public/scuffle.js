@@ -174,7 +174,7 @@
       const done = ok => { $('pinView').classList.add('hidden'); $('pinCancel').onclick = null; resolve(ok); };
       PinPad.attach($('pinInput'), async pin => {
         const r = await api('/api/scuffle/unlock', { pin }).catch(() => ({ ok: false }));
-        if (!r.ok) { $('pinMsg').textContent = 'Adult levels need an adult signed in with ARKS ID.'; PinPad.clear($('pinInput')); return; }
+        if (!r.ok) { $('pinMsg').textContent = 'Adult games aren\'t available on this device.'; PinPad.clear($('pinInput')); return; }
         S.pin = pin;
         try { sessionStorage.setItem('scuffle.adultPin', pin); } catch { /* unavailable */ }
         done(true);
@@ -468,7 +468,7 @@
       leaveRoom();
       show('setup');
       paintSetup();
-      toast('The host switched the game mode to adult, you have been removed. Only Adults can join.', 8000);
+      toast('The host switched the game mode to adult, you have been removed.', 8000);
     });
     // The game is gone (or this seat is): back to the setup screen. Anything else is the arcade being
     // away for a moment, and the live updates start again, by the browser or by live.js.

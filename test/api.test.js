@@ -638,25 +638,16 @@ async function run({ base, root }) {
   ok('the host can reset to the lobby',
     (await api(`/rooms/${host.code}/next`, 'POST', host)).data.state === 'lobby');
 
-  // The host switches to the unfiltered words: everyone not known to be an adult is moved out.
+  // The host switches to the unfiltered words. Anyone can play an adult game but a kid's or a teen's
+  // device, and nobody here is one (this server has no ARKS ID), so nobody is moved out.
   ok('switching a lobby to the unfiltered words needs the adult pass',
-    (await api(`/rooms/${host.code}/settings`, 'POST', { ...host, profile: 'adult', password: 'limes' })).status === 403);
-  const refusedSwitch = await api(`/rooms/${host.code}/settings`, 'POST', { ...host, profile: 'adult' }, ADULT);
-  ok('…and a lobby password, and a switch that\'s refused moves nobody',
-    refusedSwitch.status === 400 && (await hostedNow()).find(l => l.code === host.code).count === 2);
-  const switched = await api(`/rooms/${host.code}/settings`, 'POST', { ...host, profile: 'adult', password: 'limes' }, ADULT);
-  ok('with both, the lobby turns unfiltered and the guest is moved out',
-    switched.status === 200 && switched.data.settings.profile === 'adult' && switched.data.players.map(q => q.name).join() === 'Ada', JSON.stringify(switched.data.players));
-  ok('…the host reads who was removed', !!switched.data.notice && switched.data.notice.text === 'Bo was removed, the host switched game mode to adult.',
-    JSON.stringify(switched.data.notice));
-  await new Promise(r => setTimeout(r, 300));
-  ok('…the guest\'s page is told why', events.some(e => e && e.why === 'adult'));
-  ok('…and their seat is gone', (await api(`/rooms/${host.code}/ready`, 'POST', g)).status === 403);
-  const boBack = await api(`/rooms/${host.code}/join`, 'POST', { name: 'Bo', password: 'limes' });
-  ok('…and they can come back with the password the host made up', boBack.status === 201 && boBack.data.state.players.length === 2);
+    (await api(`/rooms/${host.code}/settings`, 'POST', { ...host, profile: 'adult' })).status === 403);
+  const switched = await api(`/rooms/${host.code}/settings`, 'POST', { ...host, profile: 'adult' }, ADULT);
+  ok('with it, the lobby turns unfiltered with no password, and the guest stays',
+    switched.status === 200 && switched.data.settings.profile === 'adult' && switched.data.players.map(q => q.name).join() === 'Ada,Bo' && !switched.data.notice,
+    JSON.stringify(switched.data.players));
   const markedRow = (await hostedNow()).find(l => l.code === host.code);
-  ok('the list marks it unfiltered and locked, and never shows the password',
-    markedRow.adult === true && markedRow.locked === true && !JSON.stringify(await hostedNow()).includes('limes'));
+  ok('the list marks it unfiltered, and not locked', markedRow.adult === true && !markedRow.locked);
   // The page sends one setting at a time, and the others stay as they are.
   const sized = await api(`/rooms/${host.code}/settings`, 'POST', { ...host, size: 5 });
   const clocked = await api(`/rooms/${host.code}/settings`, 'POST', { ...host, durationSec: 300 });
@@ -664,10 +655,8 @@ async function run({ base, root }) {
     sized.status === 200 && sized.data.settings.size === 5 && sized.data.settings.profile === 'adult' && clocked.status === 200 &&
     JSON.stringify(clocked.data.settings) === JSON.stringify({ size: 5, profile: 'adult', durationSec: 300 }), JSON.stringify(clocked.data.settings));
   const unchanged = await api(`/rooms/${host.code}/settings`, 'POST', host);
-  ok('…a request that names nothing changes nothing, and the lobby keeps its password',
-    JSON.stringify(unchanged.data.settings) === JSON.stringify(clocked.data.settings) && (await hostedNow()).find(l => l.code === host.code).locked === true &&
-    (await api(`/rooms/${host.code}/join`, 'POST', { name: 'Cy' })).status === 401);
-  await api(`/rooms/${host.code}/leave`, 'POST', { playerId: boBack.data.playerId, token: boBack.data.token });
+  ok('…and a request that names nothing changes nothing',
+    JSON.stringify(unchanged.data.settings) === JSON.stringify(clocked.data.settings));
 
   ac.abort();
   await stream.catch(() => {});
@@ -1178,30 +1167,22 @@ async function run({ base, root }) {
   const hostAdult = body => fetch(base + '/api/trivia/rooms', {
     method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Adult-Pin': '246810' }, body: JSON.stringify(body)
   }).then(async r => ({ status: r.status, data: await r.json() }));
-  const noPw = await hostAdult({ name: 'Grown', settings: { level: 'filthy' } });
-  ok('hosting an adult game asks the host to make a lobby password', noPw.status === 400 && noPw.data.needsPassword === 'create');
-  const adultRoom = (await hostAdult({ name: 'Grown', settings: { level: 'filthy' }, password: 'tacos' })).data;
-  ok('with a password, the adult game is made', !!adultRoom.code);
+  const adultMade = await hostAdult({ name: 'Grown', settings: { level: 'filthy' } });
+  const adultRoom = adultMade.data;
+  ok('an adult game is made with no lobby password', adultMade.status === 201 && !!adultRoom.code, JSON.stringify(adultMade));
   let lobbyNow = (await wl('/lobby')).data;
   const robin = lobbyNow.rooms.find(r => r.code === lobbyHost.code);
   ok('a hosted game shows on the lobby, open to join', !!robin && robin.status === 'open' && robin.href === `trivia.html?join=${lobbyHost.code}` && robin.host === 'Robin');
   ok('…and it counts its players, not its questions', robin.players === 1 &&
     (await wl('/trivia/lobbies')).data.lobbies.find(l => l.code === lobbyHost.code).count === 1, JSON.stringify(robin));
   const listedAdult = lobbyNow.rooms.find(r => r.code === adultRoom.code);
-  ok('adult games are on the lobby too, marked and locked', !!listedAdult && listedAdult.adult && listedAdult.locked);
-  const joinAdult = pw => wl(`/trivia/rooms/${adultRoom.code}/join`, 'POST', { name: 'Kid', password: pw });
-  const noPwJoin = await joinAdult('');
-  ok('joining a locked game asks for its password', noPwJoin.status === 401 && noPwJoin.data.needsPassword === 'join');
-  ok('the wrong password is refused', (await joinAdult('pizza')).status === 401);
-  ok('the right password lets a guest in, no adult PIN needed', (await joinAdult('tacos')).status === 200);
-  const adultHostView = (await wl(`/trivia/rooms/${adultRoom.code}?playerId=${adultRoom.playerId}&token=${adultRoom.token}`)).data;
-  ok('the host can see the password to tell guests', adultHostView.lobbyPassword === 'tacos');
+  ok('adult games are on the lobby too, marked adult and not locked', !!listedAdult && listedAdult.adult && !listedAdult.locked);
+  ok('a guest joins an adult game with nothing to type', (await wl(`/trivia/rooms/${adultRoom.code}/join`, 'POST', { name: 'Pal' })).status === 200);
 
   // Rambler locks its adult games the same way
   const rbAdult = await fetch(base + '/api/rambler/rooms', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Adult-Pin': '246810' },
-    body: JSON.stringify({ name: 'H', profile: 'adult', password: 'secret' }) }).then(r => r.json());
-  ok('Rambler: an Unfiltered room needs its password to join', (await wl(`/rambler/rooms/${rbAdult.code}/join`, 'POST', { name: 'X' })).status === 401 &&
-    (await wl(`/rambler/rooms/${rbAdult.code}/join`, 'POST', { name: 'X', password: 'secret' })).status === 201);
+    body: JSON.stringify({ name: 'H', profile: 'adult' }) }).then(r => r.json());
+  ok('Rambler: a guest joins an Unfiltered room with nothing to type', (await wl(`/rambler/rooms/${rbAdult.code}/join`, 'POST', { name: 'X' })).status === 201);
   ok('the lobby says where phones should go', /^https?:\/\//.test(lobbyNow.publicUrl));
   await wl(`/trivia/rooms/${lobbyHost.code}/start`, 'POST', { playerId: lobbyHost.playerId, token: lobbyHost.token });
   lobbyNow = (await wl('/lobby')).data;
@@ -1231,11 +1212,10 @@ async function run({ base, root }) {
   const pdDraw = await party('partdeux', `/local/${pdLocal.data.id}/act`, 'POST', { action: 'draw', as: pdTurn }, { 'X-Table-Token': pdLocal.data.token });
   ok('Uh-Oh: the player whose turn it is can draw', pdDraw.status === 200);
   ok('Uh-Oh: a spicy deck needs the adult PIN', (await party('partdeux', '/local', 'POST', { names: ['A', 'B'], level: 'spicy' })).status === 403);
-  const pdRoom = (await party('partdeux', '/rooms', 'POST', { name: 'Host', level: 'filthy', drinking: true, password: 'lime' }, { 'X-Adult-Pin': '246810' })).data;
-  ok('Uh-Oh: an adult room locks with a password', (await party('partdeux', `/rooms/${pdRoom.code}/join`, 'POST', { name: 'Kid' })).status === 401);
-  const pdGuest = (await party('partdeux', `/rooms/${pdRoom.code}/join`, 'POST', { name: 'Pal', password: 'lime' })).data;
-  ok('…and lets a guest in with it', !!pdGuest.playerId);
-  ok('Uh-Oh rooms show on the arcade lobby, locked', (await wl('/lobby')).data.rooms.some(r => r.game === 'partdeux' && r.code === pdRoom.code && r.locked && r.adult));
+  const pdRoom = (await party('partdeux', '/rooms', 'POST', { name: 'Host', level: 'filthy', drinking: true }, { 'X-Adult-Pin': '246810' })).data;
+  const pdGuest = (await party('partdeux', `/rooms/${pdRoom.code}/join`, 'POST', { name: 'Pal' })).data;
+  ok('Uh-Oh: a guest joins an adult room with nothing to type', !!pdGuest.playerId);
+  ok('Uh-Oh rooms show on the arcade lobby, marked adult and not locked', (await wl('/lobby')).data.rooms.some(r => r.game === 'partdeux' && r.code === pdRoom.code && !r.locked && r.adult));
   ok('Uh-Oh: the host can\'t start until everyone is ready', (await party('partdeux', `/rooms/${pdRoom.code}/start`, 'POST', { playerId: pdRoom.playerId, token: pdRoom.token })).status === 409);
   await party('partdeux', `/rooms/${pdRoom.code}/lobby-ready`, 'POST', { playerId: pdGuest.playerId, token: pdGuest.token, ready: true });
   await party('partdeux', `/rooms/${pdRoom.code}/start`, 'POST', { playerId: pdRoom.playerId, token: pdRoom.token });
@@ -1250,9 +1230,8 @@ async function run({ base, root }) {
   const ddDone = await ddAct({ action: 'done', as: ddLocal.data.game.turn });
   ok('Dare Devil: doing it scores and passes the turn', ddDone.data.game.players[0].score > 0 && ddDone.data.game.turn !== ddLocal.data.game.turn);
   ok('Dare Devil: filthy needs the PIN to host', (await party('daredevil', '/rooms', 'POST', { name: 'H', level: 'filthy' })).status === 403);
-  const ddRoom = (await party('daredevil', '/rooms', 'POST', { name: 'H', level: 'filthy', password: 'wild' }, { 'X-Adult-Pin': '246810' })).data;
-  ok('Dare Devil: an adult room needs its password to join', (await party('daredevil', `/rooms/${ddRoom.code}/join`, 'POST', { name: 'X', password: 'nope' })).status === 401 &&
-    (await party('daredevil', `/rooms/${ddRoom.code}/join`, 'POST', { name: 'X', password: 'wild' })).status === 201);
+  const ddRoom = (await party('daredevil', '/rooms', 'POST', { name: 'H', level: 'filthy' }, { 'X-Adult-Pin': '246810' })).data;
+  ok('Dare Devil: a guest joins an adult room with nothing to type', (await party('daredevil', `/rooms/${ddRoom.code}/join`, 'POST', { name: 'X' })).status === 201);
 
   // ---- arcade profiles ---------------------------------------------------------------
   const asked = await wl('/profiles', 'POST', { name: 'Maya', avatar: 'shiba:2' });

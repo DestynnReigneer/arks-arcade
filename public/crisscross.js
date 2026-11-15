@@ -89,7 +89,7 @@
       const done = ok => { $('pinView').classList.add('hidden'); $('pinCancel').onclick = null; resolve(ok); };
       PinPad.attach($('pinInput'), async pin => {
         const r = await api('/api/crisscross/unlock', { pin }).catch(() => ({ ok: false }));
-        if (!r.ok) { $('pinMsg').textContent = 'Adult levels need an adult signed in with ARKS ID.'; PinPad.clear($('pinInput')); return; }
+        if (!r.ok) { $('pinMsg').textContent = 'Adult games aren\'t available on this device.'; PinPad.clear($('pinInput')); return; }
         S.pin = pin;
         try { sessionStorage.setItem('crisscross.adultPin', pin); } catch { /* unavailable */ }
         done(true);

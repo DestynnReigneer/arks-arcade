@@ -44,7 +44,7 @@
       b.innerHTML = '<div class="l-name"></div><div class="l-blurb"></div>';
       b.querySelector('.l-name').textContent = `${l.emoji} ${l.label}`;
       b.querySelector('.l-blurb').textContent = l.blurb;
-      if (l.adult && !unlocked()) b.insertAdjacentHTML('beforeend', TV && !ArcadeTV.adult() ? '<div class="l-lock">🔞 Needs an adults\' night</div>' : '<div class="l-lock">🔞 Adults only</div>');
+      if (l.adult && !unlocked()) b.insertAdjacentHTML('beforeend', '<div class="l-lock">🔞 Adults only</div>');
       b.onclick = () => onPick(l.id);
       box.appendChild(b);
     }
@@ -80,7 +80,7 @@
       const done = ok => { $('pinView').classList.add('hidden'); resolve(ok); };
       PinPad.attach($('pinInput'), async pin => {
         const r = await api('/unlock', { method: 'POST', body: { pin } }).catch(() => ({ ok: false }));
-        if (!r.ok) { $('pinMsg').textContent = 'Adult levels need an adult signed in with ARKS ID.'; PinPad.clear($('pinInput')); return; }
+        if (!r.ok) { $('pinMsg').textContent = 'Adult games aren\'t available on this device.'; PinPad.clear($('pinInput')); return; }
         S.pin = pin;
         try { sessionStorage.setItem('dd.pin', pin); } catch { /* unavailable */ }
         done(true);
@@ -176,7 +176,7 @@
     S.es.addEventListener('state', e => applySnap(JSON.parse(e.data)));
     S.es.addEventListener('removed', () => { closeRoom(); show('setup'); toast('The host removed you from the lobby.'); });
     // The host switched the lobby to an adult level, and this device isn't signed in as an adult.
-    S.es.addEventListener('moved', () => { closeRoom(); show('setup'); toast('The host switched the game mode to adult, you have been removed. Only Adults can join.', 8000); });
+    S.es.addEventListener('moved', () => { closeRoom(); show('setup'); toast('The host switched the game mode to adult, you have been removed.', 8000); });
     // The game is gone (or this seat is): back to the setup screen. Anything else is the arcade being
     // away for a moment, and the live updates start again, by the browser or by live.js.
     const es = S.es;

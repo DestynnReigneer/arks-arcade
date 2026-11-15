@@ -67,8 +67,9 @@ async function run({ base, fake }) {
   })()) === 'expired');
 
   console.log('\n-- family mode, and adults\' night --');
-  ok('in family mode the TV gets no adult pass', (await tv.post('/api/arksid/adult-pass')).status === 403);
-  ok('…so adult questions stay locked', (await tv.call('/api/trivia/questions?level=spicy&count=5')).status === 403);
+  const tvPass = await tv.post('/api/arksid/adult-pass');
+  ok('the TV gets an adult pass with nothing to unlock', tvPass.status === 200 && tvPass.data.pass.startsWith('ap.'), JSON.stringify(tvPass.data));
+  ok('…which opens the adult questions', (await tv.call('/api/trivia/questions?level=spicy&count=5', { headers: { 'X-Adult-Pin': tvPass.data.pass } })).status === 200);
   ok('activity outside adults\' night is fine too', (await tv.post('/api/tv/activity')).status === 200);
   const unlock = await tv.post('/api/tv/unlock');
   ok('Adults\' night shows a code and QR code for an adult\'s phone', unlock.status === 200 && /^[A-Z]{6}$/.test(unlock.data.userCode) &&
@@ -85,8 +86,8 @@ async function run({ base, fake }) {
   const adultPass = (await tv.post('/api/arksid/adult-pass')).data.pass;
   ok('it gets an adult pass', typeof adultPass === 'string' && adultPass.startsWith('ap.'));
   ok('…which opens the adult questions', (await tv.call('/api/trivia/questions?level=spicy&count=5', { headers: { 'X-Adult-Pin': adultPass } })).status === 200);
-  const adultRoom = await tv.post('/api/trivia/rooms', { name: 'Living room TV', screen: true, password: 'tacos42', settings: { level: 'spicy', count: 5, style: 'together' }, adultPin: adultPass });
-  ok('the TV can host an adult game, with a lobby password', adultRoom.status === 201, JSON.stringify(adultRoom.data));
+  const adultRoom = await tv.post('/api/trivia/rooms', { name: 'Living room TV', screen: true, settings: { level: 'spicy', count: 5, style: 'together' }, adultPin: adultPass });
+  ok('the TV hosts an adult game, with no lobby password', adultRoom.status === 201, JSON.stringify(adultRoom.data));
 
   console.log('\n-- joining an adult game on the TV --');
   const kidPhone = browser();
@@ -98,11 +99,10 @@ async function run({ base, fake }) {
   await kidPhone.call(back.pathname + back.search);
   const kidSignedIn = (await kidPhone.call('/api/arksid/me')).data.signedIn;
   ok('a kid signs in on their own phone', kidSignedIn);
-  const kidJoin = await kidPhone.post(`/api/trivia/rooms/${adultRoom.data.code}/join`, { name: 'Milo', password: 'tacos42' });
-  ok('a kid\'s phone is turned away from the adult game, even with the password', kidJoin.status === 403, JSON.stringify(kidJoin.data));
-  const guest = await browser().post(`/api/trivia/rooms/${adultRoom.data.code}/join`, { name: 'Guest', password: 'tacos42' });
-  ok('a guest with the password gets in, as before', guest.status === 200);
-  ok('the TV itself can\'t join an adult game as a player', (await tv.post(`/api/trivia/rooms/${adultRoom.data.code}/join`, { name: 'TV', password: 'tacos42' })).status === 403);
+  const kidJoin = await kidPhone.post(`/api/trivia/rooms/${adultRoom.data.code}/join`, { name: 'Milo' });
+  ok('a kid\'s phone is turned away from the adult game', kidJoin.status === 403, JSON.stringify(kidJoin.data));
+  const guest = await browser().post(`/api/trivia/rooms/${adultRoom.data.code}/join`, { name: 'Guest' });
+  ok('a guest gets in with nothing to type', guest.status === 200);
 
   console.log('\n-- games keep adults\' night going --');
   const before = fake.tvCalls.filter(c => c === '/api/app/tv/activity').length;
@@ -114,8 +114,8 @@ async function run({ base, fake }) {
   console.log('\n-- Back to family --');
   const lock = await tv.post('/api/tv/lock');
   ok('Back to family ends it at once', lock.status === 200 && lock.data.adultMode === null && fake.tvCalls.includes('/api/app/tv/lock'));
-  ok('the adult pass stops working straight away', (await tv.call('/api/trivia/questions?level=spicy&count=5', { headers: { 'X-Adult-Pin': adultPass } })).status === 403);
-  ok('…and no new one is handed out', (await tv.post('/api/arksid/adult-pass')).status === 403);
+  ok('the TV still plays adult games: they never needed adults\' night', (await tv.call('/api/trivia/questions?level=spicy&count=5', { headers: { 'X-Adult-Pin': adultPass } })).status === 200 &&
+    (await tv.post('/api/arksid/adult-pass')).status === 200);
   st = (await tv.call('/api/tv/state?waiting=1')).data;
   ok('ARKS ID agrees: family mode', st.adultMode === null);
 
