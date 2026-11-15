@@ -36,7 +36,6 @@
 .cc-local-row button { flex: 0 0 auto; }
 
 .cc-qr { width: 150px; height: 150px; background: #fff; padding: 6px; border-radius: 10px; margin: 10px auto 2px; display: block; }
-.cc-link { font-size: 11px; opacity: 0.65; word-break: break-all; margin-bottom: 8px; }
 
 /* ---- the game ---- */
 .cc-scores { list-style: none; display: flex; gap: 6px; padding: 0; margin: 0 0 8px; }

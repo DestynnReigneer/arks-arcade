@@ -24,7 +24,7 @@ const ArcadeQR = (() => {
   async function show(img, path, label) {
     const link = await url(path);
     img.src = `/api/qr?text=${encodeURIComponent(link)}`;
-    img.alt = `QR code for ${link}`;
+    img.alt = 'QR code to scan';
     img.classList.remove('hidden');
     img.hidden = false;
     if (label) label.textContent = link.replace(/^https?:\/\//, '');

@@ -39,6 +39,9 @@ test('Words with Family: creating a lobby, finding it in List Hosted Games, and 
   await expect(host.page.locator('#waiting')).toBeVisible();
   await expect(host.page.locator('#waitHint')).toContainText('List Hosted Games');
   await expect(host.page.locator('#joinQr')).toBeVisible();
+  // The QR code is the only thing to pass along: no address on the screen, and no button that copies one.
+  await expect(host.page.locator('#copyLink, #joinLink')).toHaveCount(0);
+  await expect(host.page.locator('#waiting')).not.toContainText(/crisscross\.html|join=|Copy/);
 
   // Sam opens Words with Family, sees the lobby in List Hosted Games, and joins it. (Sam's account has no
   // photo. A profile with one would make the pages a visitor opens ask for a picture only signed-in people
