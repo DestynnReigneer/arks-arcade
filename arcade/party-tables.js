@@ -30,6 +30,9 @@
 const crypto = require('node:crypto');
 const roomPassword = require('./room-password');
 const adultJoin = require('./adult-join');
+// A seat saved before kids were marked (2026-11-15) has no kid field. One that
+// also had no adult's sign-in may be a kid's, so it counts as one.
+const oldKid = p => ('kid' in p ? !!p.kid : !p.adultSignin);
 const roomChat = require('./room-chat');
 const roomStore = require('./room-store');
 
@@ -128,7 +131,7 @@ function makeTables({ game = 'party', title = 'the game', engine, act, levels, m
           for (const p of data.players) {
             t.players.set(String(p.id), {
               id: String(p.id), token: p.token ? String(p.token) : null, name: cleanName(p.name, 'Player'), clients: 0,
-              owner: p.owner || null, profileId: p.profileId || null, ready: !!p.ready, kid: !!p.kid
+              owner: p.owner || null, profileId: p.profileId || null, ready: !!p.ready, kid: oldKid(p)
             });
           }
           if (!member(t, t.hostId)) t.hostId = t.screen ? t.screen.id : ([...t.players.values()].find(x => x.token) || {}).id || null;

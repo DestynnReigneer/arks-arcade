@@ -63,6 +63,22 @@ async function run({ base, fake }) {
   };
   ok('the TV hosts an adult room in every one of them', Object.values(rooms).every(r => r && /^[A-Z2-9]{4}$/.test(r.code)), JSON.stringify(rooms));
   ok('a kid\'s phone gets no adult pass', (await kid.post('/api/arksid/adult-pass')).status === 403);
+  // A guest pass fetched somewhere else (a private window) does nothing on a kid's signed-in device.
+  const borrowed = { 'X-Adult-Pin': (await browser().post('/api/arksid/adult-pass')).data.pass };
+  const tries = {
+    'Uh-Oh room': await kid.post('/api/partdeux/rooms', { name: 'Milo', level: 'spicy' }, borrowed),
+    'Uh-Oh on one device': await kid.post('/api/partdeux/local', { names: ['A', 'B'], level: 'spicy' }, borrowed),
+    'Dare Devil room': await kid.post('/api/daredevil/rooms', { name: 'Milo', level: 'spicy' }, borrowed),
+    'Shuffle Scuffle room': await kid.post('/api/scuffle/rooms', { name: 'Milo', settings: { dictionary: 'adult' } }, borrowed),
+    'Rambler room': await kid.post('/api/rambler/rooms', { name: 'Milo', profile: 'adult' }, borrowed),
+    'Rambler board': await kid.post('/api/rambler/board', { size: 4, profile: 'adult' }, borrowed),
+    'Know-It-All room': await kid.post('/api/trivia/rooms', { name: 'Milo', settings: { level: 'spicy', count: 5 } }, borrowed),
+    'Spin & Solve': await kid.post('/api/spinsolve/run/start', { level: 'filthy', names: ['Milo'] }, borrowed),
+    'the adult check': await kid.post('/api/adult-check', { pin: borrowed['X-Adult-Pin'] })
+  };
+  ok("a kid's signed-in device can't use a guest pass from somewhere else, anywhere",
+    Object.entries(tries).every(([k, r]) => (k === 'the adult check' ? r.data && r.data.ok === false : r.status === 403)),
+    JSON.stringify(Object.fromEntries(Object.entries(tries).map(([k, r]) => [k, r.status]))));
   for (const [game, r] of Object.entries(rooms)) {
     const kidJoin = await kid.post(`/api/${game}/rooms/${r.code}/join`, { name: 'Milo' });
     ok(`${game}: a kid's phone is turned away`, kidJoin.status === 403 && kidJoin.data.error === 'Adult games aren\'t available on a kid\'s account.', JSON.stringify(kidJoin.data));
