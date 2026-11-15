@@ -64,8 +64,14 @@ order they were clicked, and keep the rest pinned here.
   - `test/fake-arksid.js` now keeps one session id per browser, the way the real service does. Before, it made
     a new one every time, which is why the tests couldn't see this.
   - Signing out also forgets the seat the tab held in a game room (`*.room`).
-  - **Still open:** a sign-in ended on the service's side keeps its pass until that device next opens an arcade
-    page; and a tab holding a pass that has ended shows the adult levels as open until it's reloaded.
+  - **#154:** using a pass also asks the sign-in service about its sign-in, in the background, when nobody has
+    for three minutes (`checkSoon` in `arcade/arksid.js`), and takes in whatever it says: a sign-in that's
+    over ends here too, and a changed role or name arrives. So a sign-in that ended on the service's side
+    stops its pass within a few minutes, even from a game left open in a tab that never asks who's signed in.
+    A tab still holding an unlock from a sign-in that's over forgets it on its next load and loads once more,
+    with the levels locked (`dropDeadUnlocks` in `public/profile.js`); one tap unlocks them again for an adult
+    who's signed in. Signing in again in a browser replaces the record its old cookie pointed to. The pretend
+    service in the tests gained its own sign-out page.
 - **#149: Spin & Solve's limits, ahead of the bigger puzzle bank.**
   - A visitor's ten games are counted the way the rate limiter counts visitors (`ipKeyGenerator`, so a whole IPv6
     network is one), and a full arcade (3,000 games) drops its longest-idle game instead of turning people away.
