@@ -230,6 +230,40 @@ async function run() {
     .flatMap(([lv, list]) => list.filter(p => spinBanks.checkPuzzle(p).error).map(p => `${lv}: ${p.answer}`));
   ok('every built-in puzzle at every level passes the pack checks', badBuiltins.length === 0, badBuiltins.join(', '));
   ok('each adult level has its own bank', ['cheeky', 'spicy', 'filthy'].every(l => spinBanks.BUILTIN[l].length >= 30));
+  // The big banks: plain text files in spinsolve/bank/<level>/, one answer to a line.
+  const bankSizes = Object.fromEntries(Object.entries(spinBanks.BUILTIN).map(([lv, list]) => [lv, list.length]));
+  ok('there are at least 2,500 family puzzles', bankSizes.kids >= 2500, JSON.stringify(bankSizes));
+  ok('…and at least 500 at each adult level', ['cheeky', 'spicy', 'filthy'].every(l => bankSizes[l] >= 500), JSON.stringify(bankSizes));
+  ok('…which makes 4,000 or more in all', Object.values(bankSizes).reduce((n, x) => n + x, 0) >= 4000, JSON.stringify(bankSizes));
+  const lettersOnly = a => a.replace(/[^A-Z]/g, '');
+  const repeats = Object.entries(spinBanks.BUILTIN).flatMap(([lv, list]) => {
+    const seen = new Set();
+    return list.filter(q => seen.has(lettersOnly(q.answer)) || !seen.add(lettersOnly(q.answer))).map(q => `${lv}: ${q.answer}`);
+  });
+  ok('no answer comes up twice in a level, even with different spaces or punctuation', repeats.length === 0, repeats.slice(0, 8).join(', '));
+  ok('every puzzle has a category that fits its label', Object.values(spinBanks.BUILTIN).every(list => list.every(q => q.category && q.category.length <= 24)));
+  const kidsBlocked = new Set(require('node:fs').readFileSync(path.join(ROOT, 'words/blocklist-kids.txt'), 'utf8').split(/\r?\n/).map(w => w.trim().toUpperCase()).filter(w => w && !w.startsWith('#')));
+  const rudeForKids = spinBanks.BUILTIN.kids.filter(q => q.answer.split(/[^A-Z]+/).some(w => kidsBlocked.has(w))).map(q => q.answer);
+  ok('no family puzzle uses a word from the kids blocklist', rudeForKids.length === 0, rudeForKids.slice(0, 8).join(', '));
+  const swears = /\b(FUCK\w*|SHIT\w*|ASSHOLE|BITCH\w*|COCK|PUSSY|BONER|PORN\w*|SEX|SEXY)\b/;
+  const swearingForKids = spinBanks.BUILTIN.kids.filter(q => swears.test(q.answer)).map(q => q.answer);
+  ok('…or any swearing', swearingForKids.length === 0, swearingForKids.slice(0, 8).join(', '));
+  // A line that can't go on the board is left out when the bank is read, not turned into a puzzle.
+  const parsed = spinBanks.parseBank(['# Thing', 'red balloon', 'ROUTE 66', 'SUPERCALIFRAGILISTIC', '', '# ', 'ICE CREAM', `${'A'.repeat(60)} ${'B'.repeat(60)}`, 'COLOUR WHEEL'].join('\n'));
+  ok('reading a bank keeps the lines that fit, in capitals, under their category',
+    parsed.puzzles.map(q => `${q.category}: ${q.answer}`).join(' | ') === 'Thing: RED BALLOON | Phrase: ICE CREAM', JSON.stringify(parsed.puzzles));
+  ok('…and counts the ones it left out (a number, a word too long, a British spelling)', parsed.skipped === 4, String(parsed.skipped));
+  const bankDir = path.join(ROOT, 'spinsolve/bank');
+  const nodeFs = require('node:fs');
+  const unfit = nodeFs.readdirSync(bankDir).flatMap(level => nodeFs.readdirSync(path.join(bankDir, level)).filter(f => f.endsWith('.txt')).flatMap(f => {
+    let category = 'Phrase';
+    return nodeFs.readFileSync(path.join(bankDir, level, f), 'utf8').split(/\r?\n/).map(l => l.trim()).filter(Boolean).flatMap(l => {
+      if (l.startsWith('#')) { category = l.slice(1).trim(); return []; }
+      const res = spinBanks.checkPuzzle({ category, answer: l });
+      return res.error || res.puzzle.answer !== l ? [`${level}/${f}: ${l} (${res.error || 'not in capitals'})`] : [];
+    });
+  }));
+  ok('every line in the bank files is a puzzle that fits, written in capitals', unfit.length === 0, unfit.slice(0, 6).join('; '));
   ok('no puzzle uses a British spelling',
     puzzles.every(p => p.answer.split(' ').every(w => !dictionary.isBritish(w.replace(/[^A-Z]/g, '')))));
   // A game nobody touches is kept for a day, so a page that reloads after a

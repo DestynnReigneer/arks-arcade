@@ -5,6 +5,8 @@
 // (on the server only, so the page can't read the answers); the adult banks
 // live only here and are served behind an ARKS ID adult pass.
 
+const fs = require('fs');
+const path = require('path');
 const dictionary = require('../rambler/dictionary');
 const KIDS = require('./kids-puzzles');
 
@@ -78,8 +80,6 @@ const ADULT = {
   })
 };
 
-const BUILTIN = { kids: KIDS, ...ADULT };
-
 // ---- checking puzzles ----------------------------------------------------------
 
 const COLS = 12;
@@ -125,4 +125,53 @@ function checkAll(list) {
   return { puzzles, skipped };
 }
 
-module.exports = { LEVELS, levelOf, BUILTIN, checkPuzzle, checkAll, rowsNeeded };
+// ---- the built-in banks ----------------------------------------------------------
+
+// Most of the built-in puzzles are plain text, so they're easy to read and add
+// to: every .txt file in bank/<level>/ holds one answer to a line, under
+// "# Category" headings. They join the lists above, and an answer that's
+// already there is skipped. Each line goes through the same check a pasted
+// pack does, so one that can't go on the board is left out (and counted)
+// instead of becoming a puzzle.
+function parseBank(text) {
+  const puzzles = [];
+  let skipped = 0;
+  let category = 'Phrase';
+  for (const line of String(text).split(/\r?\n/)) {
+    const t = line.trim();
+    if (!t) continue;
+    if (t.startsWith('#')) { category = t.slice(1).trim().slice(0, 24) || 'Phrase'; continue; }
+    const { puzzle } = checkPuzzle({ category, answer: t });
+    if (puzzle) puzzles.push(puzzle); else skipped++;
+  }
+  return { puzzles, skipped };
+}
+function fromBank(level) {
+  const dir = path.join(__dirname, 'bank', level);
+  let files = [];
+  try { files = fs.readdirSync(dir).filter(f => f.endsWith('.txt')).sort(); } catch { return []; }
+  const out = [];
+  let left = 0;
+  for (const file of files) {
+    // A file that can't be read is left out. It never keeps the arcade from starting.
+    let text = '';
+    try { text = fs.readFileSync(path.join(dir, file), 'utf8'); } catch (e) {
+      console.warn(`Spin & Solve: bank/${level}/${file} couldn't be read (${e.code || e.message}), so its puzzles are left out.`);
+      continue;
+    }
+    const { puzzles, skipped } = parseBank(text);
+    out.push(...puzzles);
+    left += skipped;
+  }
+  if (left) console.warn(`Spin & Solve: ${left} line${left === 1 ? '' : 's'} in bank/${level}/ can't go on the board and ${left === 1 ? 'was' : 'were'} left out. npm test says which.`);
+  return out;
+}
+function withBank(level, list) {
+  const seen = new Set(list.map(q => q.answer));
+  const more = fromBank(level).filter(q => !seen.has(q.answer) && !!seen.add(q.answer));
+  return [...list, ...more];
+}
+
+const BUILTIN = Object.fromEntries(Object.entries({ kids: KIDS, ...ADULT }).map(([level, list]) => [level, withBank(level, list)]));
+
+module.exports = { LEVELS, levelOf, BUILTIN, checkPuzzle, checkAll, rowsNeeded, parseBank };

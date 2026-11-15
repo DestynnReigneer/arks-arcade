@@ -131,7 +131,7 @@ async function run({ base }) {
     const g3 = (await api(`${room(h3.code)}/join`, 'POST', { name: 'Sneaky' })).data;
     ok('only the host can take someone out', (await api(`${room(h3.code)}/remove`, 'POST', { ...seat(g3), seat: h3.playerId })).status === 403);
     s = (await api(`${room(h3.code)}/remove`, 'POST', { ...seat(h3), seat: g3.playerId })).data;
-    ok('the host can take someone out of a seat in the lobby', s.seats.length === 1 && s.chat.some(m => m.system && m.text === 'Sneaky was taken out of the game'));
+    ok('the host can take someone out of a seat in the lobby', s.seats.length === 1 && s.chat.some(m => m.system && m.text === 'Sneaky was removed from the lobby'));
     ok('…and their seat stops working', (await api(`${room(h3.code)}/chat`, 'POST', { ...seat(g3), text: 'hi' })).status === 403);
     await api(`${room(h3.code)}/leave`, 'POST', seat(h3));
     // Five unfinished games each.
