@@ -307,6 +307,51 @@ async function run() {
     spinGame.games.size === spinGame.MAX_GAMES && spinGame.games.has(oneMore.id) && !spinGame.games.has(sat.id));
   ok('every game uses the one list of puzzles it was handed, not a copy', [...spinGame.games.values()].every(g => g.pool === fewPuzzles));
   spinGame.games.clear();
+  // A game is written down after every move and read back when the arcade starts,
+  // so a restart ends nobody's game. Here the "database" is a Map.
+  const kept = new Map();
+  spinGame.useStore({ save: (id, state) => kept.set(id, state), remove: id => kept.delete(id), all: () => [...kept.values()] });
+  const savedGame = spinGame.start({ pool: fewPuzzles, poolKey: 'level:kids', names: ['Kim'], rounds: 3, level: 'kids', profileId: 'p1', ip: '203.0.113.9' });
+  ok('a new game is written down', kept.has(savedGame.id));
+  ok('…without its list of puzzles, and without the visitor\'s address',
+    !('pool' in JSON.parse(kept.get(savedGame.id))) && !kept.get(savedGame.id).includes('203.0.113.9'));
+  ok('a game nobody has made a move in isn\'t in the Continue list', spinGame.mine('p1').length === 0);
+  spinGame.solve(savedGame, 'NOT THE ANSWER');
+  ok('every move is written down as it happens', JSON.parse(kept.get(savedGame.id)).strikes === 1 && JSON.parse(kept.get(savedGame.id)).moved === true);
+  const viewBefore = JSON.stringify(spinGame.view(savedGame));
+  spinGame.games.clear();   // the arcade stops: memory is gone, the database isn't
+  const cameBack = spinGame.restore(key => (key === 'level:kids' ? fewPuzzles : null));
+  const again = spinGame.games.get(savedGame.id);
+  ok('after a restart the game comes back as it was', cameBack === 1 && !!again && again !== savedGame && JSON.stringify(spinGame.view(again)) === viewBefore);
+  ok('…on the same shared list of puzzles, with its letters as sets again', again.pool === fewPuzzles && again.revealed instanceof Set && again.used instanceof Set);
+  ok('a profile\'s game that was played is in their Continue list, and nobody else\'s',
+    spinGame.mine('p1').length === 1 && spinGame.mine('p1')[0].id === savedGame.id && spinGame.mine('p2').length === 0 && spinGame.mine(null).length === 0);
+  ok('…and it can be played on', spinGame.solve(again, again.puzzle.answer).correct === true && JSON.parse(kept.get(savedGame.id)).phase === 'roundover');
+  spinGame.sweep(Date.now() + 29 * 24 * HOUR);
+  ok('a profile\'s game that was played is kept for 30 quiet days', spinGame.KEEP_PLAYED_MS === 30 * 24 * HOUR && spinGame.games.has(savedGame.id) && kept.has(savedGame.id));
+  spinGame.sweep(Date.now() + 31 * 24 * HOUR);
+  ok('…and then it is cleared, from the database too', !spinGame.games.has(savedGame.id) && !kept.has(savedGame.id));
+  const guestGame = spinGame.start({ pool: fewPuzzles, poolKey: 'level:kids', names: ['Gus'], rounds: 3, level: 'kids' });
+  spinGame.solve(guestGame, 'NOT THE ANSWER');
+  const untouchedGame = spinGame.start({ pool: fewPuzzles, poolKey: 'level:kids', names: ['Kim'], rounds: 3, level: 'kids', profileId: 'p1' });
+  spinGame.sweep(Date.now() + 25 * HOUR);
+  ok('a guest\'s game, and a profile\'s game with no move in it, are still cleared after a quiet day',
+    !spinGame.games.has(guestGame.id) && !spinGame.games.has(untouchedGame.id) && kept.size === 0);
+  // A game whose pack was deleted while the arcade was down carries on with the puzzle it's on.
+  const orphan = spinGame.start({ pool: fewPuzzles, poolKey: 'pack:99', names: ['Kim'], rounds: 3, level: 'kids' });
+  spinGame.games.clear();
+  spinGame.restore(() => null);
+  ok('a game whose list of puzzles is gone carries on with the puzzle it has',
+    spinGame.games.has(orphan.id) && spinGame.games.get(orphan.id).pool.length === 1 && spinGame.games.get(orphan.id).pool[0].answer === orphan.puzzle.answer);
+  // Rows that aren't games are skipped instead of stopping the arcade from starting.
+  kept.set('junk', '{not json');
+  kept.set('empty', '{"id":"x","players":[]}');
+  kept.set('nothing', 'null');
+  spinGame.games.clear();
+  ok('rows that aren\'t games are skipped', spinGame.restore(() => fewPuzzles) === 1 && spinGame.games.size === 1);
+  ok('saving a game\'s score takes it out of the database', (spinGame.drop(orphan.id), !kept.has(orphan.id) && !spinGame.games.has(orphan.id)));
+  spinGame.useStore(null);
+  spinGame.games.clear();
   ok('a level is only ever one of the real ones', spinBanks.levelOf('constructor') === 'kids' && spinBanks.levelOf('__proto__') === 'kids' &&
     spinBanks.levelOf('spicy') === 'spicy' && spinBanks.levelOf(undefined) === 'kids' &&
     spinBanks.levelOf({ toString: 1 }) === 'kids' && spinBanks.levelOf(['spicy']) === 'kids');
