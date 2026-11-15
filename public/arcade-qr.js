@@ -55,6 +55,7 @@ const ArcadeQR = (() => {
   }
   // The big code, over the page, with nothing else to read.
   function open(page, code) {
+    if (document.querySelector('.qr-big')) return;
     const o = document.createElement('div');
     o.className = 'qr-big';
     o.setAttribute('role', 'dialog');
@@ -78,7 +79,7 @@ const ArcadeQR = (() => {
     document.addEventListener('keydown', esc);
     o.append(img, line, close);
     document.body.appendChild(o);
-    forGame(img, page, code);
+    forGame(img, page, code).then(() => { img.alt = 'QR code to scan'; });
     close.focus();
   }
 
