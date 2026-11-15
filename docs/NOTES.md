@@ -147,9 +147,8 @@ order they were clicked, and keep the rest pinned here.
   can switch a lobby to an adult level at any time, and everyone the arcade doesn't know to be an adult is moved
   out and told why. **#153:** Spin & Solve has 4,200 built-in puzzles, most of them plain text in
   `spinsolve/bank/<level>/`.
-- **#155: nobody is picked, and nobody is told. Lobbies are found in the lists.** The maintainer's rule, said three
-  times and built wrong twice: someone creates a lobby, and everyone else finds it and joins. It was read as a
-  rule about wording, so the word "invite" went and the feature stayed. Now the feature is gone:
+- **#155: nobody is picked, and nobody is told. Lobbies are found in the lists.** The maintainer's rule: someone
+  creates a lobby, and everyone else finds it and joins. So the choosing is gone, not only the word "invite":
   - **No "Who can join".** Chess, Know-It-All, Uh-Oh: Part Deux and Dare Devil always make a lobby anyone at the
     arcade can join. The list of people to choose from, the SELECTED seat and the notification to the people
     chosen are gone, with `arcade/invites.js`, `/api/invites` and Chess's `/rooms/:code/invite`. A request that
