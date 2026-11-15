@@ -87,6 +87,8 @@ const checkLimiter = limit(10, 2000, 'Slow down a moment.');
 const scoreLimiter = limit(10, 120, 'Too many rounds scored. Try again shortly.');
 const leaderboardLimiter = limit(10, 30, 'Too many score submissions. Try again in a few minutes.');
 const roomLimiter = limit(60, 40, 'Too many rooms created. Try again later.');
+// Joining takes a lobby password when the room is unfiltered, so one address only gets so many tries.
+const joinLimiter = limit(10, 40, 'Too many tries, wait a few minutes, then try again.');
 
 // ---- config ----------------------------------------------------------------
 
@@ -412,7 +414,7 @@ router.post('/rooms', roomLimiter, (req, res, next) => {
 });
 
 // A phone signed in to ARKS ID as a kid, a teen or a TV can't join an Unfiltered room.
-router.post('/rooms/:code/join', async (req, res, next) => {
+router.post('/rooms/:code/join', joinLimiter, async (req, res, next) => {
   try {
     // Who this device is gets looked up once, and then nothing waits, so the room can't
     // switch to the unfiltered list between the check and the join.
