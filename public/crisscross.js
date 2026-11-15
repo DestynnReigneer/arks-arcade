@@ -322,7 +322,7 @@
     } catch (e) { $('localMsg').textContent = e.message; }
   }
 
-  // ---- a lobby, from the list, a link or its QR code -------------------------------------------------------
+  // ---- a lobby, from the list or its QR code ---------------------------------------------------------------
   async function showInvite(code) {
     show('invite');
     setUrl({ join: code });
@@ -386,13 +386,9 @@
       ? `Your lobby is in List Hosted Games and on the Arcade's home page. Anyone can also scan this code to jump straight in. The game starts by itself when all ${g.seats} seats are full.`
       : `You're in! The game starts when all ${g.seats} seats are full, or when ${g.players[0].name} starts it.`;
     const link = g.joinCode ? `crisscross.html?join=${g.joinCode}` : null;
+    // The QR code is the only way in besides the lists: no address to read and no link to copy.
     $('joinQr').classList.toggle('hidden', !link);
-    $('copyLink').classList.toggle('hidden', !link);
-    $('joinLink').textContent = '';
-    if (link) ArcadeQR.show($('joinQr'), link, $('joinLink'));
-    $('copyLink').onclick = async () => {
-      try { await navigator.clipboard.writeText(await ArcadeQR.url(link)); toast('Link copied.'); } catch { toast('Copy it from the line above the button.'); }
-    };
+    if (link) ArcadeQR.show($('joinQr'), link);
     const list = $('seatedList');
     list.innerHTML = '';
     g.players.forEach(p => {
@@ -1050,7 +1046,7 @@
     },
     {
       emoji: '📱', title: 'Playing with the family',
-      html: `<p><b>New game with the family</b> lets each person play on their own device. Choose who to play with, and the game shows up in their list. There's no rush: a turn can wait hours, and the arcade's home page says when it's your turn. You can also leave a seat open and share a link or QR code.</p>
+      html: `<p><b>Create a game lobby</b> is for playing on your own devices. Others find your lobby in 🔎 List Hosted Games or on the arcade's home page, or scan its QR code. There's no rush: a turn can wait hours, and the arcade's home page says when it's your turn.</p>
         <p><b>Play on this device</b> is for passing one device around, or playing against the computer. The tiles are hidden between turns so nobody peeks.</p>
         <p><b>Family words</b> leaves rude words out. <b>Unfiltered</b> counts every word on the list, and everyone in the game has to be an adult signed in with ARKS ID.</p>`
     }
