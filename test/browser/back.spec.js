@@ -33,21 +33,9 @@ test('Back in Snake: the game asks first, then the menu, then the arcade', async
   await expect.poll(() => state(page)).toBe('playing');
   await expect(page.locator('.ah-back')).toHaveAttribute('title', 'Back to this game\'s menu');
 
-  // The browser's own Back asks first, on the page (not a browser dialog), and pauses.
-  await page.goBack();
-  const ask = page.locator('.ab-confirm');
-  await expect(ask).toBeVisible();
-  await expect(ask).toContainText('Leave this game?');
-  await expect(page.locator('#stageMsg')).toContainText('Paused');
-  await ask.getByRole('button', { name: 'Keep playing' }).click();
-  await expect(ask).toHaveCount(0);
-  expect(new URL(page.url()).pathname).toBe('/snake.html');
-  expect(await state(page)).toBe('playing');
-
-  // The top bar's arrow does the same; this time, leave.
+  // The top bar's arrow goes straight back to the game's menu: nothing asks whether you're sure.
   await page.locator('.ah-back').click();
-  await expect(ask).toBeVisible();
-  await ask.getByRole('button', { name: 'Leave' }).click();
+  await expect(page.locator('.ab-confirm')).toHaveCount(0);
   await expect.poll(() => state(page)).toBe('ready');
   expect(new URL(page.url()).pathname).toBe('/snake.html');
   await expect(page.locator('#options')).toBeVisible();
@@ -87,14 +75,12 @@ test('Back in Criss Cross steps back through its screens', async ({ page }) => {
   expect(problems, problems.join('\n')).toEqual([]);
 });
 
-test('Back in Trivia: a game in progress asks first, then setup', async ({ page }) => {
+test('Back in Trivia: a game in progress goes back to setup without asking', async ({ page }) => {
   const problems = await intoGame(page, '/trivia.html');
   await page.locator('#goBtn').click();
   await expect(page.locator('#play')).toBeVisible();
   await page.goBack();
-  const ask = page.locator('.ab-confirm');
-  await expect(ask).toContainText('Quit this game?');
-  await ask.getByRole('button', { name: 'Leave' }).click();
+  await expect(page.locator('.ab-confirm')).toHaveCount(0);
   await expect(page.locator('#setup')).toBeVisible();
   await page.goBack();
   await atHome(page);

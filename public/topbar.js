@@ -314,8 +314,9 @@ window.ArcadeBack = (() => {
   // One screen back. Our history entry has already been used up by now.
   async function stepBack() {
     if (asking || !cfg) return;
-    let busy = false;
-    try { busy = !!(cfg.busy && cfg.busy()); } catch { busy = false; }
+    // Back means back (the maintainer, 2026-11-15): nothing asks whether you're sure.
+    // A game in progress is kept by the server where the game saves, and leaving is the answer.
+    const busy = false;
     if (busy) {
       // Stay put while asking: the entry goes back, so a second Back while
       // the question is up doesn't leave the page.
