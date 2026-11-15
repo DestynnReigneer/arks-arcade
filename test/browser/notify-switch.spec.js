@@ -2,8 +2,8 @@
 
 // The notifications switch in the profile card: someone signed in with ARKS ID
 // sees it, with a pink dot until they've used it once; turning it on the first
-// time shows "One more step in Chrome", and the switch then says you're all set.
-// Off, the switch shows its title and nothing under it.
+// time shows "One more step in Chrome", and the switch is then on.
+// On or off, the switch shows its title and nothing under it.
 // The device's push service is pretended (a test browser has none to talk to).
 
 const { test, expect } = require('@playwright/test');
@@ -52,7 +52,9 @@ test('the notifications switch: the pink dot, turning it on, and the Chrome chec
   await expect(page.locator('.apf-card h2')).toHaveText('One more step in Chrome');
   await page.getByRole('button', { name: 'Got it' }).click();
   await expect(page.locator('.apf-notify')).toHaveAttribute('aria-checked', 'true');
-  await expect(page.locator('.apf-notify')).toContainText('You\'re all set, I\'ll let you know when it\'s your move or someone starts a game with you.');
+  await expect(page.locator('.apf-notify')).toHaveClass(/\bon\b/);
+  await expect(page.locator('.apf-notify b')).toHaveText('🔔 Notifications');
+  await expect(page.locator('.apf-notify small')).toHaveText('');
   await expect(page.locator('.apf-notify .apf-dot')).toHaveCount(0);
   expect(await page.evaluate(() => window.__pushOn())).toBe(true);
   expect(problems, problems.join('\n')).toEqual([]);

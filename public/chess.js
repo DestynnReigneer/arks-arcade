@@ -1,9 +1,9 @@
 'use strict';
 
 // Chess: against the computer, two players on one phone, or each on their own
-// phone. For that, the host creates a lobby (who can join: anyone at the arcade,
-// or only the people they pick) and it shows up in List Hosted Games and on the
-// home page; whoever joins taps Ready, and the host starts (lobby-ui.js draws the
+// phone. For that, the host creates a lobby and it shows up in List Hosted Games
+// and on the home page, where anyone at the arcade can join it (nobody is picked);
+// whoever joins taps Ready, and the host starts (lobby-ui.js draws the
 // seats and the chat). Nobody types a code. A game on two phones is saved on the server, so leaving
 // doesn't end it: it waits in the Continue row, and opening it on another
 // device (chess.html?room=CODE) puts you back in your seat. The rules live in chess-engine.js; this file draws the board and
@@ -96,37 +96,19 @@
   // ---- Create a game lobby -----------------------------------------------------------
 
   function openCreate() {
-    S.who = 'anyone';
     S.createColor = 'w';
-    S.chosen = new Set();
-    pressed($('whoSeg'), 'who', S.who);
     pressed($('createColorSeg'), 'color', S.createColor);
     // With a profile, your name comes from it.
     $('hostNameRow').classList.toggle('hidden', !!profileToken());
-    $('pickPeople').classList.add('hidden');
     $('createMsg').textContent = '';
     show('create');
-  }
-  async function setWho(who) {
-    if (who === 'selected' && !profileToken()) {
-      $('createMsg').textContent = 'Pick your profile at the top first, so the people you choose know who it\'s from.';
-      return;
-    }
-    S.who = who;
-    pressed($('whoSeg'), 'who', who);
-    $('createMsg').textContent = '';
-    $('pickPeople').classList.toggle('hidden', who !== 'selected');
-    if (who === 'selected') { await loadPeople(); paintPeople(); }
   }
   async function createLobby() {
     if (window.ArcadeStats) ArcadeStats.play();
     Blip.unlock();
     $('createMsg').textContent = '';
-    if (S.who === 'selected' && !S.chosen.size) { $('createMsg').textContent = 'Choose at least one person.'; return; }
     try {
-      const r = await api('/api/chess/rooms', { name: $('hostName').value, color: S.createColor, who: S.who,
-        allowed: S.who === 'selected' ? [...S.chosen] : [] }, profileHeaders());
-      if (S.who === 'selected') toast('The people you chose will get a notification.');
+      const r = await api('/api/chess/rooms', { name: $('hostName').value, color: S.createColor }, profileHeaders());
       enterRoom(r);
     } catch (e) { $('createMsg').textContent = e.message; }
   }
@@ -303,8 +285,8 @@
     connect();
   }
 
-  // Opening chess.html?room=CODE (an invite, the Continue row, another device) or
-  // ?join=CODE (Join a game on the home page). Your profile finds your seat; anyone
+  // Opening chess.html?room=CODE (the home page's list, the Continue row, another device) or
+  // ?join=CODE (the Lobbies list on the home page). Your profile finds your seat; anyone
   // else sees the lobby's details first, the same as from List Hosted Games.
   async function openRoom(code) {
     if (profileToken()) {
@@ -315,7 +297,7 @@
       const l = ((await r.json()).lobbies || []).find(x => x.code === code);
       if (l) return openDetails(l);
     } catch { /* falls through */ }
-    $('setupMsg').textContent = 'That lobby isn\'t open anymore. Choose List Hosted Games to see the ones that are.';
+    $('setupMsg').textContent = 'This game isn\'t available. Choose List Hosted Games to see the ones that are.';
   }
 
   // ---- the lobby -------------------------------------------------------------------
@@ -324,26 +306,11 @@
     const { code, playerId, token } = S.room;
     return api(`/api/chess/rooms/${code}/${path}`, { playerId, token, ...body });
   };
-  async function loadPeople() {
-    if (S.people || S.loadingPeople || !profileToken()) return;
-    S.loadingPeople = true;
-    try {
-      S.people = (await api('/api/invites/people', undefined, profileHeaders())).people;
-    } catch { S.people = []; }
-    S.loadingPeople = false;
-    paintPeople();
-  }
-  // Only People Selected: everyone with a profile here, to check one, a few or all.
-  function paintPeople() {
-    LobbyUI.people($('pickPeople'), S.people || [], S.chosen, () => {});
-    if (S.people && !S.people.length) $('createMsg').textContent = 'Nobody else has a profile here yet.';
-  }
-
   function renderLobby(snap) {
     const host = snap.host;
     $('lobbyTitle').textContent = host ? 'Your Chess lobby' : `${snap.hostName}'s Chess lobby`;
-    $('lobbyCount').textContent = `${snap.seats.length} of ${snap.max || 2} players · ${snap.settings.who === 'selected' ? 'Only people selected' : 'Anyone can join'}`;
-    LobbyUI.seats($('lobbySeats'), snap.seats, { invited: snap.invited, max: snap.max || 2, canMute: host, onMute: (seat, on) => mute(seat, on),
+    $('lobbyCount').textContent = `${snap.seats.length} of ${snap.max || 2} players`;
+    LobbyUI.seats($('lobbySeats'), snap.seats, { max: snap.max || 2, canMute: host, onMute: (seat, on) => mute(seat, on),
       onRemove: seat => roomCall('remove', { seat }).then(applySnap, e => toast(e.message)) });
     $('lobbyHost').classList.toggle('hidden', !host);
     $('lobbyGuest').classList.toggle('hidden', host);
@@ -908,8 +875,8 @@
       title: 'Ways to play',
       html: `<table>
           <tr><td>🤖 VS Computer</td><td>Easy, Medium or Hard. Win to get on the 🏆 board.</td></tr>
-          <tr><td>📱 Multiplayer-Single device</td><td>Two players take turns sharing this device. The board turns to face whoever's move it is.</td></tr>
-          <tr><td>📱📱 Create a game lobby</td><td>Each player on their own device. Choose who can join, then start once everyone taps Ready. There's a chat under the board, and the game is saved until you finish it.</td></tr>
+          <tr><td>📱 Multiplayer-Shared device</td><td>Two players take turns sharing this device. The board turns to face whoever's move it is.</td></tr>
+          <tr><td>📱📱 Multiplayer-Multiple devices</td><td>Each player on their own device. Create a game lobby, or join one from 🔎 List Hosted Games, and start once everyone taps Ready. There's a chat under the board, and the game is saved until you finish it.</td></tr>
           <tr><td>🔎 List Hosted Games</td><td>The lobbies waiting for players. Tap one to see who's in and join.</td></tr>
         </table>
         <div class="tut-tip">Tap <b>?</b> at the top any time to see this again.</div>`
@@ -923,7 +890,6 @@
   for (const b of $('colorSeg').children) b.addEventListener('click', () => { S.colorPref = b.dataset.color; pressed($('colorSeg'), 'color', S.colorPref); });
   for (const b of $('scoreBoardSeg').children) b.addEventListener('click', () => openScores(b.dataset.board));
   $('goBtn').addEventListener('click', start);
-  for (const b of $('whoSeg').children) b.addEventListener('click', () => setWho(b.dataset.who));
   for (const b of $('createColorSeg').children) b.addEventListener('click', () => { S.createColor = b.dataset.color; pressed($('createColorSeg'), 'color', S.createColor); });
   $('createBtn').addEventListener('click', createLobby);
   $('createBack').addEventListener('click', () => show('setup'));

@@ -55,7 +55,7 @@ test('Spin & Solve picks the same game back up after a reload, and a sleeping pa
   await settle(page);
   await expect(page.locator('#game')).toBeVisible();
   await expect(page.locator('#setup')).toBeHidden();
-  await expect(page.locator('#toast')).toHaveText('Welcome back, your game is right where you left it.');
+  await expect(page.locator('#toast')).toHaveText('Welcome back, your game is right where you left off.');
   await expect(page.locator('#strikes')).toHaveText('❌⬜⬜');
   await expect(page.locator('#categoryLabel')).toHaveText(before.category);
   await expect(page.locator('#roundLabel')).toHaveText(before.round);
@@ -187,6 +187,6 @@ test('a game the arcade no longer has sends the page back to the setup screen', 
   await reload(page);
   await expect(page.locator('#setup')).toBeVisible();
   await expect(page.locator('#game')).toBeHidden();
-  await expect(page.locator('#toast')).toContainText('That game has ended');
+  await expect(page.locator('#toast')).toContainText('This game has ended');
   expect(await remembered(page)).toBeNull();
 });

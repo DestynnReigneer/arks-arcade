@@ -15,12 +15,7 @@
 .lb-seat.empty .lb-tag { color: var(--dim); }
 .lb-mute { font: inherit; font-size: 11px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; }
 
-.lb-people { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; margin: 8px 0; }
-.lb-who { position: relative; display: grid; justify-items: center; gap: 4px; padding: 10px 4px 8px; border-radius: 12px; border: 1px solid var(--border);
   background: var(--card); color: var(--text); font: inherit; font-weight: 600; font-size: 14px; cursor: pointer; }
-.lb-who.on { border-color: #00ffc2; box-shadow: 0 0 0 1px #00ffc2 inset; }
-.lb-who.on::after { content: "✓"; position: absolute; top: 4px; right: 8px; color: #00ffc2; font-weight: 800; }
-.lb-who .lb-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .lb-share { margin: 8px 0; border: 1px dashed var(--border); border-radius: 12px; padding: 8px 12px; }
 .lb-share summary { cursor: pointer; font-weight: 600; }

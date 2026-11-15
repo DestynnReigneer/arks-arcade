@@ -1,7 +1,7 @@
 'use strict';
 
 // The party card games' lobby (Uh-Oh: Part Deux and Dare Devil share it):
-// who can join, the list, one seat per profile, Ready, the chat, the host's
+// the list everyone sees, one seat per profile, Ready, the chat, the host's
 // Mute and Remove Player, and the host turning a family lobby adult (which
 // moves out everyone the arcade doesn't know to be an adult).
 
@@ -35,19 +35,23 @@ async function run({ base }) {
 
   for (const game of ['partdeux', 'daredevil']) {
     const room = code => `/${game}/rooms/${code}`;
-    console.log(`\n-- ${game}: who can join --`);
+    console.log(`\n-- ${game}: a lobby is open to anyone, and found in the lists --`);
+    // A page that still sends the old "only these people" choice gets an ordinary lobby.
     const host = (await api(`/${game}/rooms`, 'POST', { name: 'Ann', level: 'kids', who: 'selected', allowed: [Bob.id] }, Ann.h)).data;
-    ok('a lobby for only the people picked is made', !!host.code, JSON.stringify(host).slice(0, 200));
+    ok('a lobby is made', !!host.code, JSON.stringify(host).slice(0, 200));
     const listed = async h => (await api(`/${game}/lobbies`, 'GET', null, h)).data.lobbies.some(l => l.code === host.code);
-    ok('the person picked sees it in List Hosted Games', await listed(Bob.h));
-    ok('…someone who wasn\'t picked doesn\'t', !(await listed(Cal.h)));
-    ok('…and neither does a guest', !(await listed({})));
-    ok('…nor the home page\'s Join a game list for them', !(await api('/lobby', 'GET', null, Cal.h)).data.rooms.some(r => r.code === host.code));
-    ok('someone who wasn\'t picked can\'t join', (await api(`${room(host.code)}/join`, 'POST', { name: 'Cal' }, Cal.h)).status === 403);
+    ok('everyone sees it in List Hosted Games: other profiles, and a guest', (await listed(Bob.h)) && (await listed(Cal.h)) && (await listed({})));
+    ok('…and in the home page\'s list of lobbies', (await api('/lobby', 'GET', null, Cal.h)).data.rooms.some(r => r.code === host.code) &&
+      (await api('/lobby')).data.rooms.some(r => r.code === host.code));
     const lobbyRow = (await api(`/${game}/lobbies`, 'GET', null, Bob.h)).data.lobbies.find(l => l.code === host.code);
-    ok('the list never shows a password, token or the people picked', !JSON.stringify(lobbyRow).match(/token|password|allowed/i));
+    ok('the list never shows a password or a token, and has nothing about who may join', !JSON.stringify(lobbyRow).match(/token|password|allowed|"who"/i));
+    const cal = (await api(`${room(host.code)}/join`, 'POST', { name: 'Cal' }, Cal.h)).data;
+    ok('someone the host never named joins', !!cal.playerId);
+    await api(`${room(host.code)}/leave`, 'POST', seat(cal));
     const bob = (await api(`${room(host.code)}/join`, 'POST', { name: 'Bob' }, Bob.h)).data;
-    ok('the person picked joins', !!bob.playerId);
+    ok('and so does anyone else', !!bob.playerId);
+    ok('there is no list of people to pick from, and no lobbies only for one person',
+      (await api('/invites/people', 'GET', null, Ann.h)).status === 404 && (await api('/invites', 'GET', null, Bob.h)).status === 404);
     const again = (await api(`${room(host.code)}/join`, 'POST', { name: 'Bob' }, Bob.h)).data;
     ok('joining again with the same profile gets the same seat, not a second one', again.playerId === bob.playerId);
 
@@ -65,7 +69,7 @@ async function run({ base }) {
     await api(`${room(host.code)}/remove`, 'POST', { ...seat(host), seat: bob.playerId });
     ok('the host can remove a player, whose seat stops working', (await api(`${room(host.code)}/chat`, 'POST', { ...seat(bob), text: 'still here?' })).status === 403);
     ok('…and who\'s gone from the lobby', !(await view(game, host.code, host)).data.players.some(p => p.id === bob.playerId));
-    ok('…and the chat says so in the words the player sees', (await view(game, host.code, host)).data.chat.some(m => m.system && /Bob was removed from the lobby/.test(m.text)));
+    ok('…and the chat says so in the words the player sees', (await view(game, host.code, host)).data.chat.some(m => m.system && /Bob was removed\.$/.test(m.text)));
 
     // It's the host's lobby, so the host can turn it adult with people in it. This arcade
     // has no ARKS ID sign-in, so nobody is known to be an adult: everyone else is moved out,
@@ -88,7 +92,7 @@ async function run({ base }) {
     ok('…and everyone else is moved out, with the players on their device', now.players.length === 1 && now.players[0].id === fam.playerId, JSON.stringify(now.players.map(p => p.name)));
     ok('…their seats stop working', (await api(`${room(fam.code)}/chat`, 'POST', { ...seat(calIn), text: 'hello?' })).status === 403 &&
       (await view(game, fam.code, gusIn)).status === 403);
-    ok('…the chat says who was moved out and why', now.chat.some(m => m.system && /Cal, Gus and Gus Jr were moved out, because the host switched to an adult level/.test(m.text)), JSON.stringify(now.chat.slice(-2)));
+    ok('…the chat says who was moved out and why', now.chat.some(m => m.system && /Cal, Gus and Gus Jr were removed, the host switched game mode to adult\./.test(m.text)), JSON.stringify(now.chat.slice(-2)));
     ok('…the lobby is locked', now.locked === true && (await api(`/${game}/lobbies`)).data.lobbies.find(l => l.code === fam.code).locked === true);
     ok('…and coming back takes the lobby password', (await api(`${room(fam.code)}/join`, 'POST', { name: 'Gus' })).status === 401 &&
       (await api(`${room(fam.code)}/join`, 'POST', { name: 'Gus', password: 'lime' })).status === 201);

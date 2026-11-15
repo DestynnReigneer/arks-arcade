@@ -139,10 +139,8 @@
         return applySnap(r);
       }
       if (S.mode === 'host') {
-        const hostExtra = lobby().hostBody();
-        if (!hostExtra) return;
         const r = await RoomPassword.withPassword(password =>
-          api('/rooms', { method: 'POST', body: { ...hostExtra, name: $('hostName').value, level: S.level, drinking, password, options }, headers: { ...pinHeaders(), ...lobby().headers() } }));
+          api('/rooms', { method: 'POST', body: { name: $('hostName').value, level: S.level, drinking, password, options }, headers: { ...pinHeaders(), ...lobby().headers() } }));
         if (r) enterRoom(r);
         return;
       }
@@ -178,7 +176,7 @@
     S.es.addEventListener('state', e => applySnap(JSON.parse(e.data)));
     S.es.addEventListener('removed', () => { closeRoom(); show('setup'); toast('The host removed you from the lobby.'); });
     // The host switched the lobby to an adult level, and this device isn't signed in as an adult.
-    S.es.addEventListener('moved', () => { closeRoom(); show('setup'); toast('The host switched to an adult level, so you were moved out of the lobby. Adults can join again with the lobby password.', 8000); });
+    S.es.addEventListener('moved', () => { closeRoom(); show('setup'); toast('The host switched the game mode to adult, you have been removed. Only Adults can join.', 8000); });
     S.es.onerror = () => {
       fetch(`${API}/rooms/${code}?playerId=${encodeURIComponent(playerId)}&token=${encodeURIComponent(token)}`)
         .then(r => { if (r.status === 404 || r.status === 403) { closeRoom(); show('setup'); toast('That game has ended.'); } }).catch(() => {});
