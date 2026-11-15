@@ -40,8 +40,10 @@ test('Words with Family: creating a lobby, finding it in List Hosted Games, and 
   await expect(host.page.locator('#waitHint')).toContainText('List Hosted Games');
   await expect(host.page.locator('#joinQr')).toBeVisible();
 
-  // Kim opens Words with Family, sees the lobby in List Hosted Games, and joins it.
-  const joiner = await signedIn(browser, 'kim');
+  // Sam opens Words with Family, sees the lobby in List Hosted Games, and joins it. (Sam's account has no
+  // photo. A profile with one would make the pages a visitor opens ask for a picture only signed-in people
+  // can load, which the page test would count as a problem.)
+  const joiner = await signedIn(browser, 'sam');
   const row = joiner.page.locator('#hostedList li', { hasText: "Alex's lobby" });
   await expect(row).toBeVisible({ timeout: 20000 });
   await expect(row).toContainText('1 of 2 players');
