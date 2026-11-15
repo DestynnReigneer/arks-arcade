@@ -99,6 +99,10 @@
     } catch (e) { box.textContent = e.message; }
   }
 
+  // With ARKS ID sign-in on, nobody has a PIN here, so the PIN notes and the unlock button stay out of the way.
+  fetch('/api/arksid/me', { cache: 'no-store' }).then(r => (r.ok ? r.json() : null)).then(me => {
+    if (me && me.on) for (const el of document.querySelectorAll('.pins-only')) el.hidden = true;
+  }).catch(() => {});
   $('unlockDevicesBtn').onclick = async () => {
     try {
       await api('/unlock-devices', { method: 'POST', body: {} });

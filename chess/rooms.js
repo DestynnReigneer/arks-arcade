@@ -8,11 +8,11 @@
 // Playing together (the play-together design, 2026-11-11, and the maintainer's
 // second round, 2026-11-12):
 //  - A room starts in its lobby, which shows up in the game's lobby list and on
-//    the arcade's home page. Nobody types a code. The host chooses the color and
-//    who can join: anyone at the arcade, or only the people they pick (who get a
-//    notification and an invite on the home page, arcade/invites.js). Whoever
-//    joins sees the settings but can't change them, and taps Ready; the host can
-//    only start once everyone in the lobby is ready.
+//    the arcade's home page, and anyone at the arcade can join it. Nobody types a
+//    code, and nobody is picked or told about it: people find it in the lists.
+//    The host chooses the color. Whoever joins sees the settings but can't change
+//    them, and taps Ready; the host can only start once everyone in the lobby is
+//    ready.
 //  - The lobby and the game have a chat (arcade/room-chat.js), filtered with the
 //    kids word list, and the host can mute someone.
 //  - A seat taken with a profile belongs to that profile, not the browser tab:
@@ -28,7 +28,6 @@
 const crypto = require('node:crypto');
 const Chess = require('../public/chess-engine');
 const db = require('../db');
-const invites = require('../arcade/invites');
 const chat = require('../arcade/room-chat').create('chess');
 
 const rooms = new Map();
@@ -41,7 +40,6 @@ const SWEEP_MS = 10 * 60 * 1000;
 const HEARTBEAT_MS = 25000;
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const COLORS = ['w', 'b', 'random'];
-const MAX_SELECTED = invites.MAX_TO;
 
 function fail(message, status = 400) {
   return Object.assign(new Error(message), { status });
@@ -98,7 +96,6 @@ function drop(r) {
   rooms.delete(r.code);
   db.db.prepare('DELETE FROM chess_rooms WHERE code = ?').run(r.code);
   chat.clear(r.code);
-  invites.clear('chess', r.code);
 }
 
 // ---- the room -------------------------------------------------------------------------------------------
@@ -125,45 +122,28 @@ function roomForProfile(profile) {
   }
 }
 
-// profile: { id, name } when the host has one (needed to pick people).
-// who: 'anyone' (the default) or 'selected', with allowed: the profile ids picked.
+// profile: { id, name } when the host has one.
 // ip: who's asking, for the per-address cap.
-function create({ name, color, who, allowed, profile, ip = '' }) {
+function create({ name, color, profile, ip = '' }) {
   if (rooms.size >= MAX_ROOMS) throw fail('The arcade is full of chess games. Try again later.', 503);
   if (ip && [...rooms.values()].filter(r => r.ip === ip && !r.ended).length >= PER_ADDRESS) {
     throw fail('That\'s a lot of chess games at once. Finish one first.', 429);
   }
   roomForProfile(profile);
-  const onlySome = who === 'selected';
-  const list = Array.isArray(allowed) ? allowed : [];
-  if (onlySome && list.length > MAX_SELECTED) throw fail(`Choose up to ${MAX_SELECTED} people.`);
-  const picked = onlySome ? [...new Set(list.map(id => String(id).slice(0, 64)))].filter(id => !profile || id !== profile.id) : [];
-  if (onlySome && !profile) throw fail('Pick your profile first, so the people you choose know who it\'s from.', 401);
-  if (onlySome && !picked.length) throw fail('Choose at least one person, or let anyone at the arcade join.');
-  // Only real profiles are kept, so nothing else can be stored with the room.
-  if (onlySome && !invites.allProfiles(picked)) throw fail('One of the people you picked doesn\'t have a profile here anymore.');
   const host = { id: makeId(), token: makeToken(), name: cleanName(profile ? profile.name : name, 'Player 1'), color: null,
     profileId: profile ? profile.id : null, ready: true, clients: 0 };
   const r = { code: makeCode(), phase: 'lobby', hostId: host.id,
-    settings: { color: COLORS.includes(color) ? color : 'w', who: onlySome ? 'selected' : 'anyone', allowed: picked },
+    settings: { color: COLORS.includes(color) ? color : 'w' },
     players: [host], muted: new Set(), clients: new Set(), lastActivity: Date.now(), ip };
   newGame(r);
   rooms.set(r.code, r);
   save(r);
-  // The people picked hear about it (a notification, and Invites on the home page).
-  if (onlySome) {
-    try { invite(r.code, host.id, host.token, picked); } catch (e) { drop(r); throw e; }
-  }
   return { code: r.code, playerId: host.id, token: host.token };
 }
 
-// Whether someone may see and join this lobby.
-const mayJoin = (r, profile) => r.settings.who !== 'selected' ||
-  (!!profile && (r.settings.allowed.includes(profile.id) || r.players.some(p => p.profileId === profile.id)));
-
 function room(code) {
   const r = rooms.get(String(code || '').toUpperCase());
-  if (!r) throw fail('That game isn\'t open anymore.', 404);
+  if (!r) throw fail('This game isn\'t available.', 404);
   return r;
 }
 
@@ -182,20 +162,18 @@ function host(r, playerId, token) {
 const seatOf = (r, profile) => (profile ? r.players.find(p => p.profileId && p.profileId === profile.id) : null);
 const ticket = (r, p) => ({ code: r.code, playerId: p.id, token: p.token, color: p.color });
 
-// Joining from an invite, a link or the code. Someone already in it with this
-// profile gets their own seat back.
+// Joining from a list or a link. Someone already in it with this profile gets
+// their own seat back.
 function join(code, name, profile) {
   const r = room(code);
   const mine = seatOf(r, profile);
   if (mine) return ticket(r, mine);
   if (r.phase !== 'lobby') throw fail('That game has already started.', 409);
-  if (!mayJoin(r, profile)) throw fail('This lobby is only for the people the host picked.', 403);
   if (r.players.length >= 2) throw fail('That game already has two players.', 409);
   roomForProfile(profile);
   const p = { id: makeId(), token: makeToken(), name: cleanName(profile ? profile.name : name, 'Player 2'), color: null,
     profileId: profile ? profile.id : null, ready: false, clients: 0 };
   r.players.push(p);
-  if (profile) invites.clear('chess', r.code, profile.id);
   chat.note(r.code, `${p.name} joined`);
   changed(r);
   return ticket(r, p);
@@ -242,29 +220,9 @@ function start(code, playerId, token) {
   for (const p of r.players) p.color = p.id === r.hostId ? pick : (pick === 'w' ? 'b' : 'w');
   r.phase = 'playing';
   newGame(r);
-  invites.clear('chess', r.code);
   chat.note(r.code, 'The game started');
   changed(r);
   return snapshot(r, playerId);
-}
-
-function invite(code, playerId, token, to) {
-  const r = room(code);
-  const h = host(r, playerId, token);
-  if (r.phase !== 'lobby') throw fail('The game has already started.', 409);
-  if (!h.profileId) throw fail('Choose your profile first, so the people you select know who it\'s from.', 401);
-  const seated = new Set(r.players.map(p => p.profileId).filter(Boolean));
-  const sent = invites.send({
-    game: 'chess', room: r.code, from: { id: h.profileId, name: h.name }, to: (Array.isArray(to) ? to : []).filter(id => !seated.has(String(id))),
-    title: 'Chess', href: `chess.html?room=${r.code}`,
-    notify: { title: 'Chess', body: `${h.name} started a Chess lobby with you. Get in here!` }
-  });
-  // In a lobby for picked people only, someone invited later is let in too.
-  if (r.settings.who === 'selected') {
-    for (const p of sent) if (!r.settings.allowed.includes(p.id) && r.settings.allowed.length < MAX_SELECTED) r.settings.allowed.push(p.id);
-  }
-  changed(r);
-  return { sent, state: snapshot(r, playerId) };
 }
 
 function say(code, playerId, token, text) {
@@ -287,8 +245,7 @@ function mute(code, playerId, token, target, on) {
   return snapshot(r, playerId);
 }
 
-// The host taking someone out of a seat in the lobby (someone who came in on
-// the code before the person the host invited, say).
+// The host taking someone out of a seat in the lobby.
 function remove(code, playerId, token, target) {
   const r = room(code);
   host(r, playerId, token);
@@ -301,7 +258,7 @@ function remove(code, playerId, token, target) {
     if (c.playerId !== t.id) continue;
     try { c.res.write('event: removed\ndata: {}\n\n'); c.res.end(); } catch { /* gone */ }
   }
-  chat.note(r.code, `${t.name} was removed from the lobby`);
+  chat.note(r.code, `${t.name} was removed.`);
   changed(r);
   return snapshot(r, playerId);
 }
@@ -334,12 +291,11 @@ function snapshot(r, viewerId) {
     phase: r.phase,
     host: !!me && me.id === r.hostId,
     hostName: hostP ? hostP.name : '',
-    settings: { color: r.settings.color, who: r.settings.who || 'anyone' },
+    settings: { color: r.settings.color },
     seats: r.players.map(p => ({ id: p.id, name: p.name, online: p.clients > 0, host: p.id === r.hostId,
       ready: p.id === r.hostId || !!p.ready, muted: r.muted.has(p.id), you: p.id === viewerId })),
     max: 2,
     allReady: r.players.length >= 2 && r.players.every(p => p.id === r.hostId || p.ready),
-    invited: r.phase === 'lobby' ? invites.pending('chess', r.code).map(i => i.name) : [],
     muted: !!me && r.muted.has(me.id),
     chat: chat.list(r.code, viewerId),
     fen: Chess.toFen(r.state),
@@ -462,15 +418,15 @@ function subscribe(code, playerId, token, res) {
 
 // ---- other parts of the arcade --------------------------------------------------------------------------
 
-// The lobbies one person can see (List Hosted Games, and Join a game on the home
-// page): every lobby open to anyone, plus the ones they were picked for.
+// Every lobby, for everyone (List Hosted Games, and the home page's list).
+// profile: who's asking, so the lobby they're already in can be marked as theirs.
 function lobbies(profile) {
   const out = [];
   for (const r of rooms.values()) {
-    if (r.phase !== 'lobby' || !mayJoin(r, profile)) continue;
+    if (r.phase !== 'lobby') continue;
     const h = r.players.find(p => p.id === r.hostId) || r.players[0] || {};
     out.push({ code: r.code, host: h.name || '', players: r.players.map(p => p.name), count: r.players.length, max: 2,
-      status: r.players.length >= 2 ? 'full' : 'open', color: r.settings.color, who: r.settings.who || 'anyone',
+      status: r.players.length >= 2 ? 'full' : 'open', color: r.settings.color,
       mine: !!profile && r.players.some(p => p.profileId === profile.id) });
   }
   return out;
@@ -489,14 +445,6 @@ function mine(profile) {
   return out;
 }
 
-// An invite stays open while the lobby has a free seat.
-invites.register('chess', (code, profileId) => {
-  const r = rooms.get(code);
-  if (!r || r.phase !== 'lobby' || r.players.length >= 2 || r.players.some(p => p.profileId === profileId)) return { open: false };
-  const h = r.players.find(p => p.id === r.hostId);
-  return { open: true, detail: `${h ? h.name : 'The host'} is waiting` };
-});
-
 // Only a game between two profiles that has really started is kept long.
 const keepsLong = r => r.phase === 'playing' && !r.ended && r.moves.length > 0 && r.players.length === 2 && r.players.every(p => p.profileId);
 
@@ -505,14 +453,13 @@ function sweep(now = Date.now()) {
     const ttl = keepsLong(r) ? TTL_MS : SHORT_TTL_MS;
     if (now - r.lastActivity >= ttl) drop(r);
   }
-  // A backstop: chat and invites for rooms that are gone.
+  // A backstop: chat for rooms that are gone.
   db.db.prepare("DELETE FROM room_chat WHERE game = 'chess' AND room NOT IN (SELECT code FROM chess_rooms)").run();
-  db.db.prepare("DELETE FROM arcade_invites WHERE game = 'chess' AND room NOT IN (SELECT code FROM chess_rooms)").run();
 }
 
 load();
 const sweeper = setInterval(sweep, SWEEP_MS);
 if (typeof sweeper.unref === 'function') sweeper.unref();
 
-module.exports = { create, join, seatFor, setSettings, ready, start, invite, say, mute, remove, leave, move, act, snapshot, room,
-  authenticate, subscribe, mine, lobbies, mayJoin, sweep, setNotifier, _rooms: rooms };
+module.exports = { create, join, seatFor, setSettings, ready, start, say, mute, remove, leave, move, act, snapshot, room,
+  authenticate, subscribe, mine, lobbies, sweep, setNotifier, _rooms: rooms };

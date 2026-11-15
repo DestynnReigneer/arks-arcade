@@ -87,7 +87,7 @@ module.exports = function triviaRoutes({ requireAdmin, notify, whoIs = null }) {
       requireLevel(settings.level, req);
       // screen: this device (a TV) shows the game and doesn't play.
       res.status(201).json(rooms.create({ name: body.name, settings, password: body.password, screen: body.screen === true,
-        profile: profileOf(req), who: body.who, allowed: body.allowed }));
+        profile: profileOf(req) }));
     } catch (e) { next(e); }
   });
   // Guests don't need an ARKS ID adult pass: an adult game's own lobby password lets

@@ -52,12 +52,12 @@ test('a host turns a family lobby adult: the guest is moved out and told why', a
   await expect(host.locator('#lobbyLevels .level[aria-pressed=true]')).toContainText('Spicy');
 
   // The guest is back on the setup screen, with the reason.
-  await expect(guest.locator('#toast')).toHaveText('The host switched to an adult level, so you were moved out of the lobby. Adults can join again with the lobby password.');
+  await expect(guest.locator('#toast')).toHaveText('The host switched the game mode to adult, you have been removed. Only Adults can join.');
   await expect(guest.locator('#setup')).toBeVisible();
   await expect(guest.locator('#lobby')).toBeHidden();
 
   // The host's lobby shows who left, and only the host is in it.
-  await expect(host.locator('#lobby .lb-chat')).toContainText('Gus was moved out, because the host switched to an adult level');
+  await expect(host.locator('#lobby .lb-chat')).toContainText('Gus was removed, the host switched game mode to adult.');
   await expect(host.locator('#lobbyPlayers')).not.toContainText('Gus');
   for (const c of ctxs) await c.close();
 });

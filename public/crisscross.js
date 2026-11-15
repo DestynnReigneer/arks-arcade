@@ -155,7 +155,7 @@
       $('mineTitle').textContent = r.yourTurn ? `Your turn in ${r.yourTurn} game${r.yourTurn === 1 ? '' : 's'}` : 'Your games';
       $('mineHint').textContent = r.games.length
         ? 'Tap a game to open it. Games you\'re waiting on update by themselves.'
-        : 'You aren\'t in any games yet. Start one with the family, and it shows up here for everyone in it.';
+        : 'No Games Running... join or start a game.';
       list.innerHTML = '';
       for (const g of r.games) list.appendChild(gameItem(g));
     } catch (e) {
@@ -349,7 +349,7 @@
     $('inviteMsg').textContent = '';
     try {
       const r = await call(`/invite/${encodeURIComponent(code)}`);
-      $('inviteTitle').textContent = `Join ${r.players[0]}'s game`;
+      $('inviteTitle').textContent = 'Join game?';
       $('inviteText').textContent = `${names(r.players)} ${r.players.length === 1 ? 'is' : 'are'} playing Words with Family, with ${r.seats - r.players.length} seat${r.seats - r.players.length === 1 ? '' : 's'} left, on ${r.dictionary === 'adult' ? 'the unfiltered word list (adults only)' : 'family words'}.` +
         (me() ? '' : ' Pick your profile first, so the game knows whose turn is whose.');
       $('inviteJoin').textContent = me() ? 'Join the game' : 'Pick my profile';
@@ -361,7 +361,7 @@
         } catch (e) { $('inviteMsg').textContent = e.message; }
       };
     } catch (e) {
-      $('inviteTitle').textContent = 'That game isn\'t open anymore';
+      $('inviteTitle').textContent = 'This game isn\'t available.';
       $('inviteText').textContent = e.message;
       $('inviteJoin').classList.add('hidden');
     }
@@ -937,6 +937,10 @@
   // ---- buttons -----------------------------------------------------------------------------------------------------
   $('newOnlineBtn').onclick = newOnline;
   $('pickProfileBtn').onclick = () => ArcadeProfile.open();
+  // Where the family signs in with ARKS ID, the line says so.
+  ArcadeProfile.arksId().ready.then(id => {
+    if (id.on) $('noProfileHint').textContent = 'A game can last a few days, with each person taking their turn whenever they\'re free, so the arcade needs your ARKS ID. Pick your profile to start or to see your open games.';
+  }).catch(() => {});
   $('newLocalBtn').onclick = newLocal;
   $('onlineGo').onclick = startOnline;
   $('onlineBack').onclick = home;

@@ -30,12 +30,14 @@ test('Chess: creating a lobby, finding it, Ready, the chat and starting', async 
   await expect(host.locator('#setup h2')).toHaveText('Choose game mode');
   await host.locator('#modeSeg [data-mode="host"]').click();
   await expect(host.locator('#create h2')).toHaveText('Set Chess Settings');
-  await expect(host.locator('#whoSeg [data-who="anyone"]')).toHaveAttribute('aria-pressed', 'true');
+  // Nothing asks who can join: a lobby is open to anyone at the arcade, and nobody is picked.
+  await expect(host.locator('#whoSeg')).toHaveCount(0);
+  await expect(host.locator('#create')).not.toContainText('Who can join');
   await host.locator('#hostName').fill('Sam');
   await host.locator('#createColorSeg [data-color="b"]').click();
   await host.locator('#createBtn').click();
   await expect(host.locator('#lobbyTitle')).toHaveText('Your Chess lobby');
-  await expect(host.locator('#lobbyCount')).toHaveText('1 of 2 players · Anyone can join');
+  await expect(host.locator('#lobbyCount')).toHaveText('1 of 2 players');
   await expect(host.locator('#lobbySeats .lb-open')).toBeVisible();
   await expect(host.locator('#lobbyStart')).toBeDisabled();
   await expect(host.locator('#lobbyStart')).toHaveText('Waiting on players to join...');

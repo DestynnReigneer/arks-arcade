@@ -84,7 +84,7 @@ function start({ pool, names, rounds, level, adult, packLabel, profileId, ip }) 
 
 function get(id) {
   const g = games.get(String(id || ''));
-  if (!g) throw fail('That game has ended. Start a new one.', 404);
+  if (!g) throw fail('This game has ended. Start a new one.', 404);
   g.touched = Date.now();
   return g;
 }

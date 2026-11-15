@@ -27,7 +27,7 @@ function createPush({ arks }) {
   // Tells the person behind an arcade profile something, on every phone they
   // turned notifications on. Never throws, and nobody waits for it: a game
   // move doesn't fail because a phone couldn't be reached.
-  // Since contract v16 it also says what kind of news it is (turn, invite, started, chat), who it's from and
+  // Since contract v16 it also says what kind of news it is (turn, started, chat), who it's from and
   // which game, so ARKS ID can send it to the person's phone, to Discord's #turns channel, or both, as they chose.
   const accountOf = profileId => {
     const p = db.db.prepare("SELECT arksid_user FROM arcade_profiles WHERE id = ? AND status = 'approved'").get(String(profileId || ''));
@@ -37,7 +37,7 @@ function createPush({ arks }) {
     const to = accountOf(profileId);
     if (!to) return Promise.resolve(0);
     const extra = {};
-    if (['turn', 'invite', 'started', 'chat'].includes(kind)) extra.kind = kind;
+    if (['turn', 'started', 'chat'].includes(kind)) extra.kind = kind;
     const fromAccount = from ? accountOf(from) : null;
     if (fromAccount) extra.from = fromAccount;
     if (game) extra.game = String(game).slice(0, 40);
