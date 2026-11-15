@@ -90,7 +90,23 @@ async function run({ base, root, restart }) {
     put.run(hex('e'), '{not a game', Date.now());
     // A family game whose row was pointed at an adult level's list of puzzles.
     put.run(hex('f'), JSON.stringify({ ...good, id: hex('f'), poolKey: 'level:filthy', profileId: null }), Date.now());
+    // Rooms that can't be put back together, beside the real ones.
+    const room = (game, code) => JSON.parse(db.prepare('SELECT data FROM saved_rooms WHERE game = ? AND code = ?').get(game, code).data);
+    const putRoom = db.prepare('INSERT INTO saved_rooms (game, code, data, saved_at) VALUES (?, ?, ?, ?)');
+    const scGood = room('scuffle', sc.code), rbGood = room('rambler', rb.code);
+    for (const [code, change] of Object.entries(damagedRooms.scuffle)) putRoom.run('scuffle', code, JSON.stringify({ ...scGood, code, ...change }), Date.now());
+    for (const [code, change] of Object.entries(damagedRooms.rambler)) putRoom.run('rambler', code, JSON.stringify({ ...rbGood, code, ...change }), Date.now());
+    putRoom.run('scuffle', 'ZZZZ', '{not a room', Date.now());
     db.close();
+  };
+  // players: [null] can't be read at all; a word list that isn't one breaks the seat it belongs to.
+  const damagedRooms = {
+    scuffle: { ZZZA: { players: [null] }, ZZZB: { players: [{ id: 'x', token: 'y', name: 'Z', found: [5] }] }, ZZZC: { phase: 'paused' } },
+    rambler: { ZZZA: { players: [null] }, ZZZB: { screen: null, players: [] }, ZZZC: { state: 'paused' } }
+  };
+  const roomRows = () => {
+    const db = new DatabaseSync(path.join(root, 'data', 'test.db'));
+    try { return db.prepare('SELECT game, code FROM saved_rooms').all().map(r => `${r.game}:${r.code}`); } finally { db.close(); }
   };
 
   // Shuffle Scuffle: a room in the middle of a round with a word found, a lobby nobody started, and an adult lobby.
@@ -228,11 +244,13 @@ async function run({ base, root, restart }) {
   await api(scRoom(`${scLobby.code}/leave`), 'POST', seat(scLobby));
 
   await wait(900);
-  let rowsLeft = [];
-  await restart({ whileDown: () => { rowsLeft = spinRows(); } });
+  let rowsLeft = [], roomsLeft = [];
+  await restart({ whileDown: () => { rowsLeft = spinRows(); roomsLeft = roomRows(); } });
 
   ok('the damaged rows were cleared out of the database, and the games are still in it',
     rowsLeft.includes(guests.id) && ![...Object.keys(damaged), hex('e')].some(id => rowsLeft.includes(id)), rowsLeft.join());
+  ok('…and so were seven rooms that couldn\'t be put back together, while the real rooms stayed',
+    roomsLeft.includes(`scuffle:${sc.code}`) && roomsLeft.includes(`rambler:${rb.code}`) && !roomsLeft.some(r => /:ZZZ/.test(r)), roomsLeft.join());
   const stillOver = await look(mine.id, kim);
   ok('a finished Spin & Solve game waiting for its score comes back as well', stillOver.status === 200 && stillOver.data.state.phase === 'over' && stillOver.data.state.players[0].total === total);
   ok('…and it has left the Continue row', !(await api('/api/continue', 'GET', null, kim)).data.games.some(g => g.game === 'spinsolve'));
