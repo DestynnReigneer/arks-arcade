@@ -569,6 +569,16 @@ async function run({ base, root, fake, admin: ADMIN }) {
     ok('…an old-style token for a signed-in account is refused', (await mineWith(kimToken.split('.')[0] + '.' + kimToken.split('.')[2])) === 401);
     await tokenTab.call('/auth/signout', { method: 'POST', follow: false });
     ok('…and once that sign-in ends, the token is refused', (await mineWith(kimToken)) === 401);
+    // A sign-in that ends at ARKS ID ends a copied token too, without the owner's browser coming back.
+    const awayTab = browser();
+    await awayTab.call('/auth/signin?return=%2F');
+    const awayToken = (await awayTab.call('/api/arksid/me')).data.token;
+    const awaySession = [...fake.sessions].filter(([, v]) => v.key === 'kim' && v.valid).map(([id]) => id).pop();
+    fake.sessions.get(awaySession).valid = false;
+    await new Promise(r => setTimeout(r, 1200));
+    await mineWith(awayToken);   // this use sets the background check going
+    await new Promise(r => setTimeout(r, 400));
+    ok('…and a sign-in that ended at ARKS ID ends its token soon after, from a token alone', (await mineWith(awayToken)) === 401);
 
     // A browser whose sign-in ended at ARKS ID signs in again. That's a different sign-in
     // there, and the record this browser's cookie pointed to goes at once, so a pass from
