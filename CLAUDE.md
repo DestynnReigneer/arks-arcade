@@ -81,7 +81,7 @@ storage) lives in `arcade/security.js`, `arcade/feedback.js` and `arcade/comm.js
   But a "so close!" must always be real (the ladder climbs the actual
   leaderboard).
 - **Built for family and parties.** Adult games and levels are wanted (with a
-  raunchiness scale), and they're listed openly on the Join a game board so
+  raunchiness scale), and they're listed openly in the home page's Lobbies list so
   guests can get in easily. Kids are kept out by needing an adult's ARKS ID
   sign-in and a per-lobby password the host makes up, not by hiding things. When in doubt, make joining
   easier for guests, not harder.

@@ -41,7 +41,7 @@ window.ramblerTutorial = Tutorial.create('rambler', [
         <tr><td>🙂 Solo</td><td>You against the clock.</td></tr>
         <tr><td>🤝 Pass &amp; Play</td><td>One device, take turns on the same board.</td></tr>
         <tr><td>📝 Tabletop</td><td>Everyone writes on paper, then types their lists in.</td></tr>
-        <tr><td>📱 Own Devices</td><td>Everyone on their own device with a room code.</td></tr>
+        <tr><td>📱📱 Multiplayer-Multiple devices</td><td>Everyone plays the same board on their own device. One person taps Create a game lobby, and everyone else joins it from 🔎 List Hosted Games.</td></tr>
         <tr><td>🔥 Marathon</td><td>Each word buys more time, and the grid grows.</td></tr>
         <tr><td>📅 Today's Board</td><td>One board a day for the whole house.</td></tr>
       </table>`

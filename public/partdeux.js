@@ -268,8 +268,8 @@
 
   function renderLobby(snap) {
     show('lobby');
-    $('lobbyCode').textContent = snap.code;
-    if ($('joinQr').dataset.code !== snap.code) { $('joinQr').dataset.code = snap.code; ArcadeQR.forGame($('joinQr'), 'partdeux.html', snap.code, $('joinLink')); }
+    // The QR code is only drawn for a TV's lobby. (Drawing it finishes a moment later and would show it on a device's lobby.)
+    if (snap.screen && $('joinQr').dataset.code !== snap.code) { $('joinQr').dataset.code = snap.code; ArcadeQR.forGame($('joinQr'), 'partdeux.html', snap.code, $('joinLink')); }
     const lv = levelInfo(snap.level);
     $('lobbyInfo').textContent = `Deck: ${lv.emoji} ${lv.label}` + (snap.drinking ? ' · 🍺 Drinking' : '') +
       (snap.lobbyPassword ? ` · 🔒 Password: ${snap.lobbyPassword}` : snap.locked ? ' · 🔒 Locked' : '');

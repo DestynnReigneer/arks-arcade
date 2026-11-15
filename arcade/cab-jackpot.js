@@ -53,7 +53,7 @@ const playedLimiter = rateLimit({
   windowMs: 60 * 1000, limit: 12, standardHeaders: true, legacyHeaders: false,
   message: { error: 'Too many games at once. Take a breather.' }
 });
-const known = (req, res, next) => (JACKPOTS[req.params.game] ? next() : res.status(404).json({ error: 'That game has no jackpot.' }));
+const known = (req, res, next) => (Object.hasOwn(JACKPOTS, req.params.game) ? next() : res.status(404).json({ error: 'That game has no jackpot.' }));
 router.get('/:game', known, (req, res) => res.json({ amount: state(req.params.game).amount }));
 router.post('/:game/played', known, playedLimiter, (req, res) => res.json({ amount: played(req.params.game, !!(req.body && req.body.won)) }));
 

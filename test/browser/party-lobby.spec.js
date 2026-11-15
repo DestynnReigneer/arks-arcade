@@ -31,7 +31,9 @@ for (const [path, title, first] of [['/partdeux.html', 'Uh-Oh: Part Deux', 'Robi
     await host.locator('#hostName').fill(who);
     await host.locator('#goBtn').click();
     await expect(host.locator('#lobby')).toBeVisible();
-    await expect(host.locator('#lobbyCode')).toBeHidden();
+    // No code anywhere, and the QR code is only for a TV.
+    await expect(host.locator('#lobbyCode')).toHaveCount(0);
+    await expect(host.locator('#joinQr')).toBeHidden();
     await expect(host.locator('#lobbyInfo')).toContainText(`Your ${title} lobby`);
     await expect(host.locator('#startBtn')).toHaveText('Waiting on players to join...');
 

@@ -138,7 +138,6 @@
    highlight. Hosting a room, the TV shows the letters, the clock and the
    scores for everyone, and none of the typing parts. */
 html.tv #lobby:not(.hidden) { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
-html.tv #lobby .code { font-size: 64px; letter-spacing: 12px; }
 html.tv #joinQr { width: 220px !important; height: 220px !important; }
 html.tv .people li { font-size: 18px; }
 html.tv .keys-hint { display: none; }
