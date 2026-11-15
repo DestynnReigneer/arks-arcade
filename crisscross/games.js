@@ -47,7 +47,8 @@ db.db.exec(`
 
 const DAY = 24 * 60 * 60 * 1000;
 const KEEP_LOCAL = 30 * DAY;        // a pass-and-play game nobody touched for a month is forgotten
-const KEEP_WAITING = 14 * DAY;      // so is an online game that never got its players
+const KEEP_WAITING = 14 * DAY;      // so is a lobby someone joined that never filled up
+const KEEP_UNJOINED = DAY;          // and a lobby nobody joined goes after one quiet day
 const MAX_OPEN_PER_PROFILE = 30;    // unfinished online games one profile can be in
 const MAX_WAITING_PER_HOST = 5;     // lobbies one profile can have waiting at once: everyone sees those, on two lists
 const MAX_LOCAL = 5000;
@@ -58,7 +59,9 @@ const cleanName = raw => String(raw || '').trim().replace(/\s+/g, ' ').slice(0, 
 
 function sweep(now = Date.now()) {
   const old = db.db.prepare(`SELECT id FROM crisscross_games WHERE (kind = 'local' AND updated_at < ?)
-    OR (status = 'waiting' AND updated_at < ?)`).all(now - KEEP_LOCAL, now - KEEP_WAITING);
+    OR (status = 'waiting' AND updated_at < ?)
+    OR (status = 'waiting' AND updated_at < ? AND (SELECT COUNT(*) FROM crisscross_seats s WHERE s.game_id = crisscross_games.id) <= 1)`)
+    .all(now - KEEP_LOCAL, now - KEEP_WAITING, now - KEEP_UNJOINED);
   for (const { id } of old) remove(id);
 }
 const sweeper = setInterval(sweep, 60 * 60 * 1000);

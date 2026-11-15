@@ -117,4 +117,9 @@ router.use((err, req, res, next) => {
   res.status(err.status).json({ error: err.message, ...(err.adult ? { adult: true } : {}) });
 });
 
+// Only for the test suite: the hourly cleanup, run as if it were some other time.
+if (process.env.NODE_ENV === 'test') {
+  router.post('/test/sweep', wrap(req => { games.sweep(Number(body(req).now) || Date.now()); return { ok: true }; }));
+}
+
 module.exports = router;
