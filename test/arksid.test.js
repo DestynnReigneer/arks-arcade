@@ -116,7 +116,10 @@ async function run({ base, root, fake, admin: ADMIN }) {
 
   console.log('\n-- adult levels follow the role --');
   ok('a kid gets no adult pass', (await milo.call('/api/arksid/adult-pass', { method: 'POST' })).status === 403);
-  ok('neither does someone signed out', (await visitor.call('/api/arksid/adult-pass', { method: 'POST' })).status === 401);
+  const guestPass = await visitor.call('/api/arksid/adult-pass', { method: 'POST' });
+  ok('a guest does, on a device that isn\'t a kid\'s', guestPass.status === 200 && /^ag\./.test(guestPass.data.pass), JSON.stringify(guestPass.data));
+  ok('…and it opens the adult levels', (await visitor.call('/api/adult-check', { method: 'POST', body: { pin: guestPass.data.pass } })).data.ok === true);
+  ok('a made-up guest pass doesn\'t', (await visitor.call('/api/adult-check', { method: 'POST', body: { pin: 'ag.9999999999999.' + 'x'.repeat(43) } })).data.ok === false);
   const p = await fresh.call('/api/arksid/adult-pass', { method: 'POST' });
   ok('an adult does', p.status === 200 && /^ap\./.test(p.data.pass));
   ok('…and it works wherever the adult PIN did', (await visitor.call('/api/adult-check', { method: 'POST', body: { pin: p.data.pass } })).data.ok === true &&

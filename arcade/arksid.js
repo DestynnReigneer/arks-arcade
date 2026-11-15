@@ -410,7 +410,15 @@ function createArksId({ client, now = Date.now, profiles }) {
     checkSoon(s.session_id, s.checked_at);
     return true;
   });
+  // A guest's pass: "ag.<expires>.<signature>". A guest is anyone who isn't signed
+  // in on a device that isn't a kid's or a teen's (checked when it's handed out).
+  function guestPass() {
+    const body = `ag.${now() + PASS_MS}`;
+    return `${body}.${sign(body)}`;
+  }
   function passOk(pass) {
+    const g = /^(ag\.(\d{10,16}))\.([A-Za-z0-9_-]{43})$/.exec(String(pass || ''));
+    if (g) return Number(g[2]) >= now() && sameSig(g[3], sign(g[1]));
     const m = /^(ap\.([0-9a-f]{16})\.(\d{10,16})\.([0-9a-f]{24}))\.([A-Za-z0-9_-]{43})$/.exec(String(pass || ''));
     if (!m || Number(m[3]) < now() || !sameSig(m[5], sign(m[1]))) return false;
     const row = db.db.prepare(`SELECT a.role, a.kind, a.user_id FROM arcade_profiles p JOIN arcade_id_accounts a ON a.user_id = p.arksid_user
@@ -420,8 +428,8 @@ function createArksId({ client, now = Date.now, profiles }) {
       .filter(s => signinKey(s.session_id) === m[4]);
     if (!signins.length) return false;
     checkSoon(signins[0].session_id, Math.max(...signins.map(s => s.checked_at)));
-    // A TV's pass works only while its adults' night is on.
-    if (row.kind === 'tv') return !!adultModeOf(row.user_id);
+    // A TV plays adult games like anyone else (the maintainer, 2026-11-15).
+    if (row.kind === 'tv') return true;
     return GROWN_UP.includes(row.role);
   }
 
@@ -585,14 +593,19 @@ function createArksId({ client, now = Date.now, profiles }) {
       res.set({ 'Content-Type': pic.type, 'Cache-Control': 'private, max-age=3600', 'X-Content-Type-Options': 'nosniff' }).send(pic.body);
     });
 
-    // The adult pass, for a signed-in adult. It goes where the PIN used to.
+    // The adult pass, which goes where the PIN used to. Everyone gets one but a
+    // kid's or a teen's device (the maintainer, 2026-11-15): adults, TVs, and guests.
     router.post('/api/arksid/adult-pass', async (req, res) => {
       res.set('Cache-Control', 'no-store');
+      const KID = { error: 'Adult games aren\'t available on a kid\'s account.' };
       const me = client ? await current(req) : null;
-      if (!me) return res.status(401).json({ error: 'Sign in with ARKS ID first.' });
-      if (me.tv && !me.adultMode) return res.status(403).json({ error: 'Adult levels on the TV need an adults\' night, unlocked from an adult\'s phone.' });
-      if (!me.tv && !GROWN_UP.includes(me.account.role)) return res.status(403).json({ error: 'Adult levels are for adult ARKS ID accounts.' });
-      res.json({ pass: passFor(me.profile, me.sessionId) });
+      if (me) {
+        if (!me.tv && !GROWN_UP.includes(me.account.role)) return res.status(403).json(KID);
+        return res.json({ pass: passFor(me.profile, me.sessionId) });
+      }
+      const dev = deviceFrom(req);
+      if (dev && dev.known && dev.ownerRole && !GROWN_UP.includes(dev.ownerRole)) return res.status(403).json(KID);
+      res.json({ pass: guestPass() });
     });
     return router;
   }

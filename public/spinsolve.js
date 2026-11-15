@@ -148,7 +148,7 @@
       const tryPin = async pin => {
         try {
           const r = await api('/api/spinsolve/unlock', { pin });
-          if (!r.ok) { $('pinMsg').textContent = 'Adult levels need an adult signed in with ARKS ID.'; PinPad.clear($('pinInput')); return; }
+          if (!r.ok) { $('pinMsg').textContent = 'Adult games aren\'t available on this device.'; PinPad.clear($('pinInput')); return; }
           S.pin = pin;
           try { sessionStorage.setItem('spin.adultPin', pin); } catch { /* unavailable */ }
           done(true);

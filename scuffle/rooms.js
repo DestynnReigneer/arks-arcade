@@ -16,6 +16,9 @@ const crypto = require('node:crypto');
 const game = require('./game');
 const roomPassword = require('../arcade/room-password');
 const adultJoin = require('../arcade/adult-join');
+// A seat saved before kids were marked (2026-11-15) has no kid field. One that
+// also had no adult's sign-in may be a kid's, so it counts as one.
+const oldKid = p => ('kid' in p ? !!p.kid : !p.adultSignin);
 const store = require('../arcade/room-store')('scuffle');
 const clock = require('../arcade/room-clock');
 
@@ -91,7 +94,7 @@ function pack(r) {
     code: r.code, settings: r.settings, phase: r.phase, hostId: r.hostId, password: r.password,
     players: r.players.map(p => ({
       id: p.id, token: p.token, name: p.name, score: p.score, found: [...p.found], roundScore: p.roundScore,
-      done: p.done, joinedAt: p.joinedAt, adultSignin: p.adultSignin || null
+      done: p.done, joinedAt: p.joinedAt, kid: !!p.kid
     })),
     screen: r.screen ? { id: r.screen.id, token: r.screen.token, name: r.screen.name } : null,
     rounds: r.rounds, index: r.index, endsAt: r.endsAt, firstFull: r.firstFull, history: r.history,
@@ -112,7 +115,7 @@ function restore(now = Date.now()) {
       players: data.players.map(p => ({
         id: String(p.id), token: String(p.token), name: cleanName(p.name, 'Player'), score: Number(p.score) || 0,
         found: new Map(Array.isArray(p.found) ? p.found : []), roundScore: Number(p.roundScore) || 0, done: !!p.done,
-        clients: 0, joinedAt: Number(p.joinedAt) || now, adultSignin: p.adultSignin || null
+        clients: 0, joinedAt: Number(p.joinedAt) || now, kid: oldKid(p)
       })),
       screen: data.screen ? { id: String(data.screen.id), token: String(data.screen.token), name: cleanName(data.screen.name, 'TV'), clients: 0, screen: true } : null,
       rounds: Array.isArray(data.rounds) ? data.rounds : [], index: Number.isInteger(data.index) ? data.index : -1,
@@ -120,8 +123,7 @@ function restore(now = Date.now()) {
       lastActivity: Number(data.lastActivity) || savedAt, history: Array.isArray(data.history) ? data.history : []
     };
     // An unfiltered room always has its password, and a family one never does.
-    if (r.settings.dictionary === 'adult' && !r.password) return false;
-    if (r.settings.dictionary !== 'adult') r.password = null;
+    r.password = null;
     // A round or a reveal with no round behind it can't be shown: back to the lobby, seats and scores kept.
     if ((r.phase === 'playing' || r.phase === 'reveal') && !r.rounds[r.index]) { r.phase = 'lobby'; r.index = -1; r.rounds = []; }
     if (!member(r, r.hostId)) r.hostId = r.screen ? r.screen.id : r.players.slice().sort((a, b) => a.joinedAt - b.joinedAt)[0].id;
@@ -151,13 +153,13 @@ function authenticate(r, playerId, token) {
 const requireHost = (r, p) => { if (r.hostId !== p.id) throw fail('Only the host can do that.', 403); };
 
 // Joining is open any time, even mid-game: a latecomer starts on zero.
-// adultSignin: the sign-in this device has, when it's an adult's (arcade/adult-join.js). Kept on the server only.
-function join(code, name, password, adultSignin = null) {
+// kid: this device is a kid's or a teen's (arcade/adult-join.js), so it leaves if the game turns adult.
+function join(code, name, password, kid = false) {
   const r = room(code);
   roomPassword.check(r, password);
   if (r.players.length >= MAX_PLAYERS) throw fail(`That game is full (${MAX_PLAYERS} players).`, 409);
   const p = newPlayer(r, name);
-  p.adultSignin = adultSignin || null;
+  p.kid = !!kid;
   r.players.push(p);
   touch(r);
   return { code: r.code, playerId: p.id, token: p.token };
@@ -182,7 +184,7 @@ function updateSettings(code, playerId, token, settings = {}) {
 // now, not remembered from when they joined). A guest can come back with the
 // password the host just made up.
 function moveOutForAdultWords(r) {
-  const going = r.players.filter(p => p.id !== r.hostId && !adultJoin.stillAdult(p.adultSignin));
+  const going = r.players.filter(p => p.id !== r.hostId && p.kid);
   if (!going.length) return;
   const ids = new Set(going.map(p => p.id));
   r.players = r.players.filter(p => !ids.has(p.id));

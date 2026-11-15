@@ -1413,7 +1413,7 @@ function openStream() {
   // The host switched to the unfiltered word list, and this device isn't signed in as an adult.
   S.stream.addEventListener('moved', () => {
     backToSetup();
-    say($('setupMsg'), 'The host switched the game mode to adult, you have been removed. Only Adults can join.', 'err');
+    say($('setupMsg'), 'The host switched the game mode to adult, you have been removed.', 'err');
   });
   // The room is gone (or this seat is): back to the setup screen. Anything else is the arcade being
   // away for a moment, and the live updates start again, by the browser or by live.js.
@@ -1534,6 +1534,7 @@ function renderLobby(snap) {
   // The QR code is for the TV, where phones scan to join. A lobby made on a device
   // is joined from List Hosted Games.
   $('tvJoin').classList.toggle('hidden', !snap.screen);
+  if (!snap.screen) ArcadeQR.lobbyButton($('lobbyRoster'), 'rambler.html', snap.code);
   if (snap.screen && $('joinQr').dataset.code !== snap.code) { $('joinQr').dataset.code = snap.code; ArcadeQR.forGame($('joinQr'), 'rambler.html', snap.code); }
   const roster = $('lobbyRoster');
   roster.innerHTML = '';

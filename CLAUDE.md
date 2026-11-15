@@ -82,9 +82,11 @@ storage) lives in `arcade/security.js`, `arcade/feedback.js` and `arcade/comm.js
   leaderboard).
 - **Built for family and parties.** Adult games and levels are wanted (with a
   raunchiness scale), and they're listed openly in the home page's Lobbies list so
-  guests can get in easily. Kids are kept out by needing an adult's ARKS ID
-  sign-in and a per-lobby password the host makes up, not by hiding things. When in doubt, make joining
-  easier for guests, not harder.
+  guests can get in easily. **Anyone can play them but a kid's or a teen's device** (decided
+  2026-11-15): guests and TVs included, with no unlock step and no lobby password. A kid's device
+  is known through ARKS ID (signed in as a kid or a teen, or owned by one), and that's the only
+  gate. Without ARKS ID nobody can be told apart, so adult levels stay off on such an arcade.
+  When in doubt, make joining easier for guests, not harder.
 - **Every game has a How to play section** that can be reopened mid-game. New
   games need one too.
 - **The repo stays public.** Making it private was considered and turned down.
