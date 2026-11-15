@@ -60,7 +60,16 @@ function secret() {
   return s;
 }
 const sign = (id, version) => crypto.createHmac('sha256', secret()).update(`${id}:${version}`).digest('base64url');
-const tokenFor = r => `${r.id}.${sign(r.id, r.pin_version)}`;
+// A profile token. One handed out at an ARKS ID sign-in also names that sign-in
+// (signin: a short key for it, never the sign-in's id), and works only while the
+// sign-in does (the maintainer, 2026-11-15): signing out ends it everywhere it was
+// copied to, the way the adult pass ends.
+const tokenFor = (r, signin) => (signin
+  ? `${r.id}.${signin}.${sign(r.id, `${r.pin_version}:${signin}`)}`
+  : `${r.id}.${sign(r.id, r.pin_version)}`);
+// arcade/arksid.js says whether a sign-in key is still going for that profile's account.
+let signinAlive = null;
+function useSignins(fn) { signinAlive = typeof fn === 'function' ? fn : null; }
 const hashPin = (pin, salt) => crypto.scryptSync(String(pin), salt, 32).toString('hex');
 
 const row = id => db.db.prepare('SELECT * FROM arcade_profiles WHERE id = ?').get(String(id || ''));
@@ -85,11 +94,22 @@ function boardName(id) {
 // The profile a token belongs to, if it's still valid (a PIN change or a
 // deleted profile makes old tokens stop working).
 function verify(token) {
-  const [id, sig] = String(token || '').split('.');
+  const parts = String(token || '').split('.');
+  if (parts.length !== 2 && parts.length !== 3) return null;
+  const [id, key] = parts;
+  const sig = parts[parts.length - 1];
   if (!id || !sig) return null;
   const r = row(id);
   if (!r || r.status !== 'approved') return null;
-  const expected = sign(r.id, r.pin_version);
+  let expected;
+  if (parts.length === 3) {
+    if (!/^[0-9a-f]{24}$/.test(key) || !signinAlive || !signinAlive(r, key)) return null;
+    expected = sign(r.id, `${r.pin_version}:${key}`);
+  } else {
+    // A profile that belongs to an ARKS ID account only takes tokens tied to a sign-in.
+    if (arksMode && r.arksid_user) return null;
+    expected = sign(r.id, r.pin_version);
+  }
   const a = Buffer.from(sig);
   const b = Buffer.from(expected);
   return a.length === b.length && crypto.timingSafeEqual(a, b) ? pub(r) : null;
@@ -325,6 +345,7 @@ module.exports.pub = pub;
 module.exports.tokenFor = tokenFor;
 module.exports.syncRambler = syncRambler;
 module.exports.setArksMode = setArksMode;
+module.exports.useSignins = useSignins;
 module.exports.arksMode = () => arksMode;
 module.exports.DEFAULT_AVATAR = Avatars.DEFAULT;
 module.exports.boardName = boardName;

@@ -560,6 +560,16 @@ async function run({ base, root, fake, admin: ADMIN }) {
     await again.call('/auth/signout', { method: 'POST', follow: false });
     ok('signing in twice and out once leaves nothing behind', (await checks(againPass)) === false);
 
+    // The profile token ends with its sign-in too, wherever it was copied to.
+    const tokenTab = browser();
+    await tokenTab.call('/auth/signin?return=%2F');
+    const kimToken = (await tokenTab.call('/api/arksid/me')).data.token;
+    const mineWith = async t => (await fetch(`${base}/api/crisscross/mine`, { headers: { 'X-Profile-Token': t } })).status;
+    ok('a profile token from a sign-in works, from anywhere', kimToken.split('.').length === 3 && (await mineWith(kimToken)) === 200);
+    ok('…an old-style token for a signed-in account is refused', (await mineWith(kimToken.split('.')[0] + '.' + kimToken.split('.')[2])) === 401);
+    await tokenTab.call('/auth/signout', { method: 'POST', follow: false });
+    ok('…and once that sign-in ends, the token is refused', (await mineWith(kimToken)) === 401);
+
     // A browser whose sign-in ended at ARKS ID signs in again. That's a different sign-in
     // there, and the record this browser's cookie pointed to goes at once, so a pass from
     // the first sign-in is refused without anyone having to ask ARKS ID about it.
