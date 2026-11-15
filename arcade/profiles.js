@@ -325,6 +325,7 @@ module.exports.pub = pub;
 module.exports.tokenFor = tokenFor;
 module.exports.syncRambler = syncRambler;
 module.exports.setArksMode = setArksMode;
+module.exports.arksMode = () => arksMode;
 module.exports.DEFAULT_AVATAR = Avatars.DEFAULT;
 module.exports.boardName = boardName;
 module.exports.approvedIds = () => db.db.prepare("SELECT id FROM arcade_profiles WHERE status = 'approved'").all().map(r => r.id);

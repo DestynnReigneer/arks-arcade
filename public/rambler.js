@@ -60,6 +60,10 @@ async function api(path, { method = 'GET', body } = {}) {
   const headers = {};
   if (body) headers['Content-Type'] = 'application/json';
   if (S.adultPin) headers['X-Adult-Pin'] = S.adultPin;
+  // Who's playing, as the arcade knows it. With sign-in on, this is what the server
+  // goes by: coins, streaks and scores only ever go to the profile it belongs to.
+  const who = typeof ArcadeProfile !== 'undefined' && ArcadeProfile.token();
+  if (who) headers['X-Profile-Token'] = who;
 
   // A server that has gone away can leave a request hanging forever, which
   // looks to the player like the game froze. Give up and say so instead.
@@ -789,13 +793,25 @@ function showAvatar(el, avatar) {
 }
 
 async function loadProfiles() {
+  // On an arcade with sign-in, wait until it's known who is signed in on this device,
+  // so the request below carries their profile token the first time.
+  const signIn = typeof ArcadeProfile !== 'undefined' && ArcadeProfile.arksId();
+  if (signIn && signIn.ready) await signIn.ready.catch(() => {});
   try {
     const data = await api('/players');
     S.profiles = data.players || [];
     S.avatars = data.avatars || [];
+    S.signIn = !!data.signIn;
   } catch {
     S.profiles = [];
     S.avatars = [];
+  }
+  // With sign-in, there's nobody to pick: the profile is whoever this device is
+  // signed in as (the list holds only them), and anyone else plays as a guest.
+  if (S.signIn) {
+    S.player = S.profiles[0] || null;
+    renderProfileChip();
+    return;
   }
 
   // Re-check the remembered profile against the server: it may have been
@@ -808,8 +824,11 @@ async function loadProfiles() {
 
 function setProfile(player) {
   S.player = player;
-  if (player) localStorage.setItem(PROFILE_KEY, player.id);
-  else localStorage.removeItem(PROFILE_KEY);
+  // With sign-in, what's remembered is the arcade's to keep (profile.js), not Rambler's.
+  if (!S.signIn) {
+    if (player) localStorage.setItem(PROFILE_KEY, player.id);
+    else localStorage.removeItem(PROFILE_KEY);
+  }
   renderProfileChip();
   renderMaraFound();
   refreshDailyCard();
@@ -833,6 +852,11 @@ function renderProfileChip() {
 
 async function showProfilePicker() {
   await loadProfiles();
+  // With sign-in, the arcade's own Who's playing? card is the only place to choose.
+  if (S.signIn) {
+    if (!S.player && typeof ArcadeProfile !== 'undefined') ArcadeProfile.open();
+    return;
+  }
   const host = $('whoGrid');
   host.innerHTML = '';
 
@@ -936,6 +960,9 @@ async function openProfileDetail() {
   renderProfileChip();
 
   $('pdTitle').textContent = full.name;
+  // With sign-in, the name and avatar are the account's, and switching is signing out.
+  $('pdEditBtn').classList.toggle('hidden', !!S.signIn);
+  $('pdSwitchBtn').classList.toggle('hidden', !!S.signIn);
 
   const stats = [
     ['Streak', full.streak + (full.streak === 1 ? ' day' : ' days')],
@@ -2192,6 +2219,8 @@ function bind() {
 
   // ---- profiles ----
   $('profileBtn').onclick = () => { Sound.arm(); openProfileDetail(); };
+  // Signing in or out on this page changes who's playing here too.
+  if (typeof ArcadeProfile !== 'undefined') ArcadeProfile.onChange(() => { if (S.signIn) loadProfiles().then(() => setProfile(S.player)); });
   $('whoGuestBtn').onclick = () => { setProfile(null); screen('setup'); renderSetup(); };
   $('closeNewProfileBtn').onclick = () => $('newProfileOverlay').classList.add('hidden');
   $('saveProfileBtn').onclick = saveProfile;
