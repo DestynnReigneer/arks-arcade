@@ -406,18 +406,8 @@ test('Back on the remote goes one screen back in Snake', async ({ page }) => {
   await press(page, '.tv-go');
   await expect(page.locator('body')).toHaveAttribute('data-state', 'playing');
   await page.goBack();
-  const card = page.locator('.tv-confirm');
-  await expect(card).toContainText('Leave this game?');
-  // "Keep playing" has the highlight, so OK stays.
-  await expect(card.getByRole('button', { name: 'Keep playing' })).toBeFocused();
-  await page.keyboard.press('Enter');
-  await expect(card).toHaveCount(0);
-  expect(new URL(page.url()).pathname).toBe('/snake.html');
-  await page.goBack();
-  await expect(card.getByRole('button', { name: 'Keep playing' })).toBeFocused();
-  await page.keyboard.press('ArrowRight');
-  await expect(card.getByRole('button', { name: 'Leave' })).toBeFocused();
-  await page.keyboard.press('Enter');
+  // Back goes straight to the game's menu: no card asks whether to leave.
+  await expect(page.locator('.tv-confirm')).toHaveCount(0);
   await expect(page.locator('body')).toHaveAttribute('data-state', 'ready');
   await expect(page.locator('.tv-go')).toBeVisible();
   await page.goBack();
