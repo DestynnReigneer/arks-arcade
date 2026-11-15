@@ -79,7 +79,7 @@ test('each puzzle page fits the TV, and How to play waits for the ? button', asy
     await page.goto(p);
     await page.waitForLoadState('networkidle');
     await expect(page.locator('html')).toHaveClass(/\btv\b/);
-    await expect(page.locator('#tvBar')).toContainText('family mode');
+    await expect(page.locator('#tvBar')).toContainText('📺');
     await expect(page.locator('.tut-overlay:visible')).toHaveCount(0);
     await expect.poll(() => page.evaluate(() => document.activeElement && document.activeElement !== document.body)).toBe(true);
     await fitsTheScreen(page);

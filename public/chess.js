@@ -310,6 +310,7 @@
     const host = snap.host;
     $('lobbyTitle').textContent = host ? 'Your Chess lobby' : `${snap.hostName}'s Chess lobby`;
     $('lobbyCount').textContent = `${snap.seats.length} of ${snap.max || 2} players`;
+    if (S.room) ArcadeQR.lobbyButton($('lobbySeats'), 'chess.html', S.room.code);
     LobbyUI.seats($('lobbySeats'), snap.seats, { max: snap.max || 2, canMute: host, onMute: (seat, on) => mute(seat, on),
       onRemove: seat => roomCall('remove', { seat }).then(applySnap, e => toast(e.message)) });
     $('lobbyHost').classList.toggle('hidden', !host);

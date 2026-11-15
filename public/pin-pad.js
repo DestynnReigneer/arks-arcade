@@ -85,7 +85,7 @@
     const note = document.createElement('p');
     note.className = 'pin-pad-arksid';
     note.style.cssText = 'text-align:center;margin:10px 0;line-height:1.45';
-    note.textContent = 'Adult levels need an adult signed in with ARKS ID, and this arcade doesn’t use ARKS ID, so they stay off.';
+    note.textContent = 'Adult games aren’t available on this arcade.';
     state.pad.after(note);
     state.note = note;
   }
@@ -104,18 +104,8 @@
     note.style.cssText = 'text-align:center;margin:10px 0;line-height:1.45';
     state.pad.after(note);
     state.note = note;
-    const me = Id.me || {};
-    if (!me.signedIn) {
-      note.textContent = 'Adult levels unlock when an adult signs in with their ARKS ID. ';
-      const a = document.createElement('a');
-      a.href = '/auth/signin?return=' + encodeURIComponent(location.pathname + location.search + location.hash);
-      a.textContent = 'Sign in';
-      a.style.color = 'inherit';
-      note.appendChild(a);
-      return;
-    }
-    if (!me.adult) { note.textContent = 'Adult levels are only for adult ARKS ID accounts, so they stay locked here.'; return; }
-    note.textContent = 'Unlocking with your ARKS ID…';
+    // Anyone but a kid's or a teen's device gets in, with nothing to do.
+    note.textContent = '';
     let done = false;
     const unlock = async () => {
       if (done || state.busy || !state.onComplete) return;
@@ -123,8 +113,8 @@
       try {
         const res = await fetch('/api/arksid/adult-pass', { method: 'POST' });
         const data = await res.json().catch(() => ({}));
-        if (!res.ok || !data.pass) throw new Error(data.error || 'ARKS ID didn’t answer. Try again in a moment.');
-        note.textContent = 'Unlocked with your ARKS ID.';
+        if (!res.ok || !data.pass) throw new Error(data.error || 'That didn’t work. Try again in a moment.');
+        note.textContent = '';
         state.busy = true;
         try { await state.onComplete(data.pass); } finally { state.busy = false; }
       } catch (e) { note.textContent = e.message; done = false; }

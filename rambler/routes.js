@@ -60,7 +60,7 @@ function assertProfileAllowed(profile, req) {
   if (profile !== 'adult') return;
   const supplied = req.get('X-Adult-Pin') || (req.body && req.body.adultPin) || '';
   if (!adultPin.matches(supplied)) {
-    throw fail('Adult levels need an adult signed in with ARKS ID.', 403);
+    throw fail('Adult games aren\'t available on this device.', 403);
   }
 }
 
@@ -439,9 +439,9 @@ router.post('/rooms/:code/join', joinLimiter, async (req, res, next) => {
   try {
     // Who this device is gets looked up once, and then nothing waits, so the room can't
     // switch to the unfiltered list between the check and the join.
-    const me = await adultJoin.who(req);
-    adultJoin.refuse(me, rooms.requireRoom(req.params.code).settings.profile === 'adult');
-    const { room, player } = rooms.joinRoom(req.params.code, (req.body || {}).name, (req.body || {}).password, adultJoin.signinOf(me));
+    const kid = await adultJoin.kid(req);
+    adultJoin.refuse(kid, rooms.requireRoom(req.params.code).settings.profile === 'adult');
+    const { room, player } = rooms.joinRoom(req.params.code, (req.body || {}).name, (req.body || {}).password, kid);
     res.status(201).json({
       code: room.code,
       playerId: player.id,
