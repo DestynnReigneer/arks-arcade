@@ -22,8 +22,8 @@ const GAMES = {
 // Each game keeps its rooms in its own module; this reads them without
 // changing anything. status: open (can join), playing (wait for the next
 // one), full.
-// viewer: the profile asking (from its token), so a lobby only open to the people
-// its host picked is listed only for them.
+// viewer: the profile asking (from its token), so the lobby they're already in can
+// be marked as theirs. Every lobby is listed for everyone.
 function collect(viewer = null) {
   const out = [];
   const add = (game, room) => out.push({ game, ...GAMES[game], href: `${GAMES[game].page}?join=${room.code}`, ...room });
@@ -44,7 +44,7 @@ function collect(viewer = null) {
   for (const l of chess.lobbies(viewer)) {
     add('chess', {
       code: l.code, host: l.host, players: l.count, max: l.max, status: l.status,
-      detail: `Multiplayer-Multiple devices${l.who === 'selected' ? ' · People selected' : ''}`
+      detail: 'Multiplayer-Multiple devices'
     });
   }
 
@@ -55,17 +55,16 @@ function collect(viewer = null) {
     add('trivia', {
       adult: l.adult, locked: l.locked, code: l.code, host: l.host, players: l.count, max: l.max,
       status: l.status === 'full' ? 'full' : l.status === 'playing' ? 'live' : 'open',
-      detail: l.question ? `Game started · question ${l.question.index} of ${l.question.total}` : `${l.adult ? l.level : 'Everyone on their own device'}${l.who === 'selected' ? ' · People selected' : ''}`
+      detail: l.question ? `Game started · question ${l.question.index} of ${l.question.total}` : (l.adult ? l.level : 'Everyone on their own device')
     });
   }
 
-  // The party card games share one kind of table. Only rooms this person may join
-  // are listed (anyone, or the people the host picked).
+  // The party card games share one kind of table.
   for (const [game, mod] of [['partdeux', '../partdeux/tables'], ['daredevil', '../daredevil/tables']]) {
     for (const l of require(mod).lobbies(viewer)) {
       add(game, {
         adult: l.adult, locked: l.locked, code: l.code, host: l.host, players: l.count, max: l.max, status: l.status,
-        detail: `${l.level[0].toUpperCase() + l.level.slice(1)} deck${l.drinking ? ' · 🍺' : ''}${l.who === 'selected' ? ' · People selected' : ''}`
+        detail: `${l.level[0].toUpperCase() + l.level.slice(1)} deck${l.drinking ? ' · 🍺' : ''}`
       });
     }
   }

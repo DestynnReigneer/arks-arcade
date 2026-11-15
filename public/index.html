@@ -372,20 +372,15 @@
 </div>
 
 <!-- The games whoever is playing on this device has in progress. It only shows when there are some. -->
-<section class="lobby hidden" id="invites" aria-label="Lobbies open for you">
-  <div class="lobby-head"><h2>📨 LOBBIES FOR YOU</h2></div>
-  <ul class="lobby-list" id="invitesList"></ul>
-</section>
-
 <section class="lobby hidden" id="continue" aria-label="Continue a game">
   <div class="lobby-head"><h2>⏯️ CONTINUE</h2></div>
   <ul class="lobby-list" id="continueList"></ul>
 </section>
 
 <!-- Games being hosted right now, and a QR code to get other phones here -->
-<section class="lobby" id="lobby" aria-label="Join a game">
+<section class="lobby" id="lobby" aria-label="Lobbies">
   <div class="lobby-head">
-    <h2>📡 JOIN A GAME</h2>
+    <h2>📨 LOBBIES</h2>
     <button class="hub-btn" id="qrToggle" aria-expanded="false">📱 Phone QR</button>
   </div>
   <div class="qr-card hidden" id="qrCard">
@@ -418,7 +413,7 @@
         <option value="bigswing.html">⚾ Big Swing</option>
       </select>
       <div class="qr-link" id="arcadeLink"></div>
-      <p>A game hosted on a TV shows its own QR code too, to jump straight into that game.</p>
+      <p>To jump straight into a hosted game on TV, scan the QR code.</p>
     </div>
   </div>
   <ul class="lobby-list" id="lobbyList"></ul>
@@ -609,7 +604,7 @@
   <div class="modal-card">
     <h3 id="helpTitle">How the arcade works</h3>
     <div class="help-body">
-      <p>Pick who's playing with your profile at the top left, then tap any game to start. To play together, one person creates a game lobby, and everyone else joins it from List Hosted Games in that game or from Join a game on this page.</p>
+      <p>Pick who's playing with your profile at the top left, then tap any game to start. To play multiplayer, one person creates a game lobby. Players can join a hosted multiplayer game from the "List Hosted Games" or "Lobbies" on this page.</p>
       <p>Each game has its own How to play guide. Tap the ? inside any game to open it, even in the middle of a round.</p>
       <p>Your scores, streaks and high-score spots follow your profile. If you play as a guest, nothing is saved under your name.</p>
       <p>Found something broken, or have an idea? Tap the little bug in the bottom-right corner of any page, or Send feedback at the bottom of this one. You can add a screenshot and draw on it.</p>

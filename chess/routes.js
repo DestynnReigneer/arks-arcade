@@ -5,7 +5,7 @@
 //
 // A seat is proven with its playerId and token. Who someone is in the family
 // comes from the X-Profile-Token header, never the address: it's what lets a
-// host invite people and lets a seat follow its profile to another device.
+// seat follow its profile to another device.
 
 const express = require('express');
 const rateLimit = require('express-rate-limit');
@@ -40,8 +40,7 @@ const wrap = fn => (req, res, next) => { try { res.json(fn(req, res)); } catch (
 
 router.post('/rooms', createLimiter, (req, res, next) => {
   try {
-    res.status(201).json(rooms.create({ name: b(req).name, color: b(req).color, who: b(req).who, allowed: b(req).allowed,
-      profile: profileOf(req), ip: req.ip }));
+    res.status(201).json(rooms.create({ name: b(req).name, color: b(req).color, profile: profileOf(req), ip: req.ip }));
   } catch (e) { next(e); }
 });
 
@@ -60,7 +59,6 @@ router.post('/rooms/:code/seat', createLimiter, wrap(req => {
 router.post('/rooms/:code/settings', seatLimiter, wrap(req => rooms.setSettings(...auth(req), { color: b(req).color })));
 router.post('/rooms/:code/ready', seatLimiter, wrap(req => rooms.ready(...auth(req), b(req).ready !== false)));
 router.post('/rooms/:code/start', seatLimiter, wrap(req => rooms.start(...auth(req))));
-router.post('/rooms/:code/invite', createLimiter, wrap(req => rooms.invite(...auth(req), b(req).to)));
 router.post('/rooms/:code/chat', chatLimiter, wrap(req => rooms.say(...auth(req), b(req).text)));
 router.post('/rooms/:code/mute', seatLimiter, wrap(req => rooms.mute(...auth(req), b(req).seat, !!b(req).on)));
 router.post('/rooms/:code/remove', seatLimiter, wrap(req => rooms.remove(...auth(req), b(req).seat)));

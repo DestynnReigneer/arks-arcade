@@ -85,17 +85,40 @@ order they were clicked, and keep the rest pinned here.
 - **Known flake:** `test/clueless.test.js` "New board ... gives a different crossword, not today's" fails once
   in a great while, when a random mini crossword happens to be today's. It passes on a rerun.
 
-**Next up** (the maintainer's order from 2026-11-14)
-1. Bucket Drop loses its Cups and Speed choice: Big cups and Fast are the game, and only that board shows. The
-   other boards' scores stay in the database.
-2. A host can switch a lobby to an adult level at any time. Adult levels still need an adult signed in with ARKS
-   ID, so anyone who isn't is moved out of the lobby with a message saying why.
-3. Spin & Solve goes from 342 puzzles to 4,000.
-4. The rest of the saved games: the party games, the solo word games and the action games.
-5. The notification bell in the waffle menu, once ARKS ID keeps the list.
-6. Previews before building: kick and ban for hosts, 8-Bit avatars, more easter eggs.
-7. No-scroll layouts for the remaining games (Rambler's old header converts first), then the lobby for Rambler
-   and Shuffle Scuffle, then the small repairs (a same-origin check on `/api` writes, Rambler's guest photos).
+- **#151:** Bucket Drop is played one way (big cups, fast): no settings, no setup screen, one board. **#152:** a host
+  can switch a lobby to an adult level at any time, and everyone the arcade doesn't know to be an adult is moved
+  out and told why. **#153:** Spin & Solve has 4,200 built-in puzzles, most of them plain text in
+  `spinsolve/bank/<level>/`.
+- **#155: nobody is picked, and nobody is told. Lobbies are found in the lists.** The maintainer's rule: someone
+  creates a lobby, and everyone else finds it and joins. So the choosing is gone, not only the word "invite":
+  - **No "Who can join".** Chess, Know-It-All, Uh-Oh: Part Deux and Dare Devil always make a lobby anyone at the
+    arcade can join. The list of people to choose from, the SELECTED seat and the notification to the people
+    chosen are gone, with `arcade/invites.js`, `/api/invites` and Chess's `/rooms/:code/invite`. A request that
+    still sends `who` or `allowed` gets an ordinary lobby.
+  - **One list on the home page,** titled **📨 LOBBIES** (it was 📡 JOIN A GAME). The row of lobbies "for you" is gone.
+  - Nothing sends the `invite` kind of notification anymore (`arcade/push.js`). The `arcade_invites` table is
+    left in the database, unused.
+  - **Icons:** Create a game lobby has three people and a wrench; the two devices sit by the
+    Multiplayer-Multiple devices heading in Chess. "Multiplayer-Single device" is now "Multiplayer-Shared device".
+  - **The maintainer's wording** from the same review is in: the home page's help, "This game isn't available.",
+    "Game has already started.", the TV lines, "Sam was removed.", the lines for a lobby that turns adult,
+    "right where you left off", and nothing under 🔔 Notifications whether it's on or off. The TV's pass-around
+    choices say device (only the sentence about scanning says phone). The admin page hides its PIN notes and
+    the unlock button when sign-in is on, since nobody has a PIN then.
+  - **Still to do for the same rule:** Words with Family still lets the starter choose people (it gets the lobby
+    next), and Rambler and Shuffle Scuffle still hand out a room code to type (they get the lobby after that).
+
+**Next up** (the maintainer's order)
+1. Words with Family gets the lobby: create one, others find it and join, no choosing people. Its share link
+   and QR code stay as a way to jump into the lobby.
+2. Rambler and Shuffle Scuffle get the lobby, so nobody types a room code. A room that switches to the
+   unfiltered word list moves out everyone the arcade doesn't know to be an adult, like the card games.
+3. Games that save, the rest: a game in progress is kept in the database, so a restart of the arcade brings
+   every game back where it was. The party games, the solo word games (Spin & Solve first), the action games.
+4. The notification bell in the waffle menu, once ARKS ID keeps the list.
+5. Previews before building: kick and ban for hosts, 8-Bit avatars, more easter eggs.
+6. No-scroll layouts for the remaining games (Rambler's old header converts first), then the small repairs
+   (a same-origin check on `/api` writes, Rambler's guest photos).
 
 ## The session before (2026-11-13, afternoon)
 
