@@ -96,9 +96,28 @@ order they were clicked, and keep the rest pinned here.
     come back as they were, an adult game still needs the pass, a finished game still saves its score, and a
     saved game stays gone. `test/unit.test.js` covers the store with a Map, and
     `test/browser/spin-resume.spec.js` opens a game by its address on a device that never saw it.
-  - **Still to do for the rest of the plan:** the rooms (Know-It-All, the card games, Rambler and Shuffle Scuffle)
-    are still in memory only, and so are solo Rambler and Shuffle Scuffle. Chess, Words with Family, Sudoku and
-    Clueless Crosswords already come back after a restart.
+  - **Still to do for the rest of the plan:** Know-It-All's and the card games' rooms are still in memory only,
+    and so are solo Rambler and Shuffle Scuffle. Chess, Words with Family, Sudoku and Clueless Crosswords
+    already come back after a restart.
+- **Rambler's and Shuffle Scuffle's rooms come back after a restart, in the middle of a round.**
+  - `arcade/room-store.js` (table `saved_rooms`) keeps a game's rooms as text: `saveSoon` writes a room within
+    400 ms of a change (ten words in a second are one write), `saveNow` at once, `remove` when it closes, and
+    `all()` hands them back at startup. `server.js` writes anything still waiting when it's told to stop
+    (SIGTERM or Ctrl+C); a power cut loses at most that last moment.
+  - Each game's `rooms.js` has `pack(room)` and `restore()`. What comes back: every seat with its token (so a
+    page's live updates reconnect by themselves), names, scores, the words found, the host, the settings, a TV
+    as the room's screen, the lobby password of an adult room, and the round. **The clock stood still while the
+    arcade was away:** a round gets the time it had left when it was last written down.
+  - Rambler's board comes back under the id it had (`boards.stash(built, id)`), so pages keep checking words
+    against it. The page's clock follows a round whose end moved.
+  - A room is kept as long as before (Shuffle Scuffle 6 quiet hours, Rambler 3), so the lists don't fill up
+    with rooms nobody is in. A room that closed stays closed.
+  - Tests: `test/restart.test.js` now sets up a Shuffle Scuffle round and a Rambler round, keeps the arcade
+    away for four seconds, and checks the seats, words, board, scores and the time left, then plays on and
+    restarts twice more. Checked by hand in real browsers too: two devices in each game carried on with no
+    reload after the server was stopped for five seconds.
+  - **Not done:** a seat still belongs to the tab that took it (a reload in Rambler loses it, as before), where
+    the saved-games plan wants it to follow the person.
 - **Known flake:** `test/clueless.test.js` "New board ... gives a different crossword, not today's" fails once
   in a great while, when a random mini crossword happens to be today's. It passes on a rerun.
 

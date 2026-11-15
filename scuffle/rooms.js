@@ -7,12 +7,16 @@
 // only send the words people spell.
 // A room can be hosted by a screen (a TV): it shows the letters, the clock
 // and everyone's counts to the whole room, and isn't a player itself.
-// Rooms live in memory, like the other games' rooms.
+// Rooms live in memory, and each one is written down as it changes
+// (arcade/room-store.js) and read back when the arcade starts, so a restart
+// or a power cut ends nobody's game: the seats, the scores, the round and the
+// time left on its clock all come back, and the pages carry on by themselves.
 
 const crypto = require('node:crypto');
 const game = require('./game');
 const roomPassword = require('../arcade/room-password');
 const adultJoin = require('../arcade/adult-join');
+const store = require('../arcade/room-store')('scuffle');
 
 const rooms = new Map();
 const MAX_ROOMS = 200;
@@ -66,13 +70,67 @@ function create({ name, settings, password, screen = false }) {
     r.screen = { id: makeId(), token: makeToken(), name: cleanName(name, 'TV'), clients: 0, screen: true };
     r.hostId = r.screen.id;
     rooms.set(r.code, r);
+    store.saveNow(r.code, pack(r));
     return { code: r.code, playerId: r.screen.id, token: r.screen.token };
   }
   const host = newPlayer(r, name || 'Host');
   r.players.push(host);
   r.hostId = host.id;
   rooms.set(r.code, r);
+  store.saveNow(r.code, pack(r));
   return { code: r.code, playerId: host.id, token: host.token };
+}
+
+// ---- kept between restarts ---------------------------------------------------------
+// A room as plain data: everything but who's connected right now and its
+// running timer. It holds the seats' tokens, the round's words and, for an
+// adult room, its lobby password, so it never leaves the server.
+function pack(r) {
+  return {
+    code: r.code, settings: r.settings, phase: r.phase, hostId: r.hostId, password: r.password,
+    players: r.players.map(p => ({
+      id: p.id, token: p.token, name: p.name, score: p.score, found: [...p.found], roundScore: p.roundScore,
+      done: p.done, joinedAt: p.joinedAt, adultSignin: p.adultSignin || null
+    })),
+    screen: r.screen ? { id: r.screen.id, token: r.screen.token, name: r.screen.name } : null,
+    rounds: r.rounds, index: r.index, endsAt: r.endsAt, firstFull: r.firstFull, history: r.history,
+    lastActivity: r.lastActivity
+  };
+}
+
+// Brings the rooms back when the arcade starts. A round that was being played
+// gets the time it had left when it was last written down, because the clock
+// stood still while the arcade was away. -> how many came back.
+function restore(now = Date.now()) {
+  let back = 0;
+  for (const { code, data, savedAt } of store.all()) {
+    const good = typeof data.code === 'string' && data.code === code && !rooms.has(code) && Array.isArray(data.players) &&
+      data.settings && ['lobby', 'playing', 'reveal', 'over'].includes(data.phase) && (data.players.length || data.screen);
+    if (!good || now - (Number(data.lastActivity) || savedAt) > TTL_MS) { store.remove(code); continue; }
+    const r = {
+      code, settings: cleanSettings(data.settings), phase: data.phase, hostId: data.hostId, password: data.password || null,
+      players: data.players.map(p => ({
+        id: String(p.id), token: String(p.token), name: cleanName(p.name, 'Player'), score: Number(p.score) || 0,
+        found: new Map(Array.isArray(p.found) ? p.found : []), roundScore: Number(p.roundScore) || 0, done: !!p.done,
+        clients: 0, joinedAt: Number(p.joinedAt) || now, adultSignin: p.adultSignin || null
+      })),
+      screen: data.screen ? { id: String(data.screen.id), token: String(data.screen.token), name: cleanName(data.screen.name, 'TV'), clients: 0, screen: true } : null,
+      rounds: Array.isArray(data.rounds) ? data.rounds : [], index: Number.isInteger(data.index) ? data.index : -1,
+      endsAt: Number(data.endsAt) || 0, firstFull: data.firstFull || null, timer: null, clients: new Set(),
+      lastActivity: Number(data.lastActivity) || savedAt, history: Array.isArray(data.history) ? data.history : []
+    };
+    // A round or a reveal with no round behind it can't be shown: back to the lobby, seats and scores kept.
+    if ((r.phase === 'playing' || r.phase === 'reveal') && !r.rounds[r.index]) { r.phase = 'lobby'; r.index = -1; r.rounds = []; }
+    if (!member(r, r.hostId)) r.hostId = r.screen ? r.screen.id : r.players.slice().sort((a, b) => a.joinedAt - b.joinedAt)[0].id;
+    if (r.phase === 'playing') {
+      const left = Math.min(r.settings.seconds * 1000, Math.max(1000, r.endsAt - savedAt));
+      r.endsAt = now + left;
+      r.timer = setTimeout(() => endRound(r), left + GRACE_MS);
+    }
+    rooms.set(code, r);
+    back++;
+  }
+  return back;
 }
 
 function room(code) {
@@ -273,6 +331,8 @@ function snapshot(r, viewerId) {
 
 function touch(r) {
   r.lastActivity = Date.now();
+  // Written down within a moment, unless the room closed in the meantime.
+  store.saveSoon(r.code, () => (rooms.get(r.code) === r ? pack(r) : null));
   for (const c of r.clients) {
     try { c.res.write(`event: state\ndata: ${JSON.stringify(snapshot(r, c.playerId))}\n\n`); } catch { /* closed */ }
   }
@@ -300,6 +360,7 @@ function close(r) {
   clearTimeout(r.timer);
   for (const c of r.clients) { try { c.res.end(); } catch { /* gone */ } }
   rooms.delete(r.code);
+  store.remove(r.code);
 }
 
 function sweep() {
@@ -308,6 +369,10 @@ function sweep() {
 }
 const sweeper = setInterval(sweep, 10 * 60 * 1000);
 if (typeof sweeper.unref === 'function') sweeper.unref();
+
+// The rooms that were open when the arcade last stopped.
+const cameBack = restore();
+if (cameBack) console.log(`Shuffle Scuffle picked ${cameBack} room${cameBack === 1 ? '' : 's'} back up.`);
 
 module.exports = {
   MAX_PLAYERS, create, join, updateSettings, start, word, done, next, leave, snapshot, room, authenticate,

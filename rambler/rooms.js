@@ -4,9 +4,11 @@ const crypto = require('node:crypto');
 const round = require('./round');
 const boards = require('./boards');
 
-// Rooms are deliberately in-memory only. A room is worth less than the three
-// minutes it lasts, so there is nothing here worth surviving a restart --
-// only finished results go to SQLite.
+// Rooms live in memory, and each one is written down as it changes
+// (arcade/room-store.js) and read back when the arcade starts, so a restart
+// or a power cut ends nobody's round: the seats, the board, the words found
+// and the time left on the clock all come back, and the pages carry on by
+// themselves. Finished scores still go to their own tables.
 //
 // A room can be hosted by a screen (a TV): it shows the board, the clock and
 // everyone's word counts to the whole room, and isn't a player itself.
@@ -98,10 +100,82 @@ function send(client, event, payload) {
   }
 }
 
+// Every change to a room ends here: it's sent to whoever is connected, and
+// written down within a moment (unless the room closed in the meantime).
 function broadcast(room) {
+  store.saveSoon(room.code, () => (rooms.get(room.code) === room ? pack(room) : null));
   for (const client of room.clients) {
     send(client, 'state', snapshot(room, client.playerId));
   }
+}
+
+// ---- kept between restarts ---------------------------------------------------------
+// A room as plain data: everything but who's connected right now and its
+// running timer. It holds the seats' tokens and, for an Unfiltered room, its
+// lobby password, so it never leaves the server.
+function pack(room) {
+  return {
+    code: room.code, createdAt: room.createdAt, lastActivity: room.lastActivity, state: room.state, settings: room.settings,
+    built: room.built || null, boardId: room.boardId, startedAt: room.startedAt, endsAt: room.endsAt,
+    players: [...room.players.values()].map(p => ({
+      id: p.id, token: p.token, name: p.name, words: p.words, ready: p.ready, joinedAt: p.joinedAt, adultSignin: p.adultSignin || null
+    })),
+    hostId: room.hostId, password: room.password, results: room.results,
+    screen: room.screen ? { id: room.screen.id, token: room.screen.token, name: room.screen.name } : null
+  };
+}
+
+// Brings the rooms back when the arcade starts. A round that was being played
+// gets its board back under the id it had, and the time it had left when it
+// was last written down, because the clock stood still while the arcade was
+// away. -> how many came back.
+function restore(now = Date.now()) {
+  let back = 0;
+  for (const { code, data, savedAt } of store.all()) {
+    const good = typeof data.code === 'string' && data.code === code && !rooms.has(code) && Array.isArray(data.players) &&
+      data.settings && ['lobby', 'playing', 'results'].includes(data.state) && (data.players.length || data.screen);
+    if (!good || now - (Number(data.lastActivity) || savedAt) > ROOM_TTL_MS) { store.remove(code); continue; }
+    const room = {
+      code, createdAt: Number(data.createdAt) || savedAt, lastActivity: Number(data.lastActivity) || savedAt, state: data.state,
+      settings: normalizeSettings(data.settings), board: null, boardId: null, minLength: null, totalWords: 0, built: null,
+      startedAt: Number(data.startedAt) || null, endsAt: Number(data.endsAt) || null,
+      players: new Map(), clients: new Set(), results: data.results || null, timer: null,
+      hostId: data.hostId, onFinish: null, password: data.password || null,
+      screen: data.screen ? { id: String(data.screen.id), token: String(data.screen.token), name: cleanName(data.screen.name, 'TV'), clients: 0, screen: true } : null
+    };
+    for (const p of data.players) {
+      room.players.set(String(p.id), {
+        id: String(p.id), token: String(p.token), name: cleanName(p.name, 'Player'), words: Array.isArray(p.words) ? p.words : [],
+        ready: !!p.ready, clients: 0, joinedAt: Number(p.joinedAt) || now, adultSignin: p.adultSignin || null
+      });
+    }
+    if (!room.players.has(room.hostId) && !(room.screen && room.screen.id === room.hostId)) {
+      room.hostId = room.screen ? room.screen.id : [...room.players.values()].sort((a, b) => a.joinedAt - b.joinedAt)[0].id;
+    }
+    const built = data.built;
+    if (room.state !== 'lobby' && built && Array.isArray(built.board) && (room.state === 'playing' || room.results)) {
+      room.built = built;
+      room.board = built.board;
+      room.minLength = built.minLength;
+      room.totalWords = built.totalWords;
+      room.boardId = boards.stash(built, data.boardId).id;
+    } else if (room.state !== 'lobby') {
+      // A round with no board behind it can't be shown: back to the lobby, with everyone still in their seat.
+      room.state = 'lobby';
+      room.results = null;
+      room.startedAt = null;
+      room.endsAt = null;
+      for (const p of room.players.values()) { p.words = []; p.ready = false; }
+    }
+    if (room.state === 'playing') {
+      const left = Math.min(room.settings.durationSec * 1000, Math.max(1000, room.endsAt - savedAt));
+      room.endsAt = now + left;
+      room.timer = setTimeout(() => finishRound(room), left + GRACE_MS);
+    }
+    rooms.set(code, room);
+    back++;
+  }
+  return back;
 }
 
 // ---- lifecycle -------------------------------------------------------------
@@ -137,6 +211,7 @@ function addPlayer(room, rawName) {
 
 const roomPassword = require('../arcade/room-password');
 const adultJoin = require('../arcade/adult-join');
+const store = require('../arcade/room-store')('rambler');
 
 // screen: this device (a TV) hosts and shows the game, and doesn't play.
 function createRoom({ hostName, size, profile, durationSec, password, screen = false }) {
@@ -173,10 +248,12 @@ function createRoom({ hostName, size, profile, durationSec, password, screen = f
   if (screen) {
     room.screen = { id: makePlayerId(), token: makeToken(), name: cleanName(hostName, 'TV'), clients: 0, screen: true };
     room.hostId = room.screen.id;
+    store.saveNow(room.code, pack(room));
     return { room, player: room.screen };
   }
   const host = addPlayer(room, hostName || 'Host');
   room.hostId = host.id;
+  store.saveNow(room.code, pack(room));
   return { room, player: host };
 }
 
@@ -307,6 +384,7 @@ function startRound(code, id, suppliedToken) {
   // Stash before the broadcast below, not after. Clients move to the playing
   // screen on that SSE event and immediately start checking words against
   // this id -- publishing the state first would hand them a null one.
+  room.built = built;
   room.board = built.board;
   room.boardId = boards.stash(built).id;
   room.minLength = built.minLength;
@@ -406,6 +484,7 @@ function resetToLobby(code, id, suppliedToken) {
   requireHost(room, player);
 
   room.state = 'lobby';
+  room.built = null;
   room.board = null;
   room.boardId = null;
   room.results = null;
@@ -476,6 +555,7 @@ function closeRoom(room) {
   }
   room.clients.clear();
   rooms.delete(room.code);
+  store.remove(room.code);
 }
 
 function sweep() {
@@ -489,6 +569,10 @@ function sweep() {
 
 const sweeper = setInterval(sweep, SWEEP_MS);
 if (typeof sweeper.unref === 'function') sweeper.unref();
+
+// The rooms that were open when the arcade last stopped.
+const cameBack = restore();
+if (cameBack) console.log(`Rambler picked ${cameBack} room${cameBack === 1 ? '' : 's'} back up.`);
 
 module.exports = {
   MAX_PLAYERS,

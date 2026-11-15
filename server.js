@@ -499,6 +499,15 @@ app.post('/api/leaderboard', leaderboardLimiter, (req, res) => {
 // player is told something went wrong (and the code to mention).
 app.use(stats.errorHandler);
 
+// Told to stop (a new image is being pulled, or Ctrl+C): whatever a room changed in its
+// last moment is written down first, so the game comes back exactly as it was.
+for (const signal of ['SIGTERM', 'SIGINT']) {
+  process.once(signal, () => {
+    try { require('./arcade/room-store').flushAll(); } catch { /* stopping either way */ }
+    process.exit(0);
+  });
+}
+
 app.listen(PORT, err => {
   // Express 5 calls this even when the port could not be opened (another
   // copy of the arcade already has it). Say so and stop, rather than print
