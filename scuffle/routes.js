@@ -65,6 +65,9 @@ router.post('/daily-status', startLimit, wrap(req => solo.dailyStatus(body(req))
 
 // ---- rooms ---------------------------------------------------------------------------
 const creds = req => [req.params.code, body(req).playerId, body(req).token];
+// List Hosted Games: every room, for anyone to find and join. The page asks every few seconds.
+const listLimit = limiter(600, 10, 'Slow down a little, then try again.');
+router.get('/lobbies', listLimit, (req, res) => res.json({ lobbies: rooms.lobbies() }));
 router.post('/rooms', roomLimit, (req, res, next) => {
   try {
     const settings = rooms.cleanSettings(body(req).settings || {});
@@ -76,8 +79,11 @@ router.post('/rooms', roomLimit, (req, res, next) => {
 // A phone signed in to ARKS ID as a kid, a teen or a TV can't join a room on the unfiltered list.
 router.post('/rooms/:code/join', roomLimit, async (req, res, next) => {
   try {
-    await adultJoin.refuseKids(req, rooms.room(req.params.code).settings.dictionary === 'adult');
-    res.json(rooms.join(req.params.code, body(req).name, body(req).password));
+    // Who this device is gets looked up once, and then nothing waits, so the room can't
+    // switch to the unfiltered list between the check and the join.
+    const me = await adultJoin.who(req);
+    adultJoin.refuse(me, rooms.room(req.params.code).settings.dictionary === 'adult');
+    res.json(rooms.join(req.params.code, body(req).name, body(req).password, adultJoin.signinOf(me)));
   } catch (e) { next(e); }
 });
 router.post('/rooms/:code/settings', (req, res, next) => {

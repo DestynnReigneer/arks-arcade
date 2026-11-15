@@ -18,8 +18,9 @@ const ROOM_TTL_MS = 3 * 60 * 60 * 1000;
 const SWEEP_MS = 5 * 60 * 1000;
 const GRACE_MS = 2500;          // allow for latency on words sent as the timer dies
 const HEARTBEAT_MS = 25000;
+const NOTICE_MS = 15000;
 
-// No O/0 or I/1 -- these get read aloud across a room.
+// No O/0 or I/1, so a code is easy to read in a link.
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
 function makeCode() {
@@ -54,16 +55,20 @@ function fail(message, status) {
 // results are in -- only how many they have found.
 function snapshot(room, forPlayerId) {
   const me = room.players.get(forPlayerId);
+  const host = room.players.get(room.hostId) || (room.screen && room.screen.id === room.hostId ? room.screen : null);
   return {
     code: room.code,
     state: room.state,
     hostId: room.hostId,
+    hostName: host ? host.name : '',
     youAreHost: room.hostId === forPlayerId,
     // screen: a TV hosts this room; isScreen: you're that TV.
     screen: !!room.screen,
     isScreen: !!(room.screen && room.screen.id === forPlayerId),
     locked: !!room.password,
     lobbyPassword: room.hostId === forPlayerId ? room.password : null,
+    // Something everyone still in the room should read once (who was moved out, and why).
+    notice: room.notice && Date.now() - room.notice.at < NOTICE_MS ? { id: room.notice.id, text: room.notice.text } : null,
     you: me ? { id: me.id, name: me.name } : null,
     settings: room.settings,
     board: room.state === 'lobby' ? null : room.board,
@@ -131,6 +136,7 @@ function addPlayer(room, rawName) {
 }
 
 const roomPassword = require('../arcade/room-password');
+const adultJoin = require('../arcade/adult-join');
 
 // screen: this device (a TV) hosts and shows the game, and doesn't play.
 function createRoom({ hostName, size, profile, durationSec, password, screen = false }) {
@@ -180,7 +186,7 @@ function getRoom(code) {
 
 function requireRoom(code) {
   const room = getRoom(code);
-  if (!room) throw fail('No room with that code.', 404);
+  if (!room) throw fail('This game isn\'t available.', 404);
   return room;
 }
 
@@ -197,13 +203,15 @@ function requireHost(room, player) {
   if (room.hostId !== player.id) throw fail('Only the host can do that.', 403);
 }
 
-function joinRoom(code, name, password) {
+// adultSignin: the sign-in this device has, when it's an adult's (arcade/adult-join.js). Kept on the server only.
+function joinRoom(code, name, password, adultSignin = null) {
   const room = requireRoom(code);
   roomPassword.check(room, password);
   if (room.players.size >= MAX_PLAYERS) {
     throw fail(`Room is full (${MAX_PLAYERS} players).`, 409);
   }
   const player = addPlayer(room, name);
+  player.adultSignin = adultSignin || null;
   broadcast(room);
   return { room, player };
 }
@@ -236,12 +244,58 @@ function updateSettings(code, id, suppliedToken, settings) {
   requireHost(room, player);
   if (room.state === 'playing') throw fail('Round in progress.', 409);
 
-  const next = normalizeSettings({ ...room.settings, ...settings });
+  // Only what the request names changes. The page sends one setting at a time, and a
+  // setting it leaves out stays as it is instead of going back to where it started.
+  const named = Object.fromEntries(Object.entries(settings || {}).filter(([, value]) => value !== undefined && value !== null));
+  const next = normalizeSettings({ ...room.settings, ...named });
+  // The password comes before anything else, so a switch that's refused changes nothing.
+  const turningAdult = next.profile === 'adult' && room.settings.profile !== 'adult';
   if (next.profile === 'adult') { if (!room.password) room.password = roomPassword.requireNew(settings.password); } else room.password = null;
+  if (turningAdult) moveOutForAdultWords(room);
   room.settings = next;
   touch(room);
   broadcast(room);
   return room;
+}
+
+// The room just switched to the unfiltered word list, which is only for adults.
+// Everyone the arcade doesn't know to be one leaves, and their page is told why.
+// The host stays, and so does anyone signed in with ARKS ID as an adult (asked
+// now, not remembered from when they joined). A guest can come back with the
+// password the host just made up.
+function moveOutForAdultWords(room) {
+  const going = [...room.players.values()].filter(p => p.id !== room.hostId && !adultJoin.stillAdult(p.adultSignin));
+  if (!going.length) return;
+  for (const p of going) {
+    room.players.delete(p.id);
+    for (const client of [...room.clients]) {
+      if (client.playerId !== p.id) continue;
+      send(client, 'moved', { why: 'adult' });
+      try { client.res.end(); } catch { /* gone */ }
+      room.clients.delete(client);
+    }
+  }
+  const names = going.map(p => p.name);
+  const who = names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+  room.notice = { id: makePlayerId(), at: Date.now(), text: `${who} ${names.length === 1 ? 'was' : 'were'} removed, the host switched game mode to adult.` };
+}
+
+// List Hosted Games and the home page's list of lobbies: every room, for everyone.
+// A room can be joined at any time, so one that's in the middle of a round is
+// listed too (playing). between: the last round's results are up and the next
+// round hasn't started.
+function lobbies() {
+  return [...rooms.values()].map(room => {
+    const host = room.players.get(room.hostId) || (room.screen && room.screen.id === room.hostId ? room.screen : null);
+    return {
+      code: room.code, host: host ? host.name : '', screen: !!room.screen,
+      players: [...room.players.values()].map(p => p.name), count: room.players.size, max: MAX_PLAYERS,
+      status: room.players.size >= MAX_PLAYERS ? 'full' : room.state === 'playing' ? 'playing' : 'open',
+      between: room.state === 'results',
+      size: room.settings.size, durationSec: room.settings.durationSec,
+      adult: room.settings.profile === 'adult', locked: !!room.password
+    };
+  });
 }
 
 function startRound(code, id, suppliedToken) {
@@ -443,7 +497,7 @@ module.exports = {
   MAX_PLAYERS,
   createRoom, joinRoom, leaveRoom, getRoom, requireRoom, authenticate,
   updateSettings, startRound, submitWords, markReady, finishRound,
-  resetToLobby, subscribe, snapshot, sweep,
+  resetToLobby, subscribe, snapshot, sweep, lobbies,
   get count() { return rooms.size; },
   _rooms: rooms
 };

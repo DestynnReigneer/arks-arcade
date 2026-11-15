@@ -438,7 +438,7 @@ function lobbies(profile) {
       status: r.players.length >= MAX_PLAYERS ? 'full' : r.phase === 'lobby' ? 'open' : 'playing',
       question: r.phase === 'lobby' ? null : { index: r.qIndex + 1, total: r.questions.length },
       level: bank.LEVELS[r.settings.level].label, adult: !!bank.LEVELS[r.settings.level].adult, locked: !!r.password,
-      style: r.settings.style, count: r.settings.count,
+      style: r.settings.style, questions: r.settings.count,
       mine: !!profile && r.players.some(p => p.profileId === profile.id) });
   }
   return out;

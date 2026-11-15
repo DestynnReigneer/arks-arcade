@@ -133,11 +133,9 @@ window.PartyLobby = (() => {
     function render(snap) {
       snapNow = snap;
       const onTv = snap.screen;
-      // The code and the QR are for the TV, where phones scan to join; a lobby
-      // hosted on a phone is joined from List Hosted Games, with no code.
-      for (const id of ['lobbyCode', 'joinQr', 'joinLink']) $(id).classList.toggle('hidden', !onTv);
-      const codeHint = $('lobbyCode').previousElementSibling;
-      if (codeHint) codeHint.classList.toggle('hidden', !onTv);
+      // The QR code is for the TV, where phones scan to join. A lobby hosted on a
+      // device is joined from List Hosted Games. Nobody types a code.
+      $('joinQr').classList.toggle('hidden', !onTv);
       if (!onTv) $('lobbyInfo').textContent = `${snap.youAreHost ? `Your ${title} lobby` : `${snap.hostName}'s ${title} lobby`} · ${$('lobbyInfo').textContent}`;
       // Ready tags, and the host's Mute and Remove Player.
       const lis = [...$('lobbyPlayers').children];

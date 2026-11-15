@@ -38,8 +38,13 @@ async function run({ base }) {
   ok('someone with no games gets an empty list', (await mine(Ana)).length === 0);
 
   // A Words with Family game between Ana and Ben. Ana hosts, so she's first.
-  const game = await api('/api/crisscross/games', 'POST', { kind: 'online', invite: [Ben.id] }, Ana.h);
+  const game = await api('/api/crisscross/games', 'POST', { kind: 'online', seats: 2 }, Ana.h);
   const gid = game.data.id;
+  const waitingRow = await mine(Ana);
+  ok('the host\'s own lobby is in their Continue row while it waits for players', waitingRow.length === 1 && waitingRow[0].detail === 'Waiting for players' && !waitingRow[0].yourTurn,
+    JSON.stringify(waitingRow));
+  ok('…and it isn\'t in anyone else\'s', (await mine(Ben)).length === 0);
+  await api(`/api/crisscross/lobby/${game.data.game.joinCode}/join`, 'POST', {}, Ben.h);
   const ana = await mine(Ana), ben = await mine(Ben);
   ok('a Words with Family game shows for the one whose move it is', ana.length === 1 && ana[0].game === 'crisscross' && ana[0].yourTurn && ana[0].detail === 'Your move',
     JSON.stringify(ana));

@@ -47,8 +47,10 @@ db.db.exec(`
 
 const DAY = 24 * 60 * 60 * 1000;
 const KEEP_LOCAL = 30 * DAY;        // a pass-and-play game nobody touched for a month is forgotten
-const KEEP_WAITING = 14 * DAY;      // so is an online game that never got its players
+const KEEP_WAITING = 14 * DAY;      // so is a lobby someone joined that never filled up
+const KEEP_UNJOINED = DAY;          // and a lobby nobody joined goes after one quiet day
 const MAX_OPEN_PER_PROFILE = 30;    // unfinished online games one profile can be in
+const MAX_WAITING_PER_HOST = 5;     // lobbies one profile can have waiting at once: everyone sees those, on two lists
 const MAX_LOCAL = 5000;
 const fail = E.fail;
 const profiles = () => require('../arcade/profiles');
@@ -57,7 +59,9 @@ const cleanName = raw => String(raw || '').trim().replace(/\s+/g, ' ').slice(0, 
 
 function sweep(now = Date.now()) {
   const old = db.db.prepare(`SELECT id FROM crisscross_games WHERE (kind = 'local' AND updated_at < ?)
-    OR (status = 'waiting' AND updated_at < ?)`).all(now - KEEP_LOCAL, now - KEEP_WAITING);
+    OR (status = 'waiting' AND updated_at < ?)
+    OR (status = 'waiting' AND updated_at < ? AND (SELECT COUNT(*) FROM crisscross_seats s WHERE s.game_id = crisscross_games.id) <= 1)`)
+    .all(now - KEEP_LOCAL, now - KEEP_WAITING, now - KEEP_UNJOINED);
   for (const { id } of old) remove(id);
 }
 const sweeper = setInterval(sweep, 60 * 60 * 1000);
@@ -109,8 +113,8 @@ function save(row, state, now = Date.now(), actor) {
 }
 
 // ---- telling people ----------------------------------------------------------------------------------
-// A notification on the phone when it becomes your turn in an online game, or when
-// someone starts a game with you (arcade/push.js, only with the sign-in service on).
+// A notification on the device when it becomes your turn in an online game
+// (arcade/push.js, only with the sign-in service on). Nobody is told that a lobby opened.
 // Games against the computer and pass-and-play games never send any.
 
 let notifier = null;
@@ -157,41 +161,47 @@ function seatFor(row, state, { profile, key }) {
 
 function newId() { return crypto.randomBytes(12).toString('hex'); }
 
-function createOnline({ host, invite, openSeats, dictionary, adultOk }, now = Date.now()) {
+// A lobby: the host, and seats for whoever joins. Nobody is picked and nobody is told:
+// people find it in List Hosted Games, in the home page's list, or by scanning its QR
+// code. It starts by itself when the seats are full, or when the host starts it.
+// seats: how many players in all, 2 to 4. (openSeats is the older way to say it: how
+// many besides the host.)
+function createOnline({ host, seats, openSeats, dictionary }, now = Date.now()) {
   const dict = E.dictOf(dictionary);
-  const ids = [...new Set((Array.isArray(invite) ? invite : []).map(String))].filter(id => id !== host.id);
-  const open = Math.max(0, Math.min(3, Number(openSeats) || 0));
-  const seats = 1 + ids.length + open;
-  if (seats < 2) throw fail('Choose at least one person to play with, or leave a seat open for a share link.');
-  if (seats > E.MAX_PLAYERS) throw fail('A game has room for 4 players at most.');
+  const asked = Number(seats) || 1 + (Number(openSeats) || 0);
+  const total = Math.max(2, Math.min(E.MAX_PLAYERS, Math.floor(asked) || 2));
   const busy = db.db.prepare(`SELECT COUNT(*) AS n FROM crisscross_seats s JOIN crisscross_games g ON g.id = s.game_id
     WHERE s.profile_id = ? AND g.status != 'over'`).get(host.id).n;
   if (busy >= MAX_OPEN_PER_PROFILE) throw fail(`You're in ${busy} unfinished games already. Finish or leave some first.`, 429);
-  const people = ids.map(id => {
-    const r = profileRow(id);
-    if (!r) throw fail('One of the people you picked doesn\'t have a profile here anymore.');
-    return r;
-  });
-  if (dict === 'adult' && adultOk) {
-    const kid = people.find(p => !adultOk(p.id));
-    if (kid) throw fail(`${kid.name} can't be in a game on the unfiltered list. Everyone in it has to be an adult.`, 403);
-  }
-  const players = [{ name: host.name, profileId: host.id }, ...people.map(p => ({ name: p.name, profileId: p.id }))];
+  // A game in progress is only seen by its players, but a waiting lobby is listed for
+  // everyone, in the game and on the home page. So those get a much smaller share.
+  const waiting = db.db.prepare("SELECT COUNT(*) AS n FROM crisscross_games WHERE kind = 'online' AND status = 'waiting' AND host_profile = ?").get(host.id).n;
+  if (waiting >= MAX_WAITING_PER_HOST) throw fail(`You already have ${waiting} lobbies waiting for players. Call one off first.`, 429);
+  const players = [{ name: host.name, profileId: host.id }];
   const id = newId();
-  const code = open ? crypto.randomBytes(9).toString('base64url') : null;
-  const state = open ? { waiting: true, seats, dictionary: dict, players } : E.newGame({ players, dictionary: dict });
+  const code = crypto.randomBytes(9).toString('base64url');
+  const state = { waiting: true, seats: total, dictionary: dict, players };
   db.db.prepare(`INSERT INTO crisscross_games (id, kind, status, dictionary, host_profile, seats, join_code, state, created_at, updated_at)
-    VALUES (?, 'online', 'waiting', ?, ?, ?, ?, '{}', ?, ?)`).run(id, dict, host.id, seats, code, now, now);
-  players.forEach((p, seat) => db.db.prepare('INSERT INTO crisscross_seats (game_id, seat, profile_id) VALUES (?, ?, ?)').run(id, seat, p.profileId));
-  const row = load(id).row;
-  save(row, state, now);
-  for (const p of people) {
-    const yours = !state.waiting && state.players[state.turn].profileId === p.id;
-    tell(row, p.id, state.waiting ? `${host.name} started a game with you. It'll start once everyone joins.`
-      : yours ? `${host.name} started a game with you, you're first!`
-        : `${host.name} started a game with you. ${state.players[state.turn].name} is first, I'll let you know when it's your turn.`, 'started', host.id);
-  }
+    VALUES (?, 'online', 'waiting', ?, ?, ?, ?, '{}', ?, ?)`).run(id, dict, host.id, total, code, now, now);
+  db.db.prepare('INSERT INTO crisscross_seats (game_id, seat, profile_id) VALUES (?, 0, ?)').run(id, host.id);
+  save(load(id).row, state, now);
   return id;
+}
+
+// List Hosted Games and the home page's list: every lobby that's waiting for players.
+// profile: who's asking, so the lobby they're already in can be marked as theirs.
+function lobbies(profile) {
+  const rows = db.db.prepare("SELECT * FROM crisscross_games WHERE kind = 'online' AND status = 'waiting' AND join_code IS NOT NULL ORDER BY created_at DESC LIMIT 60").all();
+  return rows.map(row => {
+    const state = JSON.parse(row.state);
+    const players = Array.isArray(state.players) ? state.players : [];
+    const mine = !!profile && players.some(q => q.profileId === profile.id);
+    return {
+      code: row.join_code, host: (players[0] || {}).name || '', players: players.map(q => q.name), count: players.length, max: state.seats || row.seats,
+      dictionary: row.dictionary, adult: row.dictionary === 'adult', status: players.length >= (state.seats || row.seats) ? 'full' : 'open',
+      mine, id: mine ? row.id : undefined
+    };
+  });
 }
 
 function createLocal({ players, dictionary }, now = Date.now()) {
@@ -232,7 +242,7 @@ function byCode(code) {
   return { row, state: JSON.parse(row.state) };
 }
 
-function invitePreview(code) {
+function lobbyPreview(code) {
   const { state } = byCode(code);
   return { players: state.players.map(p => p.name), seats: state.seats, dictionary: state.dictionary };
 }
@@ -399,6 +409,6 @@ function turnCount(profileId) {
 }
 
 module.exports = {
-  createOnline, createLocal, join, invitePreview, startNow, act, moves, preview, hide, open, mine, turnCount,
+  createOnline, createLocal, lobbies, join, lobbyPreview, startNow, act, moves, preview, hide, open, mine, turnCount,
   grownUp, profileRow, load, sweep, setNotifier
 };

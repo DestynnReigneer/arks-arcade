@@ -107,6 +107,8 @@ const checkLimiter = limit(10, 2000, 'Slow down a moment.');
 const scoreLimiter = limit(10, 120, 'Too many rounds scored. Try again shortly.');
 const leaderboardLimiter = limit(10, 30, 'Too many score submissions. Try again in a few minutes.');
 const roomLimiter = limit(60, 40, 'Too many rooms created. Try again later.');
+// Joining takes a lobby password when the room is unfiltered, so one address only gets so many tries.
+const joinLimiter = limit(10, 40, 'Too many tries, wait a few minutes, then try again.');
 
 // ---- config ----------------------------------------------------------------
 
@@ -401,6 +403,10 @@ router.post('/leaderboard', leaderboardLimiter, (req, res, next) => {
 
 // ---- rooms (each player on their own phone) --------------------------------
 
+// List Hosted Games: every room, for anyone to find and join. The page asks every few seconds.
+const listLimiter = limit(10, 600, 'Slow down a little, then try again.');
+router.get('/lobbies', listLimiter, (req, res) => res.json({ lobbies: rooms.lobbies() }));
+
 router.post('/rooms', roomLimiter, (req, res, next) => {
   try {
     const body = req.body || {};
@@ -428,10 +434,13 @@ router.post('/rooms', roomLimiter, (req, res, next) => {
 });
 
 // A phone signed in to ARKS ID as a kid, a teen or a TV can't join an Unfiltered room.
-router.post('/rooms/:code/join', async (req, res, next) => {
+router.post('/rooms/:code/join', joinLimiter, async (req, res, next) => {
   try {
-    await adultJoin.refuseKids(req, rooms.requireRoom(req.params.code).settings.profile === 'adult');
-    const { room, player } = rooms.joinRoom(req.params.code, (req.body || {}).name, (req.body || {}).password);
+    // Who this device is gets looked up once, and then nothing waits, so the room can't
+    // switch to the unfiltered list between the check and the join.
+    const me = await adultJoin.who(req);
+    adultJoin.refuse(me, rooms.requireRoom(req.params.code).settings.profile === 'adult');
+    const { room, player } = rooms.joinRoom(req.params.code, (req.body || {}).name, (req.body || {}).password, adultJoin.signinOf(me));
     res.status(201).json({
       code: room.code,
       playerId: player.id,

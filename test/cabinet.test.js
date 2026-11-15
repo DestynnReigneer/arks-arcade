@@ -81,6 +81,14 @@ async function run({ base, root }) {
   ok('…and so does one sent for a made-up board', odd.status === 201 &&
     (await (await fetch(`${base}/api/scores/bucketdrop?board=big-fast&limit=100`)).json()).some(r => r.initials === 'ODD' && r.board === 'big-fast'));
   ok('a game with no jackpot says so', (await fetch(`${base}/api/cab-jackpot/bigswing`)).status === 404);
+  // A game's name is looked up as its own key, so the names every object has aren't games.
+  for (const name of ['constructor', '__proto__', 'toString']) {
+    const board = await fetch(`${base}/api/scores/${name}`);
+    const jackpot = await fetch(`${base}/api/cab-jackpot/${name}`);
+    const played = await fetch(`${base}/api/cab-jackpot/${name}/played`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{"won":false}' });
+    ok(`"${name}" isn't a game: it has no board and no jackpot`, board.status === 404 && jackpot.status === 404 && played.status === 404,
+      `${board.status} ${jackpot.status} ${played.status}`);
+  }
 
   console.log('\n-- cabinet games: the Racer\'s times (fastest first) --');
   const race = (score, board = 'neon') => post('racer', { initials: 'RCR', score, board, detail: 'test' });

@@ -275,17 +275,20 @@ async function run({ base, root, fake, admin: ADMIN }) {
     method, headers: { 'X-Profile-Token': who.token, ...(pass ? { 'X-Adult-Pin': pass } : {}), ...(body ? { 'Content-Type': 'application/json' } : {}) },
     body: body ? JSON.stringify(body) : undefined
   }).then(async r => ({ status: r.status, data: await r.json().catch(() => null) }));
-  const invitable = (await cc('/people', kimCC)).data;
-  ok('the invite list says who could join an unfiltered game', invitable.find(p => p.id === miloCC.profile.id).adultOk === false &&
-    invitable.find(p => p.id === samCC.profile.id).adultOk === true);
-  const withKid = await cc('/games', kimCC, { method: 'POST', body: { kind: 'online', invite: [miloCC.profile.id], dictionary: 'adult' }, pass: kimPass });
-  ok('a kid can\'t be invited to an unfiltered game', withKid.status === 403 && /Milo/.test(withKid.data.error), JSON.stringify(withKid.data));
-  const grown = await cc('/games', kimCC, { method: 'POST', body: { kind: 'online', invite: [samCC.profile.id], dictionary: 'adult' }, pass: kimPass });
-  ok('two adults can play one', grown.status === 201);
+  ok('there is no list of people to pick from', (await cc('/people', kimCC)).status === 404);
+  const grown = await cc('/games', kimCC, { method: 'POST', body: { kind: 'online', seats: 2, dictionary: 'adult' }, pass: kimPass });
+  ok('an adult opens a lobby on the unfiltered list', grown.status === 201 && grown.data.game.status === 'waiting');
+  const grownCode = grown.data.game.joinCode;
+  const kidTry = await cc(`/lobby/${grownCode}/join`, miloCC, { method: 'POST', body: {}, pass: kimPass });
+  ok('a kid can\'t join it, even holding an adult\'s pass', kidTry.status === 403, JSON.stringify(kidTry.data));
+  ok('an adult can\'t join it without their own pass', (await cc(`/lobby/${grownCode}/join`, samCC, { method: 'POST', body: {} })).status === 403);
+  ok('two adults can play one', (await cc(`/lobby/${grownCode}/join`, samCC, { method: 'POST', body: {}, pass: samPass })).status === 200);
   ok('…each opening it with their own adult pass', (await cc(`/games/${grown.data.id}`, samCC)).status === 403 &&
     (await cc(`/games/${grown.data.id}`, samCC, { pass: samPass })).status === 200);
   ok('a kid holding an adult\'s pass still can\'t start one', (await cc('/games', miloCC, { method: 'POST', body: { kind: 'local', players: [{ name: 'A' }, { name: 'B' }], dictionary: 'adult' }, pass: kimPass })).status === 403);
-  ok('a kid can start a family-words game with an adult', (await cc('/games', miloCC, { method: 'POST', body: { kind: 'online', invite: [kimCC.profile.id] } })).status === 201);
+  const kidLobby = await cc('/games', miloCC, { method: 'POST', body: { kind: 'online', seats: 2 } });
+  ok('a kid can open a family-words lobby, and an adult can join it', kidLobby.status === 201 &&
+    (await cc(`/lobby/${kidLobby.data.game.joinCode}/join`, kimCC, { method: 'POST', body: {} })).status === 200);
 
   console.log('\n-- notifications: your turn in Words with Family --');
   // Notifications go out in the background, so wait for them to land (or for nothing to).
@@ -298,13 +301,17 @@ async function run({ base, root, fake, admin: ADMIN }) {
   ok("…and something that isn't a push address is turned away", (await samCB.call('/api/push/subscribe', { method: 'POST', body: { subscription: sub('x').endpoint } })).status === 400);
   await kimCB.call('/api/push/subscribe', { method: 'POST', body: { subscription: sub('kim') } });
   fake.pushes.length = 0;
-  const ng = await cc('/games', kimCC, { method: 'POST', body: { kind: 'online', invite: [samCC.profile.id] } });
+  const ng = await cc('/games', kimCC, { method: 'POST', body: { kind: 'online', seats: 2 } });
+  await settle(0);
+  ok('opening a lobby tells nobody', fake.pushes.length === 0, JSON.stringify(fake.pushes));
+  // Sam finds the lobby and joins, which starts the game. Kim hosts, so Kim is first, and is told.
+  await cc(`/lobby/${ng.data.game.joinCode}/join`, samCC, { method: 'POST', body: {} });
   await settle();
   const toSam = fake.pushes.filter(p => p.to === fake.users.sam.id), toKim = () => fake.pushes.filter(p => p.to === fake.users.kim.id);
-  ok('starting a game tells the person invited, with a link straight to it', toSam.length === 1 && /^Kim started a game with you[.,]/.test(toSam[0].body) &&
-    toSam[0].url === `/crisscross.html?game=${ng.data.id}` && toSam[0].tag === `ww-${ng.data.id}`, JSON.stringify(fake.pushes));
-  ok('…and not the one who started it', toKim().length === 0);
-  ok('…saying it is a new game, from Kim, in Words with Family (contract v16)', toSam[0].kind === 'started' && toSam[0].from === fake.users.kim.id && toSam[0].game === 'Words with Family', JSON.stringify(toSam[0]));
+  ok('the game starting tells whoever is first, with a link straight to it', toKim().length === 1 && toKim()[0].body === 'Everyone\'s ready, the game started. You\'re first!' &&
+    toKim()[0].url === `/crisscross.html?game=${ng.data.id}` && toKim()[0].tag === `ww-${ng.data.id}`, JSON.stringify(fake.pushes));
+  ok('…and not the one who just joined', toSam.length === 0);
+  ok('…saying it is a new game, in Words with Family (contract v16)', toKim()[0].kind === 'started' && toKim()[0].game === 'Words with Family', JSON.stringify(toKim()[0]));
   // Whoever goes first passes; the other one hears about it.
   let g = (await cc(`/games/${ng.data.id}`, kimCC)).data;
   const [first, second, secondKey] = g.you === g.turn ? [kimCC, samCC, 'sam'] : [samCC, kimCC, 'kim'];

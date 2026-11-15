@@ -172,7 +172,6 @@
 html.tv .levels { grid-template-columns: repeat(4, 1fr); }
 html.tv #modeSeg { flex-wrap: wrap; }
 html.tv #lobby:not(.hidden) { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
-html.tv #lobby .code { font-size: 64px; letter-spacing: 12px; }
 html.tv #joinQr { width: 220px !important; height: 220px !important; }
 html.tv .people li { font-size: 18px; }
 body.tv-screen #myArea .hand,

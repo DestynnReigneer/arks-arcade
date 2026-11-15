@@ -117,7 +117,8 @@ async function run({ base, root }) {
       people.push({ id: asked.data.id, h: { 'X-Profile-Token': used.data.token } });
     }
     const [fay, gus] = people;
-    const game = await call('/api/crisscross/games', 'POST', { kind: 'online', invite: [gus.id] }, fay.h);
+    const game = await call('/api/crisscross/games', 'POST', { kind: 'online', seats: 2 }, fay.h);
+    await call(`/api/crisscross/lobby/${game.data.game.joinCode}/join`, 'POST', {}, gus.h);
     await call(`/api/crisscross/games/${game.data.id}/resign`, 'POST', {}, gus.h);
     const wwf = (await admin('')).data.games.find(g => g.id === 'crisscross');
     ok('Words with Family is on the Boards tab with Best single word and Best game score',

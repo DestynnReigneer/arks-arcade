@@ -47,6 +47,11 @@ const S = {
   room: null,           // latest snapshot
   stream: null,
   clockSkew: 0,         // serverNow - Date.now()
+  findTimer: null,      // List Hosted Games asks again every few seconds while it's open
+  details: null,        // the lobby whose details card is open
+  cameFromList: false,  // joined from List Hosted Games, so leaving goes back to the list
+  noticeId: null,       // the last notice from the room that was shown
+  freshRoom: false,     // the next snapshot is the first one since joining
 
   results: null
 };
@@ -111,6 +116,8 @@ function screen(name) {
                     'maraResultsScreen']) {
     $(id).classList.toggle('hidden', id !== `${name}Screen`);
   }
+  // The list of lobbies is only kept fresh while the setup screen is showing it.
+  if (name !== 'setup') stopFinding();
   window.scrollTo(0, 0);
 }
 
@@ -1401,7 +1408,13 @@ function openStream() {
   const { code, playerId, token } = S.creds;
   const url = `${API}/rooms/${code}/events?playerId=${encodeURIComponent(playerId)}&token=${encodeURIComponent(token)}`;
   S.stream = new EventSource(url);
+  S.freshRoom = true;
   S.stream.addEventListener('state', e => applyRoomState(JSON.parse(e.data)));
+  // The host switched to the unfiltered word list, and this device isn't signed in as an adult.
+  S.stream.addEventListener('moved', () => {
+    backToSetup();
+    say($('setupMsg'), 'The host switched the game mode to adult, you have been removed. Only Adults can join.', 'err');
+  });
   S.stream.onerror = () => { /* EventSource reconnects on its own */ };
 }
 
@@ -1421,6 +1434,17 @@ function applyRoomState(snap) {
   S.duration = snap.settings.durationSec;
   S.profile = snap.settings.profile;
   paintPalette();
+  // Something the room wants everyone still in it to read once (who was moved out, and why).
+  // Someone who has only just come in doesn't need news from before they arrived.
+  if (snap.notice && snap.notice.id !== S.noticeId) {
+    S.noticeId = snap.notice.id;
+    if (!S.freshRoom) {
+      say($('lobbyNotice'), snap.notice.text);
+      clearTimeout(S.noticeTimer);
+      S.noticeTimer = setTimeout(() => say($('lobbyNotice'), ''), 9000);
+    }
+  }
+  S.freshRoom = false;
 
   if (snap.state === 'lobby') {
     renderLobby(snap);
@@ -1440,7 +1464,7 @@ function applyRoomState(snap) {
       renderBoard($('board'), S.board, S.size, S.size);
       paintTrace();
       renderFound();
-      $('turnName').innerHTML = `Room <b>${snap.code}</b>`;
+      $('turnName').textContent = snap.screen ? 'Rambler on the TV' : snap.youAreHost ? 'Your lobby' : `${snap.hostName}'s lobby`;
       // The TV only shows the board: the words are traced on the phones.
       $('typeRow').classList.toggle('hidden', !!snap.isScreen);
       $('traceBar').classList.toggle('hidden', !!snap.isScreen);
@@ -1491,11 +1515,14 @@ function renderPlayRoster(snap) {
 
 function renderLobby(snap) {
   $('lobbyPassword').textContent = snap.lobbyPassword ? `🔒 Lobby password: ${snap.lobbyPassword}` : snap.locked ? '🔒 This game is locked with a password.' : '';
+  $('lobbyTitle').textContent = snap.screen ? 'Rambler on the TV' : snap.youAreHost ? 'Your Rambler lobby' : `${snap.hostName}'s Rambler lobby`;
   $('lobbyHow').textContent = snap.isScreen
     ? 'Everyone scans the code with their own phone and types their name. The board shows up big here on the TV, and you all trace words on your phones at the same time.'
-    : 'Everyone opens this page and taps Join, then types that code.';
-  $('roomCode').textContent = snap.code;
-  if ($('joinQr').dataset.code !== snap.code) { $('joinQr').dataset.code = snap.code; ArcadeQR.forGame($('joinQr'), 'rambler.html', snap.code, $('joinLink')); }
+    : '';
+  // The QR code is for the TV, where phones scan to join. A lobby made on a device
+  // is joined from List Hosted Games.
+  $('tvJoin').classList.toggle('hidden', !snap.screen);
+  if (snap.screen && $('joinQr').dataset.code !== snap.code) { $('joinQr').dataset.code = snap.code; ArcadeQR.forGame($('joinQr'), 'rambler.html', snap.code); }
   const roster = $('lobbyRoster');
   roster.innerHTML = '';
   for (const p of snap.players) {
@@ -1877,22 +1904,29 @@ function paintPalette() {
 
 function renderSetup() {
   paintPalette();
-  for (const b of $('modeList').children) {
+  for (const b of $('modeList').querySelectorAll('.mode')) {
     b.setAttribute('aria-pressed', String(b.dataset.mode === S.mode));
   }
 
   const needsRoster = S.mode === 'turns' || S.mode === 'tabletop';
   const marathon = S.mode === 'marathon';
+  // List Hosted Games: the lobbies to pick from replace the game's own settings.
+  const finding = S.mode === 'find';
   $('playersField').classList.toggle('hidden', !needsRoster);
   $('nameField').classList.toggle('hidden', S.mode !== 'room');
-  $('joinDivider').classList.toggle('hidden', S.mode !== 'room');
-  $('joinField').classList.toggle('hidden', S.mode !== 'room');
+  // A profile's own name is used unless another is typed.
+  $('nameInput').placeholder = (S.player ? S.player.name : guestName()) || 'Who\'s playing?';
+  $('hostedField').classList.toggle('hidden', !finding);
+  $('difficultyField').classList.toggle('hidden', finding);
+  $('profileSeg').parentElement.classList.toggle('hidden', finding);
+  $('startBtn').classList.toggle('hidden', finding);
+  if (finding && !$('setupScreen').classList.contains('hidden')) { if (!S.findTimer) startFinding(); } else stopFinding();
   if (needsRoster) renderPlayersEditor();
 
   // Marathon sets its own board size and buys its own time, so neither
   // control means anything there.
-  $('sizeSeg').parentElement.classList.toggle('hidden', marathon);
-  $('durationSeg').parentElement.classList.toggle('hidden', marathon);
+  $('sizeSeg').parentElement.classList.toggle('hidden', marathon || finding);
+  $('durationSeg').parentElement.classList.toggle('hidden', marathon || finding);
 
   segment($('sizeSeg'), S.config.sizes.map(s => ({ label: s.label, value: s.size })),
     S.size, v => { S.size = v; renderSetup(); });
@@ -1912,7 +1946,7 @@ function renderSetup() {
     : '';
 
   $('startBtn').textContent = TV ? 'Show the code on the TV'
-    : S.mode === 'room' ? 'Open a room' : S.mode === 'marathon' ? 'Start the run' : 'Slide to victory';
+    : S.mode === 'room' ? 'Create lobby' : S.mode === 'marathon' ? 'Start the run' : 'Slide to victory';
 }
 
 // The PIN is checked with the server before it's kept, so a wrong one can't
@@ -1991,7 +2025,7 @@ async function startPressed() {
       const data = await RoomPassword.withPassword(password => api('/rooms', {
         method: 'POST',
         body: {
-          name: $('nameInput').value,
+          name: $('nameInput').value || (S.player ? S.player.name : guestName()),
           size: S.size,
           profile: S.profile,
           durationSec: S.duration,
@@ -2020,21 +2054,108 @@ async function startPressed() {
   }
 }
 
-async function joinPressed() {
-  const code = $('joinCodeInput').value.trim().toUpperCase();
-  if (code.length !== 4) return say($('setupMsg'), 'Room codes are four characters.', 'err');
+// ---------------------------------------------------------- List Hosted Games
+// Every Rambler lobby, for anyone to tap and join. One that's in the middle of
+// a round is listed too: a latecomer plays what's left of it.
+
+function startFinding() {
+  stopFinding();
+  loadHosted();
+  S.findTimer = setInterval(() => { if (!document.hidden) loadHosted(); }, 5000);
+}
+
+function stopFinding() {
+  if (S.findTimer) clearInterval(S.findTimer);
+  S.findTimer = null;
+}
+
+async function fetchHosted() {
+  return (await api('/lobbies')).lobbies || [];
+}
+
+// The name a seat gets: the profile's, or a guest's own ("Guest 12" until they type another).
+const guestName = () => { try { return typeof ArcadeProfile !== 'undefined' ? ArcadeProfile.name() || '' : ''; } catch { return ''; } };
+
+const hostedLine = l => `${l.size === 5 ? '5x5' : '4x4'} board · ${mmss(l.durationSec * 1000)} on the clock · ${l.adult ? 'Unfiltered words' : 'Family words'}`;
+
+async function loadHosted() {
+  let list;
+  try { list = await fetchHosted(); } catch { return; }
+  const rows = $('hostedRows');
+  rows.replaceChildren();
+  $('hostedEmpty').classList.toggle('hidden', list.length > 0);
+  for (const l of list) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'hosted-row';
+    if (l.status === 'full') b.setAttribute('aria-disabled', 'true');
+    b.innerHTML = '<span class="main"><b></b><small></small></span><span class="count"></span>';
+    b.querySelector('b').textContent = `${l.adult ? '🔞 ' : ''}${l.host}'s lobby`;
+    b.querySelector('small').textContent = l.status === 'playing' ? 'Game started · a round is being played' : hostedLine(l);
+    b.querySelector('.count').textContent = `${l.count}/${l.max}`;
+    if (l.status === 'full') {
+      const f = document.createElement('span');
+      f.className = 'full';
+      f.textContent = 'FULL';
+      b.append(f);
+    }
+    b.onclick = () => openHosted(l);
+    rows.append(b);
+  }
+}
+
+function openHosted(l) {
+  S.details = l;
+  $('hostedTitle').textContent = `${l.host}'s Rambler lobby`;
+  $('hPlayers').textContent = `${l.players.length ? l.players.join(', ') : 'Nobody yet'} · ${l.count} of ${l.max}`;
+  $('hHow').textContent = `${hostedLine(l)}. ` + (l.screen ? 'The board is on the TV, and everyone traces words on their own device.'
+    : 'Each player on their own device, all on the same board.');
+  $('hStatus').textContent = l.status === 'full' ? 'Full' : l.status === 'playing' ? 'Playing a round' : l.between ? 'Between rounds' : 'Waiting for players';
+  $('hLate').classList.toggle('hidden', l.status !== 'playing');
+  $('hostedJoinBtn').textContent = l.status === 'playing' ? 'Join game in progress?' : 'Join lobby';
+  $('hostedJoinBtn').disabled = l.status === 'full';
+  // A profile joins under its own name. A guest can type one, or keep the one they have.
+  $('hGuest').classList.toggle('hidden', !!S.player);
+  $('hostedName').placeholder = guestName() || 'Who\'s playing?';
+  say($('hostedMsg'), '');
+  $('hostedOverlay').classList.remove('hidden');
+}
+
+function closeHosted() {
+  $('hostedOverlay').classList.add('hidden');
+}
+
+async function joinHosted() {
+  const l = S.details;
+  if (!l) return;
+  say($('hostedMsg'), '');
   try {
-    const data = await RoomPassword.withPassword(password => api(`/rooms/${code}/join`, {
+    // An unfiltered lobby asks for its lobby password (not the adult pass).
+    const data = await RoomPassword.withPassword(password => api(`/rooms/${l.code}/join`, {
       method: 'POST',
-      body: { name: $('nameInput').value, password }
+      body: { name: S.player ? S.player.name : $('hostedName').value || guestName(), password }
     }));
     if (!data) return;
+    closeHosted();
     S.creds = { code: data.code, playerId: data.playerId, token: data.token };
+    S.cameFromList = true;
     S.mode = 'room';
     openStream();
   } catch (e) {
-    say($('setupMsg'), e.message, 'err');
+    say($('hostedMsg'), e.message, 'err');
   }
+}
+
+// Opening rambler.html?join=CODE (the TV's QR code, or the home page's list):
+// that lobby's details.
+async function openFromLink(code) {
+  try {
+    const l = (await fetchHosted()).find(x => x.code === code);
+    if (l) return openHosted(l);
+  } catch { /* falls through */ }
+  S.mode = 'find';
+  renderSetup();
+  say($('setupMsg'), 'This game isn\'t available. Here are the ones that are.', 'err');
 }
 
 function backToSetup() {
@@ -2051,6 +2172,9 @@ function backToSetup() {
   S.room = null;
   S.results = null;
   S.found = [];
+  // Someone who came in from List Hosted Games goes back to the list.
+  if (S.cameFromList) { S.cameFromList = false; S.mode = 'find'; }
+  say($('setupMsg'), '');
   screen('setup');
   renderSetup();
   refreshDailyCard();
@@ -2134,13 +2258,16 @@ function bindInitialsBoxes() {
 // -------------------------------------------------------------------- wiring
 
 function bind() {
-  for (const b of $('modeList').children) {
+  for (const b of $('modeList').querySelectorAll('.mode')) {
     b.onclick = () => {
       S.mode = b.dataset.mode;
+      say($('setupMsg'), '');
       if ((S.mode === 'turns' || S.mode === 'tabletop') && S.players.length < 2) {
         S.players = defaultPlayers(2);
       }
       renderSetup();
+      // The list of lobbies sits under the ways to play: bring it into view, or the tap seems to do nothing.
+      if (S.mode === 'find') $('hostedField').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     };
   }
 
@@ -2159,8 +2286,11 @@ function bind() {
   };
 
   $('startBtn').onclick = startPressed;
-  $('joinBtn').onclick = joinPressed;
-  $('joinCodeInput').addEventListener('keydown', e => { if (e.key === 'Enter') joinPressed(); });
+  $('hostedJoinBtn').onclick = joinHosted;
+  $('hostedName').addEventListener('keydown', e => { if (e.key === 'Enter') joinHosted(); });
+  $('hostedCancelBtn').onclick = closeHosted;
+  $('closeHostedBtn').onclick = closeHosted;
+  $('hostedOverlay').addEventListener('click', e => { if (e.target === $('hostedOverlay')) closeHosted(); });
 
   $('gateBtn').onclick = beginTurn;
 
@@ -2344,19 +2474,14 @@ async function boot() {
   renderSetup();
   refreshDailyCard();
 
-  // A link like rambler.html?join=ABCD (from a QR code or the arcade's
-  // "Join a game" list) lands on Own Phones with the code filled in.
-  const joinParam = new URLSearchParams(location.search).get('join');
-  if (joinParam && !TV) {
-    S.mode = 'room';
-    renderSetup();
-    $('joinCodeInput').value = joinParam.toUpperCase().slice(0, 4);
-    $('joinCodeInput').scrollIntoView({ block: 'center' });
-  }
-
   // First visit with profiles already on the server and none chosen: ask who
   // is playing rather than silently banking nothing.
   if (!S.player && S.profiles.length && !TV) showProfilePicker();
+
+  // A link like rambler.html?join=ABCD (from the TV's QR code or the home
+  // page's list of lobbies) opens that lobby's details, with Join.
+  const joinParam = new URLSearchParams(location.search).get('join');
+  if (joinParam && !TV) openFromLink(joinParam.toUpperCase().slice(0, 4));
 }
 
 // Back (topbar.js): any other screen goes back to setup, asking first while

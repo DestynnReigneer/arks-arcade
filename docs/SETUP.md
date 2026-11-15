@@ -86,7 +86,7 @@ This gives you `https://arcade.example.com` instead of an IP and port.
    - Turn on **Websockets Support** and **Block Common Exploits**.
 3. **SSL tab:** request a Let's Encrypt certificate (a DNS challenge works even
    if nothing is reachable from the internet), and turn on **Force SSL**.
-4. **Advanced tab:** paste this so live updates (room codes, games on two devices,
+4. **Advanced tab:** paste this so live updates (game lobbies, games on two devices,
    the Lobbies list) aren't held back by buffering:
 
    ```nginx

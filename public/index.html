@@ -165,7 +165,12 @@
     display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px;
     background: var(--card-2); border: 1px solid var(--border);
   }
-  .lobby-list li.open { border-color: color-mix(in srgb, var(--accent-2) 55%, var(--border)); }
+  .lobby-list li.open, .lobby-list li.live { border-color: color-mix(in srgb, var(--accent-2) 55%, var(--border)); }
+  /* A game that's going has a longer button ("Join game in progress?"). On a narrow screen it goes
+     under the text instead of squeezing the game's name into a few letters a line. */
+  .lobby-list li.live { flex-wrap: wrap; }
+  .lobby-list li.live .l-main { flex: 1 1 170px; }
+  .lobby-list li.live .l-join { margin-left: auto; }
   .lobby-list .l-emoji { font-size: 24px; }
   .lobby-list .l-main { flex: 1; min-width: 0; }
   .lobby-list .l-title { font-weight: 800; font-size: 14px; }
@@ -417,7 +422,7 @@
     </div>
   </div>
   <ul class="lobby-list" id="lobbyList"></ul>
-  <p class="lobby-empty" id="lobbyEmpty">Nobody's hosting right now. Pick a game below and choose <b>Host</b> to start one; it shows up here for everyone.</p>
+  <p class="lobby-empty" id="lobbyEmpty">Nobody's hosting right now. Pick a game below and choose <b>Create a game lobby</b> to start one; it shows up here for everyone.</p>
 </section>
 
 

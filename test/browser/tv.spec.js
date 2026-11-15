@@ -148,8 +148,10 @@ test('a phone joins a game the TV hosts', async ({ page, browser }) => {
   await press(page, '#countSeg [data-v="5"]');
   await press(page, '#goBtn');
   await expect(page.locator('#lobby')).toBeVisible();
-  const code = (await page.locator('#lobbyCode').textContent()).trim();
-  expect(code).toMatch(/^[A-Z2-9]{4}$/);
+  // The TV shows a QR code to scan and no code to type; the test reads the lobby the QR code points to.
+  await expect(page.locator('#joinQr')).toHaveAttribute('data-code', /^[A-Z2-9]{4}$/);
+  const code = await page.locator('#joinQr').getAttribute('data-code');
+  await expect(page.locator('#lobbyCode')).toHaveCount(0);
   await expect(page.locator('#joinQr')).toBeVisible();
   await expect(page.locator('#lobbyHow')).toContainText('own phone');
   await expect(page.locator('#startBtn')).toBeDisabled();
