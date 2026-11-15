@@ -399,6 +399,10 @@ function createArksId({ client, now = Date.now, profiles }) {
     }).catch(() => { askAgainAt = now() + 30 * 1000; /* ARKS ID is away: the sign-in keeps working until it would have ended anyway */ })
       .finally(() => checking.delete(sessionId));
   }
+  // A profile token names its sign-in (arcade/profiles.js); it works while that sign-in does.
+  require('./profiles').useSignins((profile, key) => !!profile.arksid_user &&
+    db.db.prepare('SELECT session_id FROM arcade_signins WHERE user_id = ? AND expires_at > ?').all(profile.arksid_user, now())
+      .some(s => signinKey(s.session_id) === key));
   function passOk(pass) {
     const m = /^(ap\.([0-9a-f]{16})\.(\d{10,16})\.([0-9a-f]{24}))\.([A-Za-z0-9_-]{43})$/.exec(String(pass || ''));
     if (!m || Number(m[3]) < now() || !sameSig(m[5], sign(m[1]))) return false;
@@ -541,7 +545,7 @@ function createArksId({ client, now = Date.now, profiles }) {
       };
       if (me) {
         const p = profiles.pub(me.profile);
-        Object.assign(out, { profile: p, token: profiles.tokenFor(me.profile), role: me.account.role, adult: GROWN_UP.includes(me.account.role) });
+        Object.assign(out, { profile: p, token: profiles.tokenFor(me.profile, signinKey(me.sessionId)), role: me.account.role, adult: GROWN_UP.includes(me.account.role) });
         // A TV (contract v14) counts as an adult only during adults' night.
         if (me.tv) Object.assign(out, { tv: true, adult: !!me.adultMode, adultMode: me.adultMode });
       }
