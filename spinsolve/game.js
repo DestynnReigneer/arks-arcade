@@ -41,9 +41,10 @@ const letters = s => s.replace(/[^A-Z]/g, '');
 const pickFrom = list => list[crypto.randomInt(list.length)];
 
 // ---- kept between restarts ---------------------------------------------------------
-// The store is { save(id, state, touched), remove(id), all() }. routes.js hands
-// over one that writes to the database. Without one (the tests that load this
-// file by itself) games live in memory only, as they did before.
+// The store is { save(id, state, touched), remove(id), all() }, where all()
+// gives every row as { id, state }. routes.js hands over one that writes to
+// the database. Without one (the tests that load this file by itself) games
+// live in memory only, as they did before.
 let store = null;
 function useStore(s) { store = s || null; }
 
@@ -59,26 +60,55 @@ function drop(id) {
   if (store) { try { store.remove(id); } catch { /* it's gone from memory either way */ } }
 }
 
-// Reads the kept games back when the arcade starts. poolOf(key) puts a game's
-// list of puzzles together again. A game whose list is gone (its pack was
-// deleted) carries on with the puzzle it's on. -> how many came back.
-function restore(poolOf, now = Date.now()) {
+// What a kept game has to look like before it's let back in: every field the
+// rest of this file reads, in the shape it reads it.
+const PHASES = ['turn', 'letter', 'roundover', 'over'];
+const isCount = n => Number.isInteger(n) && n >= 0;
+const isTexts = list => Array.isArray(list) && list.every(s => typeof s === 'string');
+function sound(g, id) {
+  if (!g || typeof g !== 'object' || g.id !== id || !/^[0-9a-f]{32}$/.test(id)) return false;
+  if (!Array.isArray(g.players) || !g.players.length || g.players.length > MAX_PLAYERS) return false;
+  if (!g.players.every(p => p && typeof p.name === 'string' && isCount(p.round) && isCount(p.total))) return false;
+  if (!PHASES.includes(g.phase) || !ROUNDS.includes(g.rounds) || !isCount(g.round) || g.round < 1 || g.round > g.rounds + 1) return false;
+  if (!isCount(g.cur) || g.cur >= g.players.length || !isCount(g.strikes) || !Number.isFinite(g.touched)) return false;
+  if (!isTexts(g.revealed) || !isTexts(g.used) || !isTexts(g.usedPuzzles) || !isTexts([g.level, g.poolKey, g.packLabel])) return false;
+  if (typeof g.adult !== 'boolean' || (g.phase === 'letter' && !Number.isFinite(g.wedge))) return false;
+  if (g.phase === 'over') return true;
+  return !!g.puzzle && typeof g.puzzle.answer === 'string' && !!letters(g.puzzle.answer) && typeof g.puzzle.category === 'string';
+}
+
+// Reads the kept games back when the arcade starts. listOf(key) finds a game's
+// list of puzzles again -> { level, adult, pool }, or null when it's gone. A
+// game whose list is gone (its pack was deleted), or isn't the level the game
+// was started on anymore, carries on with the puzzle it's on. A row that isn't
+// a game (someone edited it, or a later mistake wrote it) is left out, said in
+// the log and removed, so one bad row can never keep the arcade from starting.
+// -> how many came back.
+function restore(listOf, now = Date.now()) {
   if (!store) return 0;
   let back = 0;
-  for (const text of store.all()) {
-    let g = null;
-    try { g = JSON.parse(text); } catch { /* not a game anymore */ }
-    if (!g || typeof g.id !== 'string' || games.has(g.id) || !Array.isArray(g.players) || !g.players.length) continue;
-    let pool = null;
-    try { pool = poolOf(g.poolKey); } catch { /* the list is gone */ }
-    if (!pool || !pool.length) pool = g.puzzle ? [g.puzzle] : [];
-    if (!pool.length && g.phase !== 'over') { drop(g.id); continue; }
-    g.pool = pool;
-    g.revealed = new Set(g.revealed || []);
-    g.used = new Set(g.used || []);
-    g.usedPuzzles = new Set(g.usedPuzzles || []);
-    games.set(g.id, g);
-    back++;
+  for (const row of store.all()) {
+    const id = String(row && row.id);
+    try {
+      const g = JSON.parse(row.state);
+      if (!sound(g, id)) throw new Error('it is not a game anymore');
+      let list = null;
+      try { list = listOf(g.poolKey); } catch { /* the list is gone */ }
+      const fits = !!list && list.level === g.level && list.adult === g.adult && Array.isArray(list.pool) && list.pool.length > 0;
+      g.pool = fits ? list.pool : (g.puzzle ? [g.puzzle] : []);
+      g.revealed = new Set(g.revealed);
+      g.used = new Set(g.used);
+      g.usedPuzzles = new Set(g.usedPuzzles);
+      g.wedge = g.phase === 'letter' ? g.wedge : null;
+      g.overAt = Number(g.overAt) || 0;
+      g.moved = !!g.moved;
+      g.saved = !!g.saved;
+      games.set(id, g);
+      back++;
+    } catch (e) {
+      console.error(`Spin & Solve left out a saved game it could not read: ${e.message}`);
+      try { store.remove(id); } catch { /* it stays out of memory either way */ }
+    }
   }
   sweep(now);
   return back;
@@ -91,19 +121,23 @@ function sweep(now = Date.now()) {
   }
 }
 
-// So one address (or one profile) can't fill the arcade with games: starting
-// one more than its share drops its oldest. An address is counted the way the
-// rate limiter counts it (a whole IPv6 network is one visitor), so changing
-// addresses inside one network doesn't get around the share. Only a fingerprint
-// of it is kept, so no visitor's address is ever written to the database.
+// So one visitor can't fill the arcade with games: starting one more than a
+// share drops one of that visitor's own. A signed-in player's games are counted
+// by profile, wherever they're played, and everyone else's by address. A guest's
+// games are never counted with a profile's, so a guest on the same network, or
+// on the same device, can't push out a game that's kept for a person. An address
+// is counted the way the rate limiter counts it (a whole IPv6 network is one
+// visitor), so changing addresses inside one network doesn't get around the
+// share. Only a fingerprint of it is kept, never the address itself.
 const ownerOf = ip => (ip ? crypto.createHash('sha256').update(`spin:${ipKeyGenerator(String(ip))}`).digest('hex').slice(0, 24) : null);
-function makeRoom(ip, profileId) {
-  for (const key of ['ip', 'profileId']) {
-    const value = key === 'ip' ? ip : profileId;
-    if (!value) continue;
-    const mine = [...games.values()].filter(g => g[key] === value).sort((a, b) => a.touched - b.touched);
-    while (mine.length >= MAX_PER_OWNER) drop(mine.shift().id);
-  }
+// Which game makes room first: one nobody has made a move in, then a guest's,
+// and a profile's played game last. Among equals, the quietest goes.
+const keptFor = g => (!g.moved ? 0 : g.profileId ? 2 : 1);
+const firstToGo = (a, b) => (keptFor(a) - keptFor(b)) || (a.touched - b.touched);
+function makeRoom(owner, profileId) {
+  if (!profileId && !owner) return;
+  const mine = [...games.values()].filter(g => (profileId ? g.profileId === profileId : !g.profileId && g.ip === owner)).sort(firstToGo);
+  while (mine.length >= MAX_PER_OWNER) drop(mine.shift().id);
 }
 
 // pool: [{ category, answer, pack? }], already checked and allowed for this player.
@@ -113,12 +147,12 @@ function start({ pool, poolKey, names, rounds, level, adult, packLabel, profileI
   const owner = ownerOf(ip);
   sweep();
   makeRoom(owner, profileId || null);
-  // Full: the game nobody has touched for the longest makes room, so a pile of
-  // abandoned games can never keep someone from starting one.
+  // Full: one game makes room (see firstToGo), so a pile of abandoned games can
+  // never keep someone from starting one.
   while (games.size >= MAX_GAMES) {
-    let idle = null;
-    for (const g of games.values()) if (!idle || g.touched < idle.touched) idle = g;
-    drop(idle.id);
+    let out = null;
+    for (const g of games.values()) if (!out || firstToGo(g, out) < 0) out = g;
+    drop(out.id);
   }
   const list = (Array.isArray(names) ? names : []).slice(0, MAX_PLAYERS);
   if (!list.length) list.push('');

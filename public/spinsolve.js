@@ -206,38 +206,46 @@
     } catch { return null; }
   }
   // The home page's Continue row opens a game by its address (spinsolve.html?game=...),
-  // so a game started on one device can be carried on from another. It's remembered
-  // here like any other, and the address is tidied so a reload doesn't ask twice.
+  // so a game started on one device can be carried on from another. The address is
+  // tidied so a reload doesn't ask twice. -> the game named there, or null.
   function linkedRun() {
-    if (TV) return;
+    if (TV) return null;
     let id = null;
     try {
       const url = new URL(location.href);
       id = url.searchParams.get('game');
-      if (id === null) return;
+      if (id === null) return null;
       url.searchParams.delete('game');
       history.replaceState(history.state, '', url.pathname + url.search + url.hash);
-    } catch { return; }
-    if (!/^[0-9a-f]{32}$/.test(String(id))) return;
-    const was = rememberedRun();
-    if (was && was.id === id) return;
-    try { localStorage.setItem(runKey(), JSON.stringify({ id, turnSecs: was ? was.turnSecs : S.turnSecs, pack: '' })); } catch { /* storage is off */ }
+    } catch { return null; }
+    return /^[0-9a-f]{32}$/.test(String(id)) ? id : null;
   }
 
   // Asked once, when the page loads. -> true when a game came back.
   async function pickUpGame() {
-    linkedRun();
-    const saved = rememberedRun();
-    if (!saved || !S.config) return false;
-    rememberedAs = runKey();
+    const linked = linkedRun();
+    const kept = rememberedRun();
+    if (!S.config) return false;
+    // A game named in the address is asked for before anything is remembered, and
+    // it only takes the remembered game's place once the arcade has handed it over.
+    // So a link to a game that has ended, or never was, says so and leaves this
+    // device's own game where it was, for the next visit.
+    if (linked && !(kept && kept.id === linked)) return pickUp({ id: linked, turnSecs: kept ? kept.turnSecs : S.turnSecs, pack: '' }, true);
+    return kept ? pickUp(kept, false) : false;
+  }
+  // saved: { id, turnSecs, pack }. fromLink: it came from the address, so this
+  // device doesn't remember it yet and has nothing to forget when it isn't there.
+  async function pickUp(saved, fromLink) {
+    if (!fromLink) rememberedAs = runKey();
+    const forget = () => { if (!fromLink) forgetRun(); };
     const ask = () => api(`/api/spinsolve/run/${saved.id}`, undefined, pinHeaders());
     // The server has no such game anymore: say so. An adult who doesn't unlock it:
     // forget it quietly. Anything else (no network) can be tried on the next load.
     const gone = e => {
       // Someone tapped Play while the answer was on its way: the new game is the one to keep.
       const now = rememberedRun();
-      if (S.run || (now && now.id !== saved.id)) return false;
-      if (e.status === 404) { forgetRun(); toast(e.message); } else if (e.status === 403) forgetRun();
+      if (S.run || (!fromLink && now && now.id !== saved.id)) return false;
+      if (e.status === 404) { forget(); toast(e.message); } else if (e.status === 403) forget();
       return false;
     };
     let got;
@@ -249,12 +257,14 @@
     const st = got.state;
     // Someone tapped Play while the answer was on its way: the new game wins.
     if (S.run) return false;
-    if (st.phase === 'over' && !st.canSave) { forgetRun(); return false; }
+    if (st.phase === 'over' && !st.canSave) { forget(); return false; }
     S.run = saved.id;
     S.level = got.level || 'kids';
     S.banter = got.banter || null;
     const timer = [...$('timerSeg').children].find(b => Number(b.dataset.secs) === Number(saved.turnSecs));
     if (timer) timer.click();
+    // The arcade has the game, so now it's the one this device remembers.
+    if (fromLink) rememberRun();
     apply(st);
     document.documentElement.classList.toggle('adult-mode', isAdult());
     $('setup').classList.add('hidden');

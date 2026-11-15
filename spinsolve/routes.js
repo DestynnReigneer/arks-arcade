@@ -130,9 +130,14 @@ module.exports = function spinRoutes({ requireAdmin, notify }) {
   game.useStore({
     save: (id, state, touched) => { keepGame.run(id, state, touched); },
     remove: id => { dropGame.run(id); },
-    all: () => db.db.prepare('SELECT state FROM spin_games').all().map(r => r.state)
+    all: () => db.db.prepare('SELECT id, state FROM spin_games').all()
   });
-  const cameBack = game.restore(key => { const list = listOf(key); return list ? list.pool() : null; });
+  // A game only gets its list back when the list is still the level the game was
+  // started on, so a game can never come back holding another level's puzzles.
+  const cameBack = game.restore(key => {
+    const list = listOf(key);
+    return list ? { level: list.level, adult: P.LEVELS[list.level].adult, pool: list.pool() } : null;
+  });
   if (cameBack) console.log(`Spin & Solve picked ${cameBack} game${cameBack === 1 ? '' : 's'} back up.`);
   // A game nobody comes back to is cleared in the end (a quiet day, or 30 for a profile's game).
   const sweeper = setInterval(() => game.sweep(), 60 * 60 * 1000);

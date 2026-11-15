@@ -188,7 +188,13 @@ function resetTestDb() {
     console.log(`\n${'='.repeat(60)}\n  restart\n${'='.repeat(60)}`);
     const restartResult = await require('./restart.test.js').run({
       base: BASE, root: ROOT,
-      restart: async () => { await stopServer(server); server = await startServer(PORT); await waitForHealth(BASE); }
+      // whileDown: something to do to the database while the arcade is stopped.
+      restart: async ({ whileDown } = {}) => {
+        await stopServer(server);
+        if (whileDown) await whileDown();
+        server = await startServer(PORT);
+        await waitForHealth(BASE);
+      }
     });
     total += restartResult.pass + restartResult.fail;
     failed += restartResult.fail;

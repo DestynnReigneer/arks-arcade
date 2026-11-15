@@ -4,7 +4,10 @@
 // way a power cut or a new image stops it) and started again on the same
 // database, and the games it keeps have to come back exactly as they were.
 
-async function run({ base, restart }) {
+const path = require('path');
+const { DatabaseSync } = require('node:sqlite');
+
+async function run({ base, restart, root }) {
   let pass = 0, fail = 0;
   const ok = (label, cond, extra = '') => {
     if (cond) { pass++; console.log('  PASS  ' + label); }
@@ -47,7 +50,27 @@ async function run({ base, restart }) {
     before.state.strikes === 1 && beforeGuests.state.cur === 1 && adult.adult === true, JSON.stringify([before.state.strikes, beforeGuests.state.cur]));
   ok('nothing is in the Continue row for someone with no profile', (await api('/api/continue')).data.games.length === 0);
 
-  await restart();
+  // Rows that aren't games anymore, written straight into the database while the
+  // arcade is stopped (a file someone edited, or a mistake in a later version).
+  // The arcade has to start anyway, leave them out and clear them away.
+  const hex = ch => ch.repeat(32);
+  const damaged = { [hex('a')]: { revealed: 5 }, [hex('b')]: { revealed: {} }, [hex('c')]: { usedPuzzles: true }, [hex('d')]: { players: [null] } };
+  const spinRows = () => {
+    const db = new DatabaseSync(path.join(root, 'data', 'test.db'));
+    try { return db.prepare('SELECT id FROM spin_games').all().map(r => r.id); } finally { db.close(); }
+  };
+  await restart({
+    whileDown: () => {
+      const db = new DatabaseSync(path.join(root, 'data', 'test.db'));
+      const good = JSON.parse(db.prepare('SELECT state FROM spin_games WHERE id = ?').get(mine.id).state);
+      const put = db.prepare('INSERT INTO spin_games (id, state, touched) VALUES (?, ?, ?)');
+      for (const [id, change] of Object.entries(damaged)) put.run(id, JSON.stringify({ ...good, id, ...change }), Date.now());
+      put.run(hex('e'), '{not a game', Date.now());
+      // A family game whose row was pointed at an adult level's list of puzzles.
+      put.run(hex('f'), JSON.stringify({ ...good, id: hex('f'), poolKey: 'level:filthy', profileId: null }), Date.now());
+      db.close();
+    }
+  });
 
   const after = await look(mine.id, kim);
   ok('a game comes back after a restart, exactly as it was',
@@ -61,6 +84,17 @@ async function run({ base, restart }) {
   ok('…and so does a game nobody had moved in yet', (await look(untouched.id)).status === 200);
   ok('an adult game still needs the pass after a restart', (await look(adult.id)).status === 403 && (await look(adult.id, PIN)).status === 200);
   ok('the puzzle is the same one', (await answerOf(mine.id)) === answer);
+  const leftOut = await Promise.all([...Object.keys(damaged), hex('e')].map(id => look(id)));
+  ok('the arcade started with five damaged rows in the database, and none of them is a game', leftOut.every(r => r.status === 404), leftOut.map(r => r.status).join());
+  // The family game that pointed at an adult list plays on with the puzzle it had, round after round.
+  const crossed = hex('f');
+  const crossedAnswers = [];
+  for (let round = 1; round <= 3; round++) {
+    crossedAnswers.push(await answerOf(crossed));
+    await spin(`/${crossed}/solve`, { guess: crossedAnswers[round - 1] });
+    await spin(`/${crossed}/next`);
+  }
+  ok('a family game pointed at an adult list never draws from it', crossedAnswers.length === 3 && crossedAnswers.every(a => a === answer), crossedAnswers.join(' | '));
 
   const row = (await api('/api/continue', 'GET', null, kim)).data.games.find(g => g.game === 'spinsolve');
   ok('a profile\'s game that was played is in their Continue row', !!row && row.title === 'Spin & Solve' &&
@@ -80,8 +114,11 @@ async function run({ base, restart }) {
   ok('three rounds on, the game is over with its total', over.phase === 'over' && over.canSave === true && over.players[0].total >= 3000, JSON.stringify(over).slice(0, 200));
   const total = over.players[0].total;
 
-  await restart();
+  let rowsLeft = [];
+  await restart({ whileDown: () => { rowsLeft = spinRows(); } });
 
+  ok('the damaged rows were cleared out of the database, and the games are still in it',
+    rowsLeft.includes(guests.id) && ![...Object.keys(damaged), hex('e')].some(id => rowsLeft.includes(id)), rowsLeft.join());
   const stillOver = await look(mine.id, kim);
   ok('a finished game waiting for its score comes back as well', stillOver.status === 200 && stillOver.data.state.phase === 'over' && stillOver.data.state.players[0].total === total);
   ok('…and it has left the Continue row', !(await api('/api/continue', 'GET', null, kim)).data.games.some(g => g.game === 'spinsolve'));
