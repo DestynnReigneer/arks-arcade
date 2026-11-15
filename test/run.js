@@ -190,8 +190,10 @@ function resetTestDb() {
     const restartResult = await require('./restart.test.js').run({
       base: BASE, root: ROOT,
       // downMs: how long the arcade stays away before it comes back.
-      restart: async ({ downMs = 0 } = {}) => {
+      // whileDown: something to do to the database while the arcade is stopped.
+      restart: async ({ downMs = 0, whileDown } = {}) => {
         await stopServer(server);
+        if (whileDown) await whileDown();
         if (downMs) await new Promise(r => setTimeout(r, downMs));
         server = await startServer(PORT);
         await waitForHealth(BASE);
