@@ -50,6 +50,8 @@ const ArcadeProfile = (() => {
   Id.ready = fetch('/api/arksid/me', { cache: 'no-store' }).then(r => (r.ok ? r.json() : { on: false })).catch(() => ({ on: false })).then(me => {
     Id.on = !!me.on; Id.me = me;
     if (!Id.on) return Id;
+    // After the rest of this has run, so a quick stop at ARKS ID that's about to happen comes first.
+    setTimeout(() => dropDeadUnlocks(me), 0);
     const cur = get();
     if (me.signedIn) {
       set({ id: me.profile.id, name: me.profile.name, avatar: me.profile.avatar, hasPin: false, token: me.token,
@@ -97,12 +99,37 @@ const ArcadeProfile = (() => {
   // use it starts with the levels locked and isn't put back in someone else's
   // seat. (The server stops taking the pass too; this keeps the pages from
   // showing the levels as open.)
-  function forgetAdultUnlocks() {
+  function forgetAdultUnlocks({ seats = true } = {}) {
+    const which = seats ? /\.(adult|adultOk|adultPin|pin|room)$/ : /\.(adult|adultOk|adultPin|pin)$/;
     try {
       for (const key of Object.keys(sessionStorage)) {
-        if (/\.(adult|adultOk|adultPin|pin|room)$/.test(key)) sessionStorage.removeItem(key);
+        if (which.test(key)) sessionStorage.removeItem(key);
       }
     } catch { /* storage is off */ }
+  }
+  // A tab can still be holding an unlock after its sign-in ended somewhere else
+  // (another tab signed out, say), and the games read it as they start. So once
+  // the page knows who's signed in, an unlock that's no good anymore is
+  // forgotten and the page loads once more, clean, with the levels locked.
+  async function dropDeadUnlocks(me) {
+    if (onTv || Id.leaving) return;
+    let held = [];
+    try { held = Object.keys(sessionStorage).filter(k => /\.(adult|adultOk|adultPin|pin)$/.test(k) && sessionStorage.getItem(k)); } catch { return; }
+    if (!held.length) return;
+    let dead = !me.signedIn;
+    if (!dead) {
+      const passes = [...new Set(held.map(k => sessionStorage.getItem(k)))].filter(v => /^ap\./.test(v));
+      for (const pass of passes) {
+        try {
+          const res = await fetch('/api/adult-check', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pin: pass }) });
+          if (res.ok && (await res.json()).ok === false) { dead = true; break; }
+        } catch { /* offline: leave things as they are */ }
+      }
+    }
+    if (!dead) return;
+    // With nobody signed in, the seat this tab held goes too; a signed-in person keeps theirs.
+    forgetAdultUnlocks({ seats: !me.signedIn });
+    location.reload();
   }
   async function signOut() {
     let next = '/';
