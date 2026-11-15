@@ -179,7 +179,7 @@ test('a game the arcade no longer has sends the page back to the setup screen', 
   await expect(page.locator('#game')).toBeVisible();
   expect(await remembered(page)).toMatch(/^[0-9a-f]{32}$/);
 
-  // Remembering a game the server doesn't have is what a restart, or a day away, looks like.
+  // Remembering a game the server doesn't have is what coming back after too long looks like.
   await page.evaluate(() => {
     const key = Object.keys(localStorage).find(k => k.startsWith('spin.run.'));
     localStorage.setItem(key, JSON.stringify({ id: 'f'.repeat(32), turnSecs: 45, pack: 'all' }));
@@ -188,5 +188,51 @@ test('a game the arcade no longer has sends the page back to the setup screen', 
   await expect(page.locator('#setup')).toBeVisible();
   await expect(page.locator('#game')).toBeHidden();
   await expect(page.locator('#toast')).toContainText('This game has ended');
+  expect(await remembered(page)).toBeNull();
+});
+
+test('a game opened by its address, the way the Continue row opens it, carries on on another device', async ({ page }) => {
+  test.setTimeout(60000);
+  await quietFonts(page);
+  // A game with a strike in it, started somewhere else.
+  const started = await (await page.request.post('/api/spinsolve/run/start', { data: { level: 'kids', names: ['Kim'], rounds: 3 } })).json();
+  await page.request.post(`/api/spinsolve/run/${started.id}/solve`, { data: { guess: 'ZZZZ' } });
+
+  // This device has never seen it. The link brings it up as it stands.
+  const problems = watchProblems(page);
+  await openPage(page, `/spinsolve.html?game=${started.id}`);
+  await settle(page);
+  await expect(page.locator('#game')).toBeVisible();
+  await expect(page.locator('#setup')).toBeHidden();
+  await expect(page.locator('#toast')).toContainText('Welcome back');
+  await expect(page.locator('#strikes')).toHaveText('❌⬜⬜');
+  await expect(page.locator('#categoryLabel')).toHaveText(started.category);
+  // The address is tidied, the game is remembered here now, and a reload finds it again.
+  expect(new URL(page.url()).search).toBe('');
+  expect(await remembered(page)).toBe(started.id);
+  await reload(page);
+  await expect(page.locator('#game')).toBeVisible();
+  await expect(page.locator('#strikes')).toHaveText('❌⬜⬜');
+  expect(problems, problems.join('\n')).toEqual([]);
+
+  // A link to a game the arcade doesn't have says so, and the setup screen is there to start a
+  // new one. The game this device had is still remembered, and the next visit brings it back.
+  const madeUp = async () => {
+    await page.goto(`/spinsolve.html?game=${'0'.repeat(32)}`);
+    await page.waitForLoadState('networkidle');
+    await settle(page);
+    await expect(page.locator('#setup')).toBeVisible();
+    await expect(page.locator('#game')).toBeHidden();
+    await expect(page.locator('#toast')).toContainText('game has ended');
+    expect(new URL(page.url()).search).toBe('');
+  };
+  await madeUp();
+  expect(await remembered(page)).toBe(started.id);
+  await reload(page);
+  await expect(page.locator('#game')).toBeVisible();
+  await expect(page.locator('#strikes')).toHaveText('❌⬜⬜');
+  // With nothing remembered, the same link leaves nothing behind.
+  await page.evaluate(() => { for (const k of Object.keys(localStorage)) if (k.startsWith('spin.run.')) localStorage.removeItem(k); });
+  await madeUp();
   expect(await remembered(page)).toBeNull();
 });
