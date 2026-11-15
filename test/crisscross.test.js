@@ -195,14 +195,33 @@ async function run({ base, root }) {
     people[name] = { id: asked.data.id, h: { 'X-Profile-Token': used.data.token } };
   }
   const { Ana, Ben, Cy } = people;
-  ok('online games need a profile', (await api('/games', 'POST', { kind: 'online', invite: [Ben.id] })).status === 401);
-  ok('the invite list has everyone but you', (await api('/people', 'GET', null, Ana.h)).data.some(p => p.id === Ben.id) &&
-    !(await api('/people', 'GET', null, Ana.h)).data.some(p => p.id === Ana.id));
-  const on = await api('/games', 'POST', { kind: 'online', invite: [Ben.id] }, Ana.h);
-  ok('inviting someone starts the game straight away, with the host first', on.status === 201 && on.data.game.status === 'playing' && on.data.game.you === 0 && on.data.game.yourTurn);
+  ok('online games need a profile', (await api('/games', 'POST', { kind: 'online', seats: 2 })).status === 401);
+  ok('there is no list of people to pick from', (await api('/people', 'GET', null, Ana.h)).status === 404);
+  const made = await api('/games', 'POST', { kind: 'online', seats: 2 }, Ana.h);
+  ok('creating a lobby makes a game that waits for players, with only its host in it',
+    made.status === 201 && made.data.game.status === 'waiting' && made.data.game.players.length === 1 && !!made.data.game.joinCode);
+  const lobbyCode = made.data.game.joinCode;
+  const hosted = async h => (await api('/lobbies', 'GET', null, h || {})).data.lobbies;
+  ok('the lobby is in List Hosted Games for everyone: another profile, and a guest',
+    (await hosted(Ben.h)).some(l => l.code === lobbyCode && l.host === 'CC Ana' && l.count === 1 && l.max === 2 && l.status === 'open' && !l.mine) &&
+    (await hosted()).some(l => l.code === lobbyCode));
+  ok('…marked as yours when you are in it', (await hosted(Ana.h)).find(l => l.code === lobbyCode).mine === true);
+  ok('…and on the home page\'s list of lobbies', (await api('/api/lobby')).data.rooms.some(r => r.game === 'crisscross' && r.code === lobbyCode && r.status === 'open'));
+  ok('nobody was put in it or told about it', (await api('/mine', 'GET', null, Ben.h)).data.games.length === 0);
+  // A page that still names people gets an ordinary lobby, and the people named aren't in it.
+  const named = await api('/games', 'POST', { kind: 'online', invite: [Ben.id, Cy.id] }, Ana.h);
+  ok('naming people does nothing: the lobby has only its host', named.status === 201 && named.data.game.status === 'waiting' && named.data.game.players.length === 1 &&
+    (await api('/mine', 'GET', null, Ben.h)).data.games.length === 0);
+  await api(`/games/${named.data.id}/resign`, 'POST', {}, Ana.h);
+  ok('the host leaving closes the lobby', !(await hosted()).some(l => l.code === named.data.game.joinCode));
+  const benIn = await api(`/lobby/${lobbyCode}/join`, 'POST', {}, Ben.h);
+  ok('Ben finds it and joins, which fills the seats and starts the game', benIn.status === 200 && benIn.data.game.status === 'playing' && benIn.data.game.you === 1);
+  ok('a game that has started is off the lists', !(await hosted()).some(l => l.code === lobbyCode) && !(await api('/api/lobby')).data.rooms.some(r => r.code === lobbyCode));
+  const on = { data: { id: made.data.id, game: (await api(`/games/${made.data.id}`, 'GET', null, Ana.h)).data } };
+  ok('the game starts with the host first', on.data.game.status === 'playing' && on.data.game.you === 0 && on.data.game.yourTurn);
   const gid = on.data.id;
   const asBen = await api(`/games/${gid}`, 'GET', null, Ben.h);
-  ok('the invited player sees the game', asBen.status === 200 && asBen.data.you === 1 && !asBen.data.yourTurn);
+  ok('the player who joined sees the game', asBen.status === 200 && asBen.data.you === 1 && !asBen.data.yourTurn);
   ok('each player sees only their own rack', asBen.data.rack.length === 7 && asBen.data.players.every(p => p.rack === undefined) && !asBen.text.includes('"racks"') &&
     !asBen.text.includes('"bag":['));
   ok('someone not in the game can\'t look', (await api(`/games/${gid}`, 'GET', null, Cy.h)).status === 403 && (await api(`/games/${gid}`)).status === 401);
@@ -224,23 +243,34 @@ async function run({ base, root }) {
   ok('a finished game can be cleared from your list', (await api(`/games/${gid}/hide`, 'POST', {}, Ana.h)).status === 200 &&
     !(await api('/mine', 'GET', null, Ana.h)).data.games.some(x => x.id === gid));
 
-  console.log('\n-- criss cross: the share link --');
-  const shared = await api('/games', 'POST', { kind: 'online', invite: [], openSeats: 1 }, Ana.h);
-  ok('a seat left open makes a game that waits, with a link for the host', shared.status === 201 && shared.data.game.status === 'waiting' && !!shared.data.game.joinCode);
+  console.log('\n-- criss cross: a lobby\'s link and QR code --');
+  const shared = await api('/games', 'POST', { kind: 'online', seats: 2 }, Ana.h);
+  ok('a lobby has a link for the host, to show as a QR code', shared.status === 201 && shared.data.game.status === 'waiting' && !!shared.data.game.joinCode);
   const code = shared.data.game.joinCode;
-  ok('the link shows who\'s playing', (await api(`/invite/${code}`)).data.players.join() === 'CC Ana');
-  ok('joining needs a profile', (await api(`/invite/${code}/join`, 'POST', {})).status === 401);
-  const joined = await api(`/invite/${code}/join`, 'POST', {}, Cy.h);
+  ok('the link shows who\'s playing', (await api(`/lobby/${code}`)).data.players.join() === 'CC Ana');
+  ok('joining needs a profile', (await api(`/lobby/${code}/join`, 'POST', {})).status === 401);
+  const joined = await api(`/lobby/${code}/join`, 'POST', {}, Cy.h);
   ok('the last seat filled starts the game', joined.status === 200 && joined.data.game.status === 'playing' && joined.data.game.you === 1);
-  ok('…and the link stops working', (await api(`/invite/${code}`)).status === 404);
-  ok('a game can\'t have more than 4 players', (await api('/games', 'POST', { kind: 'online', invite: [Ben.id, Cy.id], openSeats: 2 }, Ana.h)).status === 400);
+  ok('…and the link stops working, saying why', (await api(`/lobby/${code}`)).status === 404 &&
+    (await api(`/lobby/${code}`)).data.error === 'That lobby is either full, or the game has already started.');
+  const big = await api('/games', 'POST', { kind: 'online', seats: 9 }, Ana.h);
+  ok('a lobby never has more than 4 seats', big.status === 201 && big.data.game.seats === 4);
+  const three = await api('/games', 'POST', { kind: 'online', seats: 3 }, Ben.h);
+  await api(`/lobby/${three.data.game.joinCode}/join`, 'POST', {}, Cy.h);
+  ok('with a seat still open the game waits', (await api(`/games/${three.data.id}`, 'GET', null, Ben.h)).data.status === 'waiting');
+  ok('someone who isn\'t the host can\'t start it', (await api(`/games/${three.data.id}/start`, 'POST', {}, Cy.h)).status === 403);
+  ok('the host can start with who\'s here', (await api(`/games/${three.data.id}/start`, 'POST', {}, Ben.h)).data.game.status === 'playing');
+  await api(`/games/${big.data.id}/resign`, 'POST', {}, Ana.h);
 
   console.log('\n-- criss cross: the unfiltered list --');
   const PIN = { 'X-Adult-Pin': '246810' };
-  ok('an unfiltered game needs the adult PIN to start', (await api('/games', 'POST', { kind: 'online', invite: [Ben.id], dictionary: 'adult' }, Ana.h)).status === 403);
+  ok('an unfiltered game needs the adult PIN to start', (await api('/games', 'POST', { kind: 'online', seats: 2, dictionary: 'adult' }, Ana.h)).status === 403);
   ok('…on one phone too', (await api('/games', 'POST', { kind: 'local', players: [{ name: 'A' }, { name: 'B' }], dictionary: 'adult' })).status === 403);
-  const adult = await api('/games', 'POST', { kind: 'online', invite: [Ben.id], dictionary: 'adult' }, { ...Ana.h, ...PIN });
-  ok('with the PIN it starts', adult.status === 201 && adult.data.game.dictionary === 'adult');
+  const adult = await api('/games', 'POST', { kind: 'online', seats: 2, dictionary: 'adult' }, { ...Ana.h, ...PIN });
+  ok('with the PIN the lobby opens', adult.status === 201 && adult.data.game.dictionary === 'adult');
+  ok('…and it\'s listed as an unfiltered game', (await api('/lobbies')).data.lobbies.find(l => l.code === adult.data.game.joinCode).adult === true);
+  ok('joining it needs the PIN too', (await api(`/lobby/${adult.data.game.joinCode}/join`, 'POST', {}, Ben.h)).status === 403);
+  ok('…and with it Ben is in', (await api(`/lobby/${adult.data.game.joinCode}/join`, 'POST', {}, { ...Ben.h, ...PIN })).status === 200);
   const noPin = await api(`/games/${adult.data.id}`, 'GET', null, Ben.h);
   ok('every player needs the PIN to open it, not just the host', noPin.status === 403 && noPin.data.adult === true);
   ok('…a wrong PIN doesn\'t work', (await api(`/games/${adult.data.id}`, 'GET', null, { ...Ben.h, 'X-Adult-Pin': '111111' })).status === 403);

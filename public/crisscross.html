@@ -44,7 +44,13 @@
     <h2 id="mineTitle">Your games</h2>
     <p class="hint" id="mineHint"></p>
     <ul class="cc-list" id="mineList"></ul>
-    <button class="primary big" id="newOnlineBtn">📱 New game with the family</button>
+    <button class="primary big" id="newOnlineBtn"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:1.3em;height:1.3em;vertical-align:-0.28em;margin-right:4px"><circle cx="16" cy="7" r="3.2"/><path d="M10 18.5c0-3.4 2.6-5.8 6-5.8s6 2.4 6 5.8"/><circle cx="6.5" cy="10" r="2.6"/><path d="M2 20c0-2.8 1.9-4.8 4.5-4.8"/><circle cx="25.5" cy="10" r="2.6"/><path d="M30 20c0-2.8-1.9-4.8-4.5-4.8"/><path d="M11 30l7-7"/><path d="M18 23a4 4 0 0 1 5.3-5l-2.4 2.4.5 2.2 2.2.5 2.4-2.4a4 4 0 0 1-5 5.3"/></svg>Create a game lobby</button>
+  </div>
+  <!-- List Hosted Games: every Words with Family lobby that's waiting for players. -->
+  <div class="panel no-tv" id="hostedPanel">
+    <h2>🔎 List Hosted Games</h2>
+    <p class="hint" id="hostedHint"></p>
+    <ul class="cc-list" id="hostedList"></ul>
   </div>
   <div class="panel no-tv" id="noProfile">
     <h2>Playing on everyone's own device</h2>
@@ -64,11 +70,13 @@
 <!-- ============ a new online game ============ -->
 <section id="newOnline" class="hidden">
   <div class="panel">
-    <h2>Who are you playing with?</h2>
-    <p class="hint">Choose up to three people. They'll find the game in their list the next time they open Words with Family.</p>
-    <ul class="cc-people" id="peopleList"></ul>
-    <div class="hint">Seats left open for a share link (for someone who isn't on the list)</div>
-    <div class="seg" id="openSeg"></div>
+    <h2>How many players?</h2>
+    <p class="hint">Your lobby will show in List Hosted Games and on the Arcade's home page once created. The game starts when every seat is taken, or when you start it.</p>
+    <div class="seg" id="seatsSeg">
+      <button data-v="2" aria-pressed="true">2</button>
+      <button data-v="3" aria-pressed="false">3</button>
+      <button data-v="4" aria-pressed="false">4</button>
+    </div>
   </div>
   <div class="panel">
     <h2>Which words count?</h2>
@@ -79,7 +87,7 @@
     <p class="hint" id="dictHint"></p>
   </div>
   <div class="msg center" id="onlineMsg"></div>
-  <button class="primary big" id="onlineGo">Start the game</button>
+  <button class="primary big" id="onlineGo">Create lobby</button>
   <button class="ghost big" id="onlineBack">Back</button>
 </section>
 
@@ -122,7 +130,7 @@
   </div>
 </section>
 
-<!-- ============ an invite link ============ -->
+<!-- ============ a lobby, from the list, a link or its QR code ============ -->
 <section id="invite" class="hidden">
   <div class="panel center">
     <img class="cc-logo" src="words-with-family-logo.svg" alt="" width="203" height="107">
