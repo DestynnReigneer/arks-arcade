@@ -748,7 +748,7 @@
         <tr><td>📱📱 Multiplayer-Multiple devices</td><td>Players use their own devices. The quickest to answer correctly, receives the highest score. Join from 🔎 List Hosted Games.</td></tr>
       </table>` },
     { emoji: '🎚️', title: 'Pick what you like', html: `<p>Choose <b>genres</b> (or none for a mix), a <b>difficulty</b>, how many questions, and how long to answer.</p><p>Got an idea for a topic? Tap <b>💡 Suggest a topic</b>.</p>` },
-    { emoji: '🔞', title: 'For adults', html: `<p><b>Cheeky</b>, <b>Spicy</b> and <b>Filthy</b> unlock for adults signed in with ARKS ID and get spicier as you go.</p><p>🍺 <b>Drinking</b>: wrong answers drink, three in a row gives drinks, last place finishes theirs.</p><p>💋 <b>Couples dares</b>: miss a question, do a dare. The heat matches the level.</p><div class="tut-tip">Tap <b>?</b> at the top any time to see this again.</div>` }
+    { emoji: '🔞', title: 'For adults', html: `<p><b>Cheeky</b>, <b>Spicy</b> and <b>Filthy</b> get spicier as you go.</p><p>🍺 <b>Drinking</b>: wrong answers drink, three in a row gives drinks, last place finishes theirs.</p><p>💋 <b>Couples dares</b>: miss a question, do a dare. The heat matches the level.</p><div class="tut-tip">Tap <b>?</b> at the top any time to see this again.</div>` }
   ]);
 
   // ---- wiring ---------------------------------------------------------------------------------
