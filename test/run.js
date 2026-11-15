@@ -160,13 +160,14 @@ async function waitForHealth(base) {
 function resetTestDb() {
   const dir = path.join(ROOT, 'data');
   for (const f of ['test.db', 'test.db-journal', 'test.db-wal', 'test.db-shm',
-    'test-arksid.db', 'test-arksid.db-journal', 'test-arksid.db-wal', 'test-arksid.db-shm']) {
+    'test-arksid.db', 'test-arksid.db-journal', 'test-arksid.db-wal', 'test-arksid.db-shm',
+    'test-limits.db', 'test-limits.db-journal', 'test-limits.db-wal', 'test-limits.db-shm']) {
     try { fs.unlinkSync(path.join(dir, f)); } catch { /* not there */ }
   }
 }
 
 (async () => {
-  let server = null, server2 = null, fake = null;
+  let server = null, server2 = null, server3 = null, fake = null;
   resetTestDb();
   let total = 0;
   let failed = 0;
@@ -225,12 +226,22 @@ ${'='.repeat(60)}`);
     const partyResult = await require('./tv-party-arksid.test.js').run({ base: ID_BASE, root: ROOT, fake });
     total += partyResult.pass + partyResult.fail;
     failed += partyResult.fail;
+    // Limits last as long as a server does, so the tests that use one up get a
+    // server of their own, on its own database.
+    console.log(`\n${'='.repeat(60)}\n  limits\n${'='.repeat(60)}`);
+    const LIMITS_PORT = process.env.TEST_PORT ? PORT + 2 : await freePort(), LIMITS_BASE = `http://localhost:${LIMITS_PORT}`;
+    server3 = await startServer(LIMITS_PORT, { RAMBLER_DB: 'test-limits.db' });
+    await waitForHealth(LIMITS_BASE);
+    const limitsResult = await require('./limits.test.js').run({ base: LIMITS_BASE });
+    total += limitsResult.pass + limitsResult.fail;
+    failed += limitsResult.fail;
   } catch (e) {
     console.error('\nRUNNER FAILED:', e.message);
     failed++;
   } finally {
     if (server) server.kill();
     if (server2) server2.kill();
+    if (server3) server3.kill();
     if (fake) fake.close();
   }
 

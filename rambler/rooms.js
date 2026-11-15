@@ -321,7 +321,10 @@ function updateSettings(code, id, suppliedToken, settings) {
   requireHost(room, player);
   if (room.state === 'playing') throw fail('Round in progress.', 409);
 
-  const next = normalizeSettings({ ...room.settings, ...settings });
+  // Only what the request names changes. The page sends one setting at a time, and a
+  // setting it leaves out stays as it is instead of going back to where it started.
+  const named = Object.fromEntries(Object.entries(settings || {}).filter(([, value]) => value !== undefined && value !== null));
+  const next = normalizeSettings({ ...room.settings, ...named });
   // The password comes before anything else, so a switch that's refused changes nothing.
   const turningAdult = next.profile === 'adult' && room.settings.profile !== 'adult';
   if (next.profile === 'adult') { if (!room.password) room.password = roomPassword.requireNew(settings.password); } else room.password = null;
