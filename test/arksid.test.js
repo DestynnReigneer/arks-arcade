@@ -336,34 +336,27 @@ async function run({ base, root, fake, admin: ADMIN }) {
   await fetch(`${base}/api/scores/launcher`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ score: 10, board: 'points', initials: 'LOW' }) });
   await new Promise(r => setTimeout(r, 200));
   ok('…and a score that isn\'t #1 doesn\'t', fake.trophies.length === 0);
-  console.log('\n-- notifications: Chess invites --');
+  console.log('\n-- notifications: opening a lobby tells nobody --');
   {
-    const chessCall = (p, who, body) => fetch(`${base}/api/chess${p}`, {
-      method: 'POST', headers: { 'X-Profile-Token': who.token, 'Content-Type': 'application/json' }, body: JSON.stringify(body || {})
-    }).then(async r => ({ status: r.status, data: await r.json().catch(() => null) }));
-    const hostRoom = (await chessCall('/rooms', kimCC, { color: 'w' })).data;
-    const seat = { playerId: hostRoom.playerId, token: hostRoom.token };
+    // A lobby is found in the lists. Nobody is picked, so nobody gets a notification about it.
     fake.pushes.length = 0;
-    await chessCall(`/rooms/${hostRoom.code}/invite`, kimCC, { ...seat, to: [samCC.profile.id] });
-    await settle();
-    const first = fake.pushes.filter(p => p.to === fake.users.sam.id);
-    ok('a Chess invite tells the person invited, with a link to the lobby', first.length === 1 && first[0].body === 'Kim started a Chess lobby with you. Get in here!' &&
-      first[0].url === `chess.html?room=${hostRoom.code}`, JSON.stringify(fake.pushes));
-    fake.pushes.length = 0;
-    for (let i = 0; i < 3; i++) await chessCall(`/rooms/${hostRoom.code}/invite`, kimCC, { ...seat, to: [samCC.profile.id] });
-    await settle(1);
-    ok('…and inviting them again straight away doesn\'t buzz their phone again', fake.pushes.length === 0, JSON.stringify(fake.pushes));
-    ok('…and a list that isn\'t a list is a clear error, not a crash', (await chessCall(`/rooms/${hostRoom.code}/invite`, kimCC, { ...seat, to: samCC.profile.id })).status === 400);
-    ok('the invite says it\'s an invite, from Kim (contract v16)', first[0].kind === 'invite' && first[0].from === fake.users.kim.id && first[0].game === 'Chess', JSON.stringify(first[0]));
-    // Sam joins; a chat message from Kim reaches Sam, who isn't looking at the game.
+    const chessCall = (p, who, body) => fetch(`${base}/api/chess${p}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Profile-Token': who.token }, body: JSON.stringify(body || {}) })
+      .then(async r => ({ status: r.status, data: await r.json().catch(() => null) }));
+    const hostRoom = (await chessCall('/rooms', kimCC, { color: 'w', who: 'selected', allowed: [samCC.profile.id] })).data;
+    const lobbySeat = { playerId: hostRoom.playerId, token: hostRoom.token };
+    ok('a Chess lobby opens', !!hostRoom.code, JSON.stringify(hostRoom));
+    ok('there is no way to send it to someone', (await chessCall(`/rooms/${hostRoom.code}/invite`, kimCC, { ...lobbySeat, to: [samCC.profile.id] })).status === 404);
+    await settle(0);
+    ok('…and nobody was told about it', fake.pushes.length === 0, JSON.stringify(fake.pushes));
+    // Sam finds the lobby and joins; a chat message from Kim reaches Sam, who isn't looking at the game.
     await chessCall(`/rooms/${hostRoom.code}/join`, samCC, {});
     fake.pushes.length = 0;
-    await chessCall(`/rooms/${hostRoom.code}/chat`, kimCC, { ...seat, text: 'ready when you are' });
+    await chessCall(`/rooms/${hostRoom.code}/chat`, kimCC, { ...lobbySeat, text: 'ready when you are' });
     await settle();
     const chatPush = fake.pushes.filter(p => p.to === fake.users.sam.id);
     ok('a chat message tells the others who aren\'t looking, as a chat, never with the words', chatPush.length === 1 && chatPush[0].kind === 'chat' &&
       chatPush[0].body === 'Kim sent a chat message in Chess.' && !/ready when/.test(JSON.stringify(chatPush[0])) && !fake.pushes.some(p => p.to === fake.users.kim.id), JSON.stringify(fake.pushes));
-    await chessCall(`/rooms/${hostRoom.code}/leave`, kimCC, seat);
+    await chessCall(`/rooms/${hostRoom.code}/leave`, kimCC, lobbySeat);
   }
 
   ok('a phone can turn them off again', (await samCB.call('/api/push/unsubscribe', { method: 'POST', body: { endpoint: sub('sam').endpoint } })).status === 200 &&

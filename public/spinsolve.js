@@ -243,7 +243,7 @@
     $('overView').classList.add('hidden');
     if (st.phase === 'over') gameOver();
     else resumeRound();
-    toast('Welcome back, your game is right where you left it.', 4000);
+    toast('Welcome back, your game is right where you left off.', 4000);
     // The setup screen's lists follow the game's level, and unlocking may have
     // brought the adult packs along, so they're read again.
     loadConfig().then(() => {

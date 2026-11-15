@@ -186,33 +186,17 @@
       if (S.mode.startsWith('tv')) return await hostOnTv(S.mode);
       if (S.mode === 'solo' || S.mode === 'local') return await startLocal();
       if (S.mode === 'host') {
-        if (S.who === 'selected' && !S.chosen.size) { $('setupMsg').textContent = 'Choose at least one person.'; return; }
         const r = await RoomPassword.withPassword(password =>
-          api('/api/trivia/rooms', { name: $('hostName').value, settings: settings(), password, who: S.who,
-            allowed: S.who === 'selected' ? [...S.chosen] : [] }, { ...pinHeaders(), ...profileHeaders() }));
-        if (r) { if (S.who === 'selected') toast('The people you chose will get a notification.'); enterRoom(r); }
+          api('/api/trivia/rooms', { name: $('hostName').value, settings: settings(), password }, { ...pinHeaders(), ...profileHeaders() }));
+        if (r) enterRoom(r);
         return;
       }
     } catch (e) { $('setupMsg').textContent = e.message; }
   }
 
-  // ---- Create a game lobby: who can join --------------------------------------------
+  // ---- Create a game lobby ----------------------------------------------------------
   const profileToken = () => (typeof ArcadeProfile !== 'undefined' ? ArcadeProfile.token() : null);
   const profileHeaders = () => (profileToken() ? { 'X-Profile-Token': profileToken() } : {});
-  S.who = 'anyone';
-  S.chosen = new Set();
-  async function setWho(who) {
-    if (who === 'selected' && !profileToken()) { $('setupMsg').textContent = 'Pick your profile at the top first, so the people you choose know who it\'s from.'; return; }
-    S.who = who;
-    for (const b of $('whoSeg').children) b.setAttribute('aria-pressed', String(b.dataset.who === who));
-    $('setupMsg').textContent = '';
-    $('pickPeople').classList.toggle('hidden', who !== 'selected');
-    if (who === 'selected') {
-      if (!S.people) { try { S.people = (await api('/api/invites/people', undefined, profileHeaders())).people; } catch { S.people = []; } }
-      LobbyUI.people($('pickPeople'), S.people, S.chosen, () => {});
-      if (!S.people.length) $('setupMsg').textContent = 'Nobody else has a profile here yet.';
-    }
-  }
 
   // ---- List Hosted Games ----------------------------------------------------------------
   function startFinding() {
@@ -276,14 +260,14 @@
       if (r) { closeDetails(); enterRoom(r); }
     } catch (e) { $('detailsMsg').textContent = e.message; }
   }
-  // Opening trivia.html?join=CODE (an invite, the home page): that lobby's details.
+  // Opening trivia.html?join=CODE (from the home page's list): that lobby's details.
   async function openFromLink(code) {
     try {
       const l = (await fetchLobbies()).find(x => x.code === code);
       if (l) return openDetails(l);
     } catch { /* falls through */ }
     setMode('join');
-    $('setupMsg').textContent = 'That game isn\'t open anymore. Here are the ones that are.';
+    $('setupMsg').textContent = 'This game isn\'t available. Here are the ones that are.';
   }
 
   // ---- the TV hosts ------------------------------------------------------------------
@@ -481,7 +465,7 @@
         const n = snap.players.filter(p => p.answered).length;
         const seat = turn && snap.players.find(p => p.id === turn.id);
         $('qStatus').textContent = turn ? `${turn.name} is answering${seat && seat.on && seat.on !== 'screen' ? ` on ${seat.on}'s device` : ''}…`
-          : `📱 Answer on your own devices! (${n}/${snap.players.length} locked in)`;
+          : `📱 Answer on devices! (${n}/${snap.players.length} locked in)`;
       }
       const total = snap.settings.seconds * 1000;
       runTimer(snap.endsAt - S.skew, total, () => {});
@@ -758,8 +742,8 @@
     { emoji: '🧠', title: 'The goal', html: `<p>Answer multiple-choice questions. Right answers score points: <b>100</b> easy, <b>200</b> medium, <b>300</b> hard, plus up to half again for answering <b>fast</b>.</p><p>Most points at the end knows it all.</p>` },
     { emoji: '🎮', title: 'Ways to play', html: `<table>
         <tr><td>🙂 Solo</td><td>Just you. Get on the 🏆 board.</td></tr>
-        <tr><td>📱 Multiplayer-Single device</td><td>Take turns; everyone gets their own questions.</td></tr>
-        <tr><td>📱📱 Create a game lobby</td><td>Everyone answers on their own device at the same time. Fastest right answer scores most. Everyone else joins from 🔎 List Hosted Games.</td></tr>
+        <tr><td>📱 Multiplayer-Shared device</td><td>Take turns; everyone gets their own questions.</td></tr>
+        <tr><td>📱📱 Multiplayer-Multiple devices</td><td>Players use their own devices. The quickest to answer correctly, receives the highest score. Join from 🔎 List Hosted Games.</td></tr>
       </table>` },
     { emoji: '🎚️', title: 'Pick what you like', html: `<p>Choose <b>genres</b> (or none for a mix), a <b>difficulty</b>, how many questions, and how long to answer.</p><p>Got an idea for a topic? Tap <b>💡 Suggest a topic</b>.</p>` },
     { emoji: '🔞', title: 'For adults', html: `<p><b>Cheeky</b>, <b>Spicy</b> and <b>Filthy</b> unlock for adults signed in with ARKS ID and get spicier as you go.</p><p>🍺 <b>Drinking</b>: wrong answers drink, three in a row gives drinks, last place finishes theirs.</p><p>💋 <b>Couples dares</b>: miss a question, do a dare. The heat matches the level.</p><div class="tut-tip">Tap <b>?</b> at the top any time to see this again.</div>` }
@@ -775,7 +759,6 @@
   $('packSelect').onchange = () => { S.pack = $('packSelect').value; };
   $('addPlayerBtn').onclick = () => { if (S.names.length < 8) { S.names.push(''); renderNames(); } };
   $('goBtn').onclick = go;
-  for (const b of $('whoSeg').children) b.onclick = () => setWho(b.dataset.who);
   $('joinBtn').onclick = joinLobby;
   $('detailsClose').onclick = closeDetails;
   $('joinName').onkeydown = e => { if (e.key === 'Enter') joinLobby(); };

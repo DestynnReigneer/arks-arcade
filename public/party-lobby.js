@@ -3,7 +3,7 @@
 // The lobby for the party card games (Uh-Oh: Part Deux, Dare Devil), the
 // play-together design's step 2 (2026-11-13). Both pages share their setup and
 // lobby markup, so this adds the same pieces to each:
-//   - Create a game lobby: Who can join (anyone, or Only People Selected).
+//   - Create a game lobby: it's open to anyone at the arcade. Nobody is picked.
 //   - List Hosted Games: the rooms you can join, and a details card before joining.
 //   - The lobby: Ready!, the host's start lighting up once everyone is ready, Mute
 //     and Remove Player, and the chat (lobby-ui.js); the chat goes on under the game.
@@ -11,7 +11,6 @@
 //
 //   const lobby = PartyLobby.attach({ game, title, enterRoom, creds: () => ({ code, playerId, token }) })
 //   lobby.mode(mode)             from the page's setMode
-//   lobby.hostBody()             { who, allowed } to add to the create request, or null to stop
 //   lobby.headers()              the profile header for create and join
 //   lobby.render(snap)           after the page draws its lobby
 //   lobby.game(snap)             while a game is on screen
@@ -34,30 +33,10 @@ window.PartyLobby = (() => {
     };
     const roomPost = (path, body = {}) => { const c = creds(); return post(`/rooms/${c.code}/${path}`, { playerId: c.playerId, token: c.token, ...body }).catch(e => toast(e.message)); };
 
-    // ---- Create a game lobby: who can join ----
-    let who = 'anyone';
-    const chosen = new Set();
-    let people = null;
+    // ---- Create a game lobby ----
     const hostSetup = $('hostSetup');
     hostSetup.querySelector('.hint').textContent = 'Everyone plays on their own device. Your lobby will show in List Hosted Games and on the Arcade\'s home page once created.';
     const nameRow = $('hostName').closest('label');
-    const whoLabel = make('div', 'lb-section-label', 'Who can join');
-    const whoSeg = make('div', 'seg');
-    whoSeg.innerHTML = '<button data-who="anyone" aria-pressed="true">🎮 Anyone at the arcade</button><button data-who="selected" aria-pressed="false">✅ Only People Selected</button>';
-    const pick = make('div', 'lb-people hidden');
-    hostSetup.append(whoLabel, whoSeg, pick);
-    for (const b of whoSeg.children) b.addEventListener('click', async () => {
-      if (b.dataset.who === 'selected' && !token()) { $('setupMsg').textContent = 'Pick your profile at the top first, so the people you choose know who it\'s from.'; return; }
-      who = b.dataset.who;
-      for (const x of whoSeg.children) x.setAttribute('aria-pressed', String(x === b));
-      $('setupMsg').textContent = '';
-      pick.classList.toggle('hidden', who !== 'selected');
-      if (who === 'selected') {
-        if (!people) { try { people = (await (await fetch('/api/invites/people', { headers: headers() })).json()).people || []; } catch { people = []; } }
-        LobbyUI.people(pick, people, chosen, () => {});
-        if (!people.length) $('setupMsg').textContent = 'Nobody else has a profile here yet.';
-      }
-    });
 
     // ---- List Hosted Games ----
     const joinSetup = $('joinSetup');
@@ -77,7 +56,7 @@ window.PartyLobby = (() => {
         if (l.status !== 'open') b.setAttribute('aria-disabled', 'true');
         const main = make('span', 'lb-row-main');
         main.append(make('b', '', `${l.adult ? '🔞 ' : ''}${l.host}'s lobby`),
-          make('small', '', l.status === 'playing' ? 'Game started' : 'Multiplayer-Multiple devices'));
+          make('small', '', l.status === 'playing' ? 'Game has already started.' : 'Multiplayer-Multiple devices'));
         b.append(main, make('span', 'lb-count', `${l.count}/${l.max}`));
         if (l.status === 'full') b.append(make('span', 'lb-full', 'FULL'));
         b.addEventListener('click', () => details(l));
@@ -205,13 +184,9 @@ window.PartyLobby = (() => {
         const l = (await fetchLobbies()).find(x => x.code === code);
         if (l) return details(l);
       } catch { /* falls through */ }
-      $('setupMsg').textContent = 'That game isn\'t open anymore. Choose List Hosted Games to see the ones that are.';
+      $('setupMsg').textContent = 'This game isn\'t available. Choose List Hosted Games to see the ones that are.';
     }
-    function hostBody() {
-      if (who === 'selected' && !chosen.size) { $('setupMsg').textContent = 'Choose at least one person.'; return null; }
-      return { who, allowed: who === 'selected' ? [...chosen] : [] };
-    }
-    return { mode, hostBody, headers, render, game: gameView, openFromLink, picked: () => who === 'selected' };
+    return { mode, headers, render, game: gameView, openFromLink };
   }
   return { attach };
 })();

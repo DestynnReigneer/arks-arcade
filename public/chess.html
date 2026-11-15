@@ -42,10 +42,10 @@
         <span class="mi">🤖</span><span><b>VS Computer</b><small>Difficulty: Easy, Medium or Hard.</small></span></button>
       <button class="mode-card" data-mode="local" aria-pressed="false">
         <span class="mi"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="10" y="3" width="12" height="26" rx="3"/><path d="M14.5 25h3"/></svg></span>
-        <span><b>Multiplayer-Single device</b><small>Two players take turns sharing this device.</small></span></button>
-      <div class="mode-label no-tv">Multiplayer-Multiple devices</div>
+        <span><b>Multiplayer-Shared device</b><small>Two players take turns sharing this device.</small></span></button>
+      <div class="mode-label no-tv"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:1.3em;height:1.3em;vertical-align:-0.28em;margin-right:4px"><rect x="3" y="6" width="11" height="22" rx="2.5"/><rect x="18" y="4" width="11" height="22" rx="2.5"/><path d="M7.5 24h2"/><path d="M22.5 22h2"/></svg>Multiplayer-Multiple devices</div>
       <button class="mode-card no-tv" data-mode="host" aria-pressed="false">
-        <span class="mi"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="11" height="22" rx="2.5"/><rect x="18" y="4" width="11" height="22" rx="2.5"/><path d="M7.5 24h2"/><path d="M22.5 22h2"/></svg></span>
+        <span class="mi"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="16" cy="7" r="3.2"/><path d="M10 18.5c0-3.4 2.6-5.8 6-5.8s6 2.4 6 5.8"/><circle cx="6.5" cy="10" r="2.6"/><path d="M2 20c0-2.8 1.9-4.8 4.5-4.8"/><circle cx="25.5" cy="10" r="2.6"/><path d="M30 20c0-2.8-1.9-4.8-4.5-4.8"/><path d="M11 30l7-7"/><path d="M18 23a4 4 0 0 1 5.3-5l-2.4 2.4.5 2.2 2.2.5 2.4-2.4a4 4 0 0 1-5 5.3"/></svg></span>
         <span><b>Create a game lobby</b><small>Set up your hosted game settings and rules.</small></span></button>
       <button class="mode-card no-tv" data-mode="find" aria-pressed="false">
         <span class="mi"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h14"/><path d="M4 14h10"/><path d="M4 20h8"/><circle cx="21" cy="19" r="6"/><path d="m25.5 23.5 4 4"/></svg></span>
@@ -86,15 +86,6 @@
     <div class="lb-section-label">How Multiplayer works</div>
     <p class="hint">Each player uses their own device. You'll get a notification when it's your move (if notifications are turned on), so a game can take days.</p>
     <label id="hostNameRow">Your name<input id="hostName" maxlength="16" placeholder="e.g. Sam"></label>
-
-    <div class="lb-section-label">Who can join</div>
-    <div class="mode-list" id="whoSeg">
-      <button class="mode-card" data-who="anyone" aria-pressed="true">
-        <span class="mi">🎮</span><span><b>Anyone at the arcade</b><small>It shows up in List Hosted Games</small></span></button>
-      <button class="mode-card" data-who="selected" aria-pressed="false" id="whoSelected">
-        <span class="mi">✅</span><span><b>Only People Selected</b></span></button>
-    </div>
-    <div class="lb-people hidden" id="pickPeople"></div>
 
     <div class="lb-section-label">Choose an option listed below:</div>
     <div class="seg" id="createColorSeg">

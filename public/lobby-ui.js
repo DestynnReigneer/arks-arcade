@@ -1,13 +1,12 @@
 'use strict';
 
 // The pieces every game's lobby shares (the play-together design):
-// the players' seats, the "choose who to play with" list, and the live chat.
+// the players' seats and the live chat.
 // Chess is the first game to use them. Each game keeps its own rooms on the
 // server and hands these the room's snapshot; nothing here talks to a server
 // except through the functions the game passes in.
 //
-//   LobbyUI.seats(el, seats, { invited, max, canMute, onMute, onRemove })
-//   LobbyUI.people(el, people, picked)       picked: a Set of profile ids, kept by the game
+//   LobbyUI.seats(el, seats, { max, canMute, onMute, onRemove })
 //   LobbyUI.chat(el, { send })               builds the chat once; returns { render(messages, { muted }) }
 
 window.LobbyUI = (() => {
@@ -72,10 +71,10 @@ window.LobbyUI = (() => {
     }, () => { panel.textContent = 'The emoji didn\'t load. Try again in a moment.'; delete panel.dataset.built; });
   }
 
-  // Who's in, who's been invited, and the empty seats. A seat with `ready` (true or
+  // Who's in, and the empty seats. A seat with `ready` (true or
   // false) says Ready or Not ready under the name; an open seat's dots grow and start
   // over while it waits for someone.
-  function seats(el, list, { invited = [], max = 2, canMute = false, onMute, onRemove } = {}) {
+  function seats(el, list, { max = 2, canMute = false, onMute, onRemove } = {}) {
     el.replaceChildren();
     for (const s of list) {
       const box = make('div', 'lb-seat' + (s.ready === false ? ' waiting' : ''));
@@ -96,37 +95,12 @@ window.LobbyUI = (() => {
       }
       el.append(box);
     }
-    let open = Math.max(0, max - list.length);
-    for (const name of invited) {
-      if (!open) break;
-      const box = make('div', 'lb-seat empty');
-      box.append(avatar(name, true), make('span', 'lb-name', name), make('span', 'lb-tag', 'SELECTED'));
-      el.append(box);
-      open--;
-    }
-    for (; open > 0; open--) {
+    for (let open = Math.max(0, max - list.length); open > 0; open--) {
       const box = make('div', 'lb-seat empty');
       const name = make('span', 'lb-name lb-open', 'Open');
       name.append(make('span', 'lb-dots'));
       box.append(avatar('+', true), name, make('span', 'lb-tag', ''));
       el.append(box);
-    }
-  }
-
-  // Tiles to tap: everyone in the family who has a profile here.
-  function people(el, list, picked, onChange) {
-    el.replaceChildren();
-    for (const p of list) {
-      const b = make('button', 'lb-who' + (picked.has(p.id) ? ' on' : ''));
-      b.type = 'button';
-      b.setAttribute('aria-pressed', String(picked.has(p.id)));
-      b.append(avatar(p.name), make('span', 'lb-name', p.name));
-      b.addEventListener('click', () => {
-        if (picked.has(p.id)) picked.delete(p.id); else picked.add(p.id);
-        people(el, list, picked, onChange);
-        if (onChange) onChange();
-      });
-      el.append(b);
     }
   }
 
@@ -206,5 +180,5 @@ window.LobbyUI = (() => {
     return { render };
   }
 
-  return { seats, people, chat };
+  return { seats, chat };
 })();

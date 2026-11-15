@@ -228,7 +228,7 @@ function runBots(state, now = Date.now()) {
 
 function byCode(code) {
   const row = db.db.prepare("SELECT * FROM crisscross_games WHERE join_code = ? AND status = 'waiting'").get(String(code || ''));
-  if (!row) throw fail('That link has been used up, or the game has already started.', 404);
+  if (!row) throw fail('That lobby is either full, or the game has already started.', 404);
   return { row, state: JSON.parse(row.state) };
 }
 

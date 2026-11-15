@@ -390,8 +390,8 @@ const ArcadeProfile = (() => {
       row.setAttribute('aria-checked', String(on));
       row.disabled = st.state === 'tip' || st.state === 'blocked';
       row.querySelector('.apf-sw').style.display = row.disabled ? 'none' : '';
-      // Off says nothing under the title: the switch speaks for itself.
-      small.textContent = on ? 'You\'re all set, I\'ll let you know when it\'s your move or someone starts a game with you.'
+      // On or off, nothing is written under the title: the switch speaks for itself.
+      small.textContent = on ? ''
         : st.state === 'tip' ? 'iPhones and iPads only get notifications from apps on the Home Screen. Tap Share, then Add to Home Screen, and open the Arcade from its new icon.'
           : st.state === 'blocked' ? 'Chrome is blocking notifications. Tap the icon left of the address, then Permissions, then Notifications, and choose Allow. Then open this card again.'
             : '';

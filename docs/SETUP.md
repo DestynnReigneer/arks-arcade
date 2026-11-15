@@ -87,7 +87,7 @@ This gives you `https://arcade.example.com` instead of an IP and port.
 3. **SSL tab:** request a Let's Encrypt certificate (a DNS challenge works even
    if nothing is reachable from the internet), and turn on **Force SSL**.
 4. **Advanced tab:** paste this so live updates (room codes, games on two devices,
-   the Join a game list) aren't held back by buffering:
+   the Lobbies list) aren't held back by buffering:
 
    ```nginx
    proxy_buffering off;
@@ -118,7 +118,7 @@ WireGuard):
 - On the home page, **📱 Phone QR** shows a code that opens the arcade (or one
   game) on a guest's phone. A game hosted on a TV shows its own scan-to-join
   code too.
-- **📡 Join a game** on the home page lists every game being hosted right now.
+- **📨 Lobbies** on the home page lists every game being hosted right now.
   Guests tap **Join**. Full or already-running games say so.
 - **Adult games** show on that list with 🔞 and 🔒. Hosting one needs the adult
   PIN; the host then makes up a **lobby password** for that game and tells
@@ -210,7 +210,7 @@ What's up to you:
 
 ## 9. Troubleshooting
 
-- **Rooms or the Join a game list don't update live** → the proxy is buffering.
+- **Rooms or the Lobbies list don't update live** → the proxy is buffering.
   Add the Advanced snippet from step 4 and turn on Websockets Support.
 - **QR codes point at the wrong address** → set `PUBLIC_URL` in `.env`.
 - **"Too many requests" for everyone behind the proxy** → set `TRUST_PROXY=1`.

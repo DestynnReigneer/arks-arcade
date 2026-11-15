@@ -59,7 +59,7 @@ function makeRoutes({ tables, config }) {
       assertLevelAllowed(body.level, req);
       // screen: a TV hosts the room and shows the table; it doesn't play.
       const { table, player } = tables.createRoom({ name: body.name, level: body.level, drinking: body.drinking, password: body.password, options: body.options, screen: body.screen === true,
-        profile: profileOf(req), who: body.who, allowed: body.allowed });
+        profile: profileOf(req) });
       res.status(201).json({ code: table.id, playerId: player.id, token: player.token });
     } catch (e) { next(e); }
   });
