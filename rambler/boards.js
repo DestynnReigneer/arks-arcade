@@ -14,10 +14,13 @@ const boards = new Map();
 const TTL_MS = 60 * 60 * 1000;
 const SWEEP_MS = 10 * 60 * 1000;
 
-function stash(built) {
-  const id = crypto.randomBytes(12).toString('hex');
-  boards.set(id, { ...built, id, createdAt: Date.now(), result: null });
-  return boards.get(id);
+// id: only when a room's board comes back after a restart, so the pages in the
+// middle of that round can keep checking words against the id they have.
+function stash(built, id) {
+  const kept = typeof id === 'string' && /^[0-9a-f]{24}$/.test(id) && !boards.has(id) ? id : null;
+  const key = kept || crypto.randomBytes(12).toString('hex');
+  boards.set(key, { ...built, id: key, createdAt: Date.now(), result: null });
+  return boards.get(key);
 }
 
 function get(id) {

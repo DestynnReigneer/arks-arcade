@@ -33,6 +33,12 @@ db.db.exec(`
     pack_id INTEGER,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
+  -- Games in progress, so a restart of the arcade ends nobody's game (game.js).
+  CREATE TABLE IF NOT EXISTS spin_games (
+    id TEXT PRIMARY KEY,
+    state TEXT NOT NULL,
+    touched INTEGER NOT NULL
+  );
 `);
 
 function fail(message, status = 400) {
@@ -84,24 +90,58 @@ module.exports = function spinRoutes({ requireAdmin, notify }) {
     if (!pools.made.has(key)) pools.made.set(key, Object.freeze(build()));
     return pools.made.get(key);
   }
+  // A list by its name: 'pack:12' for one pack, 'level:kids' for a level. A game keeps
+  // the name, so its list can be found again after a restart.
+  // -> { poolKey, level, packLabel, pool() }, or null when that pack is gone.
+  function listOf(key) {
+    const name = String(key || '');
+    if (name.startsWith('pack:')) {
+      const id = /^pack:(\d{1,12})$/.test(name) ? Number(name.slice(5)) : 0;
+      const row = id ? db.db.prepare('SELECT id, level, label FROM spin_packs WHERE id = ?').get(id) : null;
+      if (!row) return null;
+      return {
+        poolKey: `pack:${row.id}`, level: row.level, packLabel: row.label,
+        pool: () => pooled(`pack:${row.id}`, () => {
+          const pack = rowToPack(db.db.prepare('SELECT * FROM spin_packs WHERE id = ?').get(row.id), true);
+          return pack.puzzles.map(p => ({ ...p, pack: pack.label }));
+        })
+      };
+    }
+    const level = P.levelOf(name.replace(/^level:/, ''));
+    return {
+      poolKey: `level:${level}`, level, packLabel: '',
+      pool: () => pooled(`level:${level}`, () => [...P.BUILTIN[level], ...allPacks().filter(r => r.level === level)
+        .flatMap(r => JSON.parse(r.puzzles).map(p => ({ ...p, pack: r.label })))])
+    };
+  }
   function poolFor(body, req) {
     const packId = Number(body.pack);
-    if (packId) {
-      const row = db.db.prepare('SELECT id, level, label FROM spin_packs WHERE id = ?').get(packId);
-      if (!row) throw fail('That puzzle pack is gone.', 404);
-      requireLevel(row.level, req);
-      const pool = pooled(`pack:${row.id}`, () => {
-        const pack = rowToPack(db.db.prepare('SELECT * FROM spin_packs WHERE id = ?').get(row.id), true);
-        return pack.puzzles.map(p => ({ ...p, pack: pack.label }));
-      });
-      return { level: row.level, packLabel: row.label, pool };
-    }
-    const level = P.levelOf(body.level);
-    requireLevel(level, req);
-    const pool = pooled(`level:${level}`, () => [...P.BUILTIN[level], ...allPacks().filter(r => r.level === level)
-      .flatMap(r => JSON.parse(r.puzzles).map(p => ({ ...p, pack: r.label })))]);
-    return { level, packLabel: '', pool };
+    const list = packId ? listOf(`pack:${packId}`) : listOf(`level:${P.levelOf(body.level)}`);
+    if (!list) throw fail('That puzzle pack is gone.', 404);
+    // Whether this player may have the level is settled before its list is put together.
+    requireLevel(list.level, req);
+    return { poolKey: list.poolKey, level: list.level, packLabel: list.packLabel, pool: list.pool() };
   }
+
+  // Games are written to the database after every move and read back here, when
+  // the arcade starts, so a restart or a power cut ends nobody's game.
+  const keepGame = db.db.prepare('INSERT INTO spin_games (id, state, touched) VALUES (?, ?, ?) ON CONFLICT (id) DO UPDATE SET state = excluded.state, touched = excluded.touched');
+  const dropGame = db.db.prepare('DELETE FROM spin_games WHERE id = ?');
+  game.useStore({
+    save: (id, state, touched) => { keepGame.run(id, state, touched); },
+    remove: id => { dropGame.run(id); },
+    all: () => db.db.prepare('SELECT id, state FROM spin_games').all()
+  });
+  // A game only gets its list back when the list is still the level the game was
+  // started on, so a game can never come back holding another level's puzzles.
+  const cameBack = game.restore(key => {
+    const list = listOf(key);
+    return list ? { level: list.level, adult: P.LEVELS[list.level].adult, pool: list.pool() } : null;
+  });
+  if (cameBack) console.log(`Spin & Solve picked ${cameBack} game${cameBack === 1 ? '' : 's'} back up.`);
+  // A game nobody comes back to is cleared in the end (a quiet day, or 30 for a profile's game).
+  const sweeper = setInterval(() => game.sweep(), 60 * 60 * 1000);
+  if (typeof sweeper.unref === 'function') sweeper.unref();
 
   const startLimiter = rateLimit({
     windowMs: 10 * 60 * 1000, limit: process.env.NODE_ENV === 'test' ? 600 : 60, standardHeaders: true, legacyHeaders: false,
@@ -119,9 +159,9 @@ module.exports = function spinRoutes({ requireAdmin, notify }) {
   router.post('/run/start', startLimiter, (req, res, next) => {
     try {
       const body = req.body || {};
-      const { level, packLabel, pool } = poolFor(body, req);
+      const { poolKey, level, packLabel, pool } = poolFor(body, req);
       const profile = profileOf(req);
-      const g = game.start({ pool, names: body.names, rounds: body.rounds, level, adult: P.LEVELS[level].adult, packLabel, profileId: profile && profile.id, ip: req.ip });
+      const g = game.start({ pool, poolKey, names: body.names, rounds: body.rounds, level, adult: P.LEVELS[level].adult, packLabel, profileId: profile && profile.id, ip: req.ip });
       res.status(201).json({ ...game.view(g), level, banter: banter.forLevel(level), wedges: game.WEDGES });
     } catch (e) { next(e); }
   });
@@ -158,7 +198,7 @@ module.exports = function spinRoutes({ requireAdmin, notify }) {
         profileToken: g.profileId ? token : null, fromServer: true
       });
       g.saved = true;
-      game.games.delete(g.id);
+      game.drop(g.id);
       res.status(201).json(out);
     } catch (e) { next(e); }
   });

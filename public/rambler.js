@@ -1473,6 +1473,9 @@ function applyRoomState(snap) {
       $('playRosterTitle').textContent = snap.isScreen ? 'Words found so far' : 'Everyone else';
       screen('play');
       startClock(snap.endsAt, () => { /* the server ends the round */ });
+    } else if (snap.endsAt !== S.endsAt) {
+      // The round's end moved: the arcade was away for a moment, and the clock stood still meanwhile.
+      startClock(snap.endsAt, () => { /* the server ends the round */ });
     }
     // Counts only, never the words themselves -- watching a rival's tally
     // climb is the fun part; seeing what they found would spoil the round.
