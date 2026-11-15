@@ -290,6 +290,24 @@ async function run({ base, root }) {
   ok('…a wrong PIN doesn\'t work', (await api(`/games/${adult.data.id}`, 'GET', null, { ...Ben.h, 'X-Adult-Pin': '111111' })).status === 403);
   ok('…the right one does', (await api(`/games/${adult.data.id}`, 'GET', null, { ...Ben.h, ...PIN })).status === 200);
 
+  // Last in this file, because it clears lobbies as if weeks had gone by.
+  // A lobby nobody joined is cleared after a quiet day. One that someone joined waits two weeks for the rest.
+  const DAY_MS = 24 * 60 * 60 * 1000;
+  const unjoined = await api('/games', 'POST', { kind: 'online', seats: 2 }, Cy.h);
+  const halfFull = await api('/games', 'POST', { kind: 'online', seats: 3 }, Cy.h);
+  await api(`/lobby/${halfFull.data.game.joinCode}/join`, 'POST', {}, Ben.h);
+  const codesNow = async () => (await hosted()).map(l => l.code);
+  await api('/test/sweep', 'POST', { now: Date.now() + DAY_MS - 60 * 1000 });
+  ok('a lobby nobody joined is still there just short of a day', (await codesNow()).includes(unjoined.data.game.joinCode));
+  await api('/test/sweep', 'POST', { now: Date.now() + DAY_MS + 60 * 1000 });
+  ok('…and gone after a quiet day, while one that someone joined stays',
+    !(await codesNow()).includes(unjoined.data.game.joinCode) && (await codesNow()).includes(halfFull.data.game.joinCode), (await codesNow()).join());
+  ok('…and it has left its host\'s games too', (await api(`/games/${unjoined.data.id}`, 'GET', null, Cy.h)).status === 404);
+  await api('/test/sweep', 'POST', { now: Date.now() + 13 * DAY_MS });
+  ok('a lobby someone joined waits two weeks for the rest', (await codesNow()).includes(halfFull.data.game.joinCode));
+  await api('/test/sweep', 'POST', { now: Date.now() + 15 * DAY_MS });
+  ok('…and then it is cleared as well', !(await codesNow()).includes(halfFull.data.game.joinCode));
+
   console.log(`\n  ${pass} passed, ${fail} failed`);
   return { pass, fail };
 }
