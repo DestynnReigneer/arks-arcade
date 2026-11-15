@@ -559,6 +559,57 @@ async function run({ base, root, fake, admin: ADMIN }) {
     const againPass = (await again.call('/api/arksid/adult-pass', { method: 'POST' })).data.pass;
     await again.call('/auth/signout', { method: 'POST', follow: false });
     ok('signing in twice and out once leaves nothing behind', (await checks(againPass)) === false);
+
+    // A browser whose sign-in ended at ARKS ID signs in again. That's a different sign-in
+    // there, and the record this browser's cookie pointed to goes at once, so a pass from
+    // the first sign-in is refused without anyone having to ask ARKS ID about it.
+    const kimsLatest = () => [...fake.sessions].filter(([, v]) => v.key === 'kim' && v.valid).map(([id]) => id).pop();
+    const swap = browser();
+    await swap.call('/auth/signin?return=%2F');
+    const swapPass = (await swap.call('/api/arksid/adult-pass', { method: 'POST' })).data.pass;
+    const swapFirst = kimsLatest();
+    fake.sessions.get(swapFirst).valid = false;
+    await swap.call('/auth/signin?return=%2F');
+    ok('signing in again after the sign-in ended at ARKS ID is a new sign-in there', !!kimsLatest() && kimsLatest() !== swapFirst);
+    ok('…and a pass from the first one is refused at once', (await checks(swapPass)) === false);
+    const swapNew = (await swap.call('/api/arksid/adult-pass', { method: 'POST' })).data.pass;
+    ok('…while a pass from the new one works', (await checks(swapNew)) === true);
+    await swap.call('/auth/signout', { method: 'POST', follow: false });
+    ok('…until that browser signs out, which leaves neither pass working', (await checks(swapNew)) === false && (await checks(swapPass)) === false);
+    // The same when the arcade held two records of the first sign-in (its own cookie had
+    // run out once, and the page signed in again by itself): both go, not only the one
+    // the browser's cookie points to.
+    const swapTwo = browser();
+    await swapTwo.call('/auth/signin?return=%2F');
+    swapTwo.jar.delete(arcadeCookie);
+    await swapTwo.call('/auth/signin?silent=1&return=%2F');
+    const swapTwoPass = (await swapTwo.call('/api/arksid/adult-pass', { method: 'POST' })).data.pass;
+    ok('a pass from a sign-in the arcade holds two records of works', (await checks(swapTwoPass)) === true);
+    fake.sessions.get(kimsLatest()).valid = false;
+    await swapTwo.call('/auth/signin?return=%2F');
+    ok('…and it is refused at once when that browser signs in anew', (await checks(swapTwoPass)) === false);
+    await swapTwo.call('/auth/signout', { method: 'POST', follow: false });
+
+    // ARKS ID can't be reached. A pass in steady use asks about its sign-in once and then
+    // leaves ARKS ID alone for half a minute, instead of asking again on every use. This
+    // comes last here: nothing after it in this section waits on that background check.
+    const steady = browser();
+    await steady.call('/auth/signin?return=%2F');
+    const steadyPass = (await steady.call('/api/arksid/adult-pass', { method: 'POST' })).data.pass;
+    await new Promise(r => setTimeout(r, 1200));   // long enough for a check to be due
+    fake.sessionDown = true;
+    const askedBefore = fake.sessionChecks;
+    let stillOpen = 0;
+    for (let i = 0; i < 20; i++) {
+      if (await checks(steadyPass)) stillOpen++;
+      await new Promise(r => setTimeout(r, 25));
+    }
+    await new Promise(r => setTimeout(r, 300));
+    const asked = fake.sessionChecks - askedBefore;
+    fake.sessionDown = false;
+    ok('with ARKS ID away, twenty uses of a pass ask it once and not twenty times', asked === 1, `asked ${asked} times`);
+    ok('…and the pass keeps working meanwhile', stillOpen === 20, `${stillOpen} of 20`);
+    await steady.call('/auth/signout', { method: 'POST', follow: false });
     fake.next = 'milo';
   }
 

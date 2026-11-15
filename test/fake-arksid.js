@@ -38,6 +38,8 @@ function startFakeArksId({ secret, arcadeBase, port = 0 }) {
   const fake = { users, next: 'milo', deviceOwner: null, inbox: {}, sessions: new Map(), base: '', prefills: new Map(), lastPrefill: null, photoFetches: 0,
     // The feedback inbox (v10), and what the admin does in ARKS ID's console.
     notes: [], feedbackDown: false, inboxMissing: false,
+    // Session checks: how many were asked for, and sessionDown answers them with an error.
+    sessionChecks: 0, sessionDown: false,
     // Status reports and events for ARKS ID's admin console (v12).
     reports: [], events: [],
     // Switches and the banner (v13): the arcade's list of games, what the
@@ -173,6 +175,8 @@ function startFakeArksId({ secret, arcadeBase, port = 0 }) {
     }
     let m = /^\/api\/session\/(s_[0-9a-f]+)$/.exec(u.pathname);
     if (req.method === 'GET' && m) {
+      fake.sessionChecks++;
+      if (fake.sessionDown) return json(res, 500, { error: 'down' });
       const s = fake.sessions.get(m[1]);
       if (!s || !s.valid) return json(res, 200, { valid: false });
       const tvPart = users[s.key].kind === 'tv' ? { adultMode: tvAdult(m[1]) } : {};
