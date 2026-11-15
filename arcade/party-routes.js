@@ -20,7 +20,7 @@ function makeRoutes({ tables, config }) {
   // needs only that room's lobby password.
   const assertLevelAllowed = (level, req) => {
     if (!tables.isAdult(level)) return;
-    if (!adultPin.matches(req.get('X-Adult-Pin') || '')) throw fail('Adult levels need an adult signed in with ARKS ID.', 403);
+    if (!adultPin.matches(req.get('X-Adult-Pin') || '')) throw fail('Adult games aren\'t available on this device.', 403);
   };
   const limiter = rateLimit({ windowMs: 10 * 60 * 1000, limit: 60, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many new games at once.' } });
   const creds = req => [req.params.code, (req.body || {}).playerId || req.query.playerId, (req.body || {}).token || req.query.token];
@@ -71,9 +71,9 @@ function makeRoutes({ tables, config }) {
       // Who this device is gets looked up once. After that nothing waits: the check for a
       // kid's device, the lobby's level and the join happen together, so the lobby can't turn
       // adult in between. An adult's sign-in is kept with the seat, for the day the host does.
-      const me = await adultJoin.who(req);
-      adultJoin.refuse(me, tables.isAdult(tables.room(req.params.code).level));
-      const { table, player } = tables.joinRoom(req.params.code, body.name, body.password, profileOf(req), adultJoin.signinOf(me));
+      const kid = await adultJoin.kid(req);
+      adultJoin.refuse(kid, tables.isAdult(tables.room(req.params.code).level));
+      const { table, player } = tables.joinRoom(req.params.code, body.name, body.password, profileOf(req), kid);
       res.status(201).json({ code: table.id, playerId: player.id, token: player.token });
     } catch (e) { next(e); }
   });

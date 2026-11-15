@@ -18,7 +18,7 @@ function fail(message, status = 400) {
 const clean = (v, max) => String(v == null ? '' : v).trim().slice(0, max);
 const unlocked = req => adultPin.matches(req.get('X-Adult-Pin') || (req.body && req.body.adultPin) || '');
 function requireLevel(level, req) {
-  if (bank.LEVELS[level].adult && !unlocked(req)) throw fail('Adult levels need an adult signed in with ARKS ID.', 403);
+  if (bank.LEVELS[level].adult && !unlocked(req)) throw fail('Adult games aren\'t available on this device.', 403);
 }
 const extrasFor = level => bank.LEVELS[level].adult ? { drinks: bank.DRINKS[level], dares: bank.DARES[level] } : { drinks: null, dares: null };
 const CREDIT = 'Some questions from Open Trivia DB (opentdb.com), licensed CC BY-SA 4.0.';
@@ -97,11 +97,7 @@ module.exports = function triviaRoutes({ requireAdmin, notify, whoIs = null }) {
   router.post('/rooms/:code/join', createLimiter, async (req, res, next) => {
     try {
       const r = rooms.room(req.params.code);
-      if (bank.LEVELS[r.settings.level].adult && whoIs) {
-        let me = null;
-        try { me = await whoIs(req); } catch { me = null; }
-        if (me && (me.tv || !['admin', 'adult'].includes(me.account.role))) throw fail('This is an adult game, so it\'s only for adult accounts.', 403);
-      }
+      await require('../arcade/adult-join').refuseKids(req, !!bank.LEVELS[r.settings.level].adult);
       res.json(rooms.join(req.params.code, (req.body || {}).name, (req.body || {}).password, profileOf(req)));
     } catch (e) { next(e); }
   });

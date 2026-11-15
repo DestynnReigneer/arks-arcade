@@ -225,7 +225,7 @@
     PinPad.show(pinInput, adult.requiresPin);
     document.getElementById('adultError').textContent = '';
     document.getElementById('adultHint').textContent = adult.requiresPin
-      ? 'Naughty themes for adults signed in with ARKS ID.'
+      ? 'Naughty themes. Not for kids.'
       : 'Naughty themes for adults. Are you 18 or older?';
     // With a PIN the pad checks it on the 6th digit, so there's no button.
     document.getElementById('adultOkBtn').classList.toggle('hidden', adult.requiresPin);
@@ -239,7 +239,7 @@
     try {
       if (adult.requiresPin) {
         const r = await apiPost('/api/adult-check', { pin });
-        if (!r.ok) { err.textContent = 'Adult levels need an adult signed in with ARKS ID.'; PinPad.clear(document.getElementById('adultPinInput')); return; }
+        if (!r.ok) { err.textContent = 'Adult games aren\'t available on this device.'; PinPad.clear(document.getElementById('adultPinInput')); return; }
       }
       setAdult(true, pin);
       document.getElementById('adultOverlay').classList.add('hidden');

@@ -173,7 +173,7 @@ for (const game of [
   { id: 'scuffle', path: '/scuffle.html', name: 'Shuffle Scuffle', store: 'scuffle.room' },
   { id: 'rambler', path: '/rambler.html', name: 'Rambler' }
 ]) {
-  test(`${game.name}: the host switches to the unfiltered words, and the guest is moved out and told why`, async ({ browser }) => {
+  test(`${game.name}: the host switches to the unfiltered words, and a kid is moved out and told why`, async ({ browser }) => {
     test.skip(test.info().project.name !== 'laptop', 'once is enough');
     test.setTimeout(60000);
     const ctxs = await Promise.all([browser.newContext({ viewport: { width: 1280, height: 800 } }), browser.newContext({ viewport: { width: 1280, height: 800 } })]);
@@ -198,52 +198,56 @@ for (const game of [
     }
     const seat = await (await made).json();
 
-    // A guest finds it in List Hosted Games and joins.
-    await asGuest(guest, game.path);
+    // Milo, a kid signed in on their own device, finds it in List Hosted Games and joins.
+    expect((await fake('/test/next-once', { as: 'milo' })).ok).toBe(true);
+    await guest.goto(`/auth/signin?return=${game.path}`);
+    await guest.waitForURL(u => new URL(u).pathname === game.path);
+    await guest.waitForLoadState('networkidle');
+    await closeHelp(guest);
     if (game.id === 'scuffle') {
       await guest.locator('#modeSeg [data-mode="join"]').click();
       await guest.locator('#lobbyRows .lb-row', { hasText: "Alex's lobby" }).click();
-      await guest.locator('#joinName').fill('Gus');
+      if (await guest.locator('#joinName').isVisible().catch(() => false)) await guest.locator('#joinName').fill('Milo');
       await guest.locator('#joinBtn').click();
       await expect(guest.locator('#lobby')).toBeVisible();
-      await expect(host.locator('#lobbyPlayers')).toContainText('Gus');
+      await expect(host.locator('#lobbyPlayers')).toContainText('Milo');
     } else {
       await guest.locator('#modeList [data-mode="find"]').click();
       await guest.locator('#hostedRows .hosted-row', { hasText: "Alex's lobby" }).click();
-      await guest.locator('#hostedName').fill('Gus');
+      if (await guest.locator('#hostedName').isVisible().catch(() => false)) await guest.locator('#hostedName').fill('Milo');
       await guest.locator('#hostedJoinBtn').click();
       await expect(guest.locator('#lobbyScreen')).toBeVisible();
-      await expect(host.locator('#lobbyRoster')).toContainText('Gus');
+      await expect(host.locator('#lobbyRoster')).toContainText('Milo');
     }
 
-    // The host switches the lobby to the unfiltered words and makes up its password.
+    // The host switches the lobby to the unfiltered words. No password.
     const status = await host.evaluate(async ({ id, seat }) => {
       const pass = (await (await fetch('/api/arksid/adult-pass', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })).json()).pass;
       const body = id === 'scuffle'
-        ? { playerId: seat.playerId, token: seat.token, settings: { dictionary: 'adult' }, password: 'tacos42' }
-        : { playerId: seat.playerId, token: seat.token, profile: 'adult', password: 'tacos42' };
+        ? { playerId: seat.playerId, token: seat.token, settings: { dictionary: 'adult' } }
+        : { playerId: seat.playerId, token: seat.token, profile: 'adult' };
       const r = await fetch(`/api/${id}/rooms/${seat.code}/settings`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Adult-Pin': pass }, body: JSON.stringify(body) });
       return r.status;
     }, { id: game.id, seat });
     expect(status).toBe(200);
 
     // The guest is back on the setup screen, with the reason; the host reads who left.
-    const why = 'The host switched the game mode to adult, you have been removed. Only Adults can join.';
-    const note = 'Gus was removed, the host switched game mode to adult.';
+    const why = 'The host switched the game mode to adult, you have been removed.';
+    const note = 'Milo was removed, the host switched game mode to adult.';
     if (game.id === 'scuffle') {
       await expect(guest.locator('#toast')).toHaveText(why);
       await expect(guest.locator('#setup')).toBeVisible();
       await expect(guest.locator('#lobby')).toBeHidden();
       await expect(host.locator('#toast')).toHaveText(note);
-      await expect(host.locator('#lobbyPlayers')).not.toContainText('Gus');
+      await expect(host.locator('#lobbyPlayers')).not.toContainText('Milo');
       await expect(host.locator('#lobbySettings')).toContainText('unfiltered words');
     } else {
       await expect(guest.locator('#setupMsg')).toHaveText(why);
       await expect(guest.locator('#setupScreen')).toBeVisible();
       await expect(guest.locator('#lobbyScreen')).toBeHidden();
       await expect(host.locator('#lobbyNotice')).toHaveText(note);
-      await expect(host.locator('#lobbyRoster')).not.toContainText('Gus');
-      await expect(host.locator('#lobbyPassword')).toContainText('tacos42');
+      await expect(host.locator('#lobbyRoster')).not.toContainText('Milo');
+      await expect(host.locator('#lobbyPassword')).toHaveText('');
     }
     for (const c of ctxs) await c.close();
   });

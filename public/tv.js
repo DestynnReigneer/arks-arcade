@@ -210,7 +210,9 @@ const ArcadeTV = (() => {
     return data;
   });
   const post = url => getJson(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
-  const adultOn = () => !!(state.adultMode && state.adultMode.until > Date.now());
+  // A TV plays adult games like anyone else (the maintainer, 2026-11-15): there's no
+  // adults' night to turn on, so once the TV is set up, adult levels are open.
+  const adultOn = () => !!(state.on && state.tv);
 
   function setMode(adultMode) {
     const was = adultOn();
@@ -345,7 +347,6 @@ const ArcadeTV = (() => {
   // The pass that goes wherever an adult check is made: adults' night first (a
   // QR code for an adult's phone), then the arcade hands one out. '' if not.
   async function adultPass() {
-    if (!adultOn() && !(await unlock())) return '';
     try {
       const data = await post('/api/arksid/adult-pass');
       return data.pass || '';
@@ -401,7 +402,7 @@ const ArcadeTV = (() => {
     }
     bar.hidden = false;
     bar.replaceChildren();
-    const adult = adultOn();
+    const adult = false;
     bar.classList.toggle('adult', adult);
     if (adult) {
       const m = state.adultMode;
@@ -411,11 +412,7 @@ const ArcadeTV = (() => {
       back.onclick = backToFamily;
       bar.appendChild(back);
     } else {
-      bar.append(el('span', 'tv-name', `📺 ${state.tv.name} · family mode`));
-      const night = el('button', 'tv-btn small', '🔞 Adults\' night');
-      night.id = 'tvAdults';
-      night.onclick = () => unlock();
-      bar.appendChild(night);
+      bar.append(el('span', 'tv-name', `📺 ${state.tv.name}`));
     }
   }
 

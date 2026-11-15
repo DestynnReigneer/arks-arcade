@@ -89,7 +89,7 @@
       const done = ok => { $('pinView').classList.add('hidden'); $('pinCancel').onclick = null; resolve(ok); };
       PinPad.attach($('pinInput'), async pin => {
         const r = await api('/api/crisscross/unlock', { pin }).catch(() => ({ ok: false }));
-        if (!r.ok) { $('pinMsg').textContent = 'Adult levels need an adult signed in with ARKS ID.'; PinPad.clear($('pinInput')); return; }
+        if (!r.ok) { $('pinMsg').textContent = 'Adult games aren\'t available on this device.'; PinPad.clear($('pinInput')); return; }
         S.pin = pin;
         try { sessionStorage.setItem('crisscross.adultPin', pin); } catch { /* unavailable */ }
         done(true);
@@ -251,7 +251,7 @@
       S.onlineDict = v; paintDict();
     });
     $('dictHint').textContent = S.onlineDict === 'adult'
-      ? 'Every word on the list counts, rude ones included. Everyone has to be an adult, and each of them will need to be signed in with ARKS ID to participate.'
+      ? 'Every word on the list counts, rude ones included. Not for kids.'
       : 'Rude words are left out, so it\'s good for kids.';
     adultMode(S.onlineDict === 'adult');
   }
@@ -1048,7 +1048,7 @@
       emoji: '📱', title: 'Playing with the family',
       html: `<p><b>Create a game lobby</b> is for playing on your own devices. Others find your lobby in 🔎 List Hosted Games or on the arcade's home page, or scan its QR code. There's no rush: a turn can wait hours, and the arcade's home page says when it's your turn.</p>
         <p><b>Play on this device</b> is for passing one device around, or playing against the computer. The tiles are hidden between turns so nobody peeks.</p>
-        <p><b>Family words</b> leaves rude words out. <b>Unfiltered</b> counts every word on the list, and everyone in the game has to be an adult signed in with ARKS ID.</p>`
+        <p><b>Family words</b> leaves rude words out. <b>Unfiltered</b> counts every word on the list. Not for kids.</p>`
     }
   ]);
   $('helpBtn').addEventListener('click', () => help.open());

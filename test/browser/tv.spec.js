@@ -4,7 +4,7 @@
 // driven only by the keyboard (the remote's arrows and OK arrive as arrow
 // keys and Enter). Setting the TV up with a pairing code, the home screen,
 // Know-It-All played to the end with the remote, a phone joining a game the
-// TV hosts, and adults' night with Back to family.
+// TV hosts, and an adult level picked with nothing to unlock.
 
 const { test, expect } = require('@playwright/test');
 const { quietFonts, watchProblems, openPage } = require('./helpers');
@@ -79,12 +79,12 @@ test('the TV sets itself up and the home screen works with only the remote', asy
   // No hover-only corners, and no admin link on the TV.
   await expect(page.locator('.fb-bug')).toBeHidden();
   await expect(page.locator('.ah-lock')).toBeHidden();
-  // Every game, the help button and Adults' night can be reached with the arrows.
+  // Every game and the help button can be reached with the arrows.
   const games = await page.locator('a.game').evaluateAll(list => list.map(a => a.className.split(' ')[1]));
   expect(games.length).toBeGreaterThan(10);
   for (const g of games) await arrowTo(page, `a.game.${g}`);
   await arrowTo(page, '#helpOpen');
-  await arrowTo(page, '#tvAdults');
+  await expect(page.locator('#tvAdults')).toHaveCount(0);
   // The picture stays inside the screen: nothing wider than the TV.
   const sizes = await page.evaluate(() => ({ page: document.documentElement.scrollWidth, screen: window.innerWidth }));
   expect(sizes.page).toBeLessThanOrEqual(sizes.screen);
@@ -92,7 +92,7 @@ test('the TV sets itself up and the home screen works with only the remote', asy
   await arrowTo(page, 'a.game.trivia');
   await page.keyboard.press('Enter');
   await page.waitForURL(/trivia\.html/);
-  await expect(page.locator('#tvBar')).toContainText('family mode');
+  await expect(page.locator('#tvBar')).toContainText('📺');
   expect(problems, problems.join('\n')).toEqual([]);
 });
 
@@ -199,29 +199,14 @@ test('a phone joins a game the TV hosts', async ({ page, browser }) => {
   await phoneCtx.close();
 });
 
-test('adults\' night from an adult\'s phone, and Back to family', async ({ page }) => {
+test('the TV plays an adult level with nothing to unlock', async ({ page }) => {
   const problems = watchProblems(page);
   await pairTv(page, '/trivia.html');
-  // Picking an adult level on the TV asks for an adult's phone, never a PIN.
-  await expect(page.locator('#levelList')).toContainText('Needs an adults\' night');
+  // Picking an adult level on the TV just picks it: no code for a phone, no PIN.
   await press(page, '#levelList .level:nth-child(3)');
-  const card = page.locator('.tv-unlock');
-  await expect(card).toBeVisible();
-  await expect(card).toContainText('adult');
-  await expect(page.locator('#pinView')).toBeHidden();
-  const userCode = (await card.locator('.tv-code').textContent()).replace(/\s/g, '');
-  // A kid's phone can't; an adult's can.
-  expect((await fake('/test/tv/unlock', { userCode, by: 'milo' })).ok).toBe(false);
-  expect((await fake('/test/tv/unlock', { userCode, by: 'kim' })).ok).toBe(true);
-  await expect(card).toBeHidden({ timeout: 10000 });
-  // The sign shows, the adult level is picked, and Back to family is right there.
-  await expect(page.locator('#tvBar')).toContainText('Adults\' night until');
-  await expect(page.locator('#tvBar')).toContainText('unlocked by Kim');
   await expect(page.locator('#levelList .level:nth-child(3)')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('.tv-unlock')).toHaveCount(0);
+  await expect(page.locator('#pinView')).toBeHidden();
   await expect(page.locator('html')).toHaveClass(/adult-mode/);
-  await press(page, '#tvFamily');
-  await expect(page.locator('#tvBar')).toContainText('family mode');
-  await expect(page.locator('#levelList .level:nth-child(1)')).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.locator('html')).not.toHaveClass(/adult-mode/);
   expect(problems, problems.join('\n')).toEqual([]);
 });

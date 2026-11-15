@@ -131,7 +131,7 @@
     $('hostSetup').classList.toggle('hidden', S.mode !== 'host');
     for (const b of $('dictSeg').children) b.setAttribute('aria-pressed', String(b.dataset.v === S.dict));
     $('dictHint').textContent = S.dict === 'adult'
-      ? 'Every word on the list counts, rude ones included. Rooms on this list get a lobby password so kids can\'t wander in.'
+      ? 'Every word on the list counts, rude ones included.'
       : 'Rude words are left out, so it\'s good for kids. The full word is always an everyday word.';
     adultMode(S.dict === 'adult');
     if (S.config) {
@@ -174,7 +174,7 @@
       const done = ok => { $('pinView').classList.add('hidden'); $('pinCancel').onclick = null; resolve(ok); };
       PinPad.attach($('pinInput'), async pin => {
         const r = await api('/api/scuffle/unlock', { pin }).catch(() => ({ ok: false }));
-        if (!r.ok) { $('pinMsg').textContent = 'Adult levels need an adult signed in with ARKS ID.'; PinPad.clear($('pinInput')); return; }
+        if (!r.ok) { $('pinMsg').textContent = 'Adult games aren\'t available on this device.'; PinPad.clear($('pinInput')); return; }
         S.pin = pin;
         try { sessionStorage.setItem('scuffle.adultPin', pin); } catch { /* unavailable */ }
         done(true);
@@ -468,7 +468,7 @@
       leaveRoom();
       show('setup');
       paintSetup();
-      toast('The host switched the game mode to adult, you have been removed. Only Adults can join.', 8000);
+      toast('The host switched the game mode to adult, you have been removed.', 8000);
     });
     // The game is gone (or this seat is): back to the setup screen. Anything else is the arcade being
     // away for a moment, and the live updates start again, by the browser or by live.js.
@@ -893,7 +893,7 @@
     },
     {
       emoji: '🔞', title: 'Family words or unfiltered',
-      html: `<p><b>Family words</b> leaves rude words out, so it's good for kids. <b>Unfiltered</b> counts every word on the list, rude ones included, and is for adults signed in with ARKS ID. A room on the unfiltered list gets a lobby password so kids can't wander in.</p>
+      html: `<p><b>Family words</b> leaves rude words out, so it's good for kids. <b>Unfiltered</b> counts every word on the list, rude ones included. Not for kids.</p>
         <div class="tut-tip">Tap <b>?</b> at the top any time to see this again.</div>`
     }
   ]);
