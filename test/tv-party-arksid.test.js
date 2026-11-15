@@ -151,6 +151,51 @@ async function run({ base, fake }) {
     ok('…and the seat that joined as an adult is moved out', (await lobbyOf(two)) === 'Kim', await lobbyOf(two));
     fake.users.sam.role = wasRole;
     await kimPhone.post(`/api/partdeux/rooms/${two.code}/leave`, seatOf(two));
+
+    // Rambler keeps coins, a streak and badges for each profile. With sign-in on, who a
+    // request is for comes from its profile token, never from an id it names.
+    console.log('\n-- Rambler: a profile belongs to whoever is signed in as it --');
+    const rb = async (path, method = 'GET', body, headers = {}) => {
+      const res = await fetch(`${base}/api/rambler${path}`, {
+        method, headers: { ...(body ? { 'Content-Type': 'application/json' } : {}), ...headers }, body: body ? JSON.stringify(body) : undefined
+      });
+      return { status: res.status, data: await res.json().catch(() => null) };
+    };
+    const kimIs = await profileOf(kimPhone), samIs = await profileOf(samPhone);
+    const kimId = kimIs['X-Profile-Token'].split('.')[0];
+    const listed = async h => (await rb('/players', 'GET', null, h)).data;
+    ok('a visitor is shown nobody\'s Rambler profile', (await listed()).players.length === 0 && (await listed()).signIn === true);
+    ok('someone signed in is shown their own, and only their own',
+      (await listed(kimIs)).players.map(q => q.id).join() === kimId && !(await listed(samIs)).players.some(q => q.id === kimId));
+    const kimBefore = (await rb(`/players/${kimId}`, 'GET', null, kimIs)).data;
+    ok('they can open their own profile, and nobody else can', !!kimBefore && kimBefore.id === kimId &&
+      (await rb(`/players/${kimId}`)).status === 404 && (await rb(`/players/${kimId}`, 'GET', null, samIs)).status === 404);
+    const tries = [
+      await rb(`/players/${kimId}`, 'PATCH', { name: 'Not Kim' }),
+      await rb(`/players/${kimId}`, 'PATCH', { name: 'Not Kim' }, samIs),
+      await rb(`/players/${kimId}`, 'DELETE'),
+      await rb(`/players/${kimId}`, 'DELETE', null, samIs),
+      await rb('/players', 'POST', { name: 'Extra' }),
+      await rb(`/players/${kimId}`, 'PATCH', { name: 'Kimmy' }, kimIs)
+    ];
+    const kimAfter = (await rb(`/players/${kimId}`, 'GET', null, kimIs)).data;
+    ok('nobody can rename, delete or add a Rambler profile here: profiles come from ARKS ID',
+      tries.every(r => r.status === 403) && !!kimAfter && kimAfter.name === kimBefore.name, tries.map(r => r.status).join());
+    // A round scored with someone else's profile id is a guest's round.
+    const round = async (headers, profileId) => {
+      const board = (await rb('/board', 'POST', { size: 4, profile: 'kids' }, headers)).data;
+      return (await rb('/score', 'POST', { boardId: board.boardId, players: [{ id: 'p0', name: 'K', words: [] }], profileId }, headers)).data;
+    };
+    const asVisitor = await round({}, kimId), asSam = await round(samIs, kimId);
+    const untouched = (await rb(`/players/${kimId}`, 'GET', null, kimIs)).data;
+    ok('a round scored in someone else\'s name counts for nobody', !asVisitor.progress && !asSam.progress && untouched.games === kimBefore.games,
+      JSON.stringify([!!asVisitor.progress, !!asSam.progress, untouched.games, kimBefore.games]));
+    const asKim = await round(kimIs, kimId);
+    ok('…and one scored by the person themselves counts for them', !!asKim.progress && (await rb(`/players/${kimId}`, 'GET', null, kimIs)).data.games === kimBefore.games + 1);
+    const hintBoard = (await rb('/board', 'POST', { size: 4, profile: 'kids' })).data;
+    const coinsBefore = (await rb(`/players/${kimId}`, 'GET', null, kimIs)).data.coins;
+    const spent = await rb('/hint', 'POST', { boardId: hintBoard.boardId, playerId: kimId, found: [] }, samIs);
+    ok('nobody can spend someone else\'s coins on a hint', spent.status === 400 && (await rb(`/players/${kimId}`, 'GET', null, kimIs)).data.coins === coinsBefore, JSON.stringify(spent));
   }
 
   return { pass, fail };

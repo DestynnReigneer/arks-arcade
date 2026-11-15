@@ -26,6 +26,26 @@ const comm = require('../arcade/comm');
 
 const INITIALS_RE = /^[A-Z0-9]{1,3}$/;
 
+// ---- who's asking ----------------------------------------------------------
+// A Rambler player is a profile (it has the profile's id) with coins, a streak
+// and badges. On an arcade with sign-in, who a request is for comes from the
+// profile token it carries (X-Profile-Token), never from an id it names: an id
+// that isn't the asker's own counts as nobody, and the round is a guest's.
+// Without sign-in, Rambler keeps its own list of profiles that anyone at the
+// arcade can pick from, as it always has.
+const arcadeProfiles = () => require('../arcade/profiles');
+const signInOn = () => arcadeProfiles().arksMode();
+const asker = req => arcadeProfiles().verify(req.get('X-Profile-Token'));
+const SIGN_IN_ONLY = 'Profiles come from ARKS ID on this arcade. Sign in with your ARKS ID instead.';
+// -> the profile this request may bank coins, streaks and scores for, or null.
+function profileFor(req, claimed) {
+  const id = String(claimed || '');
+  if (!id || !db.getPlayer(id)) return null;
+  if (!signInOn()) return id;
+  const me = asker(req);
+  return me && me.id === id ? id : null;
+}
+
 function fail(message, status) {
   return Object.assign(new Error(message), { status });
 }
@@ -211,8 +231,8 @@ router.post('/score', scoreLimiter, (req, res, next) => {
     // `profileId` is the field; `playerId` is accepted as a fallback only
     // because an earlier version used it, and it means something different
     // everywhere else (which player of the round, or which room member).
-    const profileId = body.profileId || body.playerId;
-    if (profileId && db.getPlayer(profileId)) {
+    const profileId = profileFor(req, body.profileId || body.playerId);
+    if (profileId) {
       const mine = result.results.find(r => r.playerId === (body.forPlayer || players[0].id))
         || result.results[0];
       result.progress = progress.recordRound(profileId, {
@@ -321,7 +341,7 @@ router.post('/leaderboard', leaderboardLimiter, (req, res, next) => {
       const done = marathon.finish(body.marathonId);
       const saved = db.insertArcadeScore({
         initials,
-        playerId: body.profileId && db.getPlayer(body.profileId) ? body.profileId : null,
+        playerId: profileFor(req, body.profileId),
         score: done.finalScore,
         mode: 'marathon',
         boardSize: 4,
@@ -360,7 +380,7 @@ router.post('/leaderboard', leaderboardLimiter, (req, res, next) => {
       initials,
       // `playerId` above identifies the player *within the round*; the profile
       // that banks the badge is a separate thing and has its own field.
-      playerId: body.profileId && db.getPlayer(body.profileId) ? body.profileId : null,
+      playerId: profileFor(req, body.profileId),
       score: player.score,
       mode,
       boardSize: result.size,
@@ -505,7 +525,7 @@ router.post('/hint', checkLimiter, (req, res, next) => {
   try {
     const body = req.body || {};
     const entry = boards.require(body.boardId);
-    const player = db.getPlayer(body.playerId);
+    const player = db.getPlayer(profileFor(req, body.playerId));
     if (!player) throw fail('Pick a profile before spending coins.', 400);
 
     const cost = round.difficultyOf(entry.difficulty).hintCost;
@@ -557,7 +577,7 @@ router.post('/marathon/:id/hint', checkLimiter, (req, res, next) => {
   try {
     const body = req.body || {};
     const session = marathon.get(req.params.id);
-    const player = db.getPlayer(body.playerId);
+    const player = db.getPlayer(profileFor(req, body.playerId));
     if (!player) throw fail('Pick a profile before spending coins.', 400);
 
     const cost = round.difficultyOf(session.difficulty).hintCost;
@@ -582,8 +602,8 @@ router.post('/marathon/:id/finish', scoreLimiter, (req, res, next) => {
     const body = req.body || {};
     const result = marathon.finish(req.params.id);
 
-    const finishProfile = body.profileId || body.playerId;
-    if (finishProfile && db.getPlayer(finishProfile)) {
+    const finishProfile = profileFor(req, body.profileId || body.playerId);
+    if (finishProfile) {
       result.progress = progress.recordRound(finishProfile, {
         score: result.finalScore,
         wordCount: result.wordCount,
@@ -664,12 +684,19 @@ const AVATARS = ['\u{1F98A}', '\u{1F43B}', '\u{1F431}', '\u{1F436}', '\u{1F984}'
   '\u{1F438}', '\u{1F419}', '\u{1F427}', '\u{1F981}', '\u{1F42F}', '\u{1F435}',
   '\u{1F47D}', '\u{1F916}', '\u{1F47B}', '\u{1F3AE}'];
 
+// With sign-in, the list is only ever the asker's own profile (nobody else's coins
+// and streaks are anyone's to read), and signIn tells the page to follow the
+// arcade's Who's playing? card instead of showing its own list to pick from.
 router.get('/players', (req, res) => {
-  res.json({ players: db.listPlayers(), avatars: AVATARS });
+  if (!signInOn()) return res.json({ players: db.listPlayers(), avatars: AVATARS });
+  const me = asker(req);
+  res.set('Cache-Control', 'no-store');
+  res.json({ players: me ? db.listPlayers().filter(p => p.id === me.id) : [], avatars: AVATARS, signIn: true });
 });
 
 router.get('/players/:id', (req, res, next) => {
   try {
+    if (signInOn() && !profileFor(req, req.params.id)) throw fail('No such profile.', 404);
     const p = progress.profile(req.params.id);
     if (!p) throw fail('No such profile.', 404);
     res.json(p);
@@ -680,6 +707,7 @@ router.get('/players/:id', (req, res, next) => {
 
 router.post('/players', boardLimiter, (req, res, next) => {
   try {
+    if (signInOn()) throw fail(SIGN_IN_ONLY, 403);
     const body = req.body || {};
     const name = String(body.name || '').trim().replace(/\s+/g, ' ').slice(0, 16);
     if (!name) throw fail('Give the profile a name.', 400);
@@ -695,6 +723,7 @@ router.post('/players', boardLimiter, (req, res, next) => {
 
 router.patch('/players/:id', (req, res, next) => {
   try {
+    if (signInOn()) throw fail(SIGN_IN_ONLY, 403);
     const body = req.body || {};
     const name = body.name === undefined ? undefined : String(body.name).trim().slice(0, 16);
     const avatar = AVATARS.includes(body.avatar) ? body.avatar : undefined;
@@ -708,6 +737,7 @@ router.patch('/players/:id', (req, res, next) => {
 
 router.delete('/players/:id', (req, res, next) => {
   try {
+    if (signInOn()) throw fail(SIGN_IN_ONLY, 403);
     if (!db.deletePlayer(req.params.id)) throw fail('No such profile.', 404);
     res.json({ deleted: true });
   } catch (e) {
