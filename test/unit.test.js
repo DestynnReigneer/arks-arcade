@@ -388,6 +388,20 @@ async function run() {
   ok('saving a game\'s score takes it out of the database', (spinGame.drop(orphan.id), !kept.has(orphan.id) && !spinGame.games.has(orphan.id)));
   spinGame.useStore(null);
   spinGame.games.clear();
+  // A room's clock closes its room when what it runs fails, and the arcade carries on.
+  const roomClock = require(path.join(ROOT, 'arcade/room-clock.js'));
+  const clockSaw = { ran: 0, closed: 0 };
+  const hush = console.error;
+  console.error = () => {};
+  roomClock(5, () => { clockSaw.ran++; }, () => { clockSaw.closed++; });
+  roomClock(5, () => { clockSaw.ran++; throw new Error('this room is wrong inside'); }, () => { clockSaw.closed++; });
+  roomClock(5, () => { throw new Error('wrong inside'); }, () => { throw new Error('and it won\'t close'); });
+  const stopped = roomClock(5, () => { clockSaw.ran += 10; }, () => {});
+  clearTimeout(stopped);
+  await new Promise(r => setTimeout(r, 60));
+  console.error = hush;
+  ok('a room\'s clock runs what it was given, and one that fails closes its room instead of stopping the arcade',
+    clockSaw.ran === 2 && clockSaw.closed === 1, JSON.stringify(clockSaw));
   ok('a level is only ever one of the real ones', spinBanks.levelOf('constructor') === 'kids' && spinBanks.levelOf('__proto__') === 'kids' &&
     spinBanks.levelOf('spicy') === 'spicy' && spinBanks.levelOf(undefined) === 'kids' &&
     spinBanks.levelOf({ toString: 1 }) === 'kids' && spinBanks.levelOf(['spicy']) === 'kids');
