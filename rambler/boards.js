@@ -10,7 +10,13 @@ const crypto = require('node:crypto');
 // room state machine need to put boards in it. Rooms have to stash a board
 // *before* they broadcast the round start, or clients receive a null board id
 // and every word check 404s.
+//
+// A board for a round on one device (solo, the daily, taking turns, tabletop)
+// is also written down (keep), and read back when the arcade starts, so a
+// round that was being played can still be checked and scored after a
+// restart. A room's board isn't: it's kept with its room (rooms.js).
 const boards = new Map();
+const store = require('../arcade/room-store')('rambler-boards');
 const TTL_MS = 60 * 60 * 1000;
 const SWEEP_MS = 10 * 60 * 1000;
 
@@ -21,6 +27,24 @@ function stash(built, id) {
   const key = kept || crypto.randomBytes(12).toString('hex');
   boards.set(key, { ...built, id: key, createdAt: Date.now(), result: null });
   return boards.get(key);
+}
+
+// Writes a board down, with whatever has been added to it since it was stashed (its result, once scored).
+function keep(entry) {
+  if (entry && boards.get(entry.id) === entry) store.saveSoon(entry.id, () => ({ ...entry }));
+  return entry;
+}
+
+// Brings the kept boards back when the arcade starts. -> how many came back.
+function restore(now = Date.now()) {
+  return store.restoreEach(({ code, data, savedAt }) => {
+    const createdAt = Number(data.createdAt) || savedAt;
+    const good = /^[0-9a-f]{24}$/.test(code) && data.id === code && !boards.has(code) && Array.isArray(data.board) && data.board.length > 0 &&
+      Number.isInteger(data.cols) && Number.isInteger(data.rows) && typeof data.profile === 'string';
+    if (!good || now - createdAt > TTL_MS) return false;
+    boards.set(code, { ...data, id: code, createdAt, result: data.result || null });
+    return true;
+  });
 }
 
 function get(id) {
@@ -38,15 +62,19 @@ function require_(id) {
 function sweep() {
   const cutoff = Date.now() - TTL_MS;
   for (const [id, entry] of boards) {
-    if (entry.createdAt < cutoff) boards.delete(id);
+    if (entry.createdAt < cutoff) { boards.delete(id); store.remove(id); }
   }
 }
 
 const sweeper = setInterval(sweep, SWEEP_MS);
 if (typeof sweeper.unref === 'function') sweeper.unref();
 
+const cameBack = restore();
+if (cameBack) console.log(`Rambler picked ${cameBack} board${cameBack === 1 ? '' : 's'} back up.`);
+
 module.exports = {
   stash,
+  keep,
   get,
   require: require_,
   sweep,
