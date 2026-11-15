@@ -657,6 +657,16 @@ async function run({ base, root }) {
   const markedRow = (await hostedNow()).find(l => l.code === host.code);
   ok('the list marks it unfiltered and locked, and never shows the password',
     markedRow.adult === true && markedRow.locked === true && !JSON.stringify(await hostedNow()).includes('limes'));
+  // The page sends one setting at a time, and the others stay as they are.
+  const sized = await api(`/rooms/${host.code}/settings`, 'POST', { ...host, size: 5 });
+  const clocked = await api(`/rooms/${host.code}/settings`, 'POST', { ...host, durationSec: 300 });
+  ok('changing only the clock leaves the board size and the word list alone',
+    sized.status === 200 && sized.data.settings.size === 5 && sized.data.settings.profile === 'adult' && clocked.status === 200 &&
+    JSON.stringify(clocked.data.settings) === JSON.stringify({ size: 5, profile: 'adult', durationSec: 300 }), JSON.stringify(clocked.data.settings));
+  const unchanged = await api(`/rooms/${host.code}/settings`, 'POST', host);
+  ok('…a request that names nothing changes nothing, and the lobby keeps its password',
+    JSON.stringify(unchanged.data.settings) === JSON.stringify(clocked.data.settings) && (await hostedNow()).find(l => l.code === host.code).locked === true &&
+    (await api(`/rooms/${host.code}/join`, 'POST', { name: 'Cy' })).status === 401);
   await api(`/rooms/${host.code}/leave`, 'POST', { playerId: boBack.data.playerId, token: boBack.data.token });
 
   ac.abort();

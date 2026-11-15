@@ -295,6 +295,19 @@ async function run() {
   ok('…and one IPv4 address gets its own ten', spinGame.games.size === 2 * spinGame.MAX_PER_OWNER);
   startFrom('2001:db8:9:9::1');
   ok('a different IPv6 network is a different visitor', spinGame.games.size === 2 * spinGame.MAX_PER_OWNER + 1);
+  // A signed-in player's games are counted by profile and a guest's by address, so a
+  // guest at the same address can't push out a game that's kept for a person.
+  spinGame.games.clear();
+  const startAs = (profileId, ip) => spinGame.start({ pool: fewPuzzles, names: ['Kim'], rounds: 3, level: 'kids', profileId, ip });
+  const kimsGame = startAs('p1', '203.0.113.7');
+  spinGame.solve(kimsGame, 'NOT THE ANSWER');
+  kimsGame.touched -= 60 * 1000;
+  for (let i = 0; i < 12; i++) startFrom('203.0.113.7');
+  ok('twelve guest games from a person\'s own address leave that person\'s game alone',
+    spinGame.games.has(kimsGame.id) && spinGame.games.size === spinGame.MAX_PER_OWNER + 1);
+  for (let i = 0; i < 12; i++) startAs('p1', `198.51.100.${i}`);
+  ok('a profile gets its ten wherever it plays, and a game with no move in it goes before one that was played',
+    spinGame.games.has(kimsGame.id) && [...spinGame.games.values()].filter(g => g.profileId === 'p1').length === spinGame.MAX_PER_OWNER);
   // A full arcade makes room by dropping the game that has sat untouched the
   // longest, instead of turning the new player away.
   spinGame.games.clear();
@@ -305,12 +318,17 @@ async function run() {
   const oneMore = startFrom('10.200.0.1');
   ok('one more still gets in, and the longest-idle game makes room for it',
     spinGame.games.size === spinGame.MAX_GAMES && spinGame.games.has(oneMore.id) && !spinGame.games.has(sat.id));
+  const longKept = [...spinGame.games.values()][5];
+  Object.assign(longKept, { profileId: 'p9', moved: true, touched: longKept.touched - 60 * 60 * 1000 });
+  const another = startFrom('10.200.0.2');
+  ok('…but a game kept for a person stays, however quiet, while there are games nobody played',
+    spinGame.games.size === spinGame.MAX_GAMES && spinGame.games.has(another.id) && spinGame.games.has(longKept.id));
   ok('every game uses the one list of puzzles it was handed, not a copy', [...spinGame.games.values()].every(g => g.pool === fewPuzzles));
   spinGame.games.clear();
   // A game is written down after every move and read back when the arcade starts,
   // so a restart ends nobody's game. Here the "database" is a Map.
   const kept = new Map();
-  spinGame.useStore({ save: (id, state) => kept.set(id, state), remove: id => kept.delete(id), all: () => [...kept.values()] });
+  spinGame.useStore({ save: (id, state) => kept.set(id, state), remove: id => kept.delete(id), all: () => [...kept].map(([id, state]) => ({ id, state })) });
   const savedGame = spinGame.start({ pool: fewPuzzles, poolKey: 'level:kids', names: ['Kim'], rounds: 3, level: 'kids', profileId: 'p1', ip: '203.0.113.9' });
   ok('a new game is written down', kept.has(savedGame.id));
   ok('…without its list of puzzles, and without the visitor\'s address',
@@ -320,7 +338,8 @@ async function run() {
   ok('every move is written down as it happens', JSON.parse(kept.get(savedGame.id)).strikes === 1 && JSON.parse(kept.get(savedGame.id)).moved === true);
   const viewBefore = JSON.stringify(spinGame.view(savedGame));
   spinGame.games.clear();   // the arcade stops: memory is gone, the database isn't
-  const cameBack = spinGame.restore(key => (key === 'level:kids' ? fewPuzzles : null));
+  const kidsList = { level: 'kids', adult: false, pool: fewPuzzles };
+  const cameBack = spinGame.restore(key => (key === 'level:kids' ? kidsList : null));
   const again = spinGame.games.get(savedGame.id);
   ok('after a restart the game comes back as it was', cameBack === 1 && !!again && again !== savedGame && JSON.stringify(spinGame.view(again)) === viewBefore);
   ok('…on the same shared list of puzzles, with its letters as sets again', again.pool === fewPuzzles && again.revealed instanceof Set && again.used instanceof Set);
@@ -343,15 +362,46 @@ async function run() {
   spinGame.restore(() => null);
   ok('a game whose list of puzzles is gone carries on with the puzzle it has',
     spinGame.games.has(orphan.id) && spinGame.games.get(orphan.id).pool.length === 1 && spinGame.games.get(orphan.id).pool[0].answer === orphan.puzzle.answer);
-  // Rows that aren't games are skipped instead of stopping the arcade from starting.
+  // A game only gets its list back when the list is still the level the game was started on.
+  spinGame.games.clear();
+  spinGame.restore(() => ({ level: 'filthy', adult: true, pool: [{ category: 'Phrase', answer: 'NOT FOR KIDS' }] }));
+  ok('a family game never comes back holding an adult level\'s puzzles',
+    spinGame.games.has(orphan.id) && spinGame.games.get(orphan.id).pool.length === 1 && spinGame.games.get(orphan.id).pool[0].answer === orphan.puzzle.answer);
+  // Rows that aren't games are left out and cleared away instead of stopping the arcade from starting.
   kept.set('junk', '{not json');
   kept.set('empty', '{"id":"x","players":[]}');
   kept.set('nothing', 'null');
+  const whole = JSON.parse(kept.get(orphan.id));
+  const broken = { revealed: 5, used: {}, usedPuzzles: true, players: [null], cur: 4, phase: 'paused', rounds: 2, puzzle: null, adult: 'no', level: 7 };
+  Object.entries(broken).forEach(([field, value], i) => {
+    const id = i.toString(16).repeat(32);
+    kept.set(id, JSON.stringify({ ...whole, id, [field]: value }));
+  });
+  kept.set('f'.repeat(32), JSON.stringify({ ...whole, id: 'e'.repeat(32) }));   // a row filed under another game's name
   spinGame.games.clear();
-  ok('rows that aren\'t games are skipped', spinGame.restore(() => fewPuzzles) === 1 && spinGame.games.size === 1);
+  let cameBackSound = -1;
+  const quiet = console.error;
+  console.error = () => {};
+  try { cameBackSound = spinGame.restore(() => kidsList); } catch { /* the check below says so */ } finally { console.error = quiet; }
+  ok('fourteen rows that aren\'t games are left out, and the one that is comes back', cameBackSound === 1 && spinGame.games.size === 1 && spinGame.games.has(orphan.id));
+  ok('…and they are cleared out of the database', kept.size === 1 && kept.has(orphan.id), [...kept.keys()].join());
   ok('saving a game\'s score takes it out of the database', (spinGame.drop(orphan.id), !kept.has(orphan.id) && !spinGame.games.has(orphan.id)));
   spinGame.useStore(null);
   spinGame.games.clear();
+  // A room's clock closes its room when what it runs fails, and the arcade carries on.
+  const roomClock = require(path.join(ROOT, 'arcade/room-clock.js'));
+  const clockSaw = { ran: 0, closed: 0 };
+  const hush = console.error;
+  console.error = () => {};
+  roomClock(5, () => { clockSaw.ran++; }, () => { clockSaw.closed++; });
+  roomClock(5, () => { clockSaw.ran++; throw new Error('this room is wrong inside'); }, () => { clockSaw.closed++; });
+  roomClock(5, () => { throw new Error('wrong inside'); }, () => { throw new Error('and it won\'t close'); });
+  const stopped = roomClock(5, () => { clockSaw.ran += 10; }, () => {});
+  clearTimeout(stopped);
+  await new Promise(r => setTimeout(r, 60));
+  console.error = hush;
+  ok('a room\'s clock runs what it was given, and one that fails closes its room instead of stopping the arcade',
+    clockSaw.ran === 2 && clockSaw.closed === 1, JSON.stringify(clockSaw));
   ok('a level is only ever one of the real ones', spinBanks.levelOf('constructor') === 'kids' && spinBanks.levelOf('__proto__') === 'kids' &&
     spinBanks.levelOf('spicy') === 'spicy' && spinBanks.levelOf(undefined) === 'kids' &&
     spinBanks.levelOf({ toString: 1 }) === 'kids' && spinBanks.levelOf(['spicy']) === 'kids');
