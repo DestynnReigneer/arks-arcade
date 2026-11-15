@@ -102,9 +102,9 @@ order they were clicked, and keep the rest pinned here.
     come back as they were, an adult game still needs the pass, a finished game still saves its score, and a
     saved game stays gone. `test/unit.test.js` covers the store with a Map, and
     `test/browser/spin-resume.spec.js` opens a game by its address on a device that never saw it.
-  - **Still to do for the rest of the plan:** Know-It-All's and the card games' rooms are still in memory only,
-    and so are solo Rambler and Shuffle Scuffle. Chess, Words with Family, Sudoku and Clueless Crosswords
-    already come back after a restart.
+  - **Still to do for the rest of the plan:** solo Rambler (the timed board and the marathon) and solo Shuffle
+    Scuffle are still in memory only, and the action games run in the browser. Every room, Chess, Words with
+    Family, Sudoku and Clueless Crosswords come back after a restart.
 - **Rambler's and Shuffle Scuffle's rooms come back after a restart, in the middle of a round.**
   - `arcade/room-store.js` (table `saved_rooms`) keeps a game's rooms as text: `saveSoon` writes a room within
     400 ms of a change (ten words in a second are one write), `saveNow` at once, `remove` when it closes, and
@@ -124,6 +124,59 @@ order they were clicked, and keep the rest pinned here.
     reload after the server was stopped for five seconds.
   - **Not done:** a seat still belongs to the tab that took it (a reload in Rambler loses it, as before), where
     the saved-games plan wants it to follow the person.
+- **Know-It-All's rooms and the card games come back after a restart too.**
+  - Know-It-All (`trivia/rooms.js`): the seats, scores, streaks, the questions, the chat and who's muted come
+    back. **A question that was being answered starts over with a full clock** (the maintainer's call from the
+    saved-games plan), so this question's answers aren't kept. An answer that was showing is shown again
+    before the next question.
+  - Uh-Oh: Part Deux and Dare Devil (`arcade/party-tables.js`): a room comes back with every hand, the deck,
+    whose turn it is and the chat, and so does a game on one device (its token still opens it). The engines'
+    games are plain data, and `test/unit.test.js` now plays 40 Uh-Oh games and four Dare Devil games that are
+    written down and read back after every single move.
+  - The chat is no longer cleared at startup: `chat.keepOnly(rooms)` keeps it for the rooms that came back.
+  - A room that would come back in a state that can't be shown (no question behind its phase, no host, an adult
+    level with no password) either goes back to its lobby with everyone in their seat, or isn't brought back.
+  - **Live updates start again by themselves behind a proxy** (`public/live.js`, on the six pages with rooms).
+    A browser's EventSource tries again on its own when the connection drops, but gives up for good when it's
+    answered with an error page, which is what a reverse proxy sends while the arcade restarts. Each page now
+    checks whether its game is gone (404 or 403: back to the setup screen) and otherwise starts the updates
+    again every two seconds until the arcade is back. Rambler gained `GET /rooms/:code` for that check, and now
+    leaves a room that's gone the way the other games do.
+  - Tests: `test/restart.test.js` adds a Know-It-All room in the middle of a question and both card games in
+    the middle of a hand (a room and a one-device game each), compared field by field before and after;
+    `test/browser/live-retry.spec.js` answers a room's live updates with a 502 for a while and checks the page
+    keeps trying and carries on.
+- **What a review of the lobby and saved-games work changed** (in #156 to #160):
+  - **Nothing read back at startup can stop the arcade from starting.** Spin & Solve checks a saved game field
+    by field before it's let back in (`sound()` in `spinsolve/game.js`), and each game's rooms are put back
+    together one at a time (`store.restoreEach()` in `arcade/room-store.js`). A row that isn't a game or a
+    room anymore is left out, said in the log and removed.
+  - **A room's clock closes its room when it fails** (`arcade/room-clock.js`, used by Rambler, Shuffle
+    Scuffle and Know-It-All), instead of stopping the whole arcade and reading the same room back at the
+    next start.
+  - **Spin & Solve:** a game only gets its list of puzzles back when the list is still the level the game
+    was started on. A signed-in player's ten games are counted by profile and a guest's by address, and a
+    game nobody has made a move in makes room first, so a guest's new games never push out a game kept for
+    a person. A game opened by its address (`?game=`) is asked for before it takes the place of the game a
+    device remembers.
+  - **Words with Family:** one person can have five lobbies waiting at once (`MAX_WAITING_PER_HOST`),
+    because a waiting lobby is listed for everyone. The limit of 30 unfinished games is unchanged.
+    A lobby nobody joined is cleared after one quiet day (`KEEP_UNJOINED`; one that someone joined still
+    waits two weeks), and the test suite runs the cleanup through a test-only `POST /test/sweep`.
+  - **No links (the maintainer, 2026-11-15):** "You either join a game by looking for one in the Lobbies,
+    or you scan a qr code, there is no invites, or links or codes." Words with Family's waiting screen
+    shows only its QR code: the address and Copy the link are gone, the QR picture's description no
+    longer carries the address (`public/arcade-qr.js`), and How to play describes Create a game lobby.
+    **For new text and screens:** nothing shows or copies a way into a game. The lists and a QR code are
+    the only ways in.
+  - **Rambler:** joining has a limit on tries (40 in ten minutes from one address), like every other lobby
+    that takes a password. Changing one setting in a lobby leaves the others alone (the page sends one at a
+    time, and the ones it left out used to go back to where they started).
+  - **Tests:** `test/limits.test.js` runs on a server of its own, after everything else, because a limit
+    lasts as long as its server does; it checks all five lobbies that take a password. `test/restart.test.js`
+    writes damaged rows into the database while the arcade is stopped (five Spin & Solve games, sixteen
+    rooms and tables) and checks the arcade starts, leaves them out and clears them away. The restart hook
+    takes `{ downMs, whileDown }`.
 - **Known flake:** `test/clueless.test.js` "New board ... gives a different crossword, not today's" fails once
   in a great while, when a random mini crossword happens to be today's. It passes on a rerun.
 
@@ -1584,7 +1637,7 @@ board-name setting and adult PIN are only for copies running without it.
 - **Shared family accounts ("ARKS ID")**: planned and approved. The
   contract is in the private `arks-id` repo (`docs/SPEC.md`); see CLAUDE.md
   for how to use it. The arcade integrates last (after ARKS ID, the Hub's
-  sign-in and passkeys). **Built against ARKS ID contract v16** (2026-11-13): every notification says its kind (turn, invite, started, chat), who it's from and the game, so ARKS ID can send it to the phone, Discord's #turns or both; chat messages tell the people in the room who aren't looking (never the words); and a new #1 on an all-time board goes to #trophies (`trophy` on a Comm Center post, `push.trophy`). Before that, v15 (2026-11-07): notifications when it's your turn in
+  sign-in and passkeys). **Built against ARKS ID contract v17** (2026-11-14): the `invite` kind is gone, because nobody is invited to anything anymore (the arcade stopped sending it in #155). Before that, v16 (2026-11-13): every notification says its kind (turn, started, chat; invite until v17), who it's from and the game, so ARKS ID can send it to the phone, Discord's #turns or both; chat messages tell the people in the room who aren't looking (never the words); and a new #1 on an all-time board goes to #trophies (`trophy` on a Comm Center post, `push.trophy`). Before that, v15 (2026-11-07): notifications when it's your turn in
   Words with Family (see the top of this file). Before that, v14 (2026-11-01): TVs (the pairing
   code sign-in, adults' night, see the top of this file). Before that, v13 (2026-11-01): game
   switches and the banner from ARKS ID's admin console (see the top of this file). Before
