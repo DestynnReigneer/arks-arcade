@@ -140,6 +140,29 @@ order they were clicked, and keep the rest pinned here.
     the middle of a hand (a room and a one-device game each), compared field by field before and after;
     `test/browser/live-retry.spec.js` answers a room's live updates with a 502 for a while and checks the page
     keeps trying and carries on.
+- **What a review of the lobby and saved-games work changed** (in #156 to #160):
+  - **Nothing read back at startup can stop the arcade from starting.** Spin & Solve checks a saved game field
+    by field before it's let back in (`sound()` in `spinsolve/game.js`), and each game's rooms are put back
+    together one at a time (`store.restoreEach()` in `arcade/room-store.js`). A row that isn't a game or a
+    room anymore is left out, said in the log and removed.
+  - **A room's clock closes its room when it fails** (`arcade/room-clock.js`, used by Rambler, Shuffle
+    Scuffle and Know-It-All), instead of stopping the whole arcade and reading the same room back at the
+    next start.
+  - **Spin & Solve:** a game only gets its list of puzzles back when the list is still the level the game
+    was started on. A signed-in player's ten games are counted by profile and a guest's by address, and a
+    game nobody has made a move in makes room first, so a guest's new games never push out a game kept for
+    a person. A game opened by its address (`?game=`) is asked for before it takes the place of the game a
+    device remembers.
+  - **Words with Family:** one person can have five lobbies waiting at once (`MAX_WAITING_PER_HOST`),
+    because a waiting lobby is listed for everyone. The limit of 30 unfinished games is unchanged.
+  - **Rambler:** joining has a limit on tries (40 in ten minutes from one address), like every other lobby
+    that takes a password. Changing one setting in a lobby leaves the others alone (the page sends one at a
+    time, and the ones it left out used to go back to where they started).
+  - **Tests:** `test/limits.test.js` runs on a server of its own, after everything else, because a limit
+    lasts as long as its server does; it checks all five lobbies that take a password. `test/restart.test.js`
+    writes damaged rows into the database while the arcade is stopped (five Spin & Solve games, sixteen
+    rooms and tables) and checks the arcade starts, leaves them out and clears them away. The restart hook
+    takes `{ downMs, whileDown }`.
 - **Known flake:** `test/clueless.test.js` "New board ... gives a different crossword, not today's" fails once
   in a great while, when a random mini crossword happens to be today's. It passes on a rerun.
 
