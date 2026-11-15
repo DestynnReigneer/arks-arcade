@@ -119,6 +119,9 @@ function restore(now = Date.now()) {
       endsAt: Number(data.endsAt) || 0, firstFull: data.firstFull || null, timer: null, clients: new Set(),
       lastActivity: Number(data.lastActivity) || savedAt, history: Array.isArray(data.history) ? data.history : []
     };
+    // An unfiltered room always has its password, and a family one never does.
+    if (r.settings.dictionary === 'adult' && !r.password) return false;
+    if (r.settings.dictionary !== 'adult') r.password = null;
     // A round or a reveal with no round behind it can't be shown: back to the lobby, seats and scores kept.
     if ((r.phase === 'playing' || r.phase === 'reveal') && !r.rounds[r.index]) { r.phase = 'lobby'; r.index = -1; r.rounds = []; }
     if (!member(r, r.hostId)) r.hostId = r.screen ? r.screen.id : r.players.slice().sort((a, b) => a.joinedAt - b.joinedAt)[0].id;
