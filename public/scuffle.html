@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="arcade-ui.css">
 <link rel="stylesheet" href="tutorial.css">
 <link rel="stylesheet" href="scuffle.css">
+<link rel="stylesheet" href="lobby-ui.css">
 <link rel="stylesheet" href="adult-mode.css">
 <link rel="stylesheet" href="look.css">
 <link rel="stylesheet" href="topbar.css">
@@ -39,17 +40,19 @@
     <div class="seg mode-seg" id="modeSeg">
       <button data-mode="daily" aria-pressed="true" aria-describedby="dailyTip">📅 Daily<span class="sc-tip" role="tooltip" id="dailyTip"></span></button>
       <button data-mode="free" aria-pressed="false">🎲 Free play</button>
-      <button data-mode="host" aria-pressed="false" class="no-tv">📡 Host</button>
-      <button data-mode="join" aria-pressed="false" class="no-tv">🔗 Join</button>
+      <button data-mode="host" aria-pressed="false" class="no-tv"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:1.3em;height:1.3em;vertical-align:-0.28em;margin-right:4px"><circle cx="16" cy="7" r="3.2"/><path d="M10 18.5c0-3.4 2.6-5.8 6-5.8s6 2.4 6 5.8"/><circle cx="6.5" cy="10" r="2.6"/><path d="M2 20c0-2.8 1.9-4.8 4.5-4.8"/><circle cx="25.5" cy="10" r="2.6"/><path d="M30 20c0-2.8-1.9-4.8-4.5-4.8"/><path d="M11 30l7-7"/><path d="M18 23a4 4 0 0 1 5.3-5l-2.4 2.4.5 2.2 2.2.5 2.4-2.4a4 4 0 0 1-5 5.3"/></svg>Create a game lobby</button>
+      <button data-mode="join" aria-pressed="false" class="no-tv">🔎 List Hosted Games</button>
       <button data-mode="tvphones" aria-pressed="false" class="tv-only">📱 Everyone on their own device</button>
     </div>
     <p class="hint" id="modeHint"></p>
     <div id="hostSetup" class="hidden">
       <label>Your name<input id="hostName" maxlength="16" placeholder="e.g. Sam"></label>
     </div>
+    <!-- List Hosted Games: every Shuffle Scuffle lobby, to tap and join. -->
     <div id="joinSetup" class="hidden">
-      <label>Game code<input id="joinCode" maxlength="4" placeholder="ABCD" autocapitalize="characters" class="code-input"></label>
-      <label>Your name<input id="joinName" maxlength="16" placeholder="e.g. Alex"></label>
+      <h2>Available Shuffle Scuffle lobbies</h2>
+      <ul class="lb-rows" id="lobbyRows"></ul>
+      <p class="hint hidden" id="findEmpty">There aren't any Shuffle Scuffle lobbies right now. Create one!</p>
     </div>
   </div>
 
@@ -77,11 +80,15 @@
 <!-- ============ room lobby ============ -->
 <section id="lobby" class="hidden">
   <div class="panel center">
-    <div class="hint">Game code</div>
-    <div class="code" id="lobbyCode">----</div>
-    <img class="join-qr hidden" id="joinQr" width="150" height="150" alt="QR code to join">
-    <div class="join-link" id="joinLink"></div>
-    <p class="hint" id="lobbyHow">Scan the code with another phone, or open Shuffle Scuffle there, tap Join and type the code in.</p>
+    <h2 id="lobbyTitle"></h2>
+    <!-- The QR code is for the TV, where phones scan to join. A lobby made on a
+         device is joined from List Hosted Games. Nobody types a code. -->
+    <div id="tvJoin" class="hidden">
+      <img class="join-qr hidden" id="joinQr" width="150" height="150" alt="QR code to join">
+      <div class="join-link" id="joinLink"></div>
+      <div class="hint">On other devices: Shuffle Scuffle → List Hosted Games.</div>
+    </div>
+    <p class="hint" id="lobbyHow"></p>
     <p class="hint" id="lobbySettings"></p>
   </div>
   <div class="panel">
@@ -159,6 +166,28 @@
 </section>
 
 <!-- ============ overlays ============ -->
+<!-- A lobby from the list, a QR code or the home page: who's in it, and Join. -->
+<div class="overlay hidden" id="detailsView" role="dialog" aria-labelledby="detailsTitle">
+  <div class="card-panel">
+    <h2 id="detailsTitle"></h2>
+    <div class="lb-facts">
+      <div><small>PLAYERS</small><span id="dPlayers"></span></div>
+      <div><small>HOW</small><span id="dHow"></span></div>
+      <div><small>STATUS</small><span id="dStatus"></span></div>
+    </div>
+    <p class="hint hidden" id="dLate">You'll join on the next word with 0 points.</p>
+    <div id="dGuest" class="hidden">
+      <p class="hint">Choose your profile, or type your name to join as a guest.</p>
+      <label>Your name<input id="joinName" maxlength="16" placeholder="e.g. Alex"></label>
+    </div>
+    <div class="msg" id="detailsMsg"></div>
+    <div class="stack">
+      <button class="primary" id="joinBtn">Join lobby</button>
+      <button class="ghost" id="detailsClose">Not now</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay hidden" id="pinView">
   <div class="card-panel center">
     <div class="big-emoji">🔞</div>

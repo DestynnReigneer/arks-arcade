@@ -153,6 +153,57 @@ async function run({ base, fake }) {
     await kimPhone.post(`/api/partdeux/rooms/${two.code}/leave`, seatOf(two));
   }
 
+  console.log('\n-- a host turns a family word game unfiltered --');
+  {
+    const samNow = await signIn('sam');
+    fake.next = was;
+    const kimPass = async () => ({ 'X-Adult-Pin': (await kimPhone.post('/api/arksid/adult-pass')).data.pass });
+    const namesOf = snap => (snap.players || []).map(q => q.name).sort().join();
+
+    // Shuffle Scuffle
+    const sc = (await kimPhone.post('/api/scuffle/rooms', { name: 'Kim', settings: { dictionary: 'kids' } })).data;
+    const scState = async () => (await kimPhone.call(`/api/scuffle/rooms/${sc.code}?playerId=${sc.playerId}&token=${sc.token}`)).data;
+    await samNow.post(`/api/scuffle/rooms/${sc.code}/join`, { name: 'Sam' });
+    await kid.post(`/api/scuffle/rooms/${sc.code}/join`, { name: 'Milo' });
+    const scGuest = browser();
+    await scGuest.post(`/api/scuffle/rooms/${sc.code}/join`, { name: 'Gus' });
+    ok('Shuffle Scuffle: an adult, a kid and a guest joined the host\'s family lobby', namesOf(await scState()) === 'Gus,Kim,Milo,Sam', namesOf(await scState()));
+    const scTurned = await kimPhone.post(`/api/scuffle/rooms/${sc.code}/settings`, { ...seatOf(sc), settings: { dictionary: 'adult' }, password: 'tacos42' }, await kimPass());
+    ok('Shuffle Scuffle: the host switches to the unfiltered words', scTurned.status === 200, JSON.stringify(scTurned.data));
+    const scAfter = await scState();
+    ok('Shuffle Scuffle: the adult signed in with ARKS ID stays, and the kid and the guest are moved out', namesOf(scAfter) === 'Kim,Sam', namesOf(scAfter));
+    ok('Shuffle Scuffle: everyone still in reads who was removed',
+      !!scAfter.notice && scAfter.notice.text === 'Milo and Gus were removed, the host switched game mode to adult.', JSON.stringify(scAfter.notice));
+    ok('Shuffle Scuffle: the kid can\'t come back, even with the password', (await kid.post(`/api/scuffle/rooms/${sc.code}/join`, { name: 'Milo', password: 'tacos42' })).status === 403);
+    ok('Shuffle Scuffle: the guest can, with the password', (await scGuest.post(`/api/scuffle/rooms/${sc.code}/join`, { name: 'Gus', password: 'tacos42' })).status === 200);
+
+    // Rambler (it has no route that only reads a room, so the host asks by saving its settings as they are)
+    const rb = (await kimPhone.post('/api/rambler/rooms', { name: 'Kim', size: 4, durationSec: 60 })).data;
+    const rbState = async () => (await kimPhone.post(`/api/rambler/rooms/${rb.code}/settings`, seatOf(rb))).data;
+    await samNow.post(`/api/rambler/rooms/${rb.code}/join`, { name: 'Sam' });
+    await kid.post(`/api/rambler/rooms/${rb.code}/join`, { name: 'Milo' });
+    const rbGuest = browser();
+    await rbGuest.post(`/api/rambler/rooms/${rb.code}/join`, { name: 'Gus' });
+    ok('Rambler: an adult, a kid and a guest joined the host\'s family lobby', namesOf(await rbState()) === 'Gus,Kim,Milo,Sam', namesOf(await rbState()));
+    const rbTurned = await kimPhone.post(`/api/rambler/rooms/${rb.code}/settings`, { ...seatOf(rb), profile: 'adult', password: 'tacos42' }, await kimPass());
+    ok('Rambler: the host switches to the unfiltered words', rbTurned.status === 200, JSON.stringify(rbTurned.data));
+    ok('Rambler: the adult signed in with ARKS ID stays, and the kid and the guest are moved out', namesOf(rbTurned.data) === 'Kim,Sam', namesOf(rbTurned.data));
+    ok('Rambler: everyone still in reads who was removed',
+      !!rbTurned.data.notice && rbTurned.data.notice.text === 'Milo and Gus were removed, the host switched game mode to adult.', JSON.stringify(rbTurned.data.notice));
+    ok('Rambler: the kid can\'t come back, even with the password', (await kid.post(`/api/rambler/rooms/${rb.code}/join`, { name: 'Milo', password: 'tacos42' })).status === 403);
+    ok('Rambler: the guest can, with the password', (await rbGuest.post(`/api/rambler/rooms/${rb.code}/join`, { name: 'Gus', password: 'tacos42' })).status === 201);
+
+    // Who is an adult is asked again at the switch, not remembered from when they joined.
+    const sc2 = (await kimPhone.post('/api/scuffle/rooms', { name: 'Kim', settings: { dictionary: 'kids' } })).data;
+    const samSeat = (await samNow.post(`/api/scuffle/rooms/${sc2.code}/join`, { name: 'Sam' })).data;
+    await samNow.post('/auth/signout');
+    const sc2Turned = await kimPhone.post(`/api/scuffle/rooms/${sc2.code}/settings`, { ...seatOf(sc2), settings: { dictionary: 'adult' }, password: 'tacos42' }, await kimPass());
+    const sc2After = (await kimPhone.call(`/api/scuffle/rooms/${sc2.code}?playerId=${sc2.playerId}&token=${sc2.token}`)).data;
+    ok('Shuffle Scuffle: an adult who signed out before the switch is moved out too', sc2Turned.status === 200 && namesOf(sc2After) === 'Kim', namesOf(sc2After));
+    ok('…and that seat can\'t read the unfiltered lobby', (await browser().call(`/api/scuffle/rooms/${sc2.code}?playerId=${samSeat.playerId}&token=${samSeat.token}`)).status === 403);
+    for (const [game, r] of [['scuffle', sc], ['scuffle', sc2], ['rambler', rb]]) await kimPhone.post(`/api/${game}/rooms/${r.code}/leave`, seatOf(r));
+  }
+
   return { pass, fail };
 }
 

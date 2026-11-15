@@ -119,7 +119,10 @@ test('Uh-Oh: Part Deux: the TV shows the table and one phone is passed around', 
   await expect(page.locator('#tvpassSetup')).toBeVisible();
   await press(page, '#goBtn');
   await expect(page.locator('#lobby')).toBeVisible();
-  const code = (await page.locator('#lobbyCode').textContent()).trim();
+  // The TV shows a QR code to scan and no code to type; the test reads the lobby the QR code points to.
+  await expect(page.locator('#joinQr')).toHaveAttribute('data-code', /^[A-Z2-9]{4}$/);
+  const code = await page.locator('#joinQr').getAttribute('data-code');
+  await expect(page.locator('#lobbyCode')).toHaveCount(0);
   await expect(page.locator('#joinQr')).toBeVisible();
   await expect(page.locator('#lobbyHow')).toContainText('pass around');
   await expect(page.locator('#startBtn')).toBeDisabled();
@@ -178,7 +181,10 @@ test('Dare Devil: phones draw while the TV shows the card, then the remote plays
   await press(page, '#lengthSeg [data-v="quick"]');
   await press(page, '#goBtn');
   await expect(page.locator('#lobby')).toBeVisible();
-  const code = (await page.locator('#lobbyCode').textContent()).trim();
+  // The TV shows a QR code to scan and no code to type; the test reads the lobby the QR code points to.
+  await expect(page.locator('#joinQr')).toHaveAttribute('data-code', /^[A-Z2-9]{4}$/);
+  const code = await page.locator('#joinQr').getAttribute('data-code');
+  await expect(page.locator('#lobbyCode')).toHaveCount(0);
   const { ctx, phone, problems: phoneProblems } = await phoneJoins(browser, '/daredevil.html', code);
   await expect(phone.locator('.pl-details')).toBeVisible();
   await phone.locator('.pl-details [data-name]').fill('Ana');
@@ -232,11 +238,17 @@ test('Shuffle Scuffle: the TV shows the letters while a phone races', async ({ p
   await expect(page.locator('[data-mode="tvphones"]')).toHaveAttribute('aria-pressed', 'true');
   await press(page, '#goBtn');
   await expect(page.locator('#lobby')).toBeVisible();
-  const code = (await page.locator('#lobbyCode').textContent()).trim();
+  // The TV shows a QR code to scan and no code to type; the test reads the lobby the QR code points to.
+  await expect(page.locator('#joinQr')).toHaveAttribute('data-code', /^[A-Z2-9]{4}$/);
+  const code = await page.locator('#joinQr').getAttribute('data-code');
+  await expect(page.locator('#lobbyCode')).toHaveCount(0);
   await expect(page.locator('#lobbyHow')).toContainText('own phone');
   const { ctx, phone, problems: phoneProblems } = await phoneJoins(browser, '/scuffle.html', code);
+  // The QR opens that lobby's details: type a name and join (no code to type).
+  await expect(phone.locator('#detailsView')).toBeVisible();
+  await expect(phone.locator('#detailsTitle')).toContainText('Shuffle Scuffle lobby');
   await phone.locator('#joinName').fill('Pat');
-  await phone.locator('#goBtn').click();
+  await phone.locator('#joinBtn').click();
   await expect(page.locator('#lobbyPlayers')).toContainText('Pat');
   await press(page, '#startBtn');
   await expect(page.locator('#play')).toBeVisible();
@@ -268,15 +280,18 @@ test('Rambler: the board goes up on the TV and a phone plays the round', async (
   await expect(page.locator('#tvRoomMode')).toHaveAttribute('aria-pressed', 'true');
   await press(page, '#startBtn');
   await expect(page.locator('#lobbyScreen')).toBeVisible();
-  const code = (await page.locator('#roomCode').textContent()).trim();
+  // The TV shows a QR code to scan and no code to type; the test reads the lobby the QR code points to.
+  await expect(page.locator('#joinQr')).toHaveAttribute('data-code', /^[A-Z2-9]{4}$/);
+  const code = await page.locator('#joinQr').getAttribute('data-code');
+  await expect(page.locator('#roomCode')).toHaveCount(0);
   await expect(page.locator('#lobbyHow')).toContainText('own phone');
   await expect(page.locator('#lobbyStartBtn')).toBeDisabled();
   const { ctx, phone, problems: phoneProblems } = await phoneJoins(browser, '/rambler.html', code);
-  const guest = phone.locator('#whoGuestBtn');
-  if (await guest.isVisible().catch(() => false)) await guest.click();
-  await expect(phone.locator('#joinCodeInput')).toHaveValue(code);
-  await phone.locator('#nameInput').fill('Pat');
-  await phone.locator('#joinBtn').click();
+  // The QR opens that lobby's details: type a name and join (no code to type).
+  await expect(phone.locator('#hostedOverlay')).toBeVisible();
+  await expect(phone.locator('#hostedTitle')).toContainText('Rambler lobby');
+  await phone.locator('#hostedName').fill('Pat');
+  await phone.locator('#hostedJoinBtn').click();
   await expect(page.locator('#lobbyRoster')).toContainText('Pat');
   await press(page, '#lobbyStartBtn');
   await expect(page.locator('#playScreen')).toBeVisible();

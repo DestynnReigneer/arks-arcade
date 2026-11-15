@@ -114,9 +114,6 @@
 
   // Every room being hosted anywhere in the arcade, refreshed every few seconds.
   const STATUS = { open: 'Join', live: 'Join game in progress?', playing: 'Playing now', full: 'Full' };
-  // Games joined from the list, with no code to type (the maintainer's call, 2026-11-12).
-  const NO_CODE = new Set(['chess', 'trivia', 'partdeux', 'daredevil', 'crisscross']);
-
   async function loadLobby() {
     try {
       // With a profile, the lobby you're already in is marked as yours.
@@ -136,7 +133,7 @@
           li.querySelector('.l-emoji').appendChild(img);
         } else li.querySelector('.l-emoji').textContent = r.emoji;
         li.querySelector('.l-title').textContent = `${r.adult ? '🔞 ' : ''}${r.label} · ${r.host || 'someone'}'s game${r.locked ? ' 🔒' : ''}`;
-        li.querySelector('.l-sub').textContent = `${NO_CODE.has(r.game) ? '' : `Code ${r.code} · `}${r.players}/${r.max} players · ${r.detail}${r.status === 'playing' ? ' · game in progress' : ''}`;
+        li.querySelector('.l-sub').textContent = `${r.players}/${r.max} players · ${r.detail}${r.status === 'playing' ? ' · game in progress' : ''}`;
         const join = li.querySelector('.l-join');
         join.textContent = STATUS[r.status];
         if (r.status === 'open' || r.status === 'live') join.href = r.href;
@@ -151,7 +148,7 @@
       if (rooms.length && !open) $('lobbyEmpty').classList.remove('hidden');
       $('lobbyEmpty').innerHTML = rooms.length && !open
         ? 'Those games have already started or are full. Please pick another game to play or choose to <b>Host</b> your own.'
-        : 'Nobody\'s hosting right now. Pick a game below and choose <b>Host</b> to start one; it shows up here for everyone.';
+        : 'Nobody\'s hosting right now. Pick a game below and choose <b>Create a game lobby</b> to start one; it shows up here for everyone.';
     } catch { /* the server's away; try again shortly */ }
   }
   loadLobby();

@@ -1,8 +1,10 @@
 'use strict';
 
-// Shuffle Scuffle rooms: a four-letter code, a phone each, everyone racing
-// on the same letters at the same time. The server keeps the clock, checks
-// every word and adds up every score; phones only send the words people type.
+// Shuffle Scuffle rooms: a device each, everyone racing on the same letters
+// at the same time. A room is a lobby anyone can find in List Hosted Games and
+// join; its four-letter code is only its name in links and QR codes. The
+// server keeps the clock, checks every word and adds up every score; devices
+// only send the words people spell.
 // A room can be hosted by a screen (a TV): it shows the letters, the clock
 // and everyone's counts to the whole room, and isn't a player itself.
 // Rooms live in memory, like the other games' rooms.
@@ -10,6 +12,7 @@
 const crypto = require('node:crypto');
 const game = require('./game');
 const roomPassword = require('../arcade/room-password');
+const adultJoin = require('../arcade/adult-join');
 
 const rooms = new Map();
 const MAX_ROOMS = 200;
@@ -18,7 +21,8 @@ const MAX_WORDS = 300;
 const GRACE_MS = 1500;
 const TTL_MS = 6 * 60 * 60 * 1000;
 const HEARTBEAT_MS = 25000;
-// No O/0 or I/1: these get read aloud across a room.
+const NOTICE_MS = 15000;
+// No O/0 or I/1, so a code is easy to read in a link.
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
 const fail = (message, status = 400) => Object.assign(new Error(message), { status });
@@ -73,7 +77,7 @@ function create({ name, settings, password, screen = false }) {
 
 function room(code) {
   const r = rooms.get(String(code || '').toUpperCase());
-  if (!r) throw fail('No Shuffle Scuffle game with that code.', 404);
+  if (!r) throw fail('This game isn\'t available.', 404);
   return r;
 }
 
@@ -87,11 +91,13 @@ function authenticate(r, playerId, token) {
 const requireHost = (r, p) => { if (r.hostId !== p.id) throw fail('Only the host can do that.', 403); };
 
 // Joining is open any time, even mid-game: a latecomer starts on zero.
-function join(code, name, password) {
+// adultSignin: the sign-in this device has, when it's an adult's (arcade/adult-join.js). Kept on the server only.
+function join(code, name, password, adultSignin = null) {
   const r = room(code);
   roomPassword.check(r, password);
   if (r.players.length >= MAX_PLAYERS) throw fail(`That game is full (${MAX_PLAYERS} players).`, 409);
   const p = newPlayer(r, name);
+  p.adultSignin = adultSignin || null;
   r.players.push(p);
   touch(r);
   return { code: r.code, playerId: p.id, token: p.token };
@@ -102,9 +108,50 @@ function updateSettings(code, playerId, token, settings = {}) {
   requireHost(r, authenticate(r, playerId, token));
   if (r.phase === 'playing' || r.phase === 'reveal') throw fail('Change the settings between games.', 409);
   const next = cleanSettings({ ...r.settings, ...settings });
+  // The password comes before anything else, so a switch that's refused changes nothing.
+  const turningAdult = next.dictionary === 'adult' && r.settings.dictionary !== 'adult';
   if (next.dictionary === 'adult') { if (!r.password) r.password = roomPassword.requireNew(settings.password); } else r.password = null;
+  if (turningAdult) moveOutForAdultWords(r);
   r.settings = next;
   touch(r);
+}
+
+// The room just switched to the unfiltered word list, which is only for adults.
+// Everyone the arcade doesn't know to be one leaves, and their page is told why.
+// The host stays, and so does anyone signed in with ARKS ID as an adult (asked
+// now, not remembered from when they joined). A guest can come back with the
+// password the host just made up.
+function moveOutForAdultWords(r) {
+  const going = r.players.filter(p => p.id !== r.hostId && !adultJoin.stillAdult(p.adultSignin));
+  if (!going.length) return;
+  const ids = new Set(going.map(p => p.id));
+  r.players = r.players.filter(p => !ids.has(p.id));
+  for (const c of [...r.clients]) {
+    if (!ids.has(c.playerId)) continue;
+    try { c.res.write('event: moved\ndata: {"why":"adult"}\n\n'); c.res.end(); } catch { /* gone */ }
+    r.clients.delete(c);
+  }
+  const names = going.map(p => p.name);
+  const who = names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+  r.notice = { id: makeId(), at: Date.now(), text: `${who} ${names.length === 1 ? 'was' : 'were'} removed, the host switched game mode to adult.` };
+}
+
+// List Hosted Games and the home page's list of lobbies: every room, for everyone.
+// Joining is open any time, so a room that's in the middle of a game is listed
+// too, with the round it's on.
+function lobbies() {
+  return [...rooms.values()].map(r => {
+    const host = member(r, r.hostId);
+    const going = r.phase === 'playing' || r.phase === 'reveal';
+    return {
+      code: r.code, host: host ? host.name : '', screen: !!r.screen,
+      players: r.players.map(p => p.name), count: r.players.length, max: MAX_PLAYERS,
+      status: r.players.length >= MAX_PLAYERS ? 'full' : going ? 'playing' : 'open',
+      round: going ? { index: r.index + 1, total: r.rounds.length } : null,
+      rounds: r.settings.rounds, seconds: r.settings.seconds,
+      adult: r.settings.dictionary === 'adult', locked: !!r.password
+    };
+  });
 }
 
 function start(code, playerId, token) {
@@ -205,6 +252,8 @@ function snapshot(r, viewerId) {
     // screen: a TV hosts this room; isScreen: you're that TV.
     screen: !!r.screen, isScreen: !!(r.screen && r.screen.id === viewerId),
     locked: !!r.password, lobbyPassword: r.hostId === viewerId ? r.password : null,
+    // Something everyone still in the room should read once (who was moved out, and why).
+    notice: r.notice && Date.now() - r.notice.at < NOTICE_MS ? { id: r.notice.id, text: r.notice.text } : null,
     settings: r.settings, maxPlayers: MAX_PLAYERS,
     index: r.index, totalRounds: r.rounds.length || r.settings.rounds,
     endsAt: r.phase === 'playing' ? r.endsAt : null, serverNow: Date.now(),
@@ -262,5 +311,5 @@ if (typeof sweeper.unref === 'function') sweeper.unref();
 
 module.exports = {
   MAX_PLAYERS, create, join, updateSettings, start, word, done, next, leave, snapshot, room, authenticate,
-  subscribe, cleanSettings, _rooms: rooms
+  subscribe, cleanSettings, lobbies, _rooms: rooms
 };

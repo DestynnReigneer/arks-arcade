@@ -28,7 +28,7 @@ A dice-and-grid word hunt against the clock. (Boggle-style — "Boggle" is a Has
   - **Solo** — you against the clock.
   - **Pass & Play** — one device, 2–8 players, same board each turn.
   - **Tabletop** — one shared timer, everyone writes on paper, then the lists get typed in for scoring. The device is just the buzzer and the scorekeeper.
-  - **Own Devices** — a four-letter room code, everyone on their own device, synchronized timer, live word counts (counts only — never the words).
+  - **Multiplayer-Multiple devices** — everyone on their own device, on the same board with one timer. One person chooses **Create a game lobby**, and everyone else finds it in **List Hosted Games** (or in the home page's Lobbies list) and taps it to join. Nobody types a code. Live word counts (counts only — never the words).
 - Two dictionaries: a **Kids** list with the rude words removed, and an **Unfiltered** list with slang and profanity added on top. Separate leaderboards, so the two never share a scale.
 - **Difficulty** — Easy (three-letter words count, roomier timer, richer boards), Normal (the box rules), Hard (four letters minimum, less time, scores multiplied by 1.35).
 - **Timers up to ten minutes.** Three is the box rule and it is genuinely miserable for a seven-year-old.
@@ -56,7 +56,7 @@ Because of Marathon, boards are rectangular internally. Anything that takes a bo
 
 | Feature | Server | UI |
 |---|---|---|
-| Solo / Pass & Play / Tabletop / Own Devices | done | done |
+| Solo / Pass & Play / Tabletop / Multiplayer-Multiple devices | done | done |
 | Marathon | done | done |
 | Profiles, streaks, coins, milestones | done | done |
 | Hints | done | done |
@@ -106,7 +106,8 @@ Everything lives under `/api/rambler`.
 | `GET/POST /players`, `GET/PATCH/DELETE /players/:id` | Profiles |
 | `GET /daily`, `GET /daily/standings` | The daily board and its table |
 | `POST /marathon`, `POST /marathon/:id/word`, `.../hint`, `.../finish` | A Marathon run |
-| `POST /rooms`, `.../join`, `.../events`, `.../start`, `.../words`, `.../ready`, `.../next`, `.../leave` | Multi-device rooms; `events` is the SSE stream |
+| `GET /lobbies` | List Hosted Games: every lobby, with its host, who's in, the seats, the board and the word list. |
+| `POST /rooms`, `.../join`, `.../events`, `.../start`, `.../words`, `.../ready`, `.../next`, `.../leave`, `.../settings` | A lobby with everyone on their own device; `events` is the SSE stream |
 | `GET/POST /leaderboard` | Scores, split by dictionary and board size |
 
 Multi-device rooms use Server-Sent Events, which are built into Node and the browser — no websocket dependency. Rooms are in-memory and vanish on restart; only finished scores are persisted.
@@ -286,7 +287,7 @@ A word race. Everyone gets the same 6 or 7 letters, mixed up, and races to find 
 - **Two dailies:** a **family daily** and an **unfiltered daily**, each four rounds of 75 seconds with letters made from the date alone, so everyone gets the same ones that day. They have different letters and separate high-score boards (today and all time); the word list you pick under Which words count decides which one Daily plays. The family daily's full words are everyday words on the kids list (the same seed as the single daily before November 2026); the unfiltered one is picked the unfiltered way, so now and then its full word is a cheeky one. The first go at each can go on its board, and a profile gets one go at each a day.
 - **A daily you've played fades:** its Daily button goes pale, can't be started again, and says "Come back tomorrow for a new one" on hover, on focus (the TV's highlight) and when tapped (touch screens have no hover), and free play is picked instead. For a profile the server says which are done (`POST /daily-status`); a guest's device remembers it.
 - **Free play:** new letters every game, 3, 5 or 7 rounds, any round length. These scores don't go on a board.
-- **Rooms, a device each:** the host gets a four-letter code (and a QR code), picks the rounds, the time and the word list, and everyone races on the same letters at once. Each device sees how many words the others have found and a star when someone gets the full word, but not their words until the round ends. Latecomers can join mid-game, and rooms show on the Join a game board.
+- **A lobby, a device each:** one person chooses **Create a game lobby** and picks the rounds, the time and the word list. Everyone else finds it in **List Hosted Games** (or in the home page's Lobbies list), taps it to see who's in, and joins. Nobody types a code. Everyone races on the same letters at once. Each device sees how many words the others have found and a star when someone gets the full word, but not their words until the round ends. A game that's already going stays on the list, and a latecomer jumps in on the next word.
 - **Family words or unfiltered:** the family list is the kids dictionary (`words/blocklist-kids.txt` keeps rude words out). Unfiltered is the full list and follows the arcade's adult rules: an adult's ARKS ID sign-in to play it, and a lobby password the host makes up for a room. Guests get in with the password. Unfiltered rounds sometimes hide a cheeky word from `words/spice-adult.txt`.
 - **The server decides everything** (`scuffle/`): it picks and mixes the letters, starts each round's clock, checks every word (in the letters, on the chosen list, not already found) and adds up every score. The page sends only the words people spell; a score or time in the request is ignored, words after the clock (plus a second and a half for the network) are refused, and a round's words are only sent once it's over.
 - **Phones first:** big letter tiles to tap, Shuffle, Back, Clear and Enter, the words you've found, and a countdown. On a keyboard you can just type. After each round you see the full word and every word you missed.
@@ -306,8 +307,9 @@ Everything is under `/api/scuffle`. `dictionary` is `kids` or `adult` (the adult
 | `POST /solo/:id/save` `{ initials?, profileToken? }` | Puts a finished daily on its list's board. Only the first per player per day for each list. |
 | `GET /board?scope=day\|all&day=&dictionary=kids\|adult` | One daily's high scores (the family board when `dictionary` is left out). |
 | `POST /daily-status` `{ profileToken? }` | Which of today's dailies a profile has played: `{ day, kids, adult }`, each `open`, `playing` (started and still going) or `done`. Without a profile both say `open`. |
-| `POST /rooms` `{ name, settings: { rounds, seconds, dictionary }, password?, screen? }` | Hosts a room (`screen: true`: a TV that shows it and doesn't play). |
-| `POST /rooms/:code/join` `{ name, password? }` | Joins one. |
+| `GET /lobbies` | List Hosted Games: every lobby, with its host, who's in, the seats, the rounds, the time, the word list, and the round it's on if a game is going. |
+| `POST /rooms` `{ name, settings: { rounds, seconds, dictionary }, password?, screen? }` | Creates a lobby (`screen: true`: a TV that shows it and doesn't play). |
+| `POST /rooms/:code/join` `{ name, password? }` | Joins one. The page gets the code from the list, a link or a TV's QR code. |
 | `POST /rooms/:code/start`, `/word`, `/done`, `/next`, `/leave`, `/settings` | Playing in a room (each with `playerId` and `token`). |
 | `GET /rooms/:code/events` | The room's live updates (server-sent events). |
 
@@ -435,7 +437,7 @@ Questions come from a built-in bank (`trivia/bank.js`), packs built from an AI p
 
 Opened on a TV (a TV app whose browser adds `ARKS-TV/<version>` to its user agent, or any browser with `?tv=1` on the address to try it), the arcade switches to a TV layout: everything is drawn half as big again, it stays inside the edges some TVs cut off, and a thick turquoise ring shows which button the remote is on. The remote's arrows move the ring to the nearest button in that direction, and OK (Enter) presses it. The home page shows the games as big tiles with Know-It-All first. On a TV, Know-It-All's "Who's playing?" offers three ways, and in all of them the TV hosts a room and the server keeps every score:
 
-- **Everyone on their own device:** the TV shows the code and a QR code to join, the questions, who has locked in and the scores. Everyone answers on their own device at the same time.
+- **Everyone on their own device:** the TV shows a QR code to scan (and no code to type), the questions, who has locked in and the scores. Everyone answers on their own device at the same time.
 - **Pass one device around:** you take turns. Scan the code with the phone you'll pass around and add everyone's names on it. Before each turn the TV says whose turn it is, and the clock starts when they press I'm ready.
 - **Play with the remote:** the same turns, with the players added on the TV, and the remote answers. A controller's X, Y and shoulder buttons pick answers A to D too.
 
@@ -457,7 +459,7 @@ Both card games share their one-device and room plumbing (`arcade/party-tables.j
 
 #### The party games, word games and puzzles on a TV
 
-These games work on a TV the same way as Know-It-All (see "Know-It-All on a TV" above): the TV layout, the remote's arrows and OK, and adult levels only during an adults' night. In each, the TV can host a room as its **screen**: it shows the game big, with the code and a QR code to join, and it starts the game but isn't a player. The server still decides every move and every score.
+These games work on a TV the same way as Know-It-All (see "Know-It-All on a TV" above): the TV layout, the remote's arrows and OK, and adult levels only during an adults' night. In each, the TV can host a room as its **screen**: it shows the game big, with a QR code to scan (and no code to type), and it starts the game but isn't a player. The server still decides every move and every score.
 
 | Game | On a TV |
 |---|---|
@@ -499,9 +501,9 @@ The rooms gained `screen: true` when making one (`POST /api/partdeux/rooms`, `/a
 ### Shared
 
 - Ships as a single Docker image with a SQLite file as its only state
-- The home page's Lobbies list shows every hosted room in any game, with scan-to-join QR codes in each game's lobby and walkthrough. Adult rooms are listed too but locked: hosting one needs an adult's ARKS ID sign-in and a lobby password the host makes up; guests only need that password
+- The home page's Lobbies list shows every hosted room in any game, and each game has its own List Hosted Games. A lobby is joined by tapping it; nobody types a code, and none is shown. A game on a TV also shows a QR code to scan. Adult rooms are listed too but locked: hosting one needs an adult's ARKS ID sign-in and a lobby password the host makes up; guests only need that password
 - An adult's ARKS ID sign-in is what opens the adult levels. The arcade hands that page an adult pass, which works for up to 12 hours and only while that sign-in is still going. Signing out of the arcade ends the pass at once, in every tab and anywhere else it was used, so the next person to pick up the device finds the adult levels locked. A sign-in that's ended somewhere else (on the sign-in service's own page, say) takes the pass with it the next time that device opens a page of the arcade.
-- In Uh-Oh: Part Deux and Dare Devil, the host can switch a family lobby to an adult level at any time, with people already in it. Adult levels are only for adults, so everyone the arcade doesn't know to be one (a kid, a teen, or a guest) is moved out of the lobby and told why, along with any players they added on their own device. Adults signed in with ARKS ID stay, and a guest can come back in with the lobby password the host just made up.
+- In Uh-Oh: Part Deux and Dare Devil, the host can switch a family lobby to an adult level at any time, with people already in it. Adult levels are only for adults, so everyone the arcade doesn't know to be one (a kid, a teen, or a guest) is moved out of the lobby and told why, along with any players they added on their own device. Adults signed in with ARKS ID stay, and a guest can come back in with the lobby password the host just made up. Rambler and Shuffle Scuffle do the same when a lobby is switched to the unfiltered word list (their lobbies have no button for that yet, so it only happens through the API), and whoever is still in the lobby reads who was removed.
 - The home page's Continue row lists the games you left unfinished, on any device: your Words with Family games (the ones waiting on you first) and today's Sudoku and Clueless Crosswords puzzles you started. It only shows your own, and only when you have some. The server works out who is asking from the profile token (`GET /api/continue`), so nobody can look up someone else's games
 - Spin & Solve, Chess and Dino Dash share one high-score table (`/api/scores/:game`); new #1s post to the Comm Center
 - Feedback from anywhere: a tiny red bug sits in the bottom-right corner of every page. Tap it, then tap "Found a bug? Tell us." to open a card where you write what happened, pick the kind and the game, and add a screenshot (snap the page, or upload one) that you can draw on with a pen, a box or an arrow. The home page's Send feedback button opens the same card. Messages land in the admin's Comm Center inbox, and ping Discord when `DISCORD_WEBHOOK_URL` is set. A picture can be up to 1.5 MB (the card shrinks screenshots to fit), and the arcade keeps up to 500 MB of them in all; past that, notes still arrive without their pictures and the admin gets one note about it. Someone without a profile can send 5 notes an hour from one device, a profile can send 30 in 3 minutes, and the admin has no limit

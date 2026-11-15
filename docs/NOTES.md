@@ -100,8 +100,6 @@ order they were clicked, and keep the rest pinned here.
     "right where you left off", and nothing under 🔔 Notifications whether it's on or off. The TV's pass-around
     choices say device (only the sentence about scanning says phone). The admin page hides its PIN notes and
     the unlock button when sign-in is on, since nobody has a PIN then.
-  - **Still to do for the same rule:** Rambler and Shuffle Scuffle still hand out a room code to type. They get
-    the lobby next.
 - **#156: Words with Family has the lobby.** "New game with the family" and its list of people to choose from are
   gone. **Create a game lobby** asks how many players (2 to 4) and which words count, and the lobby shows in Words
   with Family's own **List Hosted Games**, in the home page's Lobbies list, and as a QR code and link.
@@ -113,9 +111,49 @@ order they were clicked, and keep the rest pinned here.
   - A host's own waiting lobby is in their Continue row ("Waiting for players").
   - Tests: `test/crisscross.test.js`, and `test/browser/crisscross-lobby.spec.js` for two people in real browsers.
 
+- **Rambler and Shuffle Scuffle have the lobby, and no game has a code to type or to read.** This finishes
+  the maintainer's rule ("no choosing players as a host, no invites, no code for someone to join").
+  - **Shuffle Scuffle:** 📡 Host and 🔗 Join (with its code box) are now **Create a game lobby** and **🔎 List
+    Hosted Games**. The list shows every Shuffle Scuffle lobby; tapping one opens a card with who's in, the
+    settings and the status, and Join. A game that's going is listed with its round ("Game started · round 2
+    of 5") and the button reads "Join game in progress?".
+  - **Rambler:** Own Devices is now a **Multiplayer-Multiple devices** heading with **Create a game lobby** and
+    **List Hosted Games** under it (the wording and the icons are Chess's). "Join someone's room" and its
+    code box are gone. A lobby in the middle of a round can be joined, as it could with a code. Leaving a lobby
+    that was joined from the list goes back to the list.
+  - **No code on any screen.** The lobby says whose it is ("Your Rambler lobby", "Sam's Shuffle Scuffle
+    lobby"), and Rambler's round says "Sam's lobby" where it said "Room ABCD". The TV's lobby in Know-It-All,
+    Uh-Oh: Part Deux, Dare Devil, Shuffle Scuffle and Rambler shows the QR code to scan and no four-letter
+    code, since there's nowhere left to type one. The home page's list shows no code for any game
+    (`NO_CODE` is gone from `public/hub.js`).
+  - A link with `?join=CODE` (the TV's QR code, or the home page's list) opens that lobby's card. If it's
+    gone, the page opens List Hosted Games and says "This game isn't available. Here are the ones that are."
+  - **Server:** `GET /api/scuffle/lobbies` and `GET /api/rambler/lobbies` (`lobbies()` in each `rooms.js`),
+    which `arcade/lobby.js` now reads instead of reaching into the rooms. A room that's going is `live` on
+    the home page's list (it was `open` for Shuffle Scuffle and `playing`, with no way in, for Rambler). The
+    codes still exist, as a lobby's name in links, QR codes and the API.
+  - **A lobby switched to the unfiltered words moves out everyone the arcade doesn't know to be an adult,**
+    like the card games (`moveOutForAdultWords` in both `rooms.js`). A seat keeps its `adultSignin`, asked
+    again at the switch. The page that's moved out gets the maintainer's line ("The host switched the game mode
+    to adult, you have been removed. Only Adults can join."), and everyone still in reads who was removed (a
+    `notice` in the room's state for 15 seconds, since these lobbies have no chat). Neither lobby has a
+    button for the word list yet, so today this only happens through the API.
+  - **Fixes found on the way:** Know-It-All's list sent `count` twice, so its rows showed the number of
+    questions where the number of players belongs ("10/12" for one player). The second is now `questions`.
+    The home page's list had no place for `live` in its sort order. In Uh-Oh: Part Deux and Dare Devil the QR
+    code showed up on a device's lobby a moment after it was hidden (drawing it finishes late), until the next
+    update; it's only drawn for a TV's lobby now. The home page's line for an empty list named a Host button
+    that no game has anymore, and now says Create a game lobby.
+  - Rambler's list says when a lobby is between rounds (`between`), so its card doesn't claim a round is being
+    played.
+  - `GAMES[game]` in `arcade/scores.js` and the jackpot's game name are looked up with `Object.hasOwn`.
+  - Tests: `test/scuffle.test.js`, the rooms part of `test/api.test.js`, `test/tv-party-arksid.test.js` (an
+    adult signed in stays, a kid and a guest are moved out, and an adult who signed out first is moved out
+    too), and `test/browser/words-lobby.spec.js` (three devices in each game, and the switch).
+
 **Next up** (the maintainer's order)
-1. Rambler and Shuffle Scuffle get the lobby, so nobody types a room code. A room that switches to the
-   unfiltered word list moves out everyone the arcade doesn't know to be an adult, like the card games.
+1. A button in the lobby for the host to change the word list in Rambler and Shuffle Scuffle (the server
+   takes it already), if the maintainer wants one.
 2. Games that save, the rest: a game in progress is kept in the database, so a restart of the arcade brings
    every game back where it was. The party games, the solo word games (Spin & Solve first), the action games.
 3. The notification bell in the waffle menu, once ARKS ID keeps the list.

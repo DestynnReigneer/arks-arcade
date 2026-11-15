@@ -4,6 +4,10 @@
 // the clock, checks every word and adds up the points. This page draws the
 // tiles, takes taps and typing, and shows what the server says.
 //
+// Playing together: someone creates a lobby, and everyone else finds it in
+// List Hosted Games (or the home page's list) and taps it to join. Nobody is
+// picked and nobody types a code.
+//
 // On a TV (tv.js): the daily letters and free play work with the remote (the
 // arrows move along the tiles and OK picks one), or the TV hosts a room as
 // its screen and shows the letters, the clock and everyone's counts big while
@@ -39,7 +43,11 @@
     found: [],           // [{ word, points }] this round
     busy: false,
     shownReveal: null,
-    shownFirst: null
+    shownFirst: null,
+    findTimer: null,     // List Hosted Games asks again every few seconds while it's open
+    details: null,       // the lobby whose details card is open
+    noticeId: null,      // the last notice from the room that was shown
+    fresh: false         // the next snapshot is the first one since joining
   };
   const pinHeaders = () => (S.pin ? { 'X-Adult-Pin': S.pin } : {});
   // On a TV, the unfiltered list follows adults' night, with the TV's adult pass.
@@ -84,8 +92,8 @@
   const HINTS = {
     daily: 'Today\'s letters are the same for everyone: four rounds of 75 seconds. Your first go of the day can go on the 🏆 board.',
     free: 'New letters every time, as many games as you like. Free play scores don\'t go on the board.',
-    host: 'Everyone plays on their own device at the same time. You\'ll get a four-letter code for the others to type in.',
-    join: 'Type the four-letter code from whoever is hosting. If a game is already going, you can jump in on the next word.',
+    host: 'Everyone plays on their own device at the same time. Your lobby will show in List Hosted Games and on the Arcade\'s home page once created.',
+    join: 'Tap a lobby to see who\'s in it and join.',
     tvphones: 'The TV shows the letters, the clock and how many words everyone has found. Everyone scans the code on the TV with their own phone and races on the same letters at the same time.'
   };
   if (TV) {
@@ -130,8 +138,12 @@
       seg($('roundsSeg'), S.config.rounds.map(n => [n, String(n)]), S.rounds, v => { S.rounds = v; store('scuffle.rounds', v); paintSetup(); });
       seg($('secondsSeg'), S.config.seconds.map(n => [n, `${n}s`]), S.seconds, v => { S.seconds = v; store('scuffle.seconds', v); paintSetup(); });
     }
-    $('goBtn').textContent = S.mode === 'host' ? 'Get a game code' : S.mode === 'join' ? 'Join the game'
+    $('goBtn').textContent = S.mode === 'host' ? 'Create lobby'
       : S.mode === 'tvphones' ? 'Show the code on the TV' : S.mode === 'daily' ? 'Play today\'s letters' : 'Let\'s play';
+    // List Hosted Games: the lobbies to pick from, and nothing to start.
+    const finding = S.mode === 'join' && !$('setup').classList.contains('hidden');
+    $('goBtn').classList.toggle('hidden', S.mode === 'join');
+    if (finding) { if (!S.findTimer) startFinding(); } else stopFinding();
   }
 
   async function pickDict(v) {
@@ -204,15 +216,86 @@
           settings: { rounds: S.rounds, seconds: S.seconds, dictionary: S.dict }
         }, pinHeaders()));
         if (r) enterRoom(r);
-        return;
       }
-      const code = $('joinCode').value.trim().toUpperCase();
-      if (code.length !== 4) { $('setupMsg').textContent = 'Type the four-letter code first.'; return; }
-      // A adults game asks for its lobby password (not the adult pass).
-      const r = await RoomPassword.withPassword(password =>
-        api(`/api/scuffle/rooms/${code}/join`, { name: $('joinName').value || myName(), password }));
-      if (r) enterRoom(r);
     } catch (e) { $('setupMsg').textContent = e.message; }
+  }
+
+  // ---- List Hosted Games ---------------------------------------------------------------
+  // Every Shuffle Scuffle lobby, for anyone to tap and join. A game that's already going
+  // is listed too: a latecomer jumps in on the next word.
+  function startFinding() {
+    stopFinding();
+    loadLobbies();
+    S.findTimer = setInterval(() => { if (!document.hidden) loadLobbies(); }, 5000);
+  }
+  function stopFinding() { if (S.findTimer) { clearInterval(S.findTimer); S.findTimer = null; } }
+  async function fetchLobbies() {
+    const r = await fetch('/api/scuffle/lobbies', { cache: 'no-store' });
+    return (await r.json()).lobbies || [];
+  }
+  const settingsLine = l => `${l.rounds} rounds of ${l.seconds} seconds · ${l.adult ? 'Unfiltered words' : 'Family words'}`;
+  async function loadLobbies() {
+    let list;
+    try { list = await fetchLobbies(); } catch { return; }
+    const rows = $('lobbyRows');
+    rows.replaceChildren();
+    $('findEmpty').classList.toggle('hidden', list.length > 0);
+    for (const l of list) {
+      const li = document.createElement('li');
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'lb-row';
+      if (l.status === 'full') b.setAttribute('aria-disabled', 'true');
+      const main = document.createElement('span'); main.className = 'lb-row-main';
+      const name = document.createElement('b'); name.textContent = `${l.adult ? '🔞 ' : ''}${l.host}'s lobby`;
+      const sub = document.createElement('small');
+      sub.textContent = l.round ? `Game started · round ${l.round.index} of ${l.round.total}` : settingsLine(l);
+      main.append(name, sub);
+      const count = document.createElement('span'); count.className = 'lb-count'; count.textContent = `${l.count}/${l.max}`;
+      b.append(main, count);
+      if (l.status === 'full') { const f = document.createElement('span'); f.className = 'lb-full'; f.textContent = 'FULL'; b.append(f); }
+      b.addEventListener('click', () => openDetails(l));
+      li.append(b);
+      rows.append(li);
+    }
+  }
+  function openDetails(l) {
+    S.details = l;
+    $('detailsTitle').textContent = `${l.host}'s Shuffle Scuffle lobby`;
+    $('dPlayers').textContent = `${l.players.length ? l.players.join(', ') : 'Nobody yet'} · ${l.count} of ${l.max}`;
+    $('dHow').textContent = `${settingsLine(l)}. ` + (l.screen ? 'The letters are on the TV, and everyone plays on their own device.'
+      : 'Each player on their own device, all racing on the same letters.');
+    $('dStatus').textContent = l.status === 'full' ? 'Full' : l.round ? `Playing, round ${l.round.index} of ${l.round.total}` : 'Waiting for players';
+    $('dLate').classList.toggle('hidden', !l.round);
+    $('joinBtn').textContent = l.round ? 'Join game in progress?' : 'Join lobby';
+    $('joinBtn').disabled = l.status === 'full';
+    // A profile joins under its own name. A guest can type one, or keep the one they have.
+    $('dGuest').classList.toggle('hidden', !!token());
+    $('joinName').placeholder = myName() || 'e.g. Alex';
+    $('detailsMsg').textContent = '';
+    $('detailsView').classList.remove('hidden');
+  }
+  const closeDetails = () => $('detailsView').classList.add('hidden');
+  async function joinLobby() {
+    const l = S.details;
+    if (!l) return;
+    $('detailsMsg').textContent = '';
+    try {
+      // An adult game asks for its lobby password (not the adult pass).
+      const r = await RoomPassword.withPassword(password =>
+        api(`/api/scuffle/rooms/${l.code}/join`, { name: token() ? myName() : $('joinName').value || myName(), password }));
+      if (r) { closeDetails(); enterRoom(r); }
+    } catch (e) { $('detailsMsg').textContent = e.message; }
+  }
+  // Opening scuffle.html?join=CODE (the TV's QR code, or the home page's list): that lobby's details.
+  async function openFromLink(code) {
+    try {
+      const l = (await fetchLobbies()).find(x => x.code === code);
+      if (l) return openDetails(l);
+    } catch { /* falls through */ }
+    S.mode = 'join';
+    paintSetup();
+    $('setupMsg').textContent = 'This game isn\'t available. Here are the ones that are.';
   }
 
   // ---- solo --------------------------------------------------------------------------------
@@ -368,20 +451,28 @@
     S.solo = null;
     S.shownReveal = null;
     try { sessionStorage.setItem('scuffle.room', JSON.stringify(S.room)); } catch { /* unavailable */ }
-    $('lobbyCode').textContent = r.code;
     show('lobby');
     connect();
   }
 
   function connect() {
     if (S.es) S.es.close();
+    stopFinding();
     const { code, playerId, token: tk } = S.room;
     const q = `playerId=${encodeURIComponent(playerId)}&token=${encodeURIComponent(tk)}`;
     S.es = new EventSource(`/api/scuffle/rooms/${code}/events?${q}`);
+    S.fresh = true;
     S.es.addEventListener('state', e => applySnap(JSON.parse(e.data)));
+    // The host switched to the unfiltered word list, and this device isn't signed in as an adult.
+    S.es.addEventListener('moved', () => {
+      leaveRoom();
+      show('setup');
+      paintSetup();
+      toast('The host switched the game mode to adult, you have been removed. Only Adults can join.', 8000);
+    });
     S.es.onerror = () => {
       fetch(`/api/scuffle/rooms/${code}?${q}`).then(r => {
-        if (r.status === 404 || r.status === 403) { leaveRoom(); show('setup'); toast('That game has ended.'); }
+        if (r.status === 404 || r.status === 403) { leaveRoom(); show('setup'); paintSetup(); toast('That game has ended.'); }
       }).catch(() => {});
     };
   }
@@ -403,6 +494,10 @@
     if (TV && snap.phase === 'playing' && (!S.snap || S.snap.index !== snap.index || S.snap.phase !== 'playing')) ArcadeTV.played();
     S.snap = snap;
     S.skew = snap.serverNow - Date.now();
+    // Something the room wants everyone still in it to read once (who was moved out, and why).
+    // Someone who has only just come in doesn't need news from before they arrived.
+    if (snap.notice && snap.notice.id !== S.noticeId) { S.noticeId = snap.notice.id; if (!S.fresh) toast(snap.notice.text, 7000); }
+    S.fresh = false;
     adultMode(snap.settings.dictionary === 'adult');
     document.body.classList.toggle('tv-screen', !!snap.isScreen);
     if (snap.phase === 'lobby') { Blip.musicPlaying(false); return renderLobby(snap); }
@@ -426,14 +521,17 @@
 
   function renderLobby(snap) {
     show('lobby');
-    $('lobbyCode').textContent = snap.code;
-    if ($('joinQr').dataset.code !== snap.code) { $('joinQr').dataset.code = snap.code; ArcadeQR.forGame($('joinQr'), 'scuffle.html', snap.code, $('joinLink')); }
+    $('lobbyTitle').textContent = snap.screen ? 'Shuffle Scuffle on the TV' : snap.host ? 'Your Shuffle Scuffle lobby' : `${snap.hostName}'s Shuffle Scuffle lobby`;
+    // The QR code is for the TV, where phones scan to join. A lobby made on a device
+    // is joined from List Hosted Games.
+    $('tvJoin').classList.toggle('hidden', !snap.screen);
+    if (snap.screen && $('joinQr').dataset.code !== snap.code) { $('joinQr').dataset.code = snap.code; ArcadeQR.forGame($('joinQr'), 'scuffle.html', snap.code, $('joinLink')); }
     const s = snap.settings;
     $('lobbySettings').textContent = `${s.rounds} rounds of ${s.seconds} seconds, ${s.dictionary === 'adult' ? 'unfiltered words' : 'family words'}` +
       (snap.lobbyPassword ? `. Lobby password: ${snap.lobbyPassword}` : snap.locked ? '. Locked with a password' : '') + '.';
     $('lobbyHow').textContent = snap.isScreen
       ? 'Everyone scans the code with their own phone and types their name. You all race on the same letters at the same time, and the letters, the clock and the scores show up here on the TV.'
-      : 'Scan the code with another phone, or open Shuffle Scuffle there, tap Join and type the code in.';
+      : '';
     $('lobbyCount').textContent = `(${snap.players.length} of ${snap.maxPlayers})`;
     const list = $('lobbyPlayers');
     list.innerHTML = '';
@@ -785,8 +883,8 @@
         </table>`
     },
     {
-      emoji: '📡', title: 'Playing together',
-      html: `<p><b>Host</b> a game to get a four-letter code, and everyone else taps <b>Join</b> on their own device and types it in (or scans the QR code). The host picks the rounds, the time and which words count, and everyone races on the same letters at the same time.</p>
+      emoji: '📱', title: 'Multiplayer-Multiple devices',
+      html: `<p>One person taps <b>Create a game lobby</b> and picks the rounds, the time and which words count. Everyone else opens <b>🔎 List Hosted Games</b> on their own device and taps the lobby to join. Then you all race on the same letters at the same time.</p>
         <p>You'll see how many words each player has found and a ★ when someone gets the full word, but not their words until the round is over.</p>`
     },
     {
@@ -812,7 +910,10 @@
   for (const b of $('scoreDict').children) b.onclick = () => openScores(scoreScope, undefined, b.dataset.dict);
   for (const b of $('dictSeg').children) b.onclick = () => pickDict(b.dataset.v);
   $('goBtn').onclick = go;
-  $('joinCode').onkeydown = e => { if (e.key === 'Enter') go(); };
+  $('joinBtn').onclick = joinLobby;
+  $('joinName').onkeydown = e => { if (e.key === 'Enter') joinLobby(); };
+  $('detailsClose').onclick = closeDetails;
+  $('detailsView').addEventListener('click', e => { if (e.target === $('detailsView')) closeDetails(); });
   $('startBtn').onclick = async () => { if (window.ArcadeStats) ArcadeStats.play(); try { await roomPost('start'); } catch (e) { toast(e.message); } };
   $('lobbyLeave').onclick = backToMenu;
   $('menuBtn').onclick = backToMenu;
@@ -874,9 +975,15 @@
     refreshStatus();
   }).catch(e => toast(e.message));
   // Signing in or switching profile changes whose dailies these are.
-  if (typeof ArcadeProfile !== 'undefined' && ArcadeProfile.onChange) ArcadeProfile.onChange(() => refreshStatus());
+  if (typeof ArcadeProfile !== 'undefined' && ArcadeProfile.onChange) {
+    ArcadeProfile.onChange(() => {
+      refreshStatus();
+      // A lobby's details card that's open says who would be joining: draw it again for the new person.
+      if (S.details && !$('detailsView').classList.contains('hidden')) openDetails(S.details);
+    });
+  }
   const joinParam = new URLSearchParams(location.search).get('join');
-  if (joinParam && !TV) { S.mode = 'join'; $('joinCode').value = joinParam.toUpperCase().slice(0, 4); paintSetup(); }
+  if (joinParam && !TV) openFromLink(joinParam.toUpperCase().slice(0, 4));
   try {
     const saved = JSON.parse(sessionStorage.getItem('scuffle.room') || 'null');
     if (saved && saved.code) { S.room = saved; connect(); }
