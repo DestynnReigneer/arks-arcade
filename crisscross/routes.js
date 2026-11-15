@@ -53,14 +53,8 @@ router.get('/config', (req, res) => res.json({
 }));
 router.post('/unlock', adultPin.tryLimiter(), (req, res) => res.json(adultPin.check(req, res)));
 
-// People who can be invited: every approved profile but you. With ARKS ID,
-// adultOk says who could join a game on the unfiltered list.
-router.get('/people', readLimit, wrap(req => {
-  const { profile } = needProfile(req);
-  const db = require('../db');
-  return db.db.prepare("SELECT id, name, avatar FROM arcade_profiles WHERE status = 'approved' AND id != ? ORDER BY name COLLATE NOCASE")
-    .all(profile.id).map(p => ({ id: p.id, name: p.name, avatar: p.avatar, adultOk: arksMode() ? games.grownUp(p.id) : null }));
-}));
+// List Hosted Games: every lobby that's waiting for players, for anyone who asks.
+router.get('/lobbies', readLimit, wrap(req => ({ lobbies: games.lobbies(who(req).profile) })));
 
 // Your games, and how many are waiting on you.
 router.get('/mine', readLimit, wrap(req => games.mine(needProfile(req).profile)));
@@ -79,19 +73,16 @@ router.post('/games', newLimit, (req, res, next) => {
     }
     const w = needProfile(req);
     adultGate(req, b.dictionary, w.profile);
-    const id = games.createOnline({
-      host: w.profile, invite: b.invite, openSeats: b.openSeats, dictionary: b.dictionary,
-      adultOk: arksMode() ? games.grownUp : null
-    });
+    const id = games.createOnline({ host: w.profile, seats: b.seats, openSeats: b.openSeats, dictionary: b.dictionary });
     res.status(201).json({ id, game: games.open(id, w) });
   } catch (e) { next(e); }
 });
 
-// The share link: who's in it so far, then taking a seat.
-router.get('/invite/:code', readLimit, wrap(req => games.invitePreview(req.params.code)));
-router.post('/invite/:code/join', newLimit, wrap(req => {
+// A lobby, from the list, a link or its QR code: who's in it so far, then taking a seat.
+router.get('/lobby/:code', readLimit, wrap(req => games.lobbyPreview(req.params.code)));
+router.post('/lobby/:code/join', newLimit, wrap(req => {
   const w = needProfile(req);
-  adultGate(req, games.invitePreview(req.params.code).dictionary, w.profile);
+  adultGate(req, games.lobbyPreview(req.params.code).dictionary, w.profile);
   const id = games.join(req.params.code, w.profile);
   return { id, game: games.open(id, w) };
 }));

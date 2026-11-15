@@ -143,9 +143,29 @@
     const p = me();
     $('noProfile').classList.toggle('hidden', !!p);
     $('minepanel').classList.toggle('hidden', !p);
-    if (!p || TV) return;
-    await loadMine();
-    S.poll = setInterval(() => { if (!document.hidden) loadMine(); }, 30000);
+    if (TV) return;
+    // The lobbies are for everyone to see; your own games need a profile.
+    const refresh = () => { loadHosted(); if (p) loadMine(); };
+    refresh();
+    S.poll = setInterval(() => { if (!document.hidden) refresh(); }, 15000);
+  }
+
+  // List Hosted Games: every lobby that's waiting for players. Tapping one shows who's in it, and Join.
+  async function loadHosted() {
+    const list = $('hostedList');
+    let lobbies = [];
+    try { lobbies = (await call('/lobbies')).lobbies || []; } catch { /* leave the list as it was */ return; }
+    $('hostedHint').textContent = lobbies.length ? 'Tap a lobby to see who\'s in it and join.' : 'There aren\'t any Words with Family lobbies right now. Create one!';
+    list.innerHTML = '';
+    for (const l of lobbies) {
+      const li = document.createElement('li');
+      li.innerHTML = '<span class="cc-li-main"><div class="cc-li-title"></div><div class="cc-li-sub"></div></span><span class="cc-li-tag"></span>';
+      li.querySelector('.cc-li-title').textContent = l.mine ? 'Your lobby' : `${l.host}'s lobby`;
+      li.querySelector('.cc-li-sub').textContent = `${l.count} of ${l.max} players · ${l.adult ? 'Unfiltered words' : 'Family words'}`;
+      li.querySelector(".cc-li-tag").textContent = l.mine ? 'Open' : l.status === 'full' ? 'Full' : 'Join';
+      li.onclick = () => (l.mine && l.id ? openGame(l.id) : showInvite(l.code));
+      list.appendChild(li);
+    }
   }
 
   async function loadMine() {
@@ -216,53 +236,14 @@
   }
 
   // ---- a new online game ------------------------------------------------------------------------
-  let people = [];
-  let openSeats = 0;
-  async function newOnline() {
+  // Create a game lobby: how many seats, and which words count. Nobody is picked.
+  S.onlineSeats = 2;
+  function newOnline() {
     if (!me()) { ArcadeProfile.open(); return; }
     show('newOnline');
     $('onlineMsg').textContent = '';
     paintDict();
-    const box = $('peopleList');
-    box.innerHTML = '<li class="cc-note">Loading…</li>';
-    try {
-      people = await call('/people');
-      box.innerHTML = '';
-      if (!people.length) box.innerHTML = '<li class="cc-note">Nobody else has a profile yet. Leave a seat open and send them the link instead.</li>';
-      for (const p of people) {
-        const li = document.createElement('li');
-        const label = document.createElement('label');
-        const cb = document.createElement('input');
-        cb.type = 'checkbox'; cb.value = p.id;
-        cb.onchange = () => paintSeats();
-        label.append(cb, ArcadeProfile.avatarEl(p.avatar, 26), p.name);
-        li.appendChild(label);
-        if (p.adultOk === false) {
-          const note = document.createElement('span');
-          note.className = 'cc-note kid-note';
-          note.textContent = 'family words only';
-          li.appendChild(note);
-        }
-        box.appendChild(li);
-      }
-    } catch (e) { box.innerHTML = '<li class="cc-note"></li>'; box.firstChild.textContent = e.message; }
-    paintSeats();
-  }
-  const picked = () => [...$('peopleList').querySelectorAll('input:checked')].map(cb => cb.value);
-  function paintSeats() {
-    const boxes = [...$('peopleList').querySelectorAll('input')];
-    const n = picked().length;
-    for (const cb of boxes) cb.disabled = !cb.checked && n + openSeats >= 3;
-    openSeats = Math.min(openSeats, 3 - n);
-    const box = $('openSeg');
-    box.innerHTML = '';
-    for (let k = 0; k <= 3 - n; k++) {
-      const b = document.createElement('button');
-      b.textContent = k === 0 ? 'None' : String(k);
-      b.setAttribute('aria-pressed', String(k === openSeats));
-      b.onclick = () => { openSeats = k; paintSeats(); };
-      box.appendChild(b);
-    }
+    seg($('seatsSeg'), String(S.onlineSeats), v => { S.onlineSeats = Number(v); newOnline(); });
   }
   function paintDict() {
     seg($('dictSeg'), S.onlineDict, async v => {
@@ -276,9 +257,8 @@
   }
   async function startOnline() {
     $('onlineMsg').textContent = '';
-    if (!picked().length && !openSeats) { $('onlineMsg').textContent = 'Choose someone to play with, or leave open.'; return; }
     try {
-      const r = await call('/games', { kind: 'online', invite: picked(), openSeats, dictionary: S.onlineDict });
+      const r = await call('/games', { kind: 'online', seats: S.onlineSeats, dictionary: S.onlineDict });
       if (window.ArcadeStats) ArcadeStats.play();
       showGame(r.game);
     } catch (e) { $('onlineMsg').textContent = e.message; }
@@ -342,13 +322,13 @@
     } catch (e) { $('localMsg').textContent = e.message; }
   }
 
-  // ---- the share link ------------------------------------------------------------------------------------
+  // ---- a lobby, from the list, a link or its QR code -------------------------------------------------------
   async function showInvite(code) {
     show('invite');
     setUrl({ join: code });
     $('inviteMsg').textContent = '';
     try {
-      const r = await call(`/invite/${encodeURIComponent(code)}`);
+      const r = await call(`/lobby/${encodeURIComponent(code)}`);
       $('inviteTitle').textContent = 'Join game?';
       $('inviteText').textContent = `${names(r.players)} ${r.players.length === 1 ? 'is' : 'are'} playing Words with Family, with ${r.seats - r.players.length} seat${r.seats - r.players.length === 1 ? '' : 's'} left, on ${r.dictionary === 'adult' ? 'the unfiltered word list (adults only)' : 'family words'}.` +
         (me() ? '' : ' Pick your profile first, so the game knows whose turn is whose.');
@@ -356,7 +336,7 @@
       $('inviteJoin').onclick = async () => {
         if (!me()) { ArcadeProfile.open(); return; }
         try {
-          const j = await call(`/invite/${encodeURIComponent(code)}/join`, {});
+          const j = await call(`/lobby/${encodeURIComponent(code)}/join`, {});
           showGame(j.game);
         } catch (e) { $('inviteMsg').textContent = e.message; }
       };
@@ -403,7 +383,7 @@
     show('waiting');
     adultMode(g.dictionary === 'adult');
     $('waitHint').textContent = g.host
-      ? `Send this link to the people you're waiting for, or let them scan the code. The game starts by itself when all ${g.seats} seats are full.`
+      ? `Your lobby is in List Hosted Games and on the Arcade's home page. Anyone can also scan this code to jump straight in. The game starts by itself when all ${g.seats} seats are full.`
       : `You're in! The game starts when all ${g.seats} seats are full, or when ${g.players[0].name} starts it.`;
     const link = g.joinCode ? `crisscross.html?join=${g.joinCode}` : null;
     $('joinQr').classList.toggle('hidden', !link);

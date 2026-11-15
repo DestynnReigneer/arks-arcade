@@ -16,7 +16,8 @@ const GAMES = {
   trivia: { label: 'Know-It-All', emoji: '🧠', page: 'trivia.html' },
   partdeux: { label: 'Uh-Oh: Part Deux', emoji: '🚨', page: 'partdeux.html' },
   daredevil: { label: 'Dare Devil', emoji: '😈', page: 'daredevil.html' },
-  scuffle: { label: 'Shuffle Scuffle', emoji: '🔀', page: 'scuffle.html' }
+  scuffle: { label: 'Shuffle Scuffle', emoji: '🔀', page: 'scuffle.html' },
+  crisscross: { label: 'Words with Family', emoji: '🔡', page: 'crisscross.html' }
 };
 
 // Each game keeps its rooms in its own module; this reads them without
@@ -79,6 +80,14 @@ function collect(viewer = null) {
       // Latecomers can jump in mid-game, so a running game is still open.
       status: r.players.length >= scuffle.MAX_PLAYERS ? 'full' : 'open',
       detail: `${r.settings.rounds} rounds · ${r.settings.seconds}s each${adult ? ' · Unfiltered' : ''}`
+    });
+  }
+
+  // Words with Family: lobbies waiting for players. A game that has started is nobody else's.
+  for (const l of require('../crisscross/games').lobbies(viewer)) {
+    add('crisscross', {
+      adult: l.adult, code: l.code, host: l.host, players: l.count, max: l.max, status: l.status,
+      detail: `${l.adult ? 'Unfiltered words' : 'Family words'} · a turn whenever you're free`
     });
   }
 

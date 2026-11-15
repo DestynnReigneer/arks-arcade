@@ -317,7 +317,7 @@ A crossword tile game for 2 to 4 players. Everyone has seven letter tiles, and y
 
 It was called Criss Cross until November 2026. Only the name changed: the page is still `crisscross.html`, the API is still `/api/crisscross`, and the tables and saved games are the same, so old links, bookmarks and games in progress keep working. The logo (`public/words-with-family-logo.svg`) is our own: wooden letter tiles spelling the name, each with the point value it has in this game.
 
-- **Each person on their own device** needs a profile (or ARKS ID), because a game lasts days and has to know who you are. **New game with the family** lists the family's profiles to choose from (up to three), and can leave seats open for a share link or QR code that anyone with a profile can join. A game with only chosen people starts straight away; one with open seats starts when they fill up, or when the host taps Start with whoever has joined. The game list shows whose turn it is, the last move and how long ago it was, and an open game checks for new moves every few seconds.
+- **Each person on their own device** needs a profile (or ARKS ID), because a game lasts days and has to know who you are. **Create a game lobby** asks how many players (2 to 4) and which words count, and makes a lobby with you in it. It shows up in Words with Family's **List Hosted Games** and in the home page's Lobbies list, and has a QR code and a link to jump straight in; anyone with a profile can join. Nobody is picked and nobody is told that a lobby opened. The game starts when the seats fill up, or when the host taps Start with whoever has joined. The game list shows whose turn it is, the last move and how long ago it was, and an open game checks for new moves every few seconds.
 - **On this device** is pass-and-play, open to guests: two to four names, and the computer can take any seat. Between turns the tiles are hidden behind a "Pass the device to Sam" screen. Only that device can open the game (it keeps a key).
 - **The rules:** the first word covers the star in the middle. After that, a turn's tiles go in one line, across or down, with no gaps, joined onto tiles already on the board, and every new word made (crosses included) has to be on the game's word list. Two-letter words count. Instead of playing you can swap tiles (when 7 or more are left in the bag), pass, or leave. The game ends when the bag is empty and someone uses their last tile (they get everyone else's leftover points, which everyone else loses), or after six scoreless turns in a row (everyone loses their leftovers), or when only one player is left.
 - **Points:** our own 66-tile bag and values: common letters are worth 1, and Q and Z are worth 10. Two blanks can be any letter and score nothing. The board's bonus squares double or triple a letter (2L, 3L) or a word (2W, 3W, and the star in the middle), on the turn a tile lands on them. Using all seven tiles in one turn adds 40.
@@ -334,12 +334,12 @@ Everything is under `/api/crisscross`. Who's asking goes in headers, never the a
 | Call | What it does |
 |---|---|
 | `GET /config` | The board size, bonus layout, tile counts and values, and the rules' numbers. |
-| `GET /people` | The profiles you can play with (with `adultOk` when ARKS ID is on). |
+| `GET /lobbies` | Every lobby that's waiting for players: its host, who's in, the seats and the word list. |
 | `GET /mine` | Your online games, newest first, and how many are waiting on you. |
 | `GET /turns` | Just that count, for the home page. |
-| `POST /games` `{ kind: 'online', invite: [profileId], openSeats, dictionary }` | Starts an online game. |
+| `POST /games` `{ kind: 'online', seats, dictionary }` | Creates a lobby with 2 to 4 seats and you in the first. |
 | `POST /games` `{ kind: 'local', players: [{ name } \| { bot: true }], dictionary }` | Starts a game on one device. Returns its `key`, shown once. |
-| `GET /invite/:code`, `POST /invite/:code/join` | The share link: who's in, and taking a seat. |
+| `GET /lobby/:code`, `POST /lobby/:code/join` | A lobby, from the list, its link or its QR code: who's in, and taking a seat. |
 | `GET /games/:id` | The game as you may see it: the board, the scores, your rack, the bag's count, the moves. |
 | `POST /games/:id/preview` `{ placements }` | Checks a play and scores it without making it. |
 | `POST /games/:id/play` `{ placements: [{ index, letter, blank? }] }` | Plays tiles (square 0 to 120, row by row). |

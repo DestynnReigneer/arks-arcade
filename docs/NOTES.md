@@ -100,19 +100,27 @@ order they were clicked, and keep the rest pinned here.
     "right where you left off", and nothing under 🔔 Notifications whether it's on or off. The TV's pass-around
     choices say device (only the sentence about scanning says phone). The admin page hides its PIN notes and
     the unlock button when sign-in is on, since nobody has a PIN then.
-  - **Still to do for the same rule:** Words with Family still lets the starter choose people (it gets the lobby
-    next), and Rambler and Shuffle Scuffle still hand out a room code to type (they get the lobby after that).
+  - **Still to do for the same rule:** Rambler and Shuffle Scuffle still hand out a room code to type. They get
+    the lobby next.
+- **#156: Words with Family has the lobby.** "New game with the family" and its list of people to choose from are
+  gone. **Create a game lobby** asks how many players (2 to 4) and which words count, and the lobby shows in Words
+  with Family's own **List Hosted Games**, in the home page's Lobbies list, and as a QR code and link.
+  - `createOnline({ host, seats, dictionary })` always makes a waiting game with only its host; `lobbies(profile)`
+    lists them; `GET /people` is gone; the link's routes are `/lobby/:code` and `/lobby/:code/join`. A request
+    that still sends `invite` gets a lobby with nobody put in it.
+  - Nobody is told that a lobby opened. When the seats fill and the game starts, whoever is first gets the
+    maintainer's "Everyone's ready, the game started. You're first!" (unless they're the one who just joined).
+  - A host's own waiting lobby is in their Continue row ("Waiting for players").
+  - Tests: `test/crisscross.test.js`, and `test/browser/crisscross-lobby.spec.js` for two people in real browsers.
 
 **Next up** (the maintainer's order)
-1. Words with Family gets the lobby: create one, others find it and join, no choosing people. Its share link
-   and QR code stay as a way to jump into the lobby.
-2. Rambler and Shuffle Scuffle get the lobby, so nobody types a room code. A room that switches to the
+1. Rambler and Shuffle Scuffle get the lobby, so nobody types a room code. A room that switches to the
    unfiltered word list moves out everyone the arcade doesn't know to be an adult, like the card games.
-3. Games that save, the rest: a game in progress is kept in the database, so a restart of the arcade brings
+2. Games that save, the rest: a game in progress is kept in the database, so a restart of the arcade brings
    every game back where it was. The party games, the solo word games (Spin & Solve first), the action games.
-4. The notification bell in the waffle menu, once ARKS ID keeps the list.
-5. Previews before building: kick and ban for hosts, 8-Bit avatars, more easter eggs.
-6. No-scroll layouts for the remaining games (Rambler's old header converts first), then the small repairs
+3. The notification bell in the waffle menu, once ARKS ID keeps the list.
+4. Previews before building: kick and ban for hosts, 8-Bit avatars, more easter eggs.
+5. No-scroll layouts for the remaining games (Rambler's old header converts first), then the small repairs
    (a same-origin check on `/api` writes, Rambler's guest photos).
 
 ## The session before (2026-11-13, afternoon)
