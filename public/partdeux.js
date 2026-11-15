@@ -273,6 +273,7 @@
   function renderLobby(snap) {
     show('lobby');
     // The QR code is only drawn for a TV's lobby. (Drawing it finishes a moment later and would show it on a device's lobby.)
+    if (!snap.screen) ArcadeQR.lobbyButton($('joinQr'), 'partdeux.html', snap.code);
     if (snap.screen && $('joinQr').dataset.code !== snap.code) { $('joinQr').dataset.code = snap.code; ArcadeQR.forGame($('joinQr'), 'partdeux.html', snap.code); }
     const lv = levelInfo(snap.level);
     $('lobbyInfo').textContent = `Deck: ${lv.emoji} ${lv.label}` + (snap.drinking ? ' · 🍺 Drinking' : '') +
