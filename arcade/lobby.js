@@ -16,26 +16,25 @@ const GAMES = {
   trivia: { label: 'Know-It-All', emoji: '🧠', page: 'trivia.html' },
   partdeux: { label: 'Uh-Oh: Part Deux', emoji: '🚨', page: 'partdeux.html' },
   daredevil: { label: 'Dare Devil', emoji: '😈', page: 'daredevil.html' },
-  scuffle: { label: 'Shuffle Scuffle', emoji: '🔀', page: 'scuffle.html' }
+  scuffle: { label: 'Shuffle Scuffle', emoji: '🔀', page: 'scuffle.html' },
+  crisscross: { label: 'Words with Family', emoji: '🔡', page: 'crisscross.html' }
 };
 
 // Each game keeps its rooms in its own module; this reads them without
-// changing anything. status: open (can join), playing (wait for the next
-// one), full.
+// changing anything. status: open (can join), live (already going, and can
+// still be joined), full.
 // viewer: the profile asking (from its token), so the lobby they're already in can
 // be marked as theirs. Every lobby is listed for everyone.
 function collect(viewer = null) {
   const out = [];
   const add = (game, room) => out.push({ game, ...GAMES[game], href: `${GAMES[game].page}?join=${room.code}`, ...room });
 
-  const rambler = require('../rambler/rooms');
-  for (const r of rambler._rooms.values()) {
-    const host = r.players.get(r.hostId);
+  // Rambler: a room can be joined at any time, even in the middle of a round.
+  for (const l of require('../rambler/rooms').lobbies()) {
     add('rambler', {
-      adult: r.settings.profile === 'adult', locked: !!r.password,
-      code: r.code, host: host ? host.name : '', players: r.players.size, max: rambler.MAX_PLAYERS,
-      status: r.players.size >= rambler.MAX_PLAYERS ? 'full' : r.state === 'lobby' ? 'open' : 'playing',
-      detail: `${r.settings.size === 5 ? '5x5' : '4x4'} board${r.settings.profile === 'adult' ? ' · Unfiltered' : ''}`
+      adult: l.adult, locked: l.locked, code: l.code, host: l.host, players: l.count, max: l.max,
+      status: l.status === 'playing' ? 'live' : l.status,
+      detail: `${l.size === 5 ? '5x5' : '4x4'} board${l.adult ? ' · Unfiltered' : ''}`
     });
   }
 
@@ -69,20 +68,24 @@ function collect(viewer = null) {
     }
   }
 
-  const scuffle = require('../scuffle/rooms');
-  for (const r of scuffle._rooms.values()) {
-    const host = r.players.find(p => p.id === r.hostId);
-    const adult = r.settings.dictionary === 'adult';
+  // Shuffle Scuffle: latecomers can jump in mid-game, on the next word.
+  for (const l of require('../scuffle/rooms').lobbies()) {
     add('scuffle', {
-      adult, locked: !!r.password,
-      code: r.code, host: host ? host.name : '', players: r.players.length, max: scuffle.MAX_PLAYERS,
-      // Latecomers can jump in mid-game, so a running game is still open.
-      status: r.players.length >= scuffle.MAX_PLAYERS ? 'full' : 'open',
-      detail: `${r.settings.rounds} rounds · ${r.settings.seconds}s each${adult ? ' · Unfiltered' : ''}`
+      adult: l.adult, locked: l.locked, code: l.code, host: l.host, players: l.count, max: l.max,
+      status: l.status === 'playing' ? 'live' : l.status,
+      detail: l.round ? `Game started · round ${l.round.index} of ${l.round.total}` : `${l.rounds} rounds · ${l.seconds}s each${l.adult ? ' · Unfiltered' : ''}`
     });
   }
 
-  const rank = { open: 0, playing: 1, full: 2 };
+  // Words with Family: lobbies waiting for players. A game that has started is nobody else's.
+  for (const l of require('../crisscross/games').lobbies(viewer)) {
+    add('crisscross', {
+      adult: l.adult, code: l.code, host: l.host, players: l.count, max: l.max, status: l.status,
+      detail: `${l.adult ? 'Unfiltered words' : 'Family words'} · a turn whenever you're free`
+    });
+  }
+
+  const rank = { open: 0, live: 1, playing: 1, full: 2 };
   return out.sort((a, b) => rank[a.status] - rank[b.status]);
 }
 

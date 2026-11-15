@@ -71,7 +71,8 @@ async function run({ base }) {
   ok('the top bar\'s number is the boards you\'re #1 on', small.data.gold === summary.data.shelf.gold && small.data.you === true);
 
   // A Words with Family game: Eli resigns, so Dee wins.
-  const game = await api('/api/crisscross/games', 'POST', { kind: 'online', invite: [Eli.id] }, Dee.h);
+  const game = await api('/api/crisscross/games', 'POST', { kind: 'online', seats: 2 }, Dee.h);
+  await api(`/api/crisscross/lobby/${game.data.game.joinCode}/join`, 'POST', {}, Eli.h);
   await api(`/api/crisscross/games/${game.data.id}/resign`, 'POST', {}, Eli.h);
   const after = (await trophies(Dee)).data;
   const won = boardOf(after, 'crisscross', 'wins');

@@ -70,16 +70,16 @@ function fail(message, status) {
 }
 
 function boardOf(game, board) {
-  const g = GAMES[game];
+  const g = typeof game === 'string' && Object.hasOwn(GAMES, game) ? GAMES[game] : null;
   if (!g) throw fail('Unknown game.', 404);
   const key = board && Object.hasOwn(g.boards, String(board)) ? String(board) : Object.keys(g.boards)[0];
   return { g, key };
 }
 
 function list(game, board, limit = 25) {
-  const { key } = boardOf(game, board);
+  const { g, key } = boardOf(game, board);
   const cap = Math.min(Math.max(parseInt(limit, 10) || 25, 1), 100);
-  const order = GAMES[game].lowerIsBetter ? 'ASC' : 'DESC';
+  const order = g.lowerIsBetter ? 'ASC' : 'DESC';
   return db.db.prepare(`
     SELECT * FROM arcade_scores WHERE game = ? AND board = ? ORDER BY score ${order}, created_at ASC LIMIT ?
   `).all(game, key, cap).map(r => {

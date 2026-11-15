@@ -561,6 +561,17 @@ async function run({ base, root }) {
     (await api(`/rooms/${host.code}/start`, 'POST', { playerId: g.playerId, token: 'nope' })).status === 403);
   ok('a guest cannot start the round', (await api(`/rooms/${host.code}/start`, 'POST', g)).status === 403);
 
+  // List Hosted Games: the lobby is found in a list, and nobody types a code.
+  const hostedNow = async () => (await api('/lobbies')).data.lobbies;
+  const adaRow = (await hostedNow()).find(l => l.code === host.code);
+  ok('the lobby is in List Hosted Games with its host, its players and its settings', !!adaRow && adaRow.host === 'Ada' && adaRow.count === 2 && adaRow.max === 8 &&
+    adaRow.status === 'open' && adaRow.players.join() === 'Ada,Bo' && adaRow.size === 4 && adaRow.durationSec === 60 && adaRow.adult === false && adaRow.locked === false,
+    JSON.stringify(adaRow));
+  const hostedText = JSON.stringify(await hostedNow());
+  ok('the list carries nobody\'s seat', !hostedText.includes(host.token) && !hostedText.includes(g.token) && !hostedText.includes(host.playerId));
+  ok('a lobby\'s own state says whose it is', room.data.state.hostName === 'Ada');
+  ok('a lobby that isn\'t there says so in plain words', (await api('/rooms/ZZZZ/join', 'POST', { name: 'X' })).data.error === 'This game isn\'t available.');
+
   const events = [];
   const ac = new AbortController();
   const stream = (async () => {
@@ -591,6 +602,9 @@ async function run({ base, root }) {
 
   const started = await api(`/rooms/${host.code}/start`, 'POST', host);
   ok('the host starts it', started.status === 200 && started.data.board.length === 16);
+  ok('a lobby in the middle of a round is still listed, as playing', (await hostedNow()).find(l => l.code === host.code).status === 'playing');
+  ok('…and the home page\'s list lets people join it',
+    (await (await fetch(base + '/api/lobby')).json()).rooms.find(r => r.game === 'rambler' && r.code === host.code).status === 'live');
   await new Promise(r => setTimeout(r, 400));
   const playing = events[events.length - 1];
   ok('the start reaches the guest', playing.state === 'playing');
@@ -613,6 +627,8 @@ async function run({ base, root }) {
   await api(`/rooms/${host.code}/ready`, 'POST', host);
   const ready = await api(`/rooms/${host.code}/ready`, 'POST', g);
   ok('both ready ends the round early', ready.data.state === 'results');
+  const betweenRow = (await hostedNow()).find(l => l.code === host.code);
+  ok('between rounds the lobby is open to join again, and says it\'s between rounds', betweenRow.status === 'open' && betweenRow.between === true, JSON.stringify(betweenRow));
   await new Promise(r => setTimeout(r, 300));
   const overlap = aWords.filter(w => bWords.includes(w));
   ok(`shared words cancel (${overlap.join(',')})`,
@@ -621,6 +637,37 @@ async function run({ base, root }) {
     (await api(`/rooms/${host.code}/words`, 'POST', { ...host, words: ['CAT'] })).status === 409);
   ok('the host can reset to the lobby',
     (await api(`/rooms/${host.code}/next`, 'POST', host)).data.state === 'lobby');
+
+  // The host switches to the unfiltered words: everyone not known to be an adult is moved out.
+  ok('switching a lobby to the unfiltered words needs the adult pass',
+    (await api(`/rooms/${host.code}/settings`, 'POST', { ...host, profile: 'adult', password: 'limes' })).status === 403);
+  const refusedSwitch = await api(`/rooms/${host.code}/settings`, 'POST', { ...host, profile: 'adult' }, ADULT);
+  ok('…and a lobby password, and a switch that\'s refused moves nobody',
+    refusedSwitch.status === 400 && (await hostedNow()).find(l => l.code === host.code).count === 2);
+  const switched = await api(`/rooms/${host.code}/settings`, 'POST', { ...host, profile: 'adult', password: 'limes' }, ADULT);
+  ok('with both, the lobby turns unfiltered and the guest is moved out',
+    switched.status === 200 && switched.data.settings.profile === 'adult' && switched.data.players.map(q => q.name).join() === 'Ada', JSON.stringify(switched.data.players));
+  ok('…the host reads who was removed', !!switched.data.notice && switched.data.notice.text === 'Bo was removed, the host switched game mode to adult.',
+    JSON.stringify(switched.data.notice));
+  await new Promise(r => setTimeout(r, 300));
+  ok('…the guest\'s page is told why', events.some(e => e && e.why === 'adult'));
+  ok('…and their seat is gone', (await api(`/rooms/${host.code}/ready`, 'POST', g)).status === 403);
+  const boBack = await api(`/rooms/${host.code}/join`, 'POST', { name: 'Bo', password: 'limes' });
+  ok('…and they can come back with the password the host made up', boBack.status === 201 && boBack.data.state.players.length === 2);
+  const markedRow = (await hostedNow()).find(l => l.code === host.code);
+  ok('the list marks it unfiltered and locked, and never shows the password',
+    markedRow.adult === true && markedRow.locked === true && !JSON.stringify(await hostedNow()).includes('limes'));
+  // The page sends one setting at a time, and the others stay as they are.
+  const sized = await api(`/rooms/${host.code}/settings`, 'POST', { ...host, size: 5 });
+  const clocked = await api(`/rooms/${host.code}/settings`, 'POST', { ...host, durationSec: 300 });
+  ok('changing only the clock leaves the board size and the word list alone',
+    sized.status === 200 && sized.data.settings.size === 5 && sized.data.settings.profile === 'adult' && clocked.status === 200 &&
+    JSON.stringify(clocked.data.settings) === JSON.stringify({ size: 5, profile: 'adult', durationSec: 300 }), JSON.stringify(clocked.data.settings));
+  const unchanged = await api(`/rooms/${host.code}/settings`, 'POST', host);
+  ok('…a request that names nothing changes nothing, and the lobby keeps its password',
+    JSON.stringify(unchanged.data.settings) === JSON.stringify(clocked.data.settings) && (await hostedNow()).find(l => l.code === host.code).locked === true &&
+    (await api(`/rooms/${host.code}/join`, 'POST', { name: 'Cy' })).status === 401);
+  await api(`/rooms/${host.code}/leave`, 'POST', { playerId: boBack.data.playerId, token: boBack.data.token });
 
   ac.abort();
   await stream.catch(() => {});
@@ -1138,6 +1185,8 @@ async function run({ base, root }) {
   let lobbyNow = (await wl('/lobby')).data;
   const robin = lobbyNow.rooms.find(r => r.code === lobbyHost.code);
   ok('a hosted game shows on the lobby, open to join', !!robin && robin.status === 'open' && robin.href === `trivia.html?join=${lobbyHost.code}` && robin.host === 'Robin');
+  ok('…and it counts its players, not its questions', robin.players === 1 &&
+    (await wl('/trivia/lobbies')).data.lobbies.find(l => l.code === lobbyHost.code).count === 1, JSON.stringify(robin));
   const listedAdult = lobbyNow.rooms.find(r => r.code === adultRoom.code);
   ok('adult games are on the lobby too, marked and locked', !!listedAdult && listedAdult.adult && listedAdult.locked);
   const joinAdult = pw => wl(`/trivia/rooms/${adultRoom.code}/join`, 'POST', { name: 'Kid', password: pw });

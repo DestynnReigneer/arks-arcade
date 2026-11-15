@@ -253,25 +253,66 @@ textarea:focus { outline: none; border-color: var(--accent); }
 }
 .player-row button:hover { color: var(--bad); }
 
-/* ---- room code ---- */
+/* ---- a lobby: whose it is, and on a TV the QR code to scan ---- */
 .code-display {
   text-align: center;
   padding: 20px 0 8px;
 }
-.code-display .label {
+.lobby-title {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: var(--accent);
+}
+
+/* ---- List Hosted Games: the lobbies to tap, and the card with a lobby's details ---- */
+.mode-label {
+  margin: 8px 2px 0;
   font-size: 11px;
   letter-spacing: 1.5px;
   text-transform: uppercase;
   color: var(--dim);
+  font-weight: 700;
 }
-.code-display .code {
-  font-size: 52px;
+.hosted-rows { display: grid; gap: 8px; }
+.hosted-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.hosted-row:hover, .hosted-row:focus-visible { border-color: var(--accent); }
+.hosted-row .main { flex: 1; min-width: 0; }
+.hosted-row b { display: block; font-size: 15px; }
+.hosted-row small { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; }
+.hosted-row .count { font-weight: 800; color: var(--accent); font-variant-numeric: tabular-nums; }
+.hosted-row .full {
+  font-size: 10px;
+  letter-spacing: 1px;
   font-weight: 800;
-  letter-spacing: 10px;
-  color: var(--accent);
-  margin: 6px 0 0 6px;
-  font-variant-numeric: tabular-nums;
+  color: var(--dim);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 2px 8px;
 }
+.hosted-row[aria-disabled="true"] { opacity: 0.6; cursor: default; }
+.hosted-facts { display: grid; gap: 10px; margin-bottom: 12px; }
+.hosted-facts small {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  color: var(--dim);
+  font-weight: 700;
+}
+.hosted-facts span { display: block; font-size: 14px; line-height: 1.5; }
 .code-hint { text-align: center; font-size: 12px; color: var(--muted); margin-bottom: 18px; }
 
 .roster { display: grid; gap: 7px; margin-bottom: 18px; }
@@ -1508,5 +1549,5 @@ body.tv-screen #playScreen .type-row,
 body.tv-screen #playScreen .found:not(#playRoster),
 body.tv-screen #playScreen .mara-actions { display: none; }
 body.tv-screen #playRoster .who { font-size: 18px; }
-html.tv .code-display .code { font-size: 64px; letter-spacing: 12px; }
+html.tv .lobby-title { font-size: 28px; }
 html.tv #joinQr { width: 220px !important; height: 220px !important; }

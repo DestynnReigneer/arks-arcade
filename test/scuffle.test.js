@@ -184,10 +184,10 @@ async function run({ base, root }) {
 
   console.log('\n-- scuffle: a room with two phones --');
   const host = (await api('/rooms', 'POST', { name: 'Sam', settings: { rounds: 3, seconds: 2, dictionary: 'kids' } })).data;
-  ok('hosting gives a four-letter code', /^[A-Z2-9]{4}$/.test(host.code));
+  ok('a lobby gets a short code, which only its link and QR code use', /^[A-Z2-9]{4}$/.test(host.code));
   const guest = (await api(`/rooms/${host.code}/join`, 'POST', { name: 'Alex' })).data;
-  ok('a second phone joins with the code', guest.playerId && guest.playerId !== host.playerId);
-  ok('the room is on the Join a game board', (await api('/api/lobby')).data.rooms.some(r => r.game === 'scuffle' && r.code === host.code));
+  ok('a second device joins the lobby', guest.playerId && guest.playerId !== host.playerId);
+  ok('the lobby is on the home page\'s list', (await api('/api/lobby')).data.rooms.some(r => r.game === 'scuffle' && r.code === host.code));
   ok('only the host can start', (await api(`/rooms/${host.code}/start`, 'POST', guest)).status === 403);
   await api(`/rooms/${host.code}/start`, 'POST', host);
   const snapG = (await api(`/rooms/${host.code}?playerId=${guest.playerId}&token=${guest.token}`)).data;
@@ -225,6 +225,38 @@ async function run({ base, root }) {
   await api(`/rooms/${host.code}/leave`, 'POST', host);
   ok('when the host leaves, the room passes to the next player',
     (await api(`/rooms/${host.code}?playerId=${guest.playerId}&token=${guest.token}`)).data.host === true);
+
+  console.log('\n-- scuffle: lobbies are found in a list, and nobody types a code --');
+  const lob = (await api('/rooms', 'POST', { name: 'Kim', settings: { rounds: 3, seconds: 60, dictionary: 'kids' } })).data;
+  const hosted = async () => (await api('/lobbies')).data.lobbies;
+  const row = (await hosted()).find(l => l.code === lob.code);
+  ok('a new lobby is in List Hosted Games, with its host, its players and its settings', !!row && row.host === 'Kim' && row.count === 1 && row.max === 12 &&
+    row.status === 'open' && row.players.join() === 'Kim' && row.rounds === 3 && row.seconds === 60 && row.adult === false && row.locked === false && row.round === null,
+    JSON.stringify(row));
+  const gus = (await api(`/rooms/${lob.code}/join`, 'POST', { name: 'Gus' })).data;
+  ok('whoever taps it is in', (await hosted()).find(l => l.code === lob.code).players.join() === 'Kim,Gus');
+  const listText = JSON.stringify(await hosted());
+  ok('the list carries nobody\'s seat', !listText.includes(lob.token) && !listText.includes(gus.token) && !listText.includes(lob.playerId));
+  ok('a lobby that isn\'t there says so in plain words', (await api('/rooms/ZZZZ/join', 'POST', { name: 'X' })).data.error === 'This game isn\'t available.');
+
+  // The host switches to the unfiltered words: everyone not known to be an adult is moved out.
+  const refused = await api(`/rooms/${lob.code}/settings`, 'POST', { ...lob, settings: { dictionary: 'adult' } }, PIN);
+  ok('a switch to the unfiltered words that\'s refused (no lobby password) moves nobody',
+    refused.status === 400 && (await hosted()).find(l => l.code === lob.code).count === 2);
+  const turned = await api(`/rooms/${lob.code}/settings`, 'POST', { ...lob, settings: { dictionary: 'adult' }, password: 'limes' }, PIN);
+  const afterTurn = (await api(`/rooms/${lob.code}?playerId=${lob.playerId}&token=${lob.token}`)).data;
+  ok('with the adult pass and a password the lobby turns unfiltered, and the guest is moved out',
+    turned.status === 200 && afterTurn.settings.dictionary === 'adult' && afterTurn.players.map(q => q.name).join() === 'Kim', JSON.stringify(afterTurn.players));
+  ok('…the host reads who was removed', !!afterTurn.notice && afterTurn.notice.text === 'Gus was removed, the host switched game mode to adult.', JSON.stringify(afterTurn.notice));
+  ok('…and their seat is gone', (await api(`/rooms/${lob.code}?playerId=${gus.playerId}&token=${gus.token}`)).status === 403);
+  ok('…and they can come back with the password the host made up', (await api(`/rooms/${lob.code}/join`, 'POST', { name: 'Gus', password: 'limes' })).status === 200);
+  const marked = (await hosted()).find(l => l.code === lob.code);
+  ok('the list marks it unfiltered and locked, and never shows the password', marked.adult === true && marked.locked === true && !JSON.stringify(await hosted()).includes('limes'));
+  await api(`/rooms/${lob.code}/start`, 'POST', lob);
+  const going = (await hosted()).find(l => l.code === lob.code);
+  ok('a game that has started is still listed, with the round it\'s on', going.status === 'playing' && going.round.index === 1 && going.round.total === 3, JSON.stringify(going));
+  ok('…and the home page\'s list lets people join it', (await api('/api/lobby')).data.rooms.find(r => r.code === lob.code).status === 'live');
+  await api(`/rooms/${lob.code}/leave`, 'POST', lob);
 
   console.log(`\n  ${pass} passed, ${fail} failed`);
   return { pass, fail };

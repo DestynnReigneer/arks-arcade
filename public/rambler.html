@@ -98,11 +98,19 @@
           <span class="desc">Every word buys you more time, and the grid grows as you go. You don't win — you last.</span>
         </span>
       </button>
+      <div class="mode-label no-tv"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:1.3em;height:1.3em;vertical-align:-0.28em;margin-right:4px"><rect x="3" y="6" width="11" height="22" rx="2.5"/><rect x="18" y="4" width="11" height="22" rx="2.5"/><path d="M7.5 24h2"/><path d="M22.5 22h2"/></svg>Multiplayer-Multiple devices</div>
       <button class="mode no-tv" data-mode="room" aria-pressed="false">
-        <span class="emoji">📱</span>
+        <span class="emoji"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:26px;height:26px;display:block"><circle cx="16" cy="7" r="3.2"/><path d="M10 18.5c0-3.4 2.6-5.8 6-5.8s6 2.4 6 5.8"/><circle cx="6.5" cy="10" r="2.6"/><path d="M2 20c0-2.8 1.9-4.8 4.5-4.8"/><circle cx="25.5" cy="10" r="2.6"/><path d="M30 20c0-2.8-1.9-4.8-4.5-4.8"/><path d="M11 30l7-7"/><path d="M18 23a4 4 0 0 1 5.3-5l-2.4 2.4.5 2.2 2.2.5 2.4-2.4a4 4 0 0 1-5 5.3"/></svg></span>
         <span class="body">
-          <span class="name">Own Devices</span>
-          <span class="desc">Everyone plays the same board on their own device. Share a four-letter room code.</span>
+          <span class="name">Create a game lobby</span>
+          <span class="desc">Set up your hosted game settings and rules.</span>
+        </span>
+      </button>
+      <button class="mode no-tv" data-mode="find" aria-pressed="false">
+        <span class="emoji"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:26px;height:26px;display:block"><path d="M4 8h14"/><path d="M4 14h10"/><path d="M4 20h8"/><circle cx="21" cy="19" r="6"/><path d="m25.5 23.5 4 4"/></svg></span>
+        <span class="body">
+          <span class="name">List Hosted Games</span>
+          <span class="desc">Live games lobby waiting to start or started with vacancies.</span>
         </span>
       </button>
     </div>
@@ -115,8 +123,16 @@
   </div>
 
   <div class="field no-tv" id="nameField">
+    <div class="note" style="margin-bottom:10px">Everyone plays the same board on their own device. Your lobby will show in List Hosted Games and on the Arcade's home page once created.</div>
     <label>Your name</label>
     <input type="text" id="nameInput" maxlength="16" placeholder="Who's playing?" autocomplete="off">
+  </div>
+
+  <!-- List Hosted Games: every Rambler lobby, to tap and join. -->
+  <div class="field no-tv hidden" id="hostedField">
+    <label>Available Rambler lobbies</label>
+    <div class="hosted-rows" id="hostedRows"></div>
+    <div class="note hidden" id="hostedEmpty">There aren't any Rambler lobbies right now. Create one!</div>
   </div>
 
   <div class="field">
@@ -143,16 +159,6 @@
 
   <div class="msg" id="setupMsg"></div>
   <button id="startBtn" class="primary-btn">Slide to victory</button>
-
-  <div class="divider no-tv" id="joinDivider">or</div>
-  <div class="field no-tv" id="joinField">
-    <label>Join someone's room</label>
-    <div class="type-row" style="max-width:none;margin-top:0">
-      <input type="text" id="joinCodeInput" maxlength="4" placeholder="CODE" autocomplete="off"
-             style="text-transform:uppercase;letter-spacing:6px;font-weight:700;text-align:center">
-      <button id="joinBtn" class="ghost-btn">Join</button>
-    </div>
-  </div>
 </section>
 
 <!-- ============ WHO IS PLAYING ============ -->
@@ -199,15 +205,20 @@
 
 <section id="lobbyScreen" class="screen hidden">
   <div class="code-display">
-    <div class="label">Room code</div>
-    <div class="code" id="roomCode">----</div>
-    <img class="join-qr hidden" id="joinQr" width="150" height="150" alt="QR code to join"
-         style="width:150px;height:150px;background:#fff;padding:6px;border-radius:10px;margin:10px auto 2px;display:block">
-    <div class="join-link" id="joinLink" style="font-size:11px;opacity:0.65;text-align:center;word-break:break-all"></div>
-    <div style="font-size:12px;opacity:0.75;text-align:center">Scan to join from another phone</div>
+    <div class="lobby-title" id="lobbyTitle"></div>
+    <!-- The QR code is for the TV, where phones scan to join. A lobby made on a
+         device is joined from List Hosted Games. Nobody types a code, and no
+         address or code is shown. -->
+    <div id="tvJoin" class="hidden">
+      <img class="join-qr hidden" id="joinQr" width="150" height="150" alt="QR code to join"
+           style="width:150px;height:150px;background:#fff;padding:6px;border-radius:10px;margin:10px auto 2px;display:block">
+      <div style="font-size:12px;opacity:0.75;text-align:center">Scan to join from another phone</div>
+      <div style="font-size:12px;opacity:0.75;text-align:center">On other devices: Rambler → List Hosted Games.</div>
+    </div>
   </div>
-  <div class="code-hint" id="lobbyHow">Everyone opens this page and taps Join, then types that code.</div>
+  <div class="code-hint" id="lobbyHow"></div>
   <div class="code-hint" id="lobbyPassword"></div>
+  <div class="msg" id="lobbyNotice"></div>
 
   <div class="field">
     <label>In the room</label>
@@ -496,6 +507,31 @@
     <div class="result-actions" style="margin-top:18px">
       <button id="pdEditBtn" class="ghost-btn">Edit</button>
       <button id="pdSwitchBtn" class="primary-btn">Switch profile</button>
+    </div>
+  </div>
+</div>
+
+<!-- A lobby from the list, a QR code or the home page: who's in it, and Join. -->
+<div id="hostedOverlay" class="overlay hidden" role="dialog" aria-labelledby="hostedTitle">
+  <div class="overlay-card">
+    <div class="overlay-head">
+      <h2 id="hostedTitle"></h2>
+      <button id="closeHostedBtn" class="icon-btn">✕</button>
+    </div>
+    <div class="hosted-facts">
+      <div><small>PLAYERS</small><span id="hPlayers"></span></div>
+      <div><small>HOW</small><span id="hHow"></span></div>
+      <div><small>STATUS</small><span id="hStatus"></span></div>
+    </div>
+    <div class="note hidden" id="hLate">You'll join the round that's being played, with the time that's left.</div>
+    <div id="hGuest" class="hidden" style="margin-top:12px">
+      <div class="note" style="margin-bottom:8px">Choose your profile, or type your name to join as a guest.</div>
+      <input type="text" id="hostedName" maxlength="16" placeholder="Who's playing?" autocomplete="off">
+    </div>
+    <div class="msg" id="hostedMsg"></div>
+    <div class="result-actions">
+      <button id="hostedCancelBtn" class="ghost-btn">Not now</button>
+      <button id="hostedJoinBtn" class="primary-btn">Join lobby</button>
     </div>
   </div>
 </div>
