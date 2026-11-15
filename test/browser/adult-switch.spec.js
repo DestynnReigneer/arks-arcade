@@ -1,9 +1,9 @@
 'use strict';
 
 // A host turns a family lobby adult while someone is in it. The host is an
-// adult signed in with ARKS ID; the other player is a guest, so the arcade
-// doesn't know them to be an adult. The guest is moved out and told why, the
-// host's chat says who left, and the lobby now takes its password to join.
+// adult signed in with ARKS ID; the other player is a kid signed in on their
+// own device. The kid is moved out and told why, and the host's chat says
+// who left. Nobody types a password.
 
 const { test, expect } = require('@playwright/test');
 const { quietFonts, openPage } = require('./helpers');
@@ -12,7 +12,7 @@ const PORT = Number(process.env.BROWSER_TEST_PORT || 3101);
 const FAKE = `http://localhost:${PORT + 1}`;   // the pretend ARKS ID (serve.js)
 const fake = (p, body) => fetch(FAKE + p, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then(r => r.json());
 
-test('a host turns a family lobby adult: the guest is moved out and told why', async ({ browser }) => {
+test('a host turns a family lobby adult: a kid is moved out and told why', async ({ browser }) => {
   test.skip(test.info().project.name !== 'laptop', 'once is enough');
   test.setTimeout(60000);
   const ctxs = await Promise.all([browser.newContext({ viewport: { width: 1280, height: 800 } }), browser.newContext({ viewport: { width: 1280, height: 800 } })]);
@@ -31,33 +31,32 @@ test('a host turns a family lobby adult: the guest is moved out and told why', a
   await host.locator('#goBtn').click();
   await expect(host.locator('#lobby')).toBeVisible();
 
-  // A guest finds it in List Hosted Games and joins.
-  await openPage(guest, '/partdeux.html');
-  await guest.getByRole('button', { name: /Play as a guest/ }).click();
-  await guest.getByRole('button', { name: 'Play', exact: true }).click();
+  // Milo, a kid signed in on their own device, finds it in List Hosted Games and joins.
+  expect((await fake('/test/next-once', { as: 'milo' })).ok).toBe(true);
+  await guest.goto('/auth/signin?return=/partdeux.html');
+  await guest.waitForURL(u => new URL(u).pathname === '/partdeux.html');
+  await guest.waitForLoadState('networkidle');
   await closeHelp(guest);
   await guest.locator('#modeSeg [data-mode="join"]').click();
   await guest.locator('#joinSetup .lb-row', { hasText: "Alex's lobby" }).click();
-  await guest.locator('.pl-details [data-name]').fill('Gus');
+  const nameBox = guest.locator('.pl-details [data-name]');
+  if (await nameBox.isVisible().catch(() => false)) await nameBox.fill('Milo');
   await guest.locator('.pl-details [data-join]').click();
   await expect(guest.locator('#lobby')).toBeVisible();
-  await expect(host.locator('#lobbyPlayers')).toContainText('Gus');
+  await expect(host.locator('#lobbyPlayers')).toContainText('Milo');
 
-  // The host picks Spicy and makes up the lobby password.
+  // The host picks Spicy. Nothing asks for a password.
   await host.locator('#lobbyLevels .level', { hasText: 'Spicy' }).click();
-  const ask = host.locator('[role=dialog] [data-input]');
-  await expect(ask).toBeVisible({ timeout: 15000 });
-  await ask.fill('tacos42');
-  await host.locator('[role=dialog] [data-ok]').click();
   await expect(host.locator('#lobbyLevels .level[aria-pressed=true]')).toContainText('Spicy');
 
   // The guest is back on the setup screen, with the reason.
-  await expect(guest.locator('#toast')).toHaveText('The host switched the game mode to adult, you have been removed. Only Adults can join.');
+  await expect(guest.locator('#toast')).toHaveText('The host switched the game mode to adult, you have been removed.');
   await expect(guest.locator('#setup')).toBeVisible();
   await expect(guest.locator('#lobby')).toBeHidden();
 
   // The host's lobby shows who left, and only the host is in it.
-  await expect(host.locator('#lobby .lb-chat')).toContainText('Gus was removed, the host switched game mode to adult.');
-  await expect(host.locator('#lobbyPlayers')).not.toContainText('Gus');
+  await expect(host.locator('#lobby .lb-chat')).toContainText('Milo was removed, the host switched game mode to adult.');
+  await expect(host.locator('#lobbyPlayers')).not.toContainText('Milo');
+  await expect(host.locator('[role=dialog] [data-input]')).toHaveCount(0);
   for (const c of ctxs) await c.close();
 });

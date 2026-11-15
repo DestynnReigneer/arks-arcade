@@ -4,8 +4,8 @@
 // server of their own, after everything else. A limit used up here can't make
 // a test somewhere else wait.
 //
-// Every lobby that takes a password limits how often one address can try it,
-// so nobody can sit and guess an adult lobby's password.
+// Every lobby limits how often one address can try to join, so nobody can
+// hammer a game's join route.
 
 async function run({ base }) {
   let pass = 0, fail = 0;
@@ -23,31 +23,14 @@ async function run({ base }) {
     try { data = JSON.parse(text); } catch { data = text; }
     return { status: res.status, data };
   }
-  const PIN = { 'X-Adult-Pin': '246810' };
 
-  console.log('\n-- limits: guessing a lobby password --');
-  // Each game's adult lobby, made the way its page makes it.
-  const games = [
-    ['Rambler', 'rambler', { name: 'Host', profile: 'adult', password: 'limes' }],
-    ['Shuffle Scuffle', 'scuffle', { name: 'Host', settings: { dictionary: 'adult' }, password: 'limes' }],
-    ['Know-It-All', 'trivia', { name: 'Host', settings: { level: 'spicy', count: 5, style: 'together' }, password: 'limes' }],
-    ['Uh-Oh: Part Deux', 'partdeux', { name: 'Host', level: 'spicy', password: 'limes' }],
-    ['Dare Devil', 'daredevil', { name: 'Host', level: 'spicy', password: 'limes' }]
-  ];
-  for (const [name, game, lobby] of games) {
-    const made = await api(`/api/${game}/rooms`, 'POST', lobby, PIN);
-    const code = made.data && made.data.code;
-    const join = password => api(`/api/${game}/rooms/${code}/join`, 'POST', { name: 'Guest', password });
+  console.log('\n-- limits: joining over and over --');
+  for (const [name, game] of [['Rambler', 'rambler'], ['Shuffle Scuffle', 'scuffle'], ['Know-It-All', 'trivia'], ['Uh-Oh: Part Deux', 'partdeux'], ['Dare Devil', 'daredevil']]) {
     const tries = [];
-    for (let k = 0; k < 70; k++) tries.push((await join(`wrong${k}`)).status);
+    for (let k = 0; k < 70; k++) tries.push((await api(`/api/${game}/rooms/ZZZZ/join`, 'POST', { name: 'Guest' })).status);
     const stopped = tries.indexOf(429);
-    ok(`${name}: a wrong lobby password is refused, and after enough of them the address has to wait`,
-      made.status === 201 && !!code && tries[0] === 401 && stopped > 0 && stopped <= 60 &&
-      tries.slice(0, stopped).every(s => s === 401) && tries.slice(stopped).every(s => s === 429),
-      `made ${made.status}, first wait at try ${stopped + 1}, answers ${[...new Set(tries)].join()}`);
-    const right = await join('limes');
-    ok('…and then the right password waits too, with a line that says so',
-      right.status === 429 && typeof right.data.error === 'string' && right.data.error.length > 0, JSON.stringify(right.data));
+    ok(`${name}: after enough tries at joining, the address has to wait`,
+      stopped > 0 && stopped <= 60 && tries.slice(stopped).every(s => s === 429), `first wait at try ${stopped + 1}, answers ${[...new Set(tries)].join()}`);
   }
 
   console.log(`\n  ${pass} passed, ${fail} failed`);

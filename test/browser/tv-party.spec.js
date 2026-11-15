@@ -101,7 +101,7 @@ test('each party game\'s page fits the TV and offers the TV ways to play', async
     await page.goto(path);
     await page.waitForLoadState('networkidle');
     await expect(page.locator('html')).toHaveClass(/\btv\b/);
-    await expect(page.locator('#tvBar')).toContainText('family mode');
+    await expect(page.locator('#tvBar')).toContainText('📺');
     for (const m of tvModes) await expect(page.locator(`[data-mode="${m}"]:visible`)).toHaveCount(1);
     for (const m of phoneModes) await expect(page.locator(`[data-mode="${m}"]:visible`)).toHaveCount(0);
     // The highlight is on something, and How to play waits for the ? button.

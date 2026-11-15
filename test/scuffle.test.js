@@ -172,15 +172,13 @@ async function run({ base, root }) {
     (await api('/board?scope=day&dictionary=adult')).data.length === 1);
   const st2 = (await api('/daily-status', 'POST', { profileToken: sky })).data;
   ok('now both of that profile\'s dailies are done', st2.kids === 'done' && st2.adult === 'done');
-  ok('a room on the unfiltered list needs the PIN', (await api('/rooms', 'POST', { name: 'H', settings: { dictionary: 'adult' }, password: 'limes' })).status === 403);
-  const noPw = await api('/rooms', 'POST', { name: 'H', settings: { dictionary: 'adult' } }, PIN);
-  ok('…and a lobby password', noPw.status === 400 && noPw.data.needsPassword === 'create');
-  const adultRoom = (await api('/rooms', 'POST', { name: 'H', settings: { dictionary: 'adult' }, password: 'limes' }, PIN)).data;
-  ok('a guest needs the lobby password to join', (await api(`/rooms/${adultRoom.code}/join`, 'POST', { name: 'Kid' })).status === 401);
-  ok('…and gets in with it, no PIN needed', (await api(`/rooms/${adultRoom.code}/join`, 'POST', { name: 'Pal', password: 'limes' })).status === 200);
+  ok('a room on the unfiltered list needs the adult pass', (await api('/rooms', 'POST', { name: 'H', settings: { dictionary: 'adult' } })).status === 403);
+  const adultRoom = (await api('/rooms', 'POST', { name: 'H', settings: { dictionary: 'adult' } }, PIN)).data;
+  ok('with it, an unfiltered room is made with no lobby password', !!adultRoom.code);
+  ok('a guest joins it with nothing to type', (await api(`/rooms/${adultRoom.code}/join`, 'POST', { name: 'Pal' })).status === 200);
   const kidsRoom = (await api('/rooms', 'POST', { name: 'H2', settings: { dictionary: 'kids' } })).data;
   ok('a host can\'t switch a room to the unfiltered list without the PIN',
-    (await api(`/rooms/${kidsRoom.code}/settings`, 'POST', { ...kidsRoom, settings: { dictionary: 'adult' }, password: 'pears' })).status === 403);
+    (await api(`/rooms/${kidsRoom.code}/settings`, 'POST', { ...kidsRoom, settings: { dictionary: 'adult' } })).status === 403);
 
   console.log('\n-- scuffle: a room with two phones --');
   const host = (await api('/rooms', 'POST', { name: 'Sam', settings: { rounds: 3, seconds: 2, dictionary: 'kids' } })).data;
@@ -239,19 +237,13 @@ async function run({ base, root }) {
   ok('the list carries nobody\'s seat', !listText.includes(lob.token) && !listText.includes(gus.token) && !listText.includes(lob.playerId));
   ok('a lobby that isn\'t there says so in plain words', (await api('/rooms/ZZZZ/join', 'POST', { name: 'X' })).data.error === 'This game isn\'t available.');
 
-  // The host switches to the unfiltered words: everyone not known to be an adult is moved out.
-  const refused = await api(`/rooms/${lob.code}/settings`, 'POST', { ...lob, settings: { dictionary: 'adult' } }, PIN);
-  ok('a switch to the unfiltered words that\'s refused (no lobby password) moves nobody',
-    refused.status === 400 && (await hosted()).find(l => l.code === lob.code).count === 2);
-  const turned = await api(`/rooms/${lob.code}/settings`, 'POST', { ...lob, settings: { dictionary: 'adult' }, password: 'limes' }, PIN);
+  // The host switches to the unfiltered words. Nobody here is a kid (this server has no ARKS ID), so everyone stays.
+  const turned = await api(`/rooms/${lob.code}/settings`, 'POST', { ...lob, settings: { dictionary: 'adult' } }, PIN);
   const afterTurn = (await api(`/rooms/${lob.code}?playerId=${lob.playerId}&token=${lob.token}`)).data;
-  ok('with the adult pass and a password the lobby turns unfiltered, and the guest is moved out',
-    turned.status === 200 && afterTurn.settings.dictionary === 'adult' && afterTurn.players.map(q => q.name).join() === 'Kim', JSON.stringify(afterTurn.players));
-  ok('…the host reads who was removed', !!afterTurn.notice && afterTurn.notice.text === 'Gus was removed, the host switched game mode to adult.', JSON.stringify(afterTurn.notice));
-  ok('…and their seat is gone', (await api(`/rooms/${lob.code}?playerId=${gus.playerId}&token=${gus.token}`)).status === 403);
-  ok('…and they can come back with the password the host made up', (await api(`/rooms/${lob.code}/join`, 'POST', { name: 'Gus', password: 'limes' })).status === 200);
+  ok('with the adult pass the lobby turns unfiltered, with no password, and the guest stays',
+    turned.status === 200 && afterTurn.settings.dictionary === 'adult' && afterTurn.players.map(q => q.name).join() === 'Kim,Gus' && !afterTurn.notice, JSON.stringify(afterTurn.players));
   const marked = (await hosted()).find(l => l.code === lob.code);
-  ok('the list marks it unfiltered and locked, and never shows the password', marked.adult === true && marked.locked === true && !JSON.stringify(await hosted()).includes('limes'));
+  ok('the list marks it unfiltered, and not locked', marked.adult === true && !marked.locked);
   await api(`/rooms/${lob.code}/start`, 'POST', lob);
   const going = (await hosted()).find(l => l.code === lob.code);
   ok('a game that has started is still listed, with the round it\'s on', going.status === 'playing' && going.round.index === 1 && going.round.total === 3, JSON.stringify(going));
