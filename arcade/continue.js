@@ -58,7 +58,18 @@ function chess(profile) {
   }));
 }
 
-const SOURCES = [wordsWithFamily, chess, daily('sudoku', 'Sudoku', 'sudoku.html'), daily('clueless', 'Clueless Crosswords', 'clueless.html')];
+// Spin & Solve: a game that was played and left, kept through a restart (spinsolve/game.js).
+// The three touched last, so a pile of abandoned games doesn't crowd the row.
+function spinSolve(profile) {
+  return require('../spinsolve/game').mine(profile.id).sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 3).map(g => ({
+    game: 'spinsolve',
+    title: g.solo ? 'Spin & Solve' : `Spin & Solve with ${g.names.slice(1).join(', ')}`,
+    detail: `Round ${g.round} of ${g.rounds}${g.solo ? `, $${g.total.toLocaleString('en-US')} so far` : ''}`,
+    href: `spinsolve.html?game=${encodeURIComponent(g.id)}`, yourTurn: false, updatedAt: g.updatedAt
+  }));
+}
+
+const SOURCES = [wordsWithFamily, chess, spinSolve, daily('sudoku', 'Sudoku', 'sudoku.html'), daily('clueless', 'Clueless Crosswords', 'clueless.html')];
 
 // Games waiting on you first, then whatever was touched last.
 function listFor(profile) {

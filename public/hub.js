@@ -82,7 +82,7 @@
   // The games whoever is playing on this device left unfinished, on any
   // device. The server works out who's asking from the profile token, so
   // this only ever lists your own.
-  const CONTINUE_EMOJI = { crisscross: '🔡', sudoku: '🧩', clueless: '📰', chess: '♞' };
+  const CONTINUE_EMOJI = { crisscross: '🔡', sudoku: '🧩', clueless: '📰', chess: '♞', spinsolve: '🎡' };
   async function paintContinue() {
     const token = ArcadeProfile.token();
     let games = [];
