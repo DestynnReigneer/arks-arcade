@@ -1534,6 +1534,7 @@ function renderLobby(snap) {
   // The QR code is for the TV, where phones scan to join. A lobby made on a device
   // is joined from List Hosted Games.
   $('tvJoin').classList.toggle('hidden', !snap.screen);
+  if (!snap.screen) ArcadeQR.lobbyButton($('lobbyRoster'), 'rambler.html', snap.code);
   if (snap.screen && $('joinQr').dataset.code !== snap.code) { $('joinQr').dataset.code = snap.code; ArcadeQR.forGame($('joinQr'), 'rambler.html', snap.code); }
   const roster = $('lobbyRoster');
   roster.innerHTML = '';
