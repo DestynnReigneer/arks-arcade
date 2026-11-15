@@ -119,7 +119,6 @@ html.tv #modeSeg { flex-wrap: wrap; }
 html.tv #modeSeg button { font-size: 15px; padding: 12px 10px; }
 html.tv #lobby:not(.hidden) { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
 html.tv #joinQr { width: 240px !important; height: 240px !important; }
-html.tv #joinLink { font-size: 14px !important; }
 html.tv .people li { font-size: 19px; }
 html.tv .q-top { font-size: 15px; }
 html.tv .tag { font-size: 13px; }

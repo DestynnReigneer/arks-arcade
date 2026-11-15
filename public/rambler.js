@@ -1495,7 +1495,7 @@ function renderLobby(snap) {
   // The QR code is for the TV, where phones scan to join. A lobby made on a device
   // is joined from List Hosted Games.
   $('tvJoin').classList.toggle('hidden', !snap.screen);
-  if (snap.screen && $('joinQr').dataset.code !== snap.code) { $('joinQr').dataset.code = snap.code; ArcadeQR.forGame($('joinQr'), 'rambler.html', snap.code, $('joinLink')); }
+  if (snap.screen && $('joinQr').dataset.code !== snap.code) { $('joinQr').dataset.code = snap.code; ArcadeQR.forGame($('joinQr'), 'rambler.html', snap.code); }
   const roster = $('lobbyRoster');
   roster.innerHTML = '';
   for (const p of snap.players) {
@@ -2239,6 +2239,8 @@ function bind() {
         S.players = defaultPlayers(2);
       }
       renderSetup();
+      // The list of lobbies sits under the ways to play: bring it into view, or the tap seems to do nothing.
+      if (S.mode === 'find') $('hostedField').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     };
   }
 

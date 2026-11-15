@@ -23,7 +23,6 @@
 .mode-seg button.faded:hover .sc-tip, .mode-seg button.faded:focus .sc-tip, .mode-seg button.faded.tip-on .sc-tip { opacity: 1; visibility: visible; }
 .seg button { min-width: 0; }
 .join-qr { width: 150px; height: 150px; background: #fff; padding: 6px; border-radius: 10px; margin: 10px auto 2px; display: block; }
-.join-link { font-size: 11px; opacity: 0.65; word-break: break-all; }
 .people { list-style: none; padding: 0; margin: 0 0 10px; }
 .people li { padding: 9px 4px; border-bottom: 1px solid var(--border); font-size: 15px; }
 .people li .tag { font-size: 11px; color: var(--accent); margin-left: 6px; }
