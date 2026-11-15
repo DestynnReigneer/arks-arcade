@@ -448,6 +448,32 @@ async function run() {
     } catch (e) { pdProblem = 'game ' + n + ': ' + e.message; }
   }
   ok('200 random games all end with a winner and no lost cards', pdDone === 200, pdProblem);
+  // A table is written to the database as text after every move and read back after a
+  // restart, so a game has to survive that at any moment: here, after every single move.
+  let pdKept = 0, pdKeptProblem = '';
+  for (let n = 0; n < 40 && !pdKeptProblem; n++) {
+    let g = PD.createGame({ players: Array.from({ length: 2 + n % 5 }, (_, i) => ({ id: 'p' + i, name: 'P' + i })), level: ['kids', 'cheeky', 'spicy', 'filthy'][n % 4], drinking: true });
+    try {
+      for (let guard = 0; g.phase !== 'over' && guard < 5000; guard++) {
+        g = JSON.parse(JSON.stringify(g));
+        const me = g.players[g.turn];
+        if (me.hand.length === 2 && guard % 3) PD.callUhOh(g, me.id);
+        const view = PD.snapshot(g, me.id);
+        const pick = view.playable.find(c => g.cards[c].kind !== 'gift' || me.hand.length > 1) || null;
+        if (pick) {
+          const card = g.cards[pick];
+          const opts = card.kind === 'wild' || card.kind === 'wild4' ? { color: PD.COLORS[guard % 4] }
+            : card.kind === 'gift' ? { giftCardId: me.hand.find(c => c !== pick), target: g.players.find(q => q.id !== me.id).id } : {};
+          PD.play(g, me.id, pick, opts);
+          if (g.vulnerable) PD.catchUhOh(g, g.players.find(q => q.id !== g.vulnerable).id, g.vulnerable);
+        } else { PD.draw(g, me.id); if (g.drew) PD.pass(g, me.id); }
+        const total = g.deck.length + g.discard.length + g.players.reduce((a, q) => a + q.hand.length, 0);
+        if (total !== 116) throw new Error('lost or duplicated a card: ' + total);
+      }
+      if (g.phase === 'over') pdKept++; else pdKeptProblem = 'game ' + n + ' never ended';
+    } catch (e) { pdKeptProblem = 'game ' + n + ': ' + e.message; }
+  }
+  ok('40 games written down and read back after every move still end with a winner and no lost cards', pdKept === 40, pdKeptProblem);
   const pd = PD.createGame({ players: [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }] });
   const notMine = pd.players[1].hand[0];
   ok('you can only play your own cards on your turn', (() => { try { PD.play(pd, 'b', notMine); return false; } catch (e) { return e.status === 409; } })());
@@ -497,6 +523,20 @@ async function run() {
     }
     ok(`${lv}: a quick game plays to a winner, names filled in`, g.phase === 'over' && !!g.winner && !leftover);
   }
+  // Dare Devil, written down and read back after every move (what a restart does to a table).
+  let ddKept = 0;
+  for (const lv of ['kids', 'cheeky', 'spicy', 'filthy']) {
+    let g = DD.createGame({ players: [{ id: 'a', name: 'Ann' }, { id: 'b', name: 'Bo' }, { id: 'c', name: 'Cy' }], level: lv, drinking: true, length: 'quick' });
+    for (let i = 0; g.phase !== 'over' && i < 100; i++) {
+      g = JSON.parse(JSON.stringify(g));
+      const pid = g.players[g.turn].id;
+      DD.draw(g, pid);
+      g = JSON.parse(JSON.stringify(g));
+      if (i % 4) DD.done(g, pid); else DD.chicken(g, pid);
+    }
+    if (g.phase === 'over' && g.winner) ddKept++;
+  }
+  ok('a game written down and read back after every move still plays to a winner, at every level', ddKept === 4, String(ddKept));
   const kidsTexts = DDC.pool('kids').map(c => c.text).join(' ');
   ok('the family deck has nothing rude in it', !/sex|naked|strip|kiss|drink|clothing|orgasm|fuck|shit/i.test(kidsTexts));
   ok('every card type is known', Object.values(DDC.DECK).flat().every(([type]) => DDC.TYPES[type]));

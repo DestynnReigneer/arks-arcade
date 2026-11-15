@@ -1415,7 +1415,16 @@ function openStream() {
     backToSetup();
     say($('setupMsg'), 'The host switched the game mode to adult, you have been removed. Only Adults can join.', 'err');
   });
-  S.stream.onerror = () => { /* EventSource reconnects on its own */ };
+  // The room is gone (or this seat is): back to the setup screen. Anything else is the arcade being
+  // away for a moment, and the live updates start again, by the browser or by live.js.
+  const stream = S.stream;
+  const again = () => ArcadeLive.retry(stream, () => S.stream === stream && !!S.creds, openStream);
+  stream.onerror = () => {
+    fetch(`${API}/rooms/${code}?playerId=${encodeURIComponent(playerId)}&token=${encodeURIComponent(token)}`).then(r => {
+      if (S.stream !== stream) return;
+      if (r.status === 404 || r.status === 403) { backToSetup(); say($('setupMsg'), 'That game has ended.', 'err'); } else again();
+    }).catch(again);
+  };
 }
 
 function closeStream() {

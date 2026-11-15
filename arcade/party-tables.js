@@ -1,7 +1,9 @@
 'use strict';
 
-// Tables for the party card games (Uh-Oh: Part Deux, Dare Devil), kept in
-// memory like the other games' rooms:
+// Tables for the party card games (Uh-Oh: Part Deux, Dare Devil). A table lives
+// in memory, and it's written down as it changes (room-store.js) and read back
+// when the arcade starts, so a restart ends nobody's game: the seats, the hands
+// and whose turn it is all come back. Two kinds:
 //   - local: one phone passed around; one token speaks for every seat.
 //   - room: everyone on their own phone, a four-letter code, live updates.
 //     A phone in a room can hold more players (seats) and be passed around
@@ -29,6 +31,7 @@ const crypto = require('node:crypto');
 const roomPassword = require('./room-password');
 const adultJoin = require('./adult-join');
 const roomChat = require('./room-chat');
+const roomStore = require('./room-store');
 
 const TTL_MS = 6 * 60 * 60 * 1000;
 const HEARTBEAT_MS = 25000;
@@ -47,8 +50,7 @@ const cleanName = (raw, fallback) => String(raw || '').trim().replace(/\s+/g, ' 
 function makeTables({ game = 'party', title = 'the game', engine, act, levels, minPlayers = 2, maxPlayers = 8, cleanOptions = () => ({}) }) {
   const tables = new Map();
   const chat = roomChat.create(game);
-  // These rooms live only in memory, so chat left from before a restart goes.
-  chat.clearAll();
+  const saved = roomStore(game);
   const levelOf = id => (typeof id === 'string' && Object.hasOwn(levels, id) ? id : Object.keys(levels)[0]);
   const isAdult = level => !!levels[levelOf(level)].adult;
 
@@ -80,7 +82,68 @@ function makeTables({ game = 'party', title = 'the game', engine, act, levels, m
     };
     t.game = newGame(clean.map((name, i) => ({ id: `p${i}`, name })), t);
     tables.set(t.id, t);
+    saved.saveNow(t.id, pack(t));
     return t;
+  }
+
+  // ---- kept between restarts -------------------------------------------------------
+  // A table as plain data: everything but who's connected right now. It holds the
+  // seats' tokens, every hand and, for an adult room, its lobby password, so it
+  // never leaves the server.
+  function pack(t) {
+    if (t.kind === 'local') {
+      return { id: t.id, kind: 'local', token: t.token, names: t.names, level: t.level, drinking: t.drinking, options: t.options, lastActivity: t.lastActivity, game: t.game };
+    }
+    return {
+      id: t.id, kind: 'room', level: t.level, drinking: t.drinking, options: t.options, password: t.password,
+      players: [...t.players.values()].map(p => ({
+        id: p.id, token: p.token || null, name: p.name, owner: p.owner || null, profileId: p.profileId || null, ready: !!p.ready, adultSignin: p.adultSignin || null
+      })),
+      hostId: t.hostId, screen: t.screen ? { id: t.screen.id, token: t.screen.token, name: t.screen.name } : null,
+      game: t.game, lastActivity: t.lastActivity, muted: [...t.muted]
+    };
+  }
+  const keep = t => saved.saveSoon(t.id, () => (tables.get(t.id) === t ? pack(t) : null));
+
+  // Brings the tables back when the arcade starts. The chat stays for the rooms
+  // that came back. -> how many came back.
+  function restore(now = Date.now()) {
+    // A table that can't be put back together is left out and removed (room-store.js), so it can't stop the arcade from starting.
+    const back = saved.restoreEach(({ code, data, savedAt }) => {
+      const lastActivity = Number(data.lastActivity) || savedAt;
+      let t = null;
+      if (data.id === code && !tables.has(code) && !allCodes.has(code) && now - lastActivity <= TTL_MS) {
+        if (data.kind === 'local' && typeof data.token === 'string' && Array.isArray(data.names) && data.game) {
+          t = {
+            id: code, kind: 'local', token: data.token, names: data.names.map((n, i) => cleanName(n, `Player ${i + 1}`)),
+            level: levelOf(data.level), drinking: !!data.drinking, options: cleanOptions(data.options || {}), lastActivity, game: data.game
+          };
+        } else if (data.kind === 'room' && Array.isArray(data.players) && (data.players.length || data.screen)) {
+          t = {
+            id: code, kind: 'room', level: levelOf(data.level), drinking: !!data.drinking, options: cleanOptions(data.options || {}),
+            password: data.password || null, players: new Map(), hostId: data.hostId,
+            screen: data.screen ? { id: String(data.screen.id), token: String(data.screen.token), name: cleanName(data.screen.name, 'TV'), clients: 0, screen: true } : null,
+            game: data.game || null, clients: new Set(), lastActivity, muted: new Set(Array.isArray(data.muted) ? data.muted : [])
+          };
+          for (const p of data.players) {
+            t.players.set(String(p.id), {
+              id: String(p.id), token: p.token ? String(p.token) : null, name: cleanName(p.name, 'Player'), clients: 0,
+              owner: p.owner || null, profileId: p.profileId || null, ready: !!p.ready, adultSignin: p.adultSignin || null
+            });
+          }
+          if (!member(t, t.hostId)) t.hostId = t.screen ? t.screen.id : ([...t.players.values()].find(x => x.token) || {}).id || null;
+          // An adult level always has its password, and a family one never does; a room with no host can't be run.
+          if (!isAdult(t.level)) { t.password = null; t.drinking = false; }
+          if (!t.hostId || (isAdult(t.level) && !t.password)) t = null;
+        }
+      }
+      if (!t) return false;
+      tables.set(code, t);
+      if (t.kind === 'room') allCodes.add(code);
+      return true;
+    });
+    chat.keepOnly([...tables.values()].filter(t => t.kind === 'room').map(t => t.id));
+    return back;
   }
 
   function local(id, token) {
@@ -96,6 +159,7 @@ function makeTables({ game = 'party', title = 'the game', engine, act, levels, m
     const t = local(id, token);
     act(t.game, String(body.as || ''), body);
     t.lastActivity = Date.now();
+    keep(t);
     return localSnapshot(t);
   }
 
@@ -103,6 +167,7 @@ function makeTables({ game = 'party', title = 'the game', engine, act, levels, m
     const t = local(id, token);
     t.game = newGame(t.names.map((name, i) => ({ id: `p${i}`, name })), t);
     t.lastActivity = Date.now();
+    keep(t);
     return localSnapshot(t);
   }
 
@@ -154,11 +219,13 @@ function makeTables({ game = 'party', title = 'the game', engine, act, levels, m
     if (screen) {
       t.screen = { id: makeId(), token: makeToken(), name: cleanName(name, 'TV'), clients: 0, screen: true };
       t.hostId = t.screen.id;
+      saved.saveNow(t.id, pack(t));
       return { table: t, player: t.screen };
     }
     const host = addPlayer(t, name || 'Host', null, profile);
     host.ready = true;
     t.hostId = host.id;
+    saved.saveNow(t.id, pack(t));
     return { table: t, player: host };
   }
 
@@ -358,8 +425,10 @@ function makeTables({ game = 'party', title = 'the game', engine, act, levels, m
     };
   }
 
+  // Every change to a room ends here: it's sent to whoever is connected, and written down within a moment.
   function touch(t) {
     t.lastActivity = Date.now();
+    keep(t);
     for (const c of t.clients) {
       try { c.res.write(`event: state\ndata: ${JSON.stringify(roomSnapshot(t, c.playerId))}\n\n`); } catch { /* closed */ }
     }
@@ -387,6 +456,7 @@ function makeTables({ game = 'party', title = 'the game', engine, act, levels, m
     if (t.clients) for (const c of t.clients) { try { c.res.end(); } catch { /* gone */ } }
     tables.delete(t.id);
     allCodes.delete(t.id);
+    saved.remove(t.id);
     if (t.kind === 'room') chat.clear(t.id);
   }
 
@@ -410,6 +480,10 @@ function makeTables({ game = 'party', title = 'the game', engine, act, levels, m
   }
   const sweeper = setInterval(sweep, 10 * 60 * 1000);
   if (typeof sweeper.unref === 'function') sweeper.unref();
+
+  // The tables that were open when the arcade last stopped.
+  const cameBack = restore();
+  if (cameBack) console.log(`${title} picked ${cameBack} game${cameBack === 1 ? '' : 's'} back up.`);
 
   return {
     MAX_PLAYERS: maxPlayers, isAdult, levelOf,
