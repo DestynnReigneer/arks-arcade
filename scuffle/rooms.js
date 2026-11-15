@@ -17,6 +17,7 @@ const game = require('./game');
 const roomPassword = require('../arcade/room-password');
 const adultJoin = require('../arcade/adult-join');
 const store = require('../arcade/room-store')('scuffle');
+const clock = require('../arcade/room-clock');
 
 const rooms = new Map();
 const MAX_ROOMS = 200;
@@ -102,11 +103,10 @@ function pack(r) {
 // gets the time it had left when it was last written down, because the clock
 // stood still while the arcade was away. -> how many came back.
 function restore(now = Date.now()) {
-  let back = 0;
-  for (const { code, data, savedAt } of store.all()) {
+  return store.restoreEach(({ code, data, savedAt }) => {
     const good = typeof data.code === 'string' && data.code === code && !rooms.has(code) && Array.isArray(data.players) &&
       data.settings && ['lobby', 'playing', 'reveal', 'over'].includes(data.phase) && (data.players.length || data.screen);
-    if (!good || now - (Number(data.lastActivity) || savedAt) > TTL_MS) { store.remove(code); continue; }
+    if (!good || now - (Number(data.lastActivity) || savedAt) > TTL_MS) return false;
     const r = {
       code, settings: cleanSettings(data.settings), phase: data.phase, hostId: data.hostId, password: data.password || null,
       players: data.players.map(p => ({
@@ -125,12 +125,11 @@ function restore(now = Date.now()) {
     if (r.phase === 'playing') {
       const left = Math.min(r.settings.seconds * 1000, Math.max(1000, r.endsAt - savedAt));
       r.endsAt = now + left;
-      r.timer = setTimeout(() => endRound(r), left + GRACE_MS);
+      r.timer = clock(left + GRACE_MS, () => endRound(r), () => close(r));
     }
     rooms.set(code, r);
-    back++;
-  }
-  return back;
+    return true;
+  });
 }
 
 function room(code) {
@@ -231,7 +230,7 @@ function nextRound(r) {
   r.firstFull = null;
   r.endsAt = Date.now() + r.settings.seconds * 1000;
   for (const p of r.players) { p.found = new Map(); p.roundScore = 0; p.done = false; }
-  r.timer = setTimeout(() => endRound(r), r.settings.seconds * 1000 + GRACE_MS);
+  r.timer = clock(r.settings.seconds * 1000 + GRACE_MS, () => endRound(r), () => close(r));
   touch(r);
 }
 

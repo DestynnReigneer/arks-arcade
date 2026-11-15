@@ -130,11 +130,10 @@ function pack(room) {
 // was last written down, because the clock stood still while the arcade was
 // away. -> how many came back.
 function restore(now = Date.now()) {
-  let back = 0;
-  for (const { code, data, savedAt } of store.all()) {
+  return store.restoreEach(({ code, data, savedAt }) => {
     const good = typeof data.code === 'string' && data.code === code && !rooms.has(code) && Array.isArray(data.players) &&
       data.settings && ['lobby', 'playing', 'results'].includes(data.state) && (data.players.length || data.screen);
-    if (!good || now - (Number(data.lastActivity) || savedAt) > ROOM_TTL_MS) { store.remove(code); continue; }
+    if (!good || now - (Number(data.lastActivity) || savedAt) > ROOM_TTL_MS) return false;
     const room = {
       code, createdAt: Number(data.createdAt) || savedAt, lastActivity: Number(data.lastActivity) || savedAt, state: data.state,
       settings: normalizeSettings(data.settings), board: null, boardId: null, minLength: null, totalWords: 0, built: null,
@@ -170,12 +169,11 @@ function restore(now = Date.now()) {
     if (room.state === 'playing') {
       const left = Math.min(room.settings.durationSec * 1000, Math.max(1000, room.endsAt - savedAt));
       room.endsAt = now + left;
-      room.timer = setTimeout(() => finishRound(room), left + GRACE_MS);
+      room.timer = clock(left + GRACE_MS, () => finishRound(room), () => closeRoom(room));
     }
     rooms.set(code, room);
-    back++;
-  }
-  return back;
+    return true;
+  });
 }
 
 // ---- lifecycle -------------------------------------------------------------
@@ -212,6 +210,7 @@ function addPlayer(room, rawName) {
 const roomPassword = require('../arcade/room-password');
 const adultJoin = require('../arcade/adult-join');
 const store = require('../arcade/room-store')('rambler');
+const clock = require('../arcade/room-clock');
 
 // screen: this device (a TV) hosts and shows the game, and doesn't play.
 function createRoom({ hostName, size, profile, durationSec, password, screen = false }) {
@@ -321,7 +320,10 @@ function updateSettings(code, id, suppliedToken, settings) {
   requireHost(room, player);
   if (room.state === 'playing') throw fail('Round in progress.', 409);
 
-  const next = normalizeSettings({ ...room.settings, ...settings });
+  // Only what the request names changes. The page sends one setting at a time, and a
+  // setting it leaves out stays as it is instead of going back to where it started.
+  const named = Object.fromEntries(Object.entries(settings || {}).filter(([, value]) => value !== undefined && value !== null));
+  const next = normalizeSettings({ ...room.settings, ...named });
   // The password comes before anything else, so a switch that's refused changes nothing.
   const turningAdult = next.profile === 'adult' && room.settings.profile !== 'adult';
   if (next.profile === 'adult') { if (!room.password) room.password = roomPassword.requireNew(settings.password); } else room.password = null;
@@ -400,7 +402,7 @@ function startRound(code, id, suppliedToken) {
   }
 
   clearTimeout(room.timer);
-  room.timer = setTimeout(() => finishRound(room), room.settings.durationSec * 1000 + GRACE_MS);
+  room.timer = clock(room.settings.durationSec * 1000 + GRACE_MS, () => finishRound(room), () => closeRoom(room));
   touch(room);
   broadcast(room);
   return room;

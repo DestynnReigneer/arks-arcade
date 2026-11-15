@@ -12,7 +12,7 @@
 //   store.saveSoon(code, () => pack(room))   written within a moment; changes in a row become one write
 //   store.saveNow(code, pack(room))          written at once
 //   store.remove(code)                       the room closed
-//   store.all() -> [{ code, data, savedAt }] read once, when the arcade starts
+//   store.restoreEach(row => { ... })       each kept room, once, when the arcade starts (row: { code, data, savedAt })
 //
 // What's written holds seat tokens and, for an adult room, its lobby
 // password, so it stays in the database and no route ever sends it out.
@@ -80,11 +80,24 @@ function roomStore(game) {
     }
     return out;
   }
+  // Hands each kept room to bring(), one at a time, when the arcade starts. A room
+  // bring() can't put back together (it throws, or returns false) is said in the
+  // log and removed, so one bad row can never keep the arcade from starting.
+  // -> how many came back.
+  function restoreEach(bring) {
+    let back = 0;
+    for (const row of all()) {
+      let came = false;
+      try { came = bring(row) !== false; } catch (e) { console.error(`${game}: left out a saved room that could not be read: ${e.message}`); }
+      if (came) back++; else remove(row.code);
+    }
+    return back;
+  }
   // Everything still waiting, written now.
   function flush() {
     for (const [code, w] of [...waiting]) { forget(code); write(code, w.pack); }
   }
-  const store = { saveSoon, saveNow, remove, all, flush };
+  const store = { saveSoon, saveNow, remove, all, restoreEach, flush };
   stores.push(store);
   return store;
 }

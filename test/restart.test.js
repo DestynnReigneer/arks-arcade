@@ -8,6 +8,7 @@
 // of a hand (in a room, and on one device).
 
 const path = require('node:path');
+const { DatabaseSync } = require('node:sqlite');
 
 async function run({ base, root, restart }) {
   const scuffleGame = require(path.join(root, 'scuffle/game.js'));
@@ -82,6 +83,42 @@ async function run({ base, root, restart }) {
   ok('Spin & Solve: a strike in one game, the second player\'s turn in the other',
     before.state.strikes === 1 && beforeGuests.state.cur === 1 && adult.adult === true, JSON.stringify([before.state.strikes, beforeGuests.state.cur]));
   ok('nothing is in the Continue row for someone with no profile', (await api('/api/continue')).data.games.length === 0);
+
+  // Rows that aren't games anymore, written straight into the database while the
+  // arcade is stopped (a file someone edited, or a mistake in a later version).
+  // The arcade has to start anyway, leave them out and clear them away.
+  const hex = ch => ch.repeat(32);
+  const damaged = { [hex('a')]: { revealed: 5 }, [hex('b')]: { revealed: {} }, [hex('c')]: { usedPuzzles: true }, [hex('d')]: { players: [null] } };
+  const spinRows = () => {
+    const db = new DatabaseSync(path.join(root, 'data', 'test.db'));
+    try { return db.prepare('SELECT id FROM spin_games').all().map(r => r.id); } finally { db.close(); }
+  };
+  const damage = () => {
+    const db = new DatabaseSync(path.join(root, 'data', 'test.db'));
+    const good = JSON.parse(db.prepare('SELECT state FROM spin_games WHERE id = ?').get(mine.id).state);
+    const put = db.prepare('INSERT INTO spin_games (id, state, touched) VALUES (?, ?, ?)');
+    for (const [id, change] of Object.entries(damaged)) put.run(id, JSON.stringify({ ...good, id, ...change }), Date.now());
+    put.run(hex('e'), '{not a game', Date.now());
+    // A family game whose row was pointed at an adult level's list of puzzles.
+    put.run(hex('f'), JSON.stringify({ ...good, id: hex('f'), poolKey: 'level:filthy', profileId: null }), Date.now());
+    // Rooms that can't be put back together, beside the real ones.
+    const room = (game, code) => JSON.parse(db.prepare('SELECT data FROM saved_rooms WHERE game = ? AND code = ?').get(game, code).data);
+    const putRoom = db.prepare('INSERT INTO saved_rooms (game, code, data, saved_at) VALUES (?, ?, ?, ?)');
+    const scGood = room('scuffle', sc.code), rbGood = room('rambler', rb.code);
+    for (const [code, change] of Object.entries(damagedRooms.scuffle)) putRoom.run('scuffle', code, JSON.stringify({ ...scGood, code, ...change }), Date.now());
+    for (const [code, change] of Object.entries(damagedRooms.rambler)) putRoom.run('rambler', code, JSON.stringify({ ...rbGood, code, ...change }), Date.now());
+    putRoom.run('scuffle', 'ZZZZ', '{not a room', Date.now());
+    db.close();
+  };
+  // players: [null] can't be read at all; a word list that isn't one breaks the seat it belongs to.
+  const damagedRooms = {
+    scuffle: { ZZZA: { players: [null] }, ZZZB: { players: [{ id: 'x', token: 'y', name: 'Z', found: [5] }] }, ZZZC: { phase: 'paused' } },
+    rambler: { ZZZA: { players: [null] }, ZZZB: { screen: null, players: [] }, ZZZC: { state: 'paused' } }
+  };
+  const roomRows = () => {
+    const db = new DatabaseSync(path.join(root, 'data', 'test.db'));
+    try { return db.prepare('SELECT game, code FROM saved_rooms').all().map(r => `${r.game}:${r.code}`); } finally { db.close(); }
+  };
 
   // Shuffle Scuffle: a room in the middle of a round with a word found, a lobby nobody started, and an adult lobby.
   const scRoom = p => `/api/scuffle/rooms/${p}`;
@@ -160,7 +197,7 @@ async function run({ base, root, restart }) {
   // stood still from one that kept running.
   await wait(900);
   const DOWN_MS = 4000;
-  await restart({ downMs: DOWN_MS });
+  await restart({ downMs: DOWN_MS, whileDown: damage });
   const scAfter = await scSee(scAlex);
   const rbAfter = (await rbEvents(rbBo)).state;
   const kiAfter = (await kiSee(ki)).data;
@@ -178,6 +215,18 @@ async function run({ base, root, restart }) {
   ok('…and so does a game nobody had moved in yet', (await look(untouched.id)).status === 200);
   ok('an adult game still needs the pass after a restart', (await look(adult.id)).status === 403 && (await look(adult.id, PIN)).status === 200);
   ok('the puzzle is the same one', (await answerOf(mine.id)) === answer);
+  const leftOut = await Promise.all([...Object.keys(damaged), hex('e')].map(id => look(id)));
+  ok('the arcade started with five damaged rows in the database, and none of them is a game', leftOut.every(r => r.status === 404), leftOut.map(r => r.status).join());
+  // The family game that pointed at an adult list plays on with the puzzle it had, round after round.
+  const crossed = hex('f');
+  const crossedAnswers = [];
+  for (let round = 1; round <= 3; round++) {
+    crossedAnswers.push(await answerOf(crossed));
+    await spin(`/${crossed}/solve`, { guess: crossedAnswers[round - 1] });
+    await spin(`/${crossed}/next`);
+  }
+  ok('a family game pointed at an adult list never draws from it', crossedAnswers.length === 3 && crossedAnswers.every(a => a === answer), crossedAnswers.join(' | '));
+
   const row = (await api('/api/continue', 'GET', null, kim)).data.games.find(g => g.game === 'spinsolve');
   ok('a profile\'s game that was played is in their Continue row', !!row && row.title === 'Spin & Solve' &&
     /^Round 1 of 3, \$[\d,]+ so far$/.test(row.detail) && row.href === `spinsolve.html?game=${mine.id}`, JSON.stringify(row));
@@ -304,8 +353,13 @@ async function run({ base, root, restart }) {
   await api(scRoom(`${scLobby.code}/leave`), 'POST', seat(scLobby));
 
   await wait(900);
-  await restart();
+  let rowsLeft = [], roomsLeft = [];
+  await restart({ whileDown: () => { rowsLeft = spinRows(); roomsLeft = roomRows(); } });
 
+  ok('the damaged rows were cleared out of the database, and the games are still in it',
+    rowsLeft.includes(guests.id) && ![...Object.keys(damaged), hex('e')].some(id => rowsLeft.includes(id)), rowsLeft.join());
+  ok('…and so were seven rooms that couldn\'t be put back together, while the real rooms stayed',
+    roomsLeft.includes(`scuffle:${sc.code}`) && roomsLeft.includes(`rambler:${rb.code}`) && !roomsLeft.some(r => /:ZZZ/.test(r)), roomsLeft.join());
   const stillOver = await look(mine.id, kim);
   ok('a finished Spin & Solve game waiting for its score comes back as well', stillOver.status === 200 && stillOver.data.state.phase === 'over' && stillOver.data.state.players[0].total === total);
   ok('…and it has left the Continue row', !(await api('/api/continue', 'GET', null, kim)).data.games.some(g => g.game === 'spinsolve'));
