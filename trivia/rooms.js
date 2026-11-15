@@ -30,6 +30,7 @@ const chat = require('../arcade/room-chat').create('trivia');
 // Rooms live in memory, and each one is written down as it changes and read back
 // when the arcade starts (restore, below), so a restart ends nobody's game.
 const saved = require('../arcade/room-store')('trivia');
+const clock = require('../arcade/room-clock');
 
 const rooms = new Map();
 const MAX_ROOMS = 200;
@@ -115,15 +116,15 @@ function pack(r) {
 // that was showing is shown again before the next question. The chat stays for
 // the rooms that came back. -> how many came back.
 function restore(now = Date.now()) {
-  let back = 0;
   const seat = p => ({
     id: String(p.id), token: p.token ? String(p.token) : null, name: cleanName(p.name, 'Player'), score: Number(p.score) || 0,
     streak: Number(p.streak) || 0, clients: 0, owner: p.owner || null, profileId: p.profileId || null, ready: !!p.ready
   });
-  for (const { code, data, savedAt } of saved.all()) {
+  // A room that can't be put back together is left out and removed (room-store.js), so it can't stop the arcade from starting.
+  const back = saved.restoreEach(({ code, data, savedAt }) => {
     const good = typeof data.code === 'string' && data.code === code && !rooms.has(code) && Array.isArray(data.players) && data.settings &&
       ['lobby', 'ready', 'question', 'reveal', 'over'].includes(data.phase) && (data.players.length || data.screen);
-    if (!good || now - (Number(data.lastActivity) || savedAt) > TTL_MS) { saved.remove(code); continue; }
+    if (!good || now - (Number(data.lastActivity) || savedAt) > TTL_MS) return false;
     const r = {
       code, hostId: data.hostId, players: data.players.map(seat), screen: data.screen ? { ...seat(data.screen), screen: true } : null,
       settings: cleanSettings(data.settings), phase: data.phase, qIndex: Number.isInteger(data.qIndex) ? data.qIndex : -1,
@@ -134,7 +135,7 @@ function restore(now = Date.now()) {
     };
     if (!member(r, r.hostId)) r.hostId = r.screen ? r.screen.id : r.players[0].id;
     // An adult level always has its password; a room that lost it doesn't come back.
-    if (bank.LEVELS[r.settings.level].adult ? !r.password : false) { saved.remove(code); continue; }
+    if (bank.LEVELS[r.settings.level].adult ? !r.password : false) return false;
     if (!bank.LEVELS[r.settings.level].adult) r.password = null;
     // A game with no question behind it can't be shown: back to the lobby, with everyone still in their seat.
     const going = ['ready', 'question', 'reveal'].includes(r.phase);
@@ -142,10 +143,16 @@ function restore(now = Date.now()) {
       r.phase = 'lobby'; r.qIndex = -1; r.questions = []; r.reveal = null; r.finale = null; r.turnId = null;
     }
     rooms.set(code, r);
-    if (r.phase === 'question') startClock(r);
-    else if (r.phase === 'reveal') r.timer = setTimeout(() => nextQuestion(r), REVEAL_MS);
-    back++;
-  }
+    try {
+      if (r.phase === 'question') startClock(r);
+      else if (r.phase === 'reveal') r.timer = clock(REVEAL_MS, () => nextQuestion(r), () => close(r));
+    } catch (e) {
+      clearTimeout(r.timer);
+      rooms.delete(code);
+      throw e;
+    }
+    return true;
+  });
   chat.keepOnly([...rooms.keys()]);
   return back;
 }
@@ -313,7 +320,7 @@ function startClock(r) {
   r.phase = 'question';
   r.qStartedAt = Date.now();
   r.qEndsAt = r.qStartedAt + r.settings.seconds * 1000;
-  r.timer = setTimeout(() => reveal(r), r.settings.seconds * 1000 + 200);
+  r.timer = clock(r.settings.seconds * 1000 + 200, () => reveal(r), () => close(r));
   touch(r);
 }
 
@@ -367,7 +374,7 @@ function reveal(r) {
   const callouts = Rules.afterQuestion(results, { ...r.settings, ...extras(r.settings.level) });
   r.phase = 'reveal';
   r.reveal = { correctIndex: q.correctIndex, results, callouts };
-  r.timer = setTimeout(() => nextQuestion(r), REVEAL_MS + (callouts.length ? REVEAL_EXTRA_MS : 0));
+  r.timer = clock(REVEAL_MS + (callouts.length ? REVEAL_EXTRA_MS : 0), () => nextQuestion(r), () => close(r));
   touch(r);
 }
 

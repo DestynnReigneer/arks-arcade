@@ -108,12 +108,20 @@ async function run({ base, root, restart }) {
     for (const [code, change] of Object.entries(damagedRooms.scuffle)) putRoom.run('scuffle', code, JSON.stringify({ ...scGood, code, ...change }), Date.now());
     for (const [code, change] of Object.entries(damagedRooms.rambler)) putRoom.run('rambler', code, JSON.stringify({ ...rbGood, code, ...change }), Date.now());
     putRoom.run('scuffle', 'ZZZZ', '{not a room', Date.now());
+    const kiGood = room('trivia', ki.code);
+    for (const [code, change] of Object.entries(damagedRooms.trivia)) putRoom.run('trivia', code, JSON.stringify({ ...kiGood, code, ...change }), Date.now());
+    for (const game of ['partdeux', 'daredevil']) {
+      const tableGood = room(game, cards[game].host.code);
+      for (const [code, change] of Object.entries(damagedRooms.cards)) putRoom.run(game, code, JSON.stringify({ ...tableGood, id: code, ...change }), Date.now());
+    }
     db.close();
   };
   // players: [null] can't be read at all; a word list that isn't one breaks the seat it belongs to.
   const damagedRooms = {
     scuffle: { ZZZA: { players: [null] }, ZZZB: { players: [{ id: 'x', token: 'y', name: 'Z', found: [5] }] }, ZZZC: { phase: 'paused' } },
-    rambler: { ZZZA: { players: [null] }, ZZZB: { screen: null, players: [] }, ZZZC: { state: 'paused' } }
+    rambler: { ZZZA: { players: [null] }, ZZZB: { screen: null, players: [] }, ZZZC: { state: 'paused' } },
+    trivia: { ZZZA: { players: [null] }, ZZZB: { screen: null, players: [] }, ZZZC: { phase: 'paused' } },
+    cards: { ZZZA: { players: [null] }, ZZZB: { kind: 'neither' }, ZZZC: { hostId: 'nobody', players: [{ id: 'x', name: 'Z' }] } }
   };
   const roomRows = () => {
     const db = new DatabaseSync(path.join(root, 'data', 'test.db'));
@@ -358,8 +366,10 @@ async function run({ base, root, restart }) {
 
   ok('the damaged rows were cleared out of the database, and the games are still in it',
     rowsLeft.includes(guests.id) && ![...Object.keys(damaged), hex('e')].some(id => rowsLeft.includes(id)), rowsLeft.join());
-  ok('…and so were seven rooms that couldn\'t be put back together, while the real rooms stayed',
-    roomsLeft.includes(`scuffle:${sc.code}`) && roomsLeft.includes(`rambler:${rb.code}`) && !roomsLeft.some(r => /:ZZZ/.test(r)), roomsLeft.join());
+  ok('…and so were sixteen rooms and tables that couldn\'t be put back together, in all five games, while the real ones stayed',
+    roomsLeft.includes(`scuffle:${sc.code}`) && roomsLeft.includes(`rambler:${rb.code}`) && roomsLeft.includes(`trivia:${ki.code}`) &&
+    roomsLeft.includes(`partdeux:${cards.partdeux.host.code}`) && roomsLeft.includes(`daredevil:${cards.daredevil.host.code}`) &&
+    !roomsLeft.some(r => /:ZZZ/.test(r)), roomsLeft.join());
   const stillOver = await look(mine.id, kim);
   ok('a finished Spin & Solve game waiting for its score comes back as well', stillOver.status === 200 && stillOver.data.state.phase === 'over' && stillOver.data.state.players[0].total === total);
   ok('…and it has left the Continue row', !(await api('/api/continue', 'GET', null, kim)).data.games.some(g => g.game === 'spinsolve'));
