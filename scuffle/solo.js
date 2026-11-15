@@ -7,8 +7,10 @@
 // id; each round's clock starts on the server when the round does, every
 // word is checked here, and the points are added up here. The browser never
 // sends a score or a time, and it only sees a round's words once the round is
-// over. Games live in memory (a few minutes each); only saved daily scores go
-// in the database.
+// over. A game lives in memory, and it's also written down as it changes
+// (arcade/room-store.js) and read back when the arcade starts, so a restart
+// or a power cut in the middle of a round ends nobody's game. The round gets
+// the time it had left when it was last written down.
 
 const crypto = require('node:crypto');
 const db = require('../db');
@@ -109,9 +111,44 @@ migrate();
 const fail = (message, status = 400) => Object.assign(new Error(message), { status });
 const profiles = () => require('../arcade/profiles');
 const games = new Map();
+const store = require('../arcade/room-store')('scuffle-solo');
+
+// ---- kept between restarts ---------------------------------------------------------
+// A game as plain data. Each round's found words are a Map, written as a list.
+const pack = g => ({ ...g, current: undefined, played: g.played.map(r => ({ ...r, found: [...r.found] })) });
+const keep = g => { if (games.has(g.id)) store.saveSoon(g.id, () => pack(g)); };
+const drop = id => { games.delete(id); store.remove(id); };
+
+// Brings the games back when the arcade starts. A round that was going gets the
+// time it had left when it was last written down: the clock stood still while
+// the arcade was away. A row that isn't a game is left out and removed
+// (room-store.js). -> how many came back.
+function restore(now = Date.now()) {
+  return store.restoreEach(({ code, data, savedAt }) => {
+    const good = /^[0-9a-f]{32}$/.test(code) && data.id === code && !games.has(code) && ['daily', 'free'].includes(data.mode) &&
+      Array.isArray(data.rounds) && data.rounds.length > 0 && data.rounds.every(d => d && d.letters && Array.isArray(d.words)) &&
+      Number.isInteger(data.index) && data.index >= -1 && data.index < data.rounds.length &&
+      Array.isArray(data.played) && data.played.length === data.index + 1;
+    const touched = Number(data.touched) || savedAt;
+    if (!good || now - touched > KEEP_MS) return false;
+    const g = {
+      id: code, mode: data.mode, day: String(data.day), dictionary: game.profileOf(data.dictionary), seconds: Number(data.seconds) || game.DAILY.seconds,
+      rounds: data.rounds, index: data.index, current: null,
+      played: data.played.map(r => ({
+        startedAt: Number(r.startedAt) || 0, endsAt: Number(r.endsAt) || 0, score: Number(r.score) || 0, ended: !!r.ended,
+        found: new Map((Array.isArray(r.found) ? r.found : []).map(([word, points]) => [String(word), Number(points) || 0]))
+      })),
+      total: Number(data.total) || 0, finished: !!data.finished, saved: !!data.saved, profileId: data.profileId || null, touched
+    };
+    g.current = g.index >= 0 ? g.played[g.index] : null;
+    if (g.current && !g.current.ended) g.current.endsAt = now + Math.min(g.seconds * 1000, Math.max(1000, g.current.endsAt - savedAt));
+    games.set(code, g);
+    return true;
+  });
+}
 
 function sweep(now = Date.now()) {
-  for (const [id, g] of games) if (now - g.touched > KEEP_MS) games.delete(id);
+  for (const [id, g] of games) if (now - g.touched > KEEP_MS) drop(id);
   db.db.prepare('DELETE FROM scuffle_daily_plays WHERE day < ?').run(today(new Date(now - 2 * 24 * 3600 * 1000)));
 }
 const sweeper = setInterval(sweep, 10 * 60 * 1000);
@@ -137,6 +174,7 @@ function endRound(g) {
   r.ended = true;
   g.total += r.score;
   if (g.index === g.rounds.length - 1) g.finished = true;
+  keep(g);
 }
 
 function view(g, now = Date.now()) {
@@ -187,6 +225,8 @@ function start({ mode, dictionary, rounds, seconds, profileToken }, now = Date.n
     profileId: profile ? profile.id : null, touched: now
   };
   games.set(g.id, g);
+  // Written at once: a daily is the one go a profile gets, so it has to be there to come back to.
+  store.saveNow(g.id, pack(g));
   if (daily && profile) db.db.prepare('INSERT INTO scuffle_daily_plays (day, dictionary, profile_id, game_id) VALUES (?, ?, ?, ?)').run(day, dict, profile.id, g.id);
   return view(g, now);
 }
@@ -223,6 +263,7 @@ function next(id, now = Date.now()) {
   g.index++;
   g.current = { startedAt: now, endsAt: now + g.seconds * 1000, found: new Map(), score: 0, ended: false };
   g.played.push(g.current);
+  keep(g);
   return view(g, now);
 }
 
@@ -243,6 +284,7 @@ function word(id, raw, now = Date.now()) {
     verdict.points = game.pointsFor(verdict.word, def.letters.length);
     r.found.set(verdict.word, verdict.points);
     r.score += verdict.points;
+    keep(g);
     // Every word found: no reason to make them watch the clock.
     if (r.found.size === def.words.length) endRound(g);
   }
@@ -301,6 +343,7 @@ function save(id, { initials, profileToken }) {
       body: `${shout} scored ${g.total.toLocaleString('en-US')} on the ${LIST_NAME[g.dictionary]} daily set, the highest anyone has managed. Today's letters are waiting if you want a go.`
     });
   }
+  keep(g);
   return { id: scoreId, dayRank, allRank, score: g.total };
 }
 
@@ -326,5 +369,8 @@ function board({ scope = 'day', day, limit = 20, dictionary: list }) {
     };
   });
 }
+
+const cameBack = restore();
+if (cameBack) console.log(`Shuffle Scuffle picked ${cameBack} solo game${cameBack === 1 ? '' : 's'} back up.`);
 
 module.exports = { start, next, word, stop, save, board, dailyStatus, view: id => view(need(id)), GRACE_MS, _games: games };

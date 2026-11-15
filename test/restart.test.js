@@ -108,6 +108,12 @@ async function run({ base, root, restart }) {
     for (const [code, change] of Object.entries(damagedRooms.scuffle)) putRoom.run('scuffle', code, JSON.stringify({ ...scGood, code, ...change }), Date.now());
     for (const [code, change] of Object.entries(damagedRooms.rambler)) putRoom.run('rambler', code, JSON.stringify({ ...rbGood, code, ...change }), Date.now());
     putRoom.run('scuffle', 'ZZZZ', '{not a room', Date.now());
+    const soloGood = room('scuffle-solo', soloSc.gameId);
+    for (const [code, change] of Object.entries(damagedRooms.solo)) putRoom.run('scuffle-solo', code, JSON.stringify({ ...soloGood, id: code, ...change }), Date.now());
+    const maraGood = room('rambler-marathon', mara.id);
+    putRoom.run('rambler-marathon', 'a'.repeat(24), JSON.stringify({ ...maraGood, id: 'a'.repeat(24), found: [null] }), Date.now());
+    putRoom.run('rambler-marathon', 'b'.repeat(24), JSON.stringify({ ...maraGood, id: 'b'.repeat(24), board: 5 }), Date.now());
+    putRoom.run('rambler-boards', 'c'.repeat(24), JSON.stringify({ id: 'c'.repeat(24), board: 'none' }), Date.now());
     const kiGood = room('trivia', ki.code);
     for (const [code, change] of Object.entries(damagedRooms.trivia)) putRoom.run('trivia', code, JSON.stringify({ ...kiGood, code, ...change }), Date.now());
     for (const game of ['partdeux', 'daredevil']) {
@@ -121,6 +127,7 @@ async function run({ base, root, restart }) {
     scuffle: { ZZZA: { players: [null] }, ZZZB: { players: [{ id: 'x', token: 'y', name: 'Z', found: [5] }] }, ZZZC: { phase: 'paused' } },
     rambler: { ZZZA: { players: [null] }, ZZZB: { screen: null, players: [] }, ZZZC: { state: 'paused' } },
     trivia: { ZZZA: { players: [null] }, ZZZB: { screen: null, players: [] }, ZZZC: { phase: 'paused' } },
+    solo: { [hex('1')]: { played: [null] }, [hex('2')]: { rounds: 7 }, [hex('3')]: { played: [{ found: [5] }] } },
     cards: { ZZZA: { players: [null] }, ZZZB: { kind: 'neither' }, ZZZC: { hostId: 'nobody', players: [{ id: 'x', name: 'Z' }] } }
   };
   const roomRows = () => {
@@ -199,6 +206,22 @@ async function run({ base, root, restart }) {
     ok(`${game}: a room and a one-device game are in the middle of a hand`, drew.status === 200 && localDrew.status === 200 &&
       !!cards[game].beforeHost.game && cards[game].beforeHost.game.phase !== 'over', JSON.stringify(drew.data).slice(0, 200));
   }
+
+  // The word games played alone: a Shuffle Scuffle round with a word found, a Rambler
+  // board in the middle of a round, and a Marathon run with a word in it.
+  const soloSc = (await api('/api/scuffle/solo', 'POST', { mode: 'free', rounds: 3, seconds: 60, dictionary: 'kids' })).data;
+  const soloRound = (await api(`/api/scuffle/solo/${soloSc.gameId}/next`, 'POST', {})).data;
+  const soloWord = scuffleGame.findWords(soloRound.round.letters, 'kids')[0];
+  const soloFound = (await api(`/api/scuffle/solo/${soloSc.gameId}/word`, 'POST', { word: soloWord })).data;
+  const soloBefore = (await api(`/api/scuffle/solo/${soloSc.gameId}`)).data;
+  const soloBoard = (await api('/api/rambler/board', 'POST', { size: 4, profile: 'kids' })).data;
+  const soloBoardWords = solver.solveWords(soloBoard.board, { cols: 4, rows: 4 }, 'kids').filter(w => w.length >= (soloBoard.minLength || 3)).slice(0, 3);
+  const mara = (await api('/api/rambler/marathon', 'POST', { profile: 'kids', difficulty: 'easy' })).data;
+  const maraWords = solver.solveWords(mara.board, { cols: mara.cols, rows: mara.rows }, 'kids').filter(w => w.length >= mara.minLength);
+  const maraBefore = (await api(`/api/rambler/marathon/${mara.id}/word`, 'POST', { word: maraWords[0] })).data;
+  ok('the solo games are set up: a word found in Shuffle Scuffle, a Rambler board, and a word in a Marathon run',
+    soloFound.ok === true && soloBefore.phase === 'playing' && soloBefore.round.found.length === 1 && !!soloBoard.boardId && soloBoardWords.length === 3 &&
+    maraBefore.valid === true && maraBefore.wordCount === 1, JSON.stringify([soloFound.ok, soloBefore.phase, maraBefore.valid, maraBefore.reason]));
 
   // A room is written down within a moment of changing. Then the plug is pulled,
   // and the arcade stays away for a few seconds, long enough to tell a clock that
@@ -345,6 +368,31 @@ async function run({ base, root, restart }) {
     ok('Uh-Oh: Part Deux: the hand plays on', more.status === 200 && !!more.data.game, JSON.stringify(more.data).slice(0, 200));
   }
 
+  console.log('\n-- restart: the word games played alone --');
+  const soloAfter = (await api(`/api/scuffle/solo/${soloSc.gameId}`)).data;
+  ok('Shuffle Scuffle alone: the round comes back with the word found and the score',
+    soloAfter.phase === 'playing' && soloAfter.index === soloBefore.index && soloAfter.total === soloBefore.total &&
+    JSON.stringify(soloAfter.round.found) === JSON.stringify(soloBefore.round.found) && soloAfter.round.letters === soloBefore.round.letters,
+    JSON.stringify(soloAfter).slice(0, 200));
+  const soloLeftBefore = soloBefore.round.endsAt - soloBefore.serverNow, soloLeftAfter = soloAfter.round.endsAt - soloAfter.serverNow;
+  ok('…and its clock stood still while the arcade was away', soloLeftAfter <= soloLeftBefore + 200 && soloLeftAfter > soloLeftBefore - 2500,
+    `${soloLeftBefore} ms left before, ${soloLeftAfter} after`);
+  const soloMore = scuffleGame.findWords(soloAfter.round.letters, 'kids').find(w => w !== soloWord);
+  ok('…and it plays on', (await api(`/api/scuffle/solo/${soloSc.gameId}/word`, 'POST', { word: soloMore })).data.ok === true);
+  const checked = await api('/api/rambler/check', 'POST', { boardId: soloBoard.boardId, word: soloBoardWords[0] });
+  ok('Rambler alone: the board is still there to check a word against', checked.status === 200 && checked.data.valid === true, JSON.stringify(checked.data));
+  const scoredSolo = await api('/api/rambler/score', 'POST', { boardId: soloBoard.boardId, players: [{ id: 'p0', name: 'Solo', words: soloBoardWords }] });
+  ok('…and the round is scored at the end', scoredSolo.status === 200 && scoredSolo.data.results[0].wordCount === 3, JSON.stringify(scoredSolo.data).slice(0, 200));
+  const maraAfter = (await api(`/api/rambler/marathon/${mara.id}/word`, 'POST', { word: maraWords[1] })).data;
+  ok('Marathon: the run comes back with its word and its score, and takes another word',
+    maraAfter.valid === true && maraAfter.wordCount === 2 && maraAfter.found[0].word === maraBefore.found[0].word && maraAfter.score > maraBefore.score,
+    JSON.stringify(maraAfter).slice(0, 200));
+  const maraLeftBefore = maraBefore.endsAt - maraBefore.serverNow, maraLeftAfter = maraAfter.endsAt - maraAfter.serverNow - maraAfter.found[1].seconds * 1000;
+  ok('…and its clock stood still too', maraLeftAfter <= maraLeftBefore + 200 && maraLeftAfter > maraLeftBefore - 4000, `${maraLeftBefore} ms left before, ${maraLeftAfter} after`);
+  const leftOutSolo = await Promise.all(Object.keys(damagedRooms.solo).map(id => api(`/api/scuffle/solo/${id}`)));
+  ok('damaged solo games and runs were left out', leftOutSolo.every(r => r.status === 404) &&
+    (await api(`/api/rambler/marathon/${'a'.repeat(24)}/word`, 'POST', { word: 'CAT' })).status === 404);
+
   console.log('\n-- restart: played on, and stopped again --');
   // Spin & Solve: played on to the end.
   const solved = await spin(`/${mine.id}/solve`, { guess: answer }, kim);
@@ -370,6 +418,9 @@ async function run({ base, root, restart }) {
     roomsLeft.includes(`scuffle:${sc.code}`) && roomsLeft.includes(`rambler:${rb.code}`) && roomsLeft.includes(`trivia:${ki.code}`) &&
     roomsLeft.includes(`partdeux:${cards.partdeux.host.code}`) && roomsLeft.includes(`daredevil:${cards.daredevil.host.code}`) &&
     !roomsLeft.some(r => /:ZZZ/.test(r)), roomsLeft.join());
+  ok('…and the damaged solo games, runs and boards, while the real ones stayed',
+    roomsLeft.includes(`scuffle-solo:${soloSc.gameId}`) && roomsLeft.includes(`rambler-marathon:${mara.id}`) && roomsLeft.includes(`rambler-boards:${soloBoard.boardId}`) &&
+    !roomsLeft.some(r => /:(1{32}|2{32}|3{32}|a{24}|b{24}|c{24})$/.test(r)), roomsLeft.filter(r => /solo|marathon|boards/.test(r)).join());
   const stillOver = await look(mine.id, kim);
   ok('a finished Spin & Solve game waiting for its score comes back as well', stillOver.status === 200 && stillOver.data.state.phase === 'over' && stillOver.data.state.players[0].total === total);
   ok('…and it has left the Continue row', !(await api('/api/continue', 'GET', null, kim)).data.games.some(g => g.game === 'spinsolve'));

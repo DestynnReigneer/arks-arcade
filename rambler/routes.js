@@ -129,11 +129,11 @@ router.post('/board', boardLimiter, (req, res, next) => {
     const profile = profileOf(body.profile);
     assertProfileAllowed(profile, req);
 
-    const entry = boards.stash(round.createBoard({
+    const entry = boards.keep(boards.stash(round.createBoard({
       size: body.size,
       profile,
       difficulty: body.difficulty
-    }));
+    })));
     res.status(201).json({
       boardId: entry.id,
       board: entry.board,
@@ -206,6 +206,7 @@ router.post('/score', scoreLimiter, (req, res, next) => {
     result.profile = entry.profile;
     result.difficulty = entry.difficulty;
     entry.result = result;
+    boards.keep(entry);
 
     // If a profile was playing, this is where the streak, coins and
     // milestones move. Guests can still play; they just bank nothing.
@@ -645,7 +646,7 @@ router.get('/daily', (req, res, next) => {
     assertProfileAllowed(profile, req);
     const day = progress.today();
     const built = progress.dailyBoard(day, profile);
-    const entry = boards.stash({ ...built, daily: day });
+    const entry = boards.keep(boards.stash({ ...built, daily: day }));
 
     const already = req.query.playerId ? db.getDailyResult(day, String(req.query.playerId)) : null;
 

@@ -14,8 +14,21 @@ const round = require('./round');
 // The clock lives here, not in the browser. The client renders a countdown
 // from `endsAt`, but the server is what decides when you are out of time, so
 // editing the page can't buy you a second.
+//
+// A run is also written down as it changes (arcade/room-store.js) and read
+// back when the arcade starts, with the time it had left when it was last
+// written down, so a restart in the middle of a run doesn't end it.
 
 const sessions = new Map();
+const store = require('../arcade/room-store')('rambler-marathon');
+const keep = session => { if (sessions.get(session.id) === session) store.saveSoon(session.id, () => ({ ...session })); };
+// The run a call was about, written down after the call has changed it.
+const kept = fn => (id, ...rest) => {
+  const out = fn(id, ...rest);
+  const session = sessions.get(String(id || ''));
+  if (session) keep(session);
+  return out;
+};
 const SESSION_TTL_MS = 2 * 60 * 60 * 1000;
 const GRACE_MS = 1500;          // forgive the latency on a word sent as time expires
 
@@ -73,7 +86,27 @@ function create({ profile = 'kids', difficulty = 'normal' } = {}) {
     maxCells: start.maxCells
   };
   sessions.set(session.id, session);
+  store.saveNow(session.id, { ...session });
   return session;
+}
+
+// Brings the runs back when the arcade starts. The clock stood still while the
+// arcade was away. A row that isn't a run is left out and removed (room-store.js).
+// -> how many came back.
+function restore(now = Date.now()) {
+  const words = list => Array.isArray(list) && list.every(f => f && typeof f.word === 'string');
+  return store.restoreEach(({ code, data, savedAt }) => {
+    const createdAt = Number(data.createdAt) || savedAt;
+    const good = /^[0-9a-f]{24}$/.test(code) && data.id === code && !sessions.has(code) && Array.isArray(data.board) && data.board.length > 0 &&
+      Number.isInteger(data.cols) && Number.isInteger(data.rows) && typeof data.profile === 'string' && words(data.found) &&
+      Array.isArray(data.revealed) && Number.isFinite(data.endsAt) && Number.isFinite(data.score) && Number.isFinite(data.startedAt);
+    if (!good || now - createdAt > SESSION_TTL_MS) return false;
+    const session = { ...data, id: code, createdAt, difficulty: round.difficultyOf(data.difficulty).id, over: !!data.over };
+    Object.assign(session, { growEvery: Number(session.growEvery) || startFor(session.difficulty).growEvery, maxCells: Number(session.maxCells) || startFor(session.difficulty).maxCells });
+    if (!session.over) session.endsAt = now + Math.max(1000, session.endsAt - savedAt);
+    sessions.set(code, session);
+    return true;
+  });
 }
 
 function fail(message, status) {
@@ -244,15 +277,18 @@ function view(session) {
 function sweep() {
   const cutoff = Date.now() - SESSION_TTL_MS;
   for (const [id, s] of sessions) {
-    if (s.createdAt < cutoff) sessions.delete(id);
+    if (s.createdAt < cutoff) { sessions.delete(id); store.remove(id); }
   }
 }
 
 const sweeper = setInterval(sweep, 15 * 60 * 1000);
 if (typeof sweeper.unref === 'function') sweeper.unref();
 
+const cameBack = restore();
+if (cameBack) console.log(`Rambler picked ${cameBack} Marathon run${cameBack === 1 ? '' : 's'} back up.`);
+
 module.exports = {
   TIME_BONUS, START,
-  create, get, submit, hint, finish, view, settle, sweep,
+  create, get, submit: kept(submit), hint: kept(hint), finish: kept(finish), view, settle, sweep,
   get count() { return sessions.size; }
 };
