@@ -161,6 +161,14 @@ order they were clicked, and keep the rest pinned here.
     device remembers.
   - **Words with Family:** one person can have five lobbies waiting at once (`MAX_WAITING_PER_HOST`),
     because a waiting lobby is listed for everyone. The limit of 30 unfinished games is unchanged.
+    A lobby nobody joined is cleared after one quiet day (`KEEP_UNJOINED`; one that someone joined still
+    waits two weeks), and the test suite runs the cleanup through a test-only `POST /test/sweep`.
+  - **No links (the maintainer, 2026-11-15):** "You either join a game by looking for one in the Lobbies,
+    or you scan a qr code, there is no invites, or links or codes." Words with Family's waiting screen
+    shows only its QR code: the address and Copy the link are gone, the QR picture's description no
+    longer carries the address (`public/arcade-qr.js`), and How to play describes Create a game lobby.
+    **For new text and screens:** nothing shows or copies a way into a game. The lists and a QR code are
+    the only ways in.
   - **Rambler:** joining has a limit on tries (40 in ten minutes from one address), like every other lobby
     that takes a password. Changing one setting in a lobby leaves the others alone (the page sends one at a
     time, and the ones it left out used to go back to where they started).
