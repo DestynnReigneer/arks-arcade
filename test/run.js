@@ -134,6 +134,15 @@ function startServer(port, extraEnv = {}) {
   });
 }
 
+// Stops a server the hard way and waits until it's really gone, so the same port can be used again.
+function stopServer(child) {
+  return new Promise(resolve => {
+    if (!child || child.exitCode !== null || child.signalCode !== null) return resolve();
+    child.once('exit', () => resolve());
+    child.kill();
+  });
+}
+
 // Poll rather than assume: the log line appears just before listen() resolves.
 async function waitForHealth(base) {
   for (let i = 0; i < 40; i++) {
@@ -174,6 +183,15 @@ function resetTestDb() {
       total += result.pass + result.fail;
       failed += result.fail;
     }
+    // The arcade stopped in the middle of things (a new image, or a power cut) and started
+    // again on the same database: the games it keeps come back as they were.
+    console.log(`\n${'='.repeat(60)}\n  restart\n${'='.repeat(60)}`);
+    const restartResult = await require('./restart.test.js').run({
+      base: BASE, root: ROOT,
+      restart: async () => { await stopServer(server); server = await startServer(PORT); await waitForHealth(BASE); }
+    });
+    total += restartResult.pass + restartResult.fail;
+    failed += restartResult.fail;
     // The same arcade signing in through ARKS ID: a second server with
     // ARKS_ID_URL set, talking to a pretend ARKS ID, on its own database.
     const { startFakeArksId } = require('./fake-arksid');

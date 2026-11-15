@@ -165,8 +165,8 @@
     return t ? { 'X-Profile-Token': t } : {};
   };
   // Every move goes to the game on the server. If the server no longer has it
-  // (nobody touched it for a day, or the arcade restarted), the page forgets it
-  // and goes back to the setup screen once the move that found out is done.
+  // (nobody came back to it for too long), the page forgets it and goes back to
+  // the setup screen once the move that found out is done.
   const runApi = async (path, body) => {
     try { return await api(`/api/spinsolve/run/${S.run}${path}`, body, pinHeaders()); } catch (e) {
       if (e.status === 404 && S.run) {
@@ -205,9 +205,28 @@
       return r && /^[0-9a-f]{32}$/.test(String(r.id)) ? r : null;
     } catch { return null; }
   }
+  // The home page's Continue row opens a game by its address (spinsolve.html?game=...),
+  // so a game started on one device can be carried on from another. It's remembered
+  // here like any other, and the address is tidied so a reload doesn't ask twice.
+  function linkedRun() {
+    if (TV) return;
+    let id = null;
+    try {
+      const url = new URL(location.href);
+      id = url.searchParams.get('game');
+      if (id === null) return;
+      url.searchParams.delete('game');
+      history.replaceState(history.state, '', url.pathname + url.search + url.hash);
+    } catch { return; }
+    if (!/^[0-9a-f]{32}$/.test(String(id))) return;
+    const was = rememberedRun();
+    if (was && was.id === id) return;
+    try { localStorage.setItem(runKey(), JSON.stringify({ id, turnSecs: was ? was.turnSecs : S.turnSecs, pack: '' })); } catch { /* storage is off */ }
+  }
 
   // Asked once, when the page loads. -> true when a game came back.
   async function pickUpGame() {
+    linkedRun();
     const saved = rememberedRun();
     if (!saved || !S.config) return false;
     rememberedAs = runKey();

@@ -76,6 +76,29 @@ order they were clicked, and keep the rest pinned here.
     card games), a game's
     answers are sent `no-store`, the page only forgets the game it asked about (not one started meanwhile), and
     Words with Family's page decides a game is gone from the 404 instead of the wording.
+- **Games that save, Spin & Solve first: a restart ends nobody's game.** The maintainer asked for a game to come
+  back after a power cut or a restart with nobody noticing.
+  - `spinsolve/game.js` writes a game down after every move through a store that `spinsolve/routes.js` hands it
+    (table `spin_games`: the game as JSON, without its list of puzzles), and `restore()` reads them back when the
+    arcade starts. A game keeps the name of its list (`poolKey`: `level:kids` or `pack:12`), so the shared list
+    is found again; if its pack was deleted meanwhile, it carries on with the puzzle it's on. The tests that load
+    `game.js` by itself give it no store, and games then live in memory only.
+  - How long a game is kept: a profile's game that has been played, 30 quiet days (the rule from the saved-games
+    plan); a guest's game or one with no move in it, a quiet day, as before; a finished one, ten minutes for its
+    score. A sweep runs every hour.
+  - **The Continue row** on the home page lists a profile's Spin & Solve game that was played and isn't finished
+    ("Round 2 of 3, $1,250 so far"), and its link (`spinsolve.html?game=<id>`) opens it on any device. The page
+    remembers a game opened that way like any other and tidies the address.
+  - A visitor's address is no longer kept with a game: only a fingerprint of it, which is all the ten-games
+    share needs, so no address is written to the database.
+  - **A real restart in the tests:** `test/restart.test.js` runs from `test/run.js` after the main suites. It
+    stops the server the hard way and starts it again on the same database, three times, and checks the games
+    come back as they were, an adult game still needs the pass, a finished game still saves its score, and a
+    saved game stays gone. `test/unit.test.js` covers the store with a Map, and
+    `test/browser/spin-resume.spec.js` opens a game by its address on a device that never saw it.
+  - **Still to do for the rest of the plan:** the rooms (Know-It-All, the card games, Rambler and Shuffle Scuffle)
+    are still in memory only, and so are solo Rambler and Shuffle Scuffle. Chess, Words with Family, Sudoku and
+    Clueless Crosswords already come back after a restart.
 - **Known flake:** `test/clueless.test.js` "New board ... gives a different crossword, not today's" fails once
   in a great while, when a random mini crossword happens to be today's. It passes on a rerun.
 
