@@ -534,7 +534,7 @@
     $('lobbySettings').textContent = `${s.rounds} rounds of ${s.seconds} seconds, ${s.dictionary === 'adult' ? 'unfiltered words' : 'family words'}` +
       (snap.lobbyPassword ? `. Lobby password: ${snap.lobbyPassword}` : snap.locked ? '. Locked with a password' : '') + '.';
     $('lobbyHow').textContent = snap.isScreen
-      ? 'Everyone scans the code with their own phone and types their name. You all race on the same letters at the same time, and the letters, the clock and the scores show up here on the TV.'
+      ? 'Scan the code to join. Everyone races on the same letters, and the letters, the clock and the scores are here on the TV.'
       : '';
     $('lobbyCount').textContent = `(${snap.players.length} of ${snap.maxPlayers})`;
     const list = $('lobbyPlayers');
@@ -888,7 +888,7 @@
     },
     {
       emoji: '📱', title: 'Multiplayer-Multiple devices',
-      html: `<p>One person taps <b>Create a game lobby</b> and picks the rounds, the time and which words count. Everyone else opens <b>🔎 List Hosted Games</b> on their own device and taps the lobby to join. Then you all race on the same letters at the same time.</p>
+      html: `<p><b>Create a game lobby</b>, friends join it from <b>🔎 List Hosted Games</b>, and everyone races on the same letters.</p>
         <p>You'll see how many words each player has found and a ★ when someone gets the full word, but not their words until the round is over.</p>`
     },
     {
