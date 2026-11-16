@@ -453,7 +453,7 @@ async function run({ base, root, fake, admin: ADMIN }) {
 
   console.log('\n-- signing out --');
   const out = await milo.call('/auth/signout', { method: 'POST', follow: false });
-  ok('signing out ends the arcade sign-in and goes on to ARKS ID\'s sign-out', out.data.next === `${fake.base}/signout?app=arcade&return=%2F`);
+  ok('signing out ends the arcade sign-in only, and stays on the arcade (contract v19)', out.data.next === '/');
   ok('…and the device is signed out', (await milo.me()).signedIn === false);
 
   console.log('\n-- an adult pass ends with the sign-in it was made for --');
@@ -493,6 +493,14 @@ async function run({ base, root, fake, admin: ADMIN }) {
     await twice.call('/auth/signout', { method: 'POST', follow: false });
     ok('…and signing out ends it, though the arcade held two records of that sign-in', (await checks(twicePass)) === false);
     ok('…for starting an adult game too', (await spin('/run/start', { body: { level: 'filthy', names: ['Kim'] }, key: twicePass })).status === 403);
+    // Signing out of the arcade leaves ARKS ID signed in (contract v19), so signing in here
+    // again comes back with the same ARKS ID sign-in. The old pass must stay dead.
+    fake.next = 'kim';
+    await twice.call('/auth/signin?return=%2F');
+    ok('signing in again after signing out does not bring the old pass back',(await checks(twicePass)) === false);
+    const backPass = (await twice.call('/api/arksid/adult-pass', { method: 'POST' })).data.pass;
+    ok('…and a new pass works', (await checks(backPass)) === true && backPass !== twicePass);
+    await twice.call('/auth/signout', { method: 'POST', follow: false });
 
     // The arcade's own cookie runs out before ARKS ID's sign-in does; the page then signs
     // in again by itself, which leaves the old record behind. Signing out ends that one too.

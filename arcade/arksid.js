@@ -224,6 +224,16 @@ db.db.exec(`
   );
 `);
 {
+  // key: what an adult pass and a profile token name (contract v19). It belongs to the
+  // arcade's own sign-in: signing out here and back in gets a new one, even though
+  // ARKS ID itself stayed signed in, so an old pass doesn't come back to life.
+  const scols = db.db.prepare('PRAGMA table_info(arcade_signins)').all().map(c => c.name);
+  if (!scols.includes('key')) {
+    db.db.exec('ALTER TABLE arcade_signins ADD COLUMN key TEXT');
+    const old = db.db.prepare('SELECT token_hash, session_id FROM arcade_signins').all();
+    const setKey = db.db.prepare('UPDATE arcade_signins SET key = ? WHERE token_hash = ?');
+    for (const r of old) setKey.run(crypto.createHash('sha256').update(`ap:${r.session_id}`).digest('hex').slice(0, 24), r.token_hash);
+  }
   const cols = db.db.prepare('PRAGMA table_info(arcade_profiles)').all().map(c => c.name);
   if (!cols.includes('arksid_user')) db.db.exec('ALTER TABLE arcade_profiles ADD COLUMN arksid_user TEXT');
   const acols = db.db.prepare('PRAGMA table_info(arcade_id_accounts)').all().map(c => c.name);
@@ -308,8 +318,12 @@ function createArksId({ client, now = Date.now, profiles }) {
     db.db.prepare('DELETE FROM arcade_signins WHERE expires_at < ?').run(now() - DEVICE_MS);
     // A TV is one device, so signing it in again leaves no earlier record of it behind.
     if (user.kind === 'tv') db.db.prepare('DELETE FROM arcade_signins WHERE user_id = ?').run(user.id);
-    db.db.prepare('INSERT INTO arcade_signins (token_hash, session_id, user_id, expires_at, checked_at, used_at) VALUES (?, ?, ?, ?, ?, ?)')
-      .run(hash(token), traded.sessionId, user.id, Number(traded.expiresAt) || now() + CHECK_MS, now(), now());
+    // A second record of the same sign-in (the page signed in again by itself) keeps
+    // its key, so passes made a moment ago still work. After a sign-out here, a new one.
+    const prev = db.db.prepare('SELECT key FROM arcade_signins WHERE session_id = ? AND key IS NOT NULL LIMIT 1').get(traded.sessionId);
+    const key = prev ? prev.key : crypto.randomBytes(12).toString('hex');
+    db.db.prepare('INSERT INTO arcade_signins (token_hash, session_id, user_id, expires_at, checked_at, used_at, key) VALUES (?, ?, ?, ?, ?, ?, ?)')
+      .run(hash(token), traded.sessionId, user.id, Number(traded.expiresAt) || now() + CHECK_MS, now(), now(), key);
     return { token };
   }
 
@@ -347,7 +361,7 @@ function createArksId({ client, now = Date.now, profiles }) {
     const profile = db.db.prepare("SELECT * FROM arcade_profiles WHERE arksid_user = ? AND status = 'approved'").get(row.user_id);
     if (!account || !profile) { end(token); return null; }
     const tv = account.kind === 'tv';
-    return { account, profile, sessionId: row.session_id, tv, adultMode: tv ? adultModeOf(account.user_id) : null };
+    return { account, profile, sessionId: row.session_id, key: row.key, tv, adultMode: tv ? adultModeOf(account.user_id) : null };
   }
   function end(token) {
     if (token) db.db.prepare('DELETE FROM arcade_signins WHERE token_hash = ?').run(hash(token));
@@ -366,10 +380,10 @@ function createArksId({ client, now = Date.now, profiles }) {
   // It also names the sign-in it was made for, and only works while that
   // sign-in is still going: signing out ends the pass, in that tab and
   // anywhere else it was copied to.
-  const signinKey = sessionId => hash(`ap:${sessionId}`).slice(0, 24);
-  function passFor(profile, sessionId) {
+  // key: the sign-in's own key (arcade_signins.key), from current().
+  function passFor(profile, key) {
     const exp = now() + PASS_MS;
-    const body = `ap.${profile.id}.${exp}.${signinKey(sessionId)}`;
+    const body = `ap.${profile.id}.${exp}.${key}`;
     return `${body}.${sign(body)}`;
   }
   // A pass can be used from a page that never asks who's signed in (a game left
@@ -404,8 +418,8 @@ function createArksId({ client, now = Date.now, profiles }) {
   // the adult pass, so a sign-in that ended there ends the token soon after.
   require('./profiles').useSignins((profile, key) => {
     if (!profile.arksid_user) return false;
-    const s = db.db.prepare('SELECT session_id, checked_at FROM arcade_signins WHERE user_id = ? AND expires_at > ?').all(profile.arksid_user, now())
-      .find(x => signinKey(x.session_id) === key);
+    const s = db.db.prepare('SELECT session_id, checked_at, key FROM arcade_signins WHERE user_id = ? AND expires_at > ?').all(profile.arksid_user, now())
+      .find(x => x.key === key);
     if (!s) return false;
     checkSoon(s.session_id, s.checked_at);
     return true;
@@ -424,8 +438,8 @@ function createArksId({ client, now = Date.now, profiles }) {
     const row = db.db.prepare(`SELECT a.role, a.kind, a.user_id FROM arcade_profiles p JOIN arcade_id_accounts a ON a.user_id = p.arksid_user
       WHERE p.id = ? AND p.status = 'approved'`).get(m[2]);
     if (!row) return false;
-    const signins = db.db.prepare('SELECT session_id, checked_at FROM arcade_signins WHERE user_id = ? AND expires_at > ?').all(row.user_id, now())
-      .filter(s => signinKey(s.session_id) === m[4]);
+    const signins = db.db.prepare('SELECT session_id, checked_at, key FROM arcade_signins WHERE user_id = ? AND expires_at > ?').all(row.user_id, now())
+      .filter(s => s.key === m[4]);
     if (!signins.length) return false;
     checkSoon(signins[0].session_id, Math.max(...signins.map(s => s.checked_at)));
     // A TV plays adult games like anyone else (the maintainer, 2026-11-15).
@@ -543,7 +557,9 @@ function createArksId({ client, now = Date.now, profiles }) {
       // The admin page's cookie goes with the sign-in.
       require('./admin-session').end(req, res);
       res.clearCookie(COOKIE, { path: '/' }).set('Cache-Control', 'no-store')
-        .json({ next: client ? `${client.url}/signout?app=arcade&return=%2F` : '/' });
+        // The arcade only, on this device (ARKS ID contract v19): ARKS ID and the
+        // other apps stay signed in, so Sign in brings you back in one tap.
+        .json({ next: '/' });
     });
 
     // Who's playing on this device, for every page (public/profile.js).
@@ -560,7 +576,7 @@ function createArksId({ client, now = Date.now, profiles }) {
       };
       if (me) {
         const p = profiles.pub(me.profile);
-        Object.assign(out, { profile: p, token: profiles.tokenFor(me.profile, signinKey(me.sessionId)), role: me.account.role, adult: GROWN_UP.includes(me.account.role) });
+        Object.assign(out, { profile: p, token: profiles.tokenFor(me.profile, me.key), role: me.account.role, adult: GROWN_UP.includes(me.account.role) });
         // A TV (contract v14) counts as an adult only during adults' night.
         if (me.tv) Object.assign(out, { tv: true, adult: !!me.adultMode, adultMode: me.adultMode });
       }
@@ -601,7 +617,7 @@ function createArksId({ client, now = Date.now, profiles }) {
       const me = client ? await current(req) : null;
       if (me) {
         if (!me.tv && !GROWN_UP.includes(me.account.role)) return res.status(403).json(KID);
-        return res.json({ pass: passFor(me.profile, me.sessionId) });
+        return res.json({ pass: passFor(me.profile, me.key) });
       }
       const dev = deviceFrom(req);
       if (dev && dev.known && dev.ownerRole && !GROWN_UP.includes(dev.ownerRole)) return res.status(403).json(KID);

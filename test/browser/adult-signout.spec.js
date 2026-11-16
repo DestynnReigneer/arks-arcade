@@ -33,9 +33,11 @@ test('signing out locks the adult levels for whoever uses the device next', asyn
 
   // Signing out, the way the profile card's button does it.
   await page.evaluate(() => { ArcadeProfile.open(); });
+  // Signing out of the arcade only (ARKS ID contract v19): it stays on the arcade.
+  const outDone = page.waitForResponse(r => new URL(r.url()).pathname === '/auth/signout');
   await page.locator('.apf [data-out]').click();
-  // The arcade sends the browser on to ARKS ID's own sign-out page.
-  await page.waitForURL(u => new URL(u).pathname === '/signout');
+  await outDone;
+  await page.waitForURL(u => new URL(u).pathname === '/');
 
   // The server won't take that pass anymore, from this browser or any other.
   const elsewhere = await browser.newContext();
@@ -83,8 +85,10 @@ test('a tab that still holds an ended unlock locks itself on its next load, and 
   await second.goto('/');
   await second.waitForLoadState('networkidle');
   await second.evaluate(() => { ArcadeProfile.open(); });
+  const secondOut = second.waitForResponse(r => new URL(r.url()).pathname === '/auth/signout');
   await second.locator('.apf [data-out]').click();
-  await second.waitForURL(u => new URL(u).pathname === '/signout');
+  await secondOut;
+  await second.waitForLoadState('load');
   expect((await fake('/test/next-once', { as: 'alex' })).ok).toBe(true);
   await second.goto('/auth/signin?return=/');
   await second.waitForURL(u => new URL(u).pathname === '/');
