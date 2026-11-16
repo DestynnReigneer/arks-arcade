@@ -98,3 +98,56 @@ test('holding a Continue row asks before leaving the game, then takes it off', a
   expect(sent).toEqual({ game: 'sudoku', ref: 'easy' });
   await expect(items.nth(0)).toContainText('Words with Family with Ben');
 });
+
+// The menu and its question stay where they can be seen: above Chrome's tab row on a
+// phone (it covers the bottom of the page without making the window shorter), and
+// inside a phone turned sideways once the longer question replaces the list.
+for (const size of [
+  { name: 'phone with the tab row', width: 412, height: 860, covered: 136 },
+  { name: 'phone sideways', width: 844, height: 390 },
+  { name: 'small phone sideways', width: 740, height: 360 }
+]) {
+  test(`the hold menu stays on screen: ${size.name}`, async ({ browser }) => {
+    const context = await browser.newContext({ viewport: { width: size.width, height: size.height }, hasTouch: true, isMobile: true });
+    const page = await context.newPage();
+    if (size.covered) {
+      await page.addInitScript(cov => {
+        const vv = new EventTarget();
+        for (const [k, get] of Object.entries({ height: () => innerHeight - cov, width: () => innerWidth, scale: () => 1, offsetTop: () => 0, offsetLeft: () => 0, pageTop: () => scrollY, pageLeft: () => scrollX })) {
+          Object.defineProperty(vv, k, { get });
+        }
+        Object.defineProperty(window, 'visualViewport', { value: vv, configurable: true });
+      }, size.covered);
+    }
+    await quietFonts(page);
+    const games = GAMES.map((g, k) => ({ ...g, ref: k ? 'easy' : 'abc', leave: k ? 'give-up' : 'ends', ...(k ? {} : { others: ['Ben'] }) }));
+    await page.route('**/api/continue', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ games }) }));
+    await openPage(page, '/');
+    await page.getByRole('button', { name: /Play as a guest/ }).click();
+    await page.getByRole('button', { name: 'Play', exact: true }).click();
+    await expect(chooser(page)).toBeHidden();
+    await page.evaluate(() => {
+      let p = {};
+      try { p = JSON.parse(localStorage.getItem('arcade.profile') || '{}') || {}; } catch { /* start clean */ }
+      localStorage.setItem('arcade.profile', JSON.stringify({ ...p, id: p.id || 'p1', name: p.name || 'Ana', token: 'test.token' }));
+    });
+    await openPage(page, '/');
+    const row = page.locator('#continue li').nth(1);
+    await row.scrollIntoViewIfNeeded();
+    await row.locator('.l-main').click({ button: 'right' });
+    const card = page.locator('.lp-card');
+    await expect(card).toBeVisible();
+    const inside = async () => {
+      await page.waitForTimeout(250);
+      return page.evaluate(cov => {
+        const r = document.querySelector('.lp-card').getBoundingClientRect();
+        return r.top >= 0 && r.left >= 0 && r.right <= innerWidth && r.bottom <= innerHeight - cov;
+      }, size.covered || 0);
+    };
+    expect(await inside()).toBe(true);
+    await card.getByRole('menuitem', { name: /Give up today's puzzle/ }).click();
+    await expect(card.getByRole('button', { name: 'Give up', exact: true })).toBeVisible();
+    expect(await inside()).toBe(true);
+    await context.close();
+  });
+}

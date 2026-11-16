@@ -16,9 +16,14 @@
 // Shift+F10 on a focused element. The tap that ends a hold doesn't also press the
 // element. A plain tap still does what it always did.
 //
-// The menu is a sheet from the bottom on a phone and a small card by the pointer on a
-// computer. An item with `ask` asks inside the same card before it runs (the safe
-// answer has the focus). Escape, a tap outside, or Back closes it.
+// On a touch screen, or any screen under 600px wide, the menu opens right under the
+// thing that was held (above it when there's no room below), so a finger doesn't
+// cover it. With a mouse it opens by the pointer. Either way it stays inside the part
+// of the screen that can be seen, which on a phone with Chrome's tab row showing is
+// shorter than the window, and it's placed again when its question replaces its list.
+// An item with `ask` asks inside the same card before it runs (the safe answer has
+// the focus). Up and Down move between the choices. Escape, a tap outside, or Back
+// closes it, and the focus goes back where it was.
 
 const LongPress = (() => {
   const HOLD_MS = 500, SLOP = 10;
@@ -36,8 +41,7 @@ const LongPress = (() => {
 .lp-veil.in{opacity:1}
 .lp-card{position:fixed;z-index:2147482001;min-width:240px;max-width:min(360px,calc(100vw - 24px));background:#1e0e39;color:#f5eaff;border:1px solid rgba(255,46,196,.55);border-radius:16px;box-shadow:0 10px 40px rgba(0,0,0,.5),0 0 24px rgba(255,46,196,.18);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;padding:8px;transform:scale(.96);opacity:0;transition:transform .16s,opacity .16s}
 .lp-card.in{transform:none;opacity:1}
-.lp-card.sheet{left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));max-width:none;transform:translateY(24px)}
-.lp-card.sheet.in{transform:none}
+.lp-card.wide{max-width:none}
 .lp-title{font-size:13px;color:#c9a8dd;padding:8px 12px 10px;border-bottom:1px solid rgba(245,234,255,.1);margin-bottom:4px;line-height:1.35}
 .lp-item{display:flex;align-items:center;gap:12px;width:100%;min-height:48px;padding:10px 12px;border:0;border-radius:10px;background:transparent;color:inherit;font:inherit;font-size:16px;font-weight:600;text-align:left;cursor:pointer}
 .lp-item:hover,.lp-item:focus-visible{background:rgba(245,234,255,.08);outline:none}
@@ -67,6 +71,38 @@ const LongPress = (() => {
     veil.classList.remove('in'); card.classList.remove('in');
     setTimeout(() => { veil.remove(); card.remove(); }, 170);
     if (back && back.isConnected) back.focus({ preventScroll: true });
+  }
+
+  // How much of the window can be seen: Chrome's tab row on a phone covers the bottom
+  // of the page without making the window shorter (topbar.js says the same in --app-h).
+  function seen() {
+    const vv = window.visualViewport;
+    const h = vv && vv.scale === 1 && vv.height > 0 ? Math.min(innerHeight, vv.height) : innerHeight;
+    return { w: innerWidth, h };
+  }
+  const near = () => innerWidth < 600 || window.matchMedia('(pointer: coarse)').matches;
+
+  // Under the row (or above it), or by the pointer, and always on screen.
+  function place(card, at, from) {
+    const { w, h } = seen();
+    const pad = 12;
+    const wide = innerWidth < 600;
+    card.classList.toggle('wide', wide);
+    card.style.width = wide ? (w - pad * 2) + 'px' : '';
+    const r = card.getBoundingClientRect();
+    let x, y;
+    if (from && (near() || !at)) {
+      const b = from.getBoundingClientRect();
+      x = wide ? pad : b.left;
+      y = b.bottom + 6 + r.height <= h - pad ? b.bottom + 6 : b.top - 6 - r.height;
+    } else {
+      x = at ? at.x : pad;
+      y = at ? at.y : pad;
+    }
+    card.style.left = Math.max(pad, Math.min(x, w - r.width - pad)) + 'px';
+    card.style.top = Math.max(pad, Math.min(y, h - r.height - pad)) + 'px';
+    card.style.maxHeight = (h - pad * 2) + 'px';
+    card.style.overflowY = 'auto';
   }
 
   function show(menu, at, from) {
@@ -116,23 +152,30 @@ const LongPress = (() => {
       go.onclick = () => run(it);
       row.append(safe, go);
       list.append(q, row);
+      place(card, at, from);
       safe.focus();
     };
     items();
-    const key = e => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); } };
+    const key = e => {
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); return; }
+      if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+      const all = [...card.querySelectorAll('button')];
+      if (!all.length) return;
+      e.preventDefault(); e.stopPropagation();
+      const k = all.indexOf(document.activeElement);
+      all[(k + (e.key === 'ArrowDown' ? 1 : all.length - 1)) % all.length].focus();
+    };
     document.addEventListener('keydown', key, true);
     veil.addEventListener('click', () => { if (!quiet()) close(); });
     const hush = e => { if (quiet()) { e.preventDefault(); e.stopPropagation(); } };
     card.addEventListener('click', hush, true);
     document.body.append(veil, card);
-    // A phone gets a sheet along the bottom; a computer a card by the pointer.
-    if (innerWidth < 600 || !at) card.classList.add('sheet');
-    else {
-      const r = card.getBoundingClientRect();
-      card.style.left = Math.max(12, Math.min(at.x, innerWidth - r.width - 12)) + 'px';
-      card.style.top = Math.max(12, Math.min(at.y, innerHeight - r.height - 12)) + 'px';
-    }
-    open = { veil, card, back: from, key };
+    place(card, at, from);
+    // Focus goes back to what had it, or to the first thing in the row that can take it.
+    const had = document.activeElement;
+    const back = from && from.contains(had) && had !== document.body ? had
+      : from && (from.matches('a[href],button') ? from : from.querySelector('a[href],button'));
+    open = { veil, card, back, key };
     requestAnimationFrame(() => { veil.classList.add('in'); card.classList.add('in'); });
     const first = card.querySelector('.lp-item');
     if (first) first.focus({ preventScroll: true });

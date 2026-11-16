@@ -159,6 +159,20 @@
       toast("That didn't work. Try again in a moment.", 3200);
       return;
     }
+    // A puzzle given up is gone from the arcade, so this device forgets which run it was
+    // on for that level (sudoku.current.<day>.<level>), and the page starts a new one
+    // instead of asking for the old one first.
+    if (g.leave === 'give-up') {
+      try {
+        for (let k = localStorage.length - 1; k >= 0; k--) {
+          const key = localStorage.key(k) || '';
+          if (key.startsWith(`${g.game}.current.`) && key.endsWith(`.${g.ref}`)) {
+            localStorage.removeItem(`${g.game}.progress.${localStorage.getItem(key)}`);
+            localStorage.removeItem(key);
+          }
+        }
+      } catch { /* storage unavailable */ }
+    }
     paintContinue();
     paintTurns();
   }
