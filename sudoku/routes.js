@@ -91,7 +91,7 @@ function puzzleFor(day, level) {
   return cache.get(key);
 }
 const levelOf = level => {
-  if (!gen.LEVELS[level]) throw fail('Pick a level: Family, Easy, Medium or Hard.');
+  if (typeof level !== 'string' || !Object.hasOwn(gen.LEVELS, level)) throw fail('Pick a level: Family, Easy, Medium or Hard.');
   return level;
 };
 
@@ -371,4 +371,12 @@ function inProgress(profileId, now = Date.now()) {
     .map(run => ({ level: run.level, label: gen.LEVELS[run.level].label, playMs: playMs(run, now), updatedAt: run.progress_at || run.paused_at || run.started_at }));
 }
 
-module.exports = { router, start, pause, saveProgress, check, cell, hint, finish, save, board, puzzleFor, inProgress, PENALTY, MIN_MS_PER_SQUARE };
+// Giving up today's puzzle from the home page's Continue row: today's unfinished run
+// is thrown away, so opening the level again starts over with a new clock.
+function giveUp(profileId, level, now = Date.now()) {
+  levelOf(level);
+  db.db.prepare('DELETE FROM sudoku_runs WHERE profile_id = ? AND day = ? AND level = ? AND finished_at IS NULL')
+    .run(String(profileId), today(new Date(now)), level);
+}
+
+module.exports = { router, start, giveUp, pause, saveProgress, check, cell, hint, finish, save, board, puzzleFor, inProgress, PENALTY, MIN_MS_PER_SQUARE };

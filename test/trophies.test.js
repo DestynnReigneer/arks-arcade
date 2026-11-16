@@ -77,9 +77,10 @@ async function run({ base }) {
   const after = (await trophies(Dee)).data;
   const won = boardOf(after, 'crisscross', 'wins');
   ok('a finished Words with Family game counts as a win', won.you && won.you.value === 1 && won.rows.some(r => r.you && r.value === 1), JSON.stringify(won));
-  const lost = boardOf((await trophies(Eli)).data, 'crisscross', 'wins');
-  ok('…and not for the one who resigned', !lost.you);
-  ok('both players\' game scores are on Best game score', boardOf(after, 'crisscross', 'best').rows.filter(r => r.name === 'TR Dee' || r.name === 'TR Eli').length === 2);
+  const eliNow = (await trophies(Eli)).data;
+  ok('…and not for the one who resigned', !boardOf(eliNow, 'crisscross', 'wins').you);
+  // Each one's own place, not the top ten: other suites' games of 0 points can fill that.
+  ok('both players\' game scores are on Best game score', !!boardOf(after, 'crisscross', 'best').you && !!boardOf(eliNow, 'crisscross', 'best').you);
 
   return { pass, fail };
 }

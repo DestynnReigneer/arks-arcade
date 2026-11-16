@@ -106,9 +106,75 @@
       li.querySelector('.l-title').textContent = g.title;
       li.querySelector('.l-sub').textContent = g.detail;
       li.querySelector('.l-join').href = g.href;
+      // Press and hold (or right-click) for Resume and Leave.
+      if (window.LongPress) LongPress.attach(li, () => continueMenu(g));
       list.appendChild(li);
     }
     $('continue').classList.toggle('hidden', !games.length);
+  }
+  // What leaving means depends on the game, so each says it its own way. The server
+  // says which kind of leaving a row is (g.leave, arcade/continue.js). The words are
+  // the maintainer's.
+  function leaveWords(g) {
+    const me = ArcadeProfile.name() || 'you';
+    // The server names the other players in Words with Family and Chess.
+    const others = Array.isArray(g.others) ? g.others : [];
+    switch (g.leave) {
+      case 'give-up':
+        return { icon: '🚪', label: "Give up today's puzzle", yes: 'Give up', ask: `Give up ${g.title.split(', ')[1] || "today's puzzle"}? It comes off your list, and today's time won't go on the board.` };
+      case 'close':
+        return { icon: '🚪', label: 'Close lobby', yes: 'Close', ask: 'Close this lobby? Nobody can join after this.' };
+      case 'lobby':
+        return { icon: '🚪', label: 'Leave lobby', yes: 'Leave', ask: 'Leave this lobby? Your seat opens up for someone else.' };
+      case 'resign':
+        return { icon: '🏳️', label: 'Resign', yes: 'Resign', ask: others.length ? `Resign Chess match with ${others[0]}? It counts as a loss.` : 'Resign this Chess match? It counts as a loss.' };
+      case 'end':
+        return { icon: '🚪', label: 'End this game', yes: 'End it', ask: "End this game? Your score won't be saved." };
+      case 'ends':
+        return { icon: '🚪', label: 'Leave this game', yes: 'Leave', ask: others.length ? `Leave your game with ${others[0]}? The game ends, and ${others[0]} wins.` : 'Leave this game? The game ends, and the other player wins.' };
+      case 'continues':
+        return { icon: '🚪', label: 'Leave this game', yes: 'Leave', ask: `Leave this game, ${me}? Everyone else keeps playing without you.` };
+      default:
+        return null;
+    }
+  }
+  function continueMenu(g) {
+    const leave = leaveWords(g);
+    const items = [{ icon: '▶️', label: 'Resume', run: () => { location.href = g.href; } }];
+    if (leave) items.push({ ...leave, danger: true, run: () => leaveGame(g) });
+    return { title: `${g.title} · ${g.detail}`, items };
+  }
+  async function leaveGame(g) {
+    const token = ArcadeProfile.token();
+    if (!token) return;
+    try {
+      const r = await fetch('/api/continue/leave', {
+        method: 'POST', cache: 'no-store',
+        headers: { 'Content-Type': 'application/json', 'X-Profile-Token': token },
+        body: JSON.stringify({ game: g.game, ref: g.ref })
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) { toast(data.error || "That didn't work. Try again in a moment.", 3200); return; }
+    } catch {
+      toast("That didn't work. Try again in a moment.", 3200);
+      return;
+    }
+    // A puzzle given up is gone from the arcade, so this device forgets which run it was
+    // on for that level (sudoku.current.<day>.<level>), and the page starts a new one
+    // instead of asking for the old one first.
+    if (g.leave === 'give-up') {
+      try {
+        for (let k = localStorage.length - 1; k >= 0; k--) {
+          const key = localStorage.key(k) || '';
+          if (key.startsWith(`${g.game}.current.`) && key.endsWith(`.${g.ref}`)) {
+            localStorage.removeItem(`${g.game}.progress.${localStorage.getItem(key)}`);
+            localStorage.removeItem(key);
+          }
+        }
+      } catch { /* storage unavailable */ }
+    }
+    paintContinue();
+    paintTurns();
   }
   ArcadeProfile.onChange(paintContinue);
   paintContinue();

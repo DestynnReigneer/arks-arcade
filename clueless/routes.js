@@ -85,7 +85,7 @@ db.db.exec(`
 const fail = (message, status = 400, extra = {}) => Object.assign(new Error(message), { status, ...extra });
 const profiles = () => require('../arcade/profiles');
 const levelOf = level => {
-  if (!maker.LEVELS[level]) throw fail('Pick a puzzle: the family mini or the adults\' one.');
+  if (typeof level !== 'string' || !Object.hasOwn(maker.LEVELS, level)) throw fail('Pick a puzzle: the family mini or the adults\' one.');
   return level;
 };
 
@@ -463,4 +463,12 @@ function inProgress(profileId, now = Date.now()) {
     .map(run => ({ level: run.level, label: maker.LEVELS[run.level].label, playMs: playMs(run, now), updatedAt: run.progress_at || run.paused_at || run.started_at }));
 }
 
-Object.assign(module.exports, { start, pause, check, reveal, finish, solved, save, saveProgress, board, inProgress, PENALTY, MIN_MS_PER_SQUARE, LINE_RULE });
+// Giving up today's puzzle from the home page's Continue row: today's unfinished run
+// is thrown away, so opening the level again starts over with a new clock.
+function giveUp(profileId, level, now = Date.now()) {
+  levelOf(level);
+  db.db.prepare('DELETE FROM clueless_runs WHERE profile_id = ? AND day = ? AND level = ? AND puzzle_key IS NULL AND finished_at IS NULL')
+    .run(String(profileId), today(new Date(now)), level);
+}
+
+Object.assign(module.exports, { start, giveUp, pause, check, reveal, finish, solved, save, saveProgress, board, inProgress, PENALTY, MIN_MS_PER_SQUARE, LINE_RULE });
