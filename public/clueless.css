@@ -106,6 +106,14 @@ body[data-dir="down"] { --dir: var(--down); }
 .cl-cover-box { max-width: 300px; }
 .cl-cover b { font-size: 20px; letter-spacing: 0.5px; }
 .cl-cover p { color: var(--muted); font-size: 14px; line-height: 1.5; margin: 8px 0 4px; }
+/* When the grid is small (a short screen with the browser's bars showing), the card
+   keeps only its title and Start, so nothing spills over the buttons around it. The
+   grid is square, so its width says how tall it is. */
+@container (max-width: 300px) {
+  .cl-cover { padding: 10px; }
+  .cl-cover b { font-size: 17px; }
+  .cl-cover p { display: none; }
+}
 
 /* Free play's New board, shown until the first letter is typed. */
 .cl-free {
@@ -219,7 +227,9 @@ html:not(.tv) .cl-stage, html:not(.tv) .cl-side { display: contents; }
 html:not(.tv) .cl-fit { container-type: size; display: grid; place-items: center; min-height: 0; }
 html:not(.tv) .cl-fit > .cl-wrap { width: min(100cqw, 100cqh); margin: 0; }
 
-@media (max-width: 899px) {
+/* A phone turned sideways (wide and short) gets the side-by-side layout, like a
+   computer, instead of the stacked one: stacked, the board had no height left. */
+@media (max-width: 899px) and (orientation: portrait), (max-width: 899px) and (min-height: 601px) {
   html:not(.tv) body { display: flex; flex-direction: column; }
   html:not(.tv) .cl-picks { order: 1; }
   html:not(.tv) .cl-side > .hud { order: 2; }
@@ -236,12 +246,15 @@ html:not(.tv) .cl-fit > .cl-wrap { width: min(100cqw, 100cqh); margin: 0; }
   html:not(.tv) body[data-state="over"] .cl-fit { height: min(100vw - 32px, 440px); }
 
   html:not(.tv):has(body:not([data-state="over"])) { height: 100%; overflow: hidden; }
-  html:not(.tv) body:not([data-state="over"]) { height: 100dvh; overflow: hidden; padding-bottom: 0; box-sizing: border-box; }
+  html:not(.tv) body:not([data-state="over"]) { height: var(--app-h, 100dvh); min-height: 0; overflow: hidden; padding-bottom: 0; box-sizing: border-box; }
   html:not(.tv) body:not([data-state="over"]) > * { flex: none; }
   html:not(.tv) body:not([data-state="over"]) .cl-picks { margin: 0 0 6px; }
   html:not(.tv) body:not([data-state="over"]) .cl-side > .hud { margin: 0 0 6px; }
   html:not(.tv) body:not([data-state="over"]) #clueBar { max-width: none; width: 100%; margin: 0 0 6px; }
-  html:not(.tv) body:not([data-state="over"]) .cl-fit { flex: 1 1 auto; }
+  /* Words with Family's fit: the grid's box is square and shrinks when the screen is
+     short, the tools and keyboard sit right under it, and spare room goes to the
+     bottom, so Chrome's row of tabs there never covers a key. */
+  html:not(.tv) body:not([data-state="over"]) .cl-fit { flex: 0 1 auto; aspect-ratio: 1; width: 100%; }
   html:not(.tv) body:not([data-state="over"]) #tools { max-width: none; margin: 6px 0 0; }
   html:not(.tv) body:not([data-state="over"]) #keys { max-width: none; margin: 2px 0 max(8px, env(safe-area-inset-bottom)); }
   html:not(.tv) body:not([data-state="over"]) #lists,
@@ -254,11 +267,11 @@ html:not(.tv) .cl-fit > .cl-wrap { width: min(100cqw, 100cqh); margin: 0; }
   html:not(.tv) body.cl-clues-open .cl-lists-x { display: inline-flex; justify-self: end; }
 }
 
-@media (min-width: 900px) {
+@media (min-width: 900px), (orientation: landscape) and (max-height: 600px) {
   html:not(.tv) body {
     max-width: none; padding-left: 0; padding-right: 0; padding-bottom: 0;
     --bar-w: calc(min(1100px, 100vw) - 32px); --gap: 24px;
-    --board: clamp(360px, min(calc(100dvh - 76px - 44px - 16px), calc(var(--bar-w) - var(--gap) - 380px)), 820px);
+    --board: clamp(200px, min(calc(var(--app-h, 100dvh) - 76px - 44px - 16px), calc(var(--bar-w) - var(--gap) - 380px)), 820px);
   }
   html:not(.tv) body > header.top, html:not(.tv) body > #over { width: var(--bar-w); margin-left: auto; margin-right: auto; box-sizing: border-box; }
   html:not(.tv) .cl-stage {
@@ -275,4 +288,30 @@ html:not(.tv) .cl-fit > .cl-wrap { width: min(100cqw, 100cqh); margin: 0; }
   /* The clue lists take the room that's left, and scroll inside it. */
   html:not(.tv) .cl-side .cl-lists { flex: 1 1 auto; min-height: 0; overflow: auto; margin: 12px 0 0; align-content: start; }
   html:not(.tv) body[data-state="over"] .cl-stage { height: auto; }
+}
+/* A phone turned sideways is too short for everything beside the grid. The page's
+   title row goes (the top bar already says where you are). The level and mode
+   buttons show while the start or paused card is up, and the keyboard while you're
+   typing. The keys get shorter on a shorter screen, and the clue lists open from
+   the menu as a sheet over the game, as on a phone held upright. */
+@media (orientation: landscape) and (max-height: 600px) and (pointer: coarse) {
+  html:not(.tv) body:not([data-state="over"]) > header.top { display: none; }
+  html:not(.tv) body { --board: clamp(200px, min(calc(var(--app-h, 100dvh) - 76px - 16px), calc(var(--bar-w) - var(--gap) - 380px)), 820px); }
+  html:not(.tv) body:has(#cover:not(.hidden)) .cl-keys,
+  html:not(.tv) body:not(:has(#cover:not(.hidden))):not([data-state="over"]) .cl-picks,
+  html:not(.tv) body:not([data-state="over"]) .cl-legend,
+  html:not(.tv) body:not([data-state="over"]) .keys-hint,
+  html:not(.tv) body:not(.cl-clues-open):not([data-state="over"]) .cl-side .cl-lists,
+  html:not(.tv) body:not([data-state="over"]) .fb-corner { display: none; }
+  html:not(.tv) .cl-side > .hud { margin: 0 0 6px; }
+  html:not(.tv) .cl-side .cl-tools { margin: 6px 0 0; }
+  html:not(.tv) .cl-side .cl-keys { margin: 2px 0 0; }
+  html:not(.tv) .cl-side .cl-keys .row { margin-top: 4px; gap: 4px; }
+  html:not(.tv) .cl-side .cl-key { height: clamp(26px, calc((var(--app-h, 100dvh) - 270px) / 3), 34px); font-size: 15px; }
+  html:not(.tv) body.cl-clues-open:not([data-state="over"]) .cl-side .cl-lists {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; position: fixed; left: 10px; right: 10px; bottom: 10px; z-index: 62;
+    max-height: calc(var(--app-h, 100dvh) - 20px); overflow: auto;
+    margin: 0; padding: 14px; border-radius: 18px; background: var(--card); border: 1px solid var(--border); box-shadow: 0 -10px 40px rgba(0,0,0,.55);
+  }
+  html:not(.tv) body.cl-clues-open .cl-lists-x { display: inline-flex; justify-self: end; grid-column: 1 / -1; }
 }

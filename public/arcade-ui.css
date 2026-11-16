@@ -124,10 +124,17 @@ button:disabled { opacity: 0.4; cursor: default; }
 .joke-pop .jp-hint { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--dim); margin-top: 8px; }
 @media (prefers-reduced-motion: reduce) { .joke-pop { transition: opacity 0.2s; } }
 
+/* --app-h (topbar.js) is the height you can really see, so a pop-up clears a browser
+   bar that covers the bottom of the page (Chrome's row of tabs on a phone). */
 .toast {
-  position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 60;
+  position: fixed; left: 50%; bottom: max(24px, calc(100dvh - var(--app-h, 100dvh) + 24px)); transform: translateX(-50%); z-index: 60;
   background: var(--card-2); border: 1px solid var(--accent); color: var(--text);
   padding: 10px 16px; border-radius: 10px; font-size: 14px; max-width: calc(100vw - 32px);
+}
+/* A phone turned sideways has its buttons along the bottom and down the side, so the
+   message shows just under the top bar instead, where it covers nothing you tap. */
+@media (orientation: landscape) and (max-height: 600px) and (pointer: coarse) {
+  html:not(.tv) .toast { bottom: auto; top: 84px; }
 }
 
 /* The end of a game: its panel sits above the board, and Play again (with

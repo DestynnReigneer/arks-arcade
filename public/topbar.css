@@ -102,6 +102,10 @@
 .ah-menu h3 { margin: 0 0 10px; font-size: 12px; letter-spacing: .16em; color: #9483ae; text-align: center; font-weight: 700; text-transform: uppercase; }
 .ah-menu .grab { display: none; width: 40px; height: 4px; border-radius: 3px; background: #9483ae; margin: 0 auto 10px; opacity: .6; }
 .ah-menu .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+/* A short screen (a phone turned sideways) gets four across, and the menu scrolls
+   inside itself if it still doesn't fit. */
+.ah-menu { max-height: calc(var(--app-h, 100dvh) - 70px); overflow: auto; }
+@media (orientation: landscape) and (max-height: 600px) { .ah-menu { width: 440px; } .ah-menu .grid { grid-template-columns: repeat(4, 1fr); } }
 .ah-menu .grid button { border: 1px solid color-mix(in srgb, #f5eaff 12%, #22103f); background: #2c1350; color: #f5eaff; border-radius: 14px; padding: 10px 4px 8px;
   display: grid; gap: 5px; justify-items: center; font: inherit; font-size: 14px; font-weight: 700; line-height: 1.15; cursor: pointer; }
 .ah-menu .grid button:hover, .ah-menu .grid button:focus-visible { border-color: color-mix(in srgb, #00ffc2 50%, #22103f); outline: none; }
