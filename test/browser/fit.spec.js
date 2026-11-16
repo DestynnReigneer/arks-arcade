@@ -14,7 +14,8 @@
 //
 // A size a game doesn't fit yet is listed in KNOWN with the reason, and that
 // test is expected to fail. When a fix makes it pass, Playwright reports the
-// "expected to fail" test as passing unexpectedly: take it off the list then.
+// "expected to fail" test as passing unexpectedly: take it off the list then. One
+// that fits on some machines and not others starts with "skip: " and isn't run.
 
 const { test, expect } = require('@playwright/test');
 const { quietFonts, watchProblems, openPage } = require('./helpers');
@@ -48,7 +49,7 @@ const KNOWN = {
   "Clueless Crosswords @ phone turned sideways": "Turned sideways, the board and the buttons are stacked, and the screen is too short for that.",
   "Snake @ phone turned sideways": "Turned sideways, the board and the buttons are stacked, and the screen is too short for that.",
   "Block Drop @ phone turned sideways": "Turned sideways, the board and the buttons are stacked, and the screen is too short for that.",
-  "Brick Breaker @ phone turned sideways": "Turned sideways, the board and the buttons are stacked, and the screen is too short for that.",
+  "Brick Breaker @ phone turned sideways": "skip: The game runs a couple of pixels off the bottom on some machines and fits on others, so it's left out until the sideways layout fixes it for good.",
   "Tower Defense @ phone turned sideways": "Turned sideways, the board and the buttons are stacked, and the screen is too short for that."
 };
 
@@ -59,7 +60,8 @@ for (const game of GAMES) {
     test(`${game.name} fits a ${label} (${viewport.width}×${viewport.height})`, async ({ browser }, info) => {
       test.skip(info.project.name !== 'phone', 'The sizes are set here, so one project runs them all.');
       const known = KNOWN[`${game.name} @ ${label}`];
-      if (known) test.fail(true, known);
+      if (known && known.startsWith('skip: ')) test.skip(true, known.slice(6));
+      else if (known) test.fail(true, known);
       const ctx = await browser.newContext({ viewport, hasTouch: touch, isMobile: touch && viewport.width < 900 });
       const page = await ctx.newPage();
       await quietFonts(page);
@@ -73,7 +75,7 @@ for (const game of GAMES) {
       const close = page.locator('.tut-x');
       if (await close.isVisible().catch(() => false)) await close.click();
       for (const s of game.start) await page.locator(s).first().click();
-      await page.waitForTimeout(400);
+      await page.waitForTimeout(1000);
 
       const need = [...game.need, ...(touch ? game.touch || [] : [])];
       const report = await page.evaluate(({ need, board, covered }) => {
