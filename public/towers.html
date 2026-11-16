@@ -90,6 +90,19 @@
     html:not(.tv) body > header.top { display: none; }
     html:not(.tv) body > .hud { margin-bottom: 8px; }
     html:not(.tv) .td-play > .keys-hint { display: none; }
+    /* Once a square is picked or a wave is on, the map choices step aside for the
+       towers, which sit in one row of four: the picture, the name and the price. */
+    html:not(.tv) body[data-state="playing"] .td-play > .options,
+    html:not(.tv) .td-play:has(#info .build-grid, #info .tower-actions) > .options { display: none; }
+    html:not(.tv) .td-play > .info { margin-top: 6px; min-height: 0; }
+    html:not(.tv) .build-grid { grid-template-columns: repeat(4, 1fr); gap: 6px; }
+    html:not(.tv) .build-grid button { flex-direction: column; gap: 2px; padding: 6px 4px; text-align: center; min-height: 44px; }
+    html:not(.tv) .build-grid small { display: none; }
+    html:not(.tv) .build-grid .cost { margin-left: 0; }
+    html:not(.tv) .tower-actions button { min-height: 44px; }
+    html:not(.tv) .speed button { width: 44px; height: 44px; }
+    /* The bug-report button would sit on the towers; it's in the top bar's menu meanwhile. */
+    html:not(.tv) .fb-corner { display: none; }
   }
 </style>
 </head>

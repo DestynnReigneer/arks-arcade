@@ -301,7 +301,8 @@ html:not(.tv) .cl-fit > .cl-wrap { width: min(100cqw, 100cqh); margin: 0; }
   html:not(.tv) body:not(:has(#cover:not(.hidden))):not([data-state="over"]) .cl-picks,
   html:not(.tv) body:not([data-state="over"]) .cl-legend,
   html:not(.tv) body:not([data-state="over"]) .keys-hint,
-  html:not(.tv) body:not(.cl-clues-open):not([data-state="over"]) .cl-side .cl-lists { display: none; }
+  html:not(.tv) body:not(.cl-clues-open):not([data-state="over"]) .cl-side .cl-lists,
+  html:not(.tv) body:not([data-state="over"]) .fb-corner { display: none; }
   html:not(.tv) .cl-side > .hud { margin: 0 0 6px; }
   html:not(.tv) .cl-side .cl-tools { margin: 6px 0 0; }
   html:not(.tv) .cl-side .cl-keys { margin: 2px 0 0; }

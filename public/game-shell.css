@@ -77,8 +77,13 @@ html:not(.tv) body[data-state="playing"] > .options { display: none; }
 @media (orientation: landscape) and (max-height: 600px) and (pointer: coarse) {
   html:not(.tv) body:has(> .stage):not(:has(#info)) {
     display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); column-gap: 20px;
-    grid-auto-flow: row dense; align-content: start; align-items: start;
+    grid-auto-flow: row dense; align-content: start; align-items: start; padding-bottom: 0;
   }
+  /* The choices keep their room while a game runs (hidden, not removed), so the
+     thumb buttons don't jump up under a thumb that's mid-tap. The bug-report
+     button would sit on the arrows; it's in the top bar's menu meanwhile. */
+  html:not(.tv) body[data-state="playing"]:has(> .stage):not(:has(#info)) > .options { display: flex; visibility: hidden; }
+  html:not(.tv) body:has(> .stage):not(:has(#info)) .fb-corner { display: none; }
   html:not(.tv) body:has(> .stage):not(:has(#info)) > * { grid-column: 1 / -1; }
   html:not(.tv) body:has(> .stage):not(:has(#info)) > header.top { display: none; }
   html:not(.tv) body:has(> .stage):not(:has(#info)) > .stage { grid-column: 1; grid-row: span 4; margin: 0; }

@@ -131,6 +131,11 @@ button:disabled { opacity: 0.4; cursor: default; }
   background: var(--card-2); border: 1px solid var(--accent); color: var(--text);
   padding: 10px 16px; border-radius: 10px; font-size: 14px; max-width: calc(100vw - 32px);
 }
+/* A phone turned sideways has its buttons along the bottom and down the side, so the
+   message shows just under the top bar instead, where it covers nothing you tap. */
+@media (orientation: landscape) and (max-height: 600px) and (pointer: coarse) {
+  html:not(.tv) .toast { bottom: auto; top: 84px; }
+}
 
 /* The end of a game: its panel sits above the board, and Play again (with
    Back to setup, where a game has one) sits in a row at the top right of it,
