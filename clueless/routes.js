@@ -137,6 +137,12 @@ function view(run, now = Date.now()) {
   };
 }
 
+// The free boards handed out lately, per level (their answers), so New board
+// doesn't give the same grid twice in a row. Kept in memory; a restart forgets it.
+const RECENT_FREE = 20;
+const recentFree = new Map();
+const answersOf = p => p.entries.map(e => e.answer).join(',');
+
 function start({ level, profileToken, free }, now = Date.now()) {
   levelOf(level);
   db.db.prepare('DELETE FROM clueless_runs WHERE started_at < ? AND saved = 0').run(now - KEEP_RUNS_MS);
@@ -144,8 +150,19 @@ function start({ level, profileToken, free }, now = Date.now()) {
   if (free) {
     // A random seed instead of the date. The puzzle is saved like a daily
     // one, so a reload (or a server restart) finds the same grid.
-    const key = `free-${crypto.randomBytes(8).toString('hex')}`;
-    puzzles.puzzleFor(key, level);
+    // The word list can only fill some shapes a few ways, so a random seed often
+    // landed on today's crossword or one just handed out (about 1 start in 7 was
+    // today's, measured 2026-11-16). Try fresh seeds until the grid is new; after
+    // a dozen tries the last one is used rather than failing.
+    const todays = answersOf(puzzles.puzzleFor(day, level));
+    const recent = recentFree.get(level) || [];
+    let key;
+    for (let tries = 0; tries < 12; tries++) {
+      key = `free-${crypto.randomBytes(8).toString('hex')}`;
+      const got = answersOf(puzzles.puzzleFor(key, level));
+      if (got !== todays && !recent.includes(got)) { recent.push(got); break; }
+    }
+    recentFree.set(level, recent.slice(-RECENT_FREE));
     const id = crypto.randomBytes(16).toString('hex');
     db.db.prepare('INSERT INTO clueless_runs (id, day, level, profile_id, started_at, puzzle_key) VALUES (?, ?, ?, NULL, ?, ?)')
       .run(id, day, level, now, key);
