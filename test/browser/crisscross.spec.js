@@ -146,4 +146,8 @@ test('Words with Family keeps its tiles and buttons high on a tall phone', async
   const actions = await page.locator('#actions').boundingBox();
   expect(board.y - (status.y + status.height), 'no big gap above the board').toBeLessThan(60);
   expect(915 - (actions.y + actions.height), 'room left under the buttons').toBeGreaterThan(80);
+  // The board reaches 4px from each side, and the buttons are in Dest's order.
+  expect(board.width, 'the board nearly fills the width').toBeGreaterThan(412 - 12);
+  expect(board.x + board.width, 'and stays on the screen').toBeLessThanOrEqual(412);
+  expect(await page.locator('#actions .cc-key small').allTextContents()).toEqual(['Pass', 'Swap', 'Recall', 'Shuffle', 'Play']);
 });
