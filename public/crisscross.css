@@ -209,6 +209,9 @@ html:not(.tv) body:has(#game:not(.hidden)) .cc-board-box.zoomed .cc-board { widt
      its full-screen message. Now the spare room goes below the buttons, and the box
      still shrinks (and the board with it) when the screen is short. */
   html:not(.tv) #game > #boardBox { order: 4; flex: 0 1 auto; aspect-ratio: 1; min-height: 0; }
+  /* Bigger board (Dest, 2026-11-15): it reaches into the page's side margins, 4px
+     from each edge instead of 16, so every square grows a little. */
+  html:not(.tv) body:has(#game:not(.hidden)) #game > #boardBox { width: auto; margin-inline: -12px; }
   html:not(.tv) #game > #rack { order: 5; margin: 10px 0 0; }
   html:not(.tv) #game > #preview { order: 6; min-height: 0; margin: 6px 0; font-size: 13px; }
   html:not(.tv) #game > #actions, html:not(.tv) #game > #swapActions { order: 7; margin: 0; }
