@@ -550,7 +550,7 @@ function createArksId({ client, now = Date.now, profiles }) {
       const token = readCookie(req, COOKIE);
       const row = token && token.length <= 100 ? db.db.prepare('SELECT session_id FROM arcade_signins WHERE token_hash = ?').get(hash(token)) : null;
       if (client && row) {
-        try { await client.appCall('POST', '/push/unsubscribe', { session: row.session_id }); } catch { /* ARKS ID away: it drops them when the session ends everywhere */ }
+        try { await client.appCall('POST', '/push/unsubscribe', { session: row.session_id }); } catch { /* ARKS ID away: the page also unsubscribes the browser itself (public/profile.js) */ }
       }
       end(token);
       if (row) endSession(row.session_id);

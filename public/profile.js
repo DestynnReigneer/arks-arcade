@@ -140,6 +140,13 @@ const ArcadeProfile = (() => {
     // Noted first, so leaving the page before the answer comes back still counts.
     try { localStorage.setItem('arksid.signedOut', '1'); } catch { /* no storage */ }
     try { next = (await (await fetch('/auth/signout', { method: 'POST' })).json()).next || '/'; } catch { /* go home */ }
+    // The sign-in service stays signed in after this (contract v19), so it can't be relied on to
+    // drop this device's notifications. The browser cuts its own subscription off, whatever it says.
+    try {
+      const reg = navigator.serviceWorker && await navigator.serviceWorker.getRegistration();
+      const sub = reg && reg.pushManager && await reg.pushManager.getSubscription();
+      if (sub) await sub.unsubscribe();
+    } catch { /* no notifications here */ }
     forgetAdultUnlocks();
     set(null);
     location.href = next;
