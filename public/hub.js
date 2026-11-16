@@ -57,7 +57,6 @@
   async function paintTurns() {
     const card = document.querySelector('.game.crisscross');
     if (!card) return;
-    let badge = card.querySelector('.turn-badge');
     const token = ArcadeProfile.token();
     let n = 0;
     if (token) {
@@ -66,7 +65,10 @@
         n = r.ok ? (await r.json()).yourTurn || 0 : 0;
       } catch { /* leave it off */ }
     }
-    if (!n) { if (badge) badge.remove(); return; }
+    // Looked up after the answer, not before: two checks can run at once (the page opening and
+    // the profile arriving), and each used to add its own badge.
+    let badge = card.querySelector('.turn-badge');
+    if (!n) { card.querySelectorAll('.turn-badge').forEach(b => b.remove()); return; }
     if (!badge) {
       badge = document.createElement('div');
       badge.className = 'turn-badge';
