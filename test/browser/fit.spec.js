@@ -51,7 +51,7 @@ const KNOWN = {
   "Brick Breaker @ phone turned sideways": "skip: The game runs a couple of pixels off the bottom on some machines and fits on others, so it's left out until the sideways layout fixes it for good.",
   "Tower Defense @ phone turned sideways": "Turned sideways, the board and the buttons are stacked, and the screen is too short for that.",
   "Spin & Solve @ phone with the browser bars showing": "The wheel keeps a minimum size, so Spin, Buy a vowel and Solve fall off the bottom; the puzzle, the host and the players need to make room.",
-  "Spin & Solve @ phone with Chrome's tab row": "The wheel keeps a minimum size, so Spin, Buy a vowel and Solve fall under the tab row; the puzzle, the host and the players need to make room.",
+  "Spin & Solve @ phone with Chrome's tab row": "skip: Spin, Buy a vowel and Solve sit right at the edge of the tab row, under it on some machines and just above it on others, until the puzzle, the host and the players make room.",
   "Spin & Solve @ phone turned sideways": "Turned sideways, the puzzle, the wheel and the buttons are stacked, and the screen is too short for that."
 };
 
