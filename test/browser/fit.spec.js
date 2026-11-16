@@ -8,9 +8,9 @@
 // The sizes are the ones people really use. Two are about Chrome on a phone: its
 // address bar makes the page shorter, and its row of tabs along the bottom covers
 // the page without making it shorter, so the page can't tell it's there. A game
-// that spreads itself over the whole height hides its buttons under that row
-// (2026-11-16: Sudoku's numbers, found by the maintainer). `covered` is how much
-// of the bottom that row hides; what you play with has to sit above it.
+// that spreads itself over the whole height hides its buttons under that row.
+// `covered` is how much of the bottom that row hides; what you play with has to
+// sit above it.
 //
 // A size a game doesn't fit yet is listed in KNOWN with the reason, and that
 // test is expected to fail. When a fix makes it pass, Playwright reports the
