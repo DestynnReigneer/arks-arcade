@@ -106,9 +106,41 @@
       li.querySelector('.l-title').textContent = g.title;
       li.querySelector('.l-sub').textContent = g.detail;
       li.querySelector('.l-join').href = g.href;
+      // Press and hold (or right-click) for Resume and Leave.
+      if (window.LongPress) LongPress.attach(li, () => continueMenu(g));
       list.appendChild(li);
     }
     $('continue').classList.toggle('hidden', !games.length);
+  }
+  // What leaving means depends on the game, so each says it its own way.
+  function leaveWords(g) {
+    if (g.game === 'sudoku' || g.game === 'clueless') {
+      return { icon: '🚪', label: "Give up today's puzzle", yes: 'Give up', ask: `Give up ${g.title.split(', ')[1] || "today's puzzle"}? It comes off your list, and today's time won't go on the board.` };
+    }
+    if (g.game === 'crisscross' && g.detail === 'Waiting for players') {
+      return { icon: '🚪', label: 'Close this lobby', yes: 'Close it', ask: 'Close this lobby? Nobody can join it after this.' };
+    }
+    if (g.game === 'chess') return { icon: '🏳️', label: 'Resign', yes: 'Resign', ask: `Resign ${g.title}? It counts as a loss.` };
+    if (g.game === 'spinsolve') return { icon: '🚪', label: 'End this game', yes: 'End it', ask: "End this game? Your score so far won't be saved." };
+    // Words with Family's title names the others ("with Ben, Kim"). A game of two ends
+    // when one leaves, and the one still in wins it (crisscross/engine.js resign()).
+    const others = (g.title.split(' with ').slice(1).join(' with ') || '').split(', ').filter(Boolean);
+    if (others.length === 1) return { icon: '🚪', label: 'Leave this game', yes: 'Leave', ask: `Leave your game with ${others[0]}? The game ends, and ${others[0]} wins it.` };
+    return { icon: '🚪', label: 'Leave this game', yes: 'Leave', ask: `Leave your game with ${others.join(', ')}? Everyone else keeps playing without you.` };
+  }
+  function continueMenu(g) {
+    const leave = leaveWords(g);
+    return {
+      title: `${g.title} · ${g.detail}`,
+      items: [
+        { icon: '▶️', label: 'Resume', run: () => { location.href = g.href; } },
+        { ...leave, danger: true, run: () => leaveGame(g) }
+      ]
+    };
+  }
+  async function leaveGame(g) {
+    // The preview stops here: each game's leave call goes in once the wording is approved.
+    console.log('leave', g.game, g.href);
   }
   ArcadeProfile.onChange(paintContinue);
   paintContinue();
