@@ -204,7 +204,11 @@ html:not(.tv) body:has(#game:not(.hidden)) .cc-board-box.zoomed .cc-board { widt
   html:not(.tv) #game > #status { order: 2; margin: 0; }
   html:not(.tv) #game > .cc-board-tools { order: 3; justify-content: center; margin: 0 0 6px; min-height: 0; }
   html:not(.tv) #game > .cc-board-tools #zoomBtn { display: none; }
-  html:not(.tv) #game > #boardBox { order: 4; flex: 1 1 auto; min-height: 0; }
+  /* Only as tall as the board (Dest, 2026-11-15): a box that grew to fill the screen
+     centered the board in it and pushed the tiles and buttons under Chrome's bar and
+     its full-screen message. Now the spare room goes below the buttons, and the box
+     still shrinks (and the board with it) when the screen is short. */
+  html:not(.tv) #game > #boardBox { order: 4; flex: 0 1 auto; aspect-ratio: 1; min-height: 0; }
   html:not(.tv) #game > #rack { order: 5; margin: 10px 0 0; }
   html:not(.tv) #game > #preview { order: 6; min-height: 0; margin: 6px 0; font-size: 13px; }
   html:not(.tv) #game > #actions, html:not(.tv) #game > #swapActions { order: 7; margin: 0; }
