@@ -232,10 +232,14 @@ async function run({ base, root }) {
   ok('free play hands out a crossword marked free', f1.status === 200 && f1.data.free === true && f1.data.puzzle.size === 5 && c.data.free === false);
   const f1Ans = (await api(`/test/answer/${f1.data.runId}`)).data.letters;
   const f2Ans = (await api(`/test/answer/${f2.data.runId}`)).data.letters;
-  // Two random mini crosswords can match by chance, so a third start settles it.
+  // New board never hands out today's crossword or one it just gave out (2026-11-16:
+  // before that, about 1 start in 7 was today's, which is what made this check flaky).
   const f3 = await api('/start', 'POST', { level: 'mini', free: true });
   const f3Ans = (await api(`/test/answer/${f3.data.runId}`)).data.letters;
-  ok('New board (another free start) gives a different crossword, not today\'s', (f1Ans !== f2Ans || f1Ans !== f3Ans) && ![f1Ans, f2Ans, f3Ans].includes(ans));
+  ok('New board (another free start) gives a different crossword, not today\'s', new Set([f1Ans, f2Ans, f3Ans]).size === 3 && ![f1Ans, f2Ans, f3Ans].includes(ans));
+  const more = [];
+  for (let i = 0; i < 12; i++) more.push((await api(`/test/answer/${(await api('/start', 'POST', { level: 'mini', free: true })).data.runId}`)).data.letters);
+  ok('…twelve more New boards in a row: none is today\'s and none repeats', !more.includes(ans) && new Set([f1Ans, f2Ans, f3Ans, ...more]).size === 15);
   ok('…and its start never carries a letter', !/"(letters|answer|answers)"/.test(f1.text));
   ok('a free crossword stays the same when you come back to it', JSON.stringify((await api(`/run/${f1.data.runId}`)).data.puzzle) === JSON.stringify(f1.data.puzzle));
   ok('today\'s puzzle is still today\'s after free play', (await api(`/test/answer/${(await api('/start', 'POST', { level: 'mini' })).data.runId}`)).data.letters === ans);
