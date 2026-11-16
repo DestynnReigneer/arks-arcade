@@ -38,26 +38,18 @@ const GAMES = [
   { name: 'Sudoku', path: '/sudoku.html', start: ['#coverBtn'], board: '#board, .sd-board', need: ['.sd-board', '#tools', '#pad'] },
   { name: 'Clueless Crosswords', path: '/clueless.html', start: ['#coverBtn'], board: '#grid', need: ['#clueBar', '#grid', '#tools'], touch: ['#keys'] },
   { name: 'Snake', path: '/snake.html', start: [], board: '#canvas', need: ['#canvas'], touch: ['#pad'] },
-  { name: 'Block Drop', path: '/blocks.html', start: [], board: '#canvas', need: ['#canvas'] },
+  { name: 'Block Drop', path: '/blocks.html', start: [], board: '#canvas', need: ['#canvas'], touch: ['#pad'] },
   { name: 'Brick Breaker', path: '/bricks.html', start: [], board: '#canvas', need: ['#canvas'] },
-  { name: 'Tower Defense', path: '/towers.html', start: ['#waveBtn'], board: '#stage', need: ['#stage', '#waveBtn'] },
+  { name: 'Tower Defense', path: '/towers.html', start: ['#waveBtn'], board: '#stage', need: ['#stage', '#waveBtn', '#info'] },
   { name: 'Words with Family', path: '/crisscross.html', start: ['#newLocalBtn', { fill: '#localPlayers input', text: 'Tester' }, '#localGo'], board: '#board', need: ['#board', '#rack', '#playBtn'] },
   { name: 'Spin & Solve', path: '/spinsolve.html', start: ['#goBtn'], board: null, need: ['#puzzleBoard', '#spinBtn', '#vowelBtn', '#solveBtn'] }
 ];
 
 // Game and size pairs that don't fit yet, with why. Fixed in order on the to-do list.
 const KNOWN = {
-  "Snake @ phone turned sideways": "Turned sideways, the board and the buttons are stacked, and the screen is too short for that.",
-  "Block Drop @ phone turned sideways": "Turned sideways, the board and the buttons are stacked, and the screen is too short for that.",
-  "Brick Breaker @ phone turned sideways": "skip: The game runs a couple of pixels off the bottom on some machines and fits on others, so it's left out until the sideways layout fixes it for good.",
-  "Tower Defense @ phone turned sideways": "Turned sideways, the board and the buttons are stacked, and the screen is too short for that.",
   "Spin & Solve @ phone with the browser bars showing": "The wheel keeps a minimum size, so Spin, Buy a vowel and Solve fall off the bottom; the puzzle, the host and the players need to make room.",
   "Spin & Solve @ phone with Chrome's tab row": "skip: Spin, Buy a vowel and Solve sit right at the edge of the tab row, under it on some machines and just above it on others, until the puzzle, the host and the players make room.",
   "Spin & Solve @ phone turned sideways": "Turned sideways, the puzzle, the wheel and the buttons are stacked, and the screen is too short for that.",
-  "Snake @ small phone turned sideways": "Turned sideways, the board and the buttons are stacked, and the screen is too short for that.",
-  "Block Drop @ small phone turned sideways": "Turned sideways, the board and the buttons are stacked, and the screen is too short for that.",
-  "Brick Breaker @ small phone turned sideways": "skip: The game runs a couple of pixels off the bottom on some machines and fits on others, so it's left out until the sideways layout fixes it for good.",
-  "Tower Defense @ small phone turned sideways": "Turned sideways, the board and the buttons are stacked, and the screen is too short for that.",
   "Spin & Solve @ small phone turned sideways": "Turned sideways, the puzzle, the wheel and the buttons are stacked, and the screen is too short for that."
 };
 
@@ -123,6 +115,18 @@ for (const game of GAMES) {
           if (Math.min(r.width, r.height) < least) out.push(`the board is squashed to ${Math.round(r.width)}×${Math.round(r.height)}`);
         }
         if (document.documentElement.scrollWidth > vw + 1) out.push(`the page scrolls sideways (${document.documentElement.scrollWidth} wide)`);
+        // Turned sideways there's no room to spare, so the page mustn't scroll at all.
+        if (innerWidth > innerHeight && document.documentElement.scrollHeight > innerHeight + 1) out.push(`the page scrolls (${document.documentElement.scrollHeight} tall)`);
+        // The bug-report button mustn't sit on anything you play with.
+        const bug = document.querySelector('.fb-bug');
+        const br = bug && getComputedStyle(bug).display !== 'none' && bug.getBoundingClientRect();
+        if (br && br.width) for (const sel of need) {
+          const el = document.querySelector(sel);
+          for (const c of el ? [el, ...el.querySelectorAll('button')] : []) {
+            const r = c.getBoundingClientRect();
+            if (r.width && r.left < br.right && r.right > br.left && r.top < br.bottom && r.bottom > br.top) { out.push(`the bug-report button sits on ${sel}`); break; }
+          }
+        }
         return out;
       }, { need, board: game.board, covered });
       await page.screenshot({ path: info.outputPath('screen.png') });
@@ -215,6 +219,25 @@ for (const [label, viewport] of SIZES.filter(s => s[2] && s[1].width > s[1].heig
     await page.locator('#cluesClose').click();
     await expect(lists).toBeHidden();
     expect(last).toBeTruthy();
+    await ctx.close();
+  });
+}
+
+// Tower Defense turned sideways: picking a square before the first wave shows the
+// towers, and every one of them has to be on the screen to be tapped.
+for (const [label, viewport] of SIZES.filter(s => s[2] && s[1].width > s[1].height)) {
+  test(`Tower Defense sideways on a ${label}: the towers are on the screen after picking a square`, async ({ browser }, info) => {
+    test.skip(info.project.name !== 'phone', 'The sizes are set here, so one project runs them all.');
+    const { ctx, page } = await openAt(browser, '/towers.html', viewport, 0);
+    const map = await page.locator('#canvas').boundingBox();
+    // A square of grass on the first map: column 5, row 5 (counting from 1).
+    await page.touchscreen.tap(map.x + map.width * 4.5 / 10, map.y + map.height * 4.5 / 13);
+    const buttons = page.locator('#info .build-grid button');
+    await expect(buttons.first()).toBeVisible();
+    for (const b of await buttons.all()) {
+      const r = await b.boundingBox();
+      expect(r.y + r.height, await b.innerText()).toBeLessThanOrEqual(viewport.height + 1);
+    }
     await ctx.close();
   });
 }

@@ -173,5 +173,6 @@ html:not(.tv) .sd-wrap { container-type: size; }
   html:not(.tv) .sd-side .sd-pad { flex: 1 1 auto; min-height: 46px; max-height: 72px; grid-auto-rows: 1fr; }
   html:not(.tv) .sd-side .sd-num { height: auto; min-height: 46px; font-size: 24px; }
   html:not(.tv) body:not([data-state="over"]) .sd-settings,
-  html:not(.tv) body:not([data-state="over"]) .keys-hint { display: none; }
+  html:not(.tv) body:not([data-state="over"]) .keys-hint,
+  html:not(.tv) body:not([data-state="over"]) .fb-corner { display: none; }
 }
