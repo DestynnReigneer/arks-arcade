@@ -317,7 +317,7 @@ html.tv .stage { width: 100%; max-width: 640px; margin: 0 auto; box-sizing: bord
    The TV keeps its own layout (above). */
 @media (max-width: 899px) {
   html:not(.tv):has(#game:not(.hidden)) { height: 100%; overflow: hidden; }
-  html:not(.tv) body:has(#game:not(.hidden)) { height: 100dvh; overflow: hidden; display: flex; flex-direction: column; padding-bottom: 0; box-sizing: border-box; }
+  html:not(.tv) body:has(#game:not(.hidden)) { height: var(--app-h, 100dvh); min-height: 0; overflow: hidden; display: flex; flex-direction: column; padding-bottom: 0; box-sizing: border-box; }
   html:not(.tv) body:has(#game:not(.hidden)) > * { flex: none; }
   html:not(.tv) body:has(#game:not(.hidden)) .fb-corner { display: none; }
   html:not(.tv) #game:not(.hidden) { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; padding-bottom: max(10px, env(safe-area-inset-bottom)); }

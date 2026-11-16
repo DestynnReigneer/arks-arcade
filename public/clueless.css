@@ -236,12 +236,15 @@ html:not(.tv) .cl-fit > .cl-wrap { width: min(100cqw, 100cqh); margin: 0; }
   html:not(.tv) body[data-state="over"] .cl-fit { height: min(100vw - 32px, 440px); }
 
   html:not(.tv):has(body:not([data-state="over"])) { height: 100%; overflow: hidden; }
-  html:not(.tv) body:not([data-state="over"]) { height: 100dvh; overflow: hidden; padding-bottom: 0; box-sizing: border-box; }
+  html:not(.tv) body:not([data-state="over"]) { height: var(--app-h, 100dvh); min-height: 0; overflow: hidden; padding-bottom: 0; box-sizing: border-box; }
   html:not(.tv) body:not([data-state="over"]) > * { flex: none; }
   html:not(.tv) body:not([data-state="over"]) .cl-picks { margin: 0 0 6px; }
   html:not(.tv) body:not([data-state="over"]) .cl-side > .hud { margin: 0 0 6px; }
   html:not(.tv) body:not([data-state="over"]) #clueBar { max-width: none; width: 100%; margin: 0 0 6px; }
-  html:not(.tv) body:not([data-state="over"]) .cl-fit { flex: 1 1 auto; }
+  /* Words with Family's fit: the grid's box is square and shrinks when the screen is
+     short, the tools and keyboard sit right under it, and spare room goes to the
+     bottom, so Chrome's row of tabs there never covers a key. */
+  html:not(.tv) body:not([data-state="over"]) .cl-fit { flex: 0 1 auto; aspect-ratio: 1; width: 100%; }
   html:not(.tv) body:not([data-state="over"]) #tools { max-width: none; margin: 6px 0 0; }
   html:not(.tv) body:not([data-state="over"]) #keys { max-width: none; margin: 2px 0 max(8px, env(safe-area-inset-bottom)); }
   html:not(.tv) body:not([data-state="over"]) #lists,
