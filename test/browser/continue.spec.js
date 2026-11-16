@@ -51,3 +51,50 @@ test('the Continue row lists your games and opens the one you tap', async ({ pag
   await items.nth(1).getByRole('link', { name: 'Play' }).click();
   await page.waitForURL(/sudoku\.html\?level=easy/);
 });
+
+// Press and hold a row (a right-click on a computer) for Resume and leaving. The
+// server's side of leaving is in test/continue.test.js; here the page asks first,
+// sends the right game, and paints the list it gets back.
+test('holding a Continue row asks before leaving the game, then takes it off', async ({ page }) => {
+  let games = GAMES.map((g, k) => ({ ...g, ref: k ? 'easy' : 'abc', leave: k ? 'give-up' : 'ends', ...(k ? {} : { others: ['Ben'] }) }));
+  let sent = null;
+  await page.route('**/api/continue', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ games }) }));
+  await page.route('**/api/continue/leave', route => {
+    sent = route.request().postDataJSON();
+    games = games.filter(g => g.ref !== sent.ref);
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, games }) });
+  });
+  await openPage(page, '/');
+  await page.getByRole('button', { name: /Play as a guest/ }).click();
+  await page.getByRole('button', { name: 'Play', exact: true }).click();
+  await expect(chooser(page)).toBeHidden();
+  await page.evaluate(() => {
+    let p = {};
+    try { p = JSON.parse(localStorage.getItem('arcade.profile') || '{}') || {}; } catch { /* start clean */ }
+    localStorage.setItem('arcade.profile', JSON.stringify({ ...p, id: p.id || 'p1', name: p.name || 'Ana', token: 'test.token' }));
+  });
+  await openPage(page, '/');
+  const items = page.locator('#continue li');
+  await expect(items).toHaveCount(2);
+
+  // A game of two: the question names the other player.
+  await items.nth(0).click({ button: 'right' });
+  const card = page.locator('.lp-card');
+  await expect(card).toBeVisible();
+  await expect(card.getByRole('menuitem', { name: /Resume/ })).toBeVisible();
+  await card.getByRole('menuitem', { name: /Leave this game/ }).click();
+  await expect(card).toContainText('Leave your game with Ben? The game ends, and Ben wins.');
+  // Never mind changes nothing.
+  await card.getByRole('button', { name: 'Never mind' }).click();
+  await expect(card).toBeHidden();
+  expect(sent).toBeNull();
+
+  // Giving up today's Sudoku.
+  await items.nth(1).click({ button: 'right' });
+  await card.getByRole('menuitem', { name: /Give up today's puzzle/ }).click();
+  await expect(card).toContainText("Give up today's Easy Challenge? It comes off your list, and today's time won't go on the board.");
+  await card.getByRole('button', { name: 'Give up', exact: true }).click();
+  await expect(items).toHaveCount(1);
+  expect(sent).toEqual({ game: 'sudoku', ref: 'easy' });
+  await expect(items.nth(0)).toContainText('Words with Family with Ben');
+});

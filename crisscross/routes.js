@@ -42,7 +42,8 @@ const limiter = (limit, windowMin = 10) => rateLimit({
   windowMs: windowMin * 60 * 1000, limit, standardHeaders: true, legacyHeaders: false,
   message: { error: 'That\'s a lot of taps in a short time. Take a breather and try again in a few minutes.' }
 });
-const readLimit = limiter(3000), moveLimit = limiter(600), newLimit = limiter(40);
+// The test suite starts many games from one address, so it gets more room (never in production).
+const readLimit = limiter(3000), moveLimit = limiter(600), newLimit = limiter(process.env.NODE_ENV === 'test' ? 200 : 40);
 const wrap = fn => (req, res, next) => { try { res.json(fn(req, res)); } catch (e) { next(e); } };
 
 router.get('/config', (req, res) => res.json({

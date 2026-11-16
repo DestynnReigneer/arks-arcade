@@ -83,6 +83,83 @@ async function run({ base }) {
   await api(`/api/crisscross/games/${gid}/resign`, 'POST', {}, Ben.h);
   ok('a finished game leaves the row', !(await mine(Ana)).some(g => g.game === 'crisscross') && !(await mine(Ben)).some(g => g.game === 'crisscross'));
 
+  // ---- leaving from the row (press and hold it) ----------------------------------------
+  console.log('\n-- continue: leaving a game from the row --');
+  const leave = (who, game, ref) => api('/api/continue/leave', 'POST', { game, ref }, who ? who.h : {});
+  const ww = h => api('/api/crisscross/games', 'POST', { kind: 'online', seats: 2 }, h);
+  ok('leaving needs a profile', (await leave(null, 'sudoku', 'easy')).status === 401);
+  ok('…and a game it knows', (await leave(Ana, 'wordless', 'x')).status === 400 && (await leave(Ana, '__proto__', 'x')).status === 400);
+
+  // Ana's own lobby that nobody joined closes.
+  const lobby = (await ww(Ana.h)).data;
+  const lobbyRow = (await mine(Ana)).find(g => g.ref === lobby.id);
+  ok('a host\'s waiting lobby says leaving closes it', lobbyRow && lobbyRow.leave === 'close', JSON.stringify(lobbyRow));
+  const closed = await leave(Ana, 'crisscross', lobby.id);
+  ok('…and leaving closes it', closed.status === 200 && !closed.data.games.some(g => g.ref === lobby.id) &&
+    (await api(`/api/crisscross/games/${lobby.id}`, 'GET', null, Ana.h)).status === 404);
+
+  // Someone else's lobby: Ben joins Cy's three-seat lobby, then leaves it.
+  const three = (await api('/api/crisscross/games', 'POST', { kind: 'online', seats: 3 }, Cy.h)).data;
+  await api(`/api/crisscross/lobby/${three.game.joinCode}/join`, 'POST', {}, Ben.h);
+  const benLobby = (await mine(Ben)).find(g => g.ref === three.id);
+  ok('a lobby someone joined says leaving just leaves it', benLobby && benLobby.leave === 'lobby', JSON.stringify(benLobby));
+  await leave(Ben, 'crisscross', three.id);
+  ok('…and it stays open for its host', !(await mine(Ben)).some(g => g.ref === three.id) && (await mine(Cy)).some(g => g.ref === three.id));
+  ok('nobody can leave a game they aren\'t in', (await leave(Ana, 'crisscross', three.id)).status === 403 && (await mine(Cy)).some(g => g.ref === three.id));
+  await leave(Cy, 'crisscross', three.id);
+
+  // A game of two ends, and the other player wins.
+  const two = (await ww(Ana.h)).data;
+  await api(`/api/crisscross/lobby/${two.game.joinCode}/join`, 'POST', {}, Ben.h);
+  const twoRow = (await mine(Ben)).find(g => g.ref === two.id);
+  ok('a game of two says leaving ends it, and who it is with', twoRow.leave === 'ends' && twoRow.others.join() === 'CT Ana', JSON.stringify(twoRow));
+  await leave(Ben, 'crisscross', two.id);
+  const ended = (await api(`/api/crisscross/games/${two.id}`, 'GET', null, Ana.h)).data;
+  ok('…and leaving ends it, with the other player winning', ended.over && !(await mine(Ana)).some(g => g.ref === two.id), JSON.stringify(ended.over));
+  ok('leaving a game that\'s already over is fine', (await leave(Ana, 'crisscross', two.id)).status === 200);
+
+  // A game of three goes on without whoever leaves.
+  const trio = (await api('/api/crisscross/games', 'POST', { kind: 'online', seats: 3 }, Ana.h)).data;
+  await api(`/api/crisscross/lobby/${trio.game.joinCode}/join`, 'POST', {}, Ben.h);
+  await api(`/api/crisscross/lobby/${trio.game.joinCode}/join`, 'POST', {}, Cy.h);
+  ok('a game of three says the others keep playing', (await mine(Cy)).find(g => g.ref === trio.id).leave === 'continues');
+  await leave(Cy, 'crisscross', trio.id);
+  ok('…and they do', (await mine(Ana)).some(g => g.ref === trio.id) && (await mine(Ben)).some(g => g.ref === trio.id));
+  await leave(Ana, 'crisscross', trio.id);
+
+  // Giving up today's Sudoku starts it over with a new clock.
+  const before = (await mine(Ben)).find(g => g.game === 'sudoku');
+  ok('a daily puzzle says leaving gives it up', before && before.leave === 'give-up' && before.ref === 'easy');
+  ok('…nobody else can give it up for them', (await leave(Ana, 'sudoku', 'easy')).status === 200 && (await mine(Ben)).some(g => g.game === 'sudoku'));
+  await leave(Ben, 'sudoku', 'easy');
+  ok('…giving it up takes it off the row', !(await mine(Ben)).some(g => g.game === 'sudoku'));
+  const again = await api('/api/sudoku/start', 'POST', { level: 'easy', profileToken: Ben.token });
+  ok('…and starting again is a new run', again.status === 200 && again.data.runId !== sudoku.data.runId, JSON.stringify(again.data).slice(0, 120));
+  await leave(Cy, 'clueless', 'mini');
+  ok('giving up today\'s crossword works the same', !(await mine(Cy)).some(g => g.game === 'clueless'));
+
+  // Chess: resigning counts as a loss.
+  const room = (await api('/api/chess/rooms', 'POST', {}, Ana.h)).data;
+  const guest = (await api(`/api/chess/rooms/${room.code}/join`, 'POST', {}, Cy.h)).data;
+  const seat = t => ({ playerId: t.playerId, token: t.token });
+  await api(`/api/chess/rooms/${room.code}/ready`, 'POST', { ...seat(guest), ready: true });
+  await api(`/api/chess/rooms/${room.code}/start`, 'POST', seat(room));
+  const chessRow = (await mine(Cy)).find(g => g.game === 'chess');
+  ok('a Chess game says leaving resigns', chessRow && chessRow.leave === 'resign' && chessRow.ref === room.code, JSON.stringify(chessRow));
+  await leave(Cy, 'chess', room.code);
+  const after = (await api(`/api/chess/rooms/${room.code}?playerId=${room.playerId}&token=${room.token}`)).data;
+  ok('…and resigning ends it', after.ended && after.ended.reason === 'resignation' && !(await mine(Ana)).some(g => g.game === 'chess'),
+    JSON.stringify(after.ended));
+
+  // Spin & Solve: ending it throws the game away.
+  const spinStart = (await api('/api/spinsolve/run/start', 'POST', { level: 'kids', names: ['Ana'], rounds: 3 }, Ana.h)).data;
+  await api(`/api/spinsolve/run/${spinStart.id}/solve`, 'POST', { guess: 'NOT THE ANSWER' }, Ana.h);
+  ok('a Spin & Solve game says leaving ends it', (await mine(Ana)).find(g => g.game === 'spinsolve').leave === 'end');
+  ok('…nobody else can end it', (await leave(Ben, 'spinsolve', spinStart.id)).status === 200 && (await mine(Ana)).some(g => g.game === 'spinsolve'));
+  await leave(Ana, 'spinsolve', spinStart.id);
+  ok('…and ending it throws it away', !(await mine(Ana)).some(g => g.game === 'spinsolve') &&
+    (await api(`/api/spinsolve/run/${spinStart.id}`, 'GET', null, Ana.h)).status === 404);
+
   return { pass, fail };
 }
 
