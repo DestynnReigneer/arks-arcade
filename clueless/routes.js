@@ -159,7 +159,9 @@ function start({ level, profileToken, free }, now = Date.now()) {
     const recent = recentFree.get(level) || [];
     const began = Date.now();
     let key;
-    for (let tries = 0; tries < 12 && (tries === 0 || Date.now() - began < 400); tries++) {
+    // Only the 7x7 grid is slow to build; the 5x5 mini takes a few ms, so it always gets its tries.
+    const timeCapped = level === 'big';
+    for (let tries = 0; tries < 12 && (!timeCapped || tries === 0 || Date.now() - began < 400); tries++) {
       key = `free-${crypto.randomBytes(8).toString('hex')}`;
       const got = answersOf(puzzles.puzzleFor(key, level));
       if (got !== todays && !recent.includes(got)) { recent.push(got); break; }
