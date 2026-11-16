@@ -33,6 +33,14 @@ from `test/fake-arksid.js`, on a throwaway database. CI runs them as a separate
 job on every pull request. Playwright is a dev dependency only, so it never
 ends up in the Docker image (CI checks that too).
 
+**The screen-size check** (`test/browser/fit.spec.js`) opens each game that's meant to
+fit the screen at six sizes, including a phone turned sideways and a phone with
+Chrome's row of tabs covering the bottom of the page, plays up to the first move, and
+fails if the board or anything you play with is off the screen, covered or squashed.
+A game and size that don't fit yet are listed in `KNOWN` with the reason. When a fix
+makes one pass, Playwright says so, and it comes off the list. A game that gets a
+fitted layout gets a line in `GAMES`.
+
 ## Layout
 
 - `server.js` — Express app; Wordless routes live here, Rambler is mounted
