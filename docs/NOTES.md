@@ -7,6 +7,20 @@ to-do list as checkboxes (the rule is in the maintainer's global CLAUDE.md
 and `arks-internal/conventions/sessions.md`): do the checked items in the
 order they were clicked, and keep the rest pinned here.
 
+## Sign out signs out of the arcade only (2026-11-15, ARKS ID contract v19)
+
+- **The maintainer's call:** Sign out ends the arcade's sign-in on this device and nothing else. The sign-in
+  service and the other apps stay signed in there, and other devices were never touched. `/auth/signout`
+  answers `next: '/'` instead of sending the browser on to the service's sign-out page.
+- `public/profile.js` notes `arksid.signedOut` before it asks, so the hourly silent sign-in doesn't put the
+  person straight back in; signing in again clears it.
+- **An adult pass and a profile token now name the arcade's own sign-in** (`key` in `arcade_signins`), not
+  the service's session. Signing out here and back in, with the service still signed in, gets a new key, so
+  an old pass stays dead. A second record of the same sign-in (the page signing in again by itself) shares
+  its key. Existing rows got the key their passes already named, so nothing in use broke.
+- Tests: `test/arksid.test.js` (the sign-out answer, and signing back in doesn't revive the old pass) and
+  `test/browser/adult-signout.spec.js` (it waits for the arcade's own sign-out now).
+
 ## Last session (2026-11-14)
 
 **Finished** (merged and published)

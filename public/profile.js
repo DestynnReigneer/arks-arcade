@@ -54,6 +54,7 @@ const ArcadeProfile = (() => {
     setTimeout(() => dropDeadUnlocks(me), 0);
     const cur = get();
     if (me.signedIn) {
+      try { localStorage.removeItem('arksid.signedOut'); } catch { /* no storage */ }
       set({ id: me.profile.id, name: me.profile.name, avatar: me.profile.avatar, hasPin: false, token: me.token,
         boardShow: me.profile.boardShow, initials: me.profile.initials, arksid: true, role: me.role, adult: me.adult });
     } else {
@@ -64,7 +65,10 @@ const ArcadeProfile = (() => {
       // back signed in here too, with no tap. If not, it comes straight back.
       let silentAt = 0;
       try { silentAt = Number(localStorage.getItem('arksid.silentAt')) || 0; } catch { silentAt = Date.now(); }
-      if (Date.now() - silentAt > 60 * 60 * 1000) {
+      // Someone who tapped Sign out here stays out until they tap Sign in.
+      let signedOut = false;
+      try { signedOut = localStorage.getItem('arksid.signedOut') === '1'; } catch { /* no storage */ }
+      if (!signedOut && Date.now() - silentAt > 60 * 60 * 1000) {
         try { localStorage.setItem('arksid.silentAt', String(Date.now())); } catch { /* no storage: don't loop */ }
         Id.leaving = true;
         location.replace('/auth/signin?silent=1&return=' + encodeURIComponent(location.pathname + location.search + location.hash));
@@ -133,7 +137,16 @@ const ArcadeProfile = (() => {
   }
   async function signOut() {
     let next = '/';
+    // Noted first, so leaving the page before the answer comes back still counts.
+    try { localStorage.setItem('arksid.signedOut', '1'); } catch { /* no storage */ }
     try { next = (await (await fetch('/auth/signout', { method: 'POST' })).json()).next || '/'; } catch { /* go home */ }
+    // The sign-in service stays signed in after this (contract v19), so it can't be relied on to
+    // drop this device's notifications. The browser cuts its own subscription off, whatever it says.
+    try {
+      const reg = navigator.serviceWorker && await navigator.serviceWorker.getRegistration();
+      const sub = reg && reg.pushManager && await reg.pushManager.getSubscription();
+      if (sub) await sub.unsubscribe();
+    } catch { /* no notifications here */ }
     forgetAdultUnlocks();
     set(null);
     location.href = next;
