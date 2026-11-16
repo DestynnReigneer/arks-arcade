@@ -227,7 +227,9 @@ html:not(.tv) .cl-stage, html:not(.tv) .cl-side { display: contents; }
 html:not(.tv) .cl-fit { container-type: size; display: grid; place-items: center; min-height: 0; }
 html:not(.tv) .cl-fit > .cl-wrap { width: min(100cqw, 100cqh); margin: 0; }
 
-@media (max-width: 899px) {
+/* A phone turned sideways (wide and short) gets the side-by-side layout, like a
+   computer, instead of the stacked one: stacked, the board had no height left. */
+@media (max-width: 899px) and (orientation: portrait), (max-width: 899px) and (min-height: 601px) {
   html:not(.tv) body { display: flex; flex-direction: column; }
   html:not(.tv) .cl-picks { order: 1; }
   html:not(.tv) .cl-side > .hud { order: 2; }
@@ -265,11 +267,11 @@ html:not(.tv) .cl-fit > .cl-wrap { width: min(100cqw, 100cqh); margin: 0; }
   html:not(.tv) body.cl-clues-open .cl-lists-x { display: inline-flex; justify-self: end; }
 }
 
-@media (min-width: 900px) {
+@media (min-width: 900px), (orientation: landscape) and (max-height: 600px) {
   html:not(.tv) body {
     max-width: none; padding-left: 0; padding-right: 0; padding-bottom: 0;
     --bar-w: calc(min(1100px, 100vw) - 32px); --gap: 24px;
-    --board: clamp(360px, min(calc(100dvh - 76px - 44px - 16px), calc(var(--bar-w) - var(--gap) - 380px)), 820px);
+    --board: clamp(200px, min(calc(var(--app-h, 100dvh) - 76px - 44px - 16px), calc(var(--bar-w) - var(--gap) - 380px)), 820px);
   }
   html:not(.tv) body > header.top, html:not(.tv) body > #over { width: var(--bar-w); margin-left: auto; margin-right: auto; box-sizing: border-box; }
   html:not(.tv) .cl-stage {
@@ -286,4 +288,21 @@ html:not(.tv) .cl-fit > .cl-wrap { width: min(100cqw, 100cqh); margin: 0; }
   /* The clue lists take the room that's left, and scroll inside it. */
   html:not(.tv) .cl-side .cl-lists { flex: 1 1 auto; min-height: 0; overflow: auto; margin: 12px 0 0; align-content: start; }
   html:not(.tv) body[data-state="over"] .cl-stage { height: auto; }
+}
+/* A phone turned sideways is too short for everything beside the grid. The page's
+   title row goes (the top bar already says where you are), the level and mode
+   buttons show only while no puzzle is going (they're back when it's paused), the
+   keyboard shows only while one is, and the keys are a little shorter. */
+@media (orientation: landscape) and (max-height: 600px) {
+  html:not(.tv) body:not([data-state="over"]) > header.top { display: none; }
+  html:not(.tv) body { --board: clamp(200px, min(calc(var(--app-h, 100dvh) - 76px - 16px), calc(var(--bar-w) - var(--gap) - 380px)), 820px); }
+  html:not(.tv) body[data-state="playing"] .cl-picks,
+  html:not(.tv) body:not([data-state="playing"]) .cl-keys,
+  html:not(.tv) body:not([data-state="over"]) .cl-legend,
+  html:not(.tv) body:not([data-state="over"]) .keys-hint { display: none; }
+  html:not(.tv) .cl-side > .hud { margin: 0 0 6px; }
+  html:not(.tv) .cl-side .cl-tools { margin: 6px 0 0; }
+  html:not(.tv) .cl-side .cl-keys { margin: 4px 0 0; }
+  html:not(.tv) .cl-side .cl-keys .row { margin-top: 4px; gap: 4px; }
+  html:not(.tv) .cl-side .cl-key { height: 34px; font-size: 15px; }
 }

@@ -30,25 +30,29 @@ const SIZES = [
   ['laptop', { width: 1366, height: 768 }, false]
 ];
 
-// start: what a person taps to get to the first move. need: what must be on the
-// screen then (touch: only on a touch screen). board: the part that can't get tiny.
+// start: what a person taps to get to the first move ({ fill, text } types into a box). need: what must be on the
+// screen then (touch: only on a touch screen). board: the part that can't get tiny
+// (null for a game whose board is a wide strip, like Spin & Solve's puzzle).
 const GAMES = [
   { name: 'Sudoku', path: '/sudoku.html', start: ['#coverBtn'], board: '#board, .sd-board', need: ['.sd-board', '#tools', '#pad'] },
   { name: 'Clueless Crosswords', path: '/clueless.html', start: ['#coverBtn'], board: '#grid', need: ['#clueBar', '#grid', '#tools'], touch: ['#keys'] },
   { name: 'Snake', path: '/snake.html', start: [], board: '#canvas', need: ['#canvas'], touch: ['#pad'] },
   { name: 'Block Drop', path: '/blocks.html', start: [], board: '#canvas', need: ['#canvas'] },
   { name: 'Brick Breaker', path: '/bricks.html', start: [], board: '#canvas', need: ['#canvas'] },
-  { name: 'Tower Defense', path: '/towers.html', start: ['#waveBtn'], board: '#stage', need: ['#stage', '#waveBtn'] }
+  { name: 'Tower Defense', path: '/towers.html', start: ['#waveBtn'], board: '#stage', need: ['#stage', '#waveBtn'] },
+  { name: 'Words with Family', path: '/crisscross.html', start: ['#newLocalBtn', { fill: '#localPlayers input', text: 'Tester' }, '#localGo'], board: '#board', need: ['#board', '#rack', '#playBtn'] },
+  { name: 'Spin & Solve', path: '/spinsolve.html', start: ['#goBtn'], board: null, need: ['#puzzleBoard', '#spinBtn', '#vowelBtn', '#solveBtn'] }
 ];
 
 // Game and size pairs that don't fit yet, with why. Fixed in order on the to-do list.
 const KNOWN = {
-  "Sudoku @ phone turned sideways": "Turned sideways, the board and the buttons are stacked, and the screen is too short for that.",
-  "Clueless Crosswords @ phone turned sideways": "Turned sideways, the board and the buttons are stacked, and the screen is too short for that.",
   "Snake @ phone turned sideways": "Turned sideways, the board and the buttons are stacked, and the screen is too short for that.",
   "Block Drop @ phone turned sideways": "Turned sideways, the board and the buttons are stacked, and the screen is too short for that.",
   "Brick Breaker @ phone turned sideways": "skip: The game runs a couple of pixels off the bottom on some machines and fits on others, so it's left out until the sideways layout fixes it for good.",
-  "Tower Defense @ phone turned sideways": "Turned sideways, the board and the buttons are stacked, and the screen is too short for that."
+  "Tower Defense @ phone turned sideways": "Turned sideways, the board and the buttons are stacked, and the screen is too short for that.",
+  "Spin & Solve @ phone with the browser bars showing": "The wheel keeps a minimum size, so Spin, Buy a vowel and Solve fall off the bottom; the puzzle, the host and the players need to make room.",
+  "Spin & Solve @ phone with Chrome's tab row": "The wheel keeps a minimum size, so Spin, Buy a vowel and Solve fall under the tab row; the puzzle, the host and the players need to make room.",
+  "Spin & Solve @ phone turned sideways": "Turned sideways, the puzzle, the wheel and the buttons are stacked, and the screen is too short for that."
 };
 
 test.describe.configure({ mode: 'parallel' });
@@ -83,7 +87,10 @@ for (const game of GAMES) {
       }
       const close = page.locator('.tut-x');
       if (await close.isVisible().catch(() => false)) await close.click();
-      for (const s of game.start) await page.locator(s).first().click();
+      for (const s of game.start) {
+        if (typeof s === 'string') await page.locator(s).first().click();
+        else await page.locator(s.fill).first().fill(s.text);
+      }
       await page.waitForTimeout(1000);
 
       const need = [...game.need, ...(touch ? game.touch || [] : [])];
@@ -102,7 +109,7 @@ for (const game of GAMES) {
           const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
           if (hit && hit !== el && !el.contains(hit) && !hit.contains(el)) out.push(`${sel} is covered by ${hit.tagName.toLowerCase()}${hit.id ? '#' + hit.id : ''}${hit.className && typeof hit.className === 'string' ? '.' + hit.className.split(' ')[0] : ''}`);
         }
-        const b = document.querySelector(board);
+        const b = board && document.querySelector(board);
         if (b) {
           const r = b.getBoundingClientRect();
           // A board narrower than a third of the screen's short side is too small to play.

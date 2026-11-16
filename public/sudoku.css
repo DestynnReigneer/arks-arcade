@@ -101,7 +101,9 @@ body[data-state="over"] .sd-tools, body[data-state="over"] .sd-pad { display: no
 html:not(.tv) .sd-stage, html:not(.tv) .sd-side { display: contents; }
 html:not(.tv) .sd-wrap { container-type: size; }
 
-@media (max-width: 899px) {
+/* A phone turned sideways (wide and short) gets the side-by-side layout, like a
+   computer, instead of the stacked one: stacked, the board had no height left. */
+@media (max-width: 899px) and (orientation: portrait), (max-width: 899px) and (min-height: 601px) {
   html:not(.tv) body { display: flex; flex-direction: column; }
   html:not(.tv) #levelSeg { order: 1; }
   html:not(.tv) .sd-side > .hud { order: 2; }
@@ -134,11 +136,11 @@ html:not(.tv) .sd-wrap { container-type: size; }
   html:not(.tv) body:not([data-state="over"]) .fb-corner { display: none; }
 }
 
-@media (min-width: 900px) {
+@media (min-width: 900px), (orientation: landscape) and (max-height: 600px) {
   html:not(.tv) body {
     max-width: none; padding-left: 0; padding-right: 0; padding-bottom: 0;
     --bar-w: calc(min(1100px, 100vw) - 32px); --gap: 24px;
-    --board: clamp(360px, min(calc(100dvh - 76px - 44px - 16px), calc(var(--bar-w) - var(--gap) - 340px)), 860px);
+    --board: clamp(200px, min(calc(var(--app-h, 100dvh) - 76px - 44px - 16px), calc(var(--bar-w) - var(--gap) - 340px)), 860px);
   }
   html:not(.tv) body > header.top, html:not(.tv) body > #over { width: var(--bar-w); margin-left: auto; margin-right: auto; box-sizing: border-box; }
   html:not(.tv) .sd-stage {
@@ -157,4 +159,17 @@ html:not(.tv) .sd-wrap { container-type: size; }
   html:not(.tv) .sd-side .sd-settings { margin: 12px 0 0; }
   html:not(.tv) .sd-side .keys-hint { margin: 8px 0 0; text-align: left; }
   html:not(.tv) body[data-state="over"] .sd-stage { height: auto; }
+}
+/* A phone turned sideways: the page's title row goes (the top bar already says
+   where you are) so the board gets its height, the numbers go back to one row of
+   nine, and the two settings move to the top bar's menu, as on a phone held upright. */
+@media (orientation: landscape) and (max-height: 600px) {
+  html:not(.tv) body:not([data-state="over"]) > header.top { display: none; }
+  html:not(.tv) body { --board: clamp(200px, min(calc(var(--app-h, 100dvh) - 76px - 16px), calc(var(--bar-w) - var(--gap) - 340px)), 860px); }
+  html:not(.tv) .sd-side #levelSeg { margin: 0 0 8px; }
+  html:not(.tv) .sd-side > .hud { margin: 0 0 8px; }
+  html:not(.tv) .sd-side .sd-pad { flex: none; margin: 8px 0 0; grid-template-columns: repeat(9, 1fr); grid-auto-rows: auto; }
+  html:not(.tv) .sd-side .sd-num { height: 46px; font-size: 22px; }
+  html:not(.tv) body:not([data-state="over"]) .sd-settings,
+  html:not(.tv) body:not([data-state="over"]) .keys-hint { display: none; }
 }

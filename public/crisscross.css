@@ -192,7 +192,9 @@ html:not(.tv) body:has(#game:not(.hidden)) .cc-board {
 html:not(.tv) body:has(#game:not(.hidden)) .cc-board-box.zoomed { overflow: auto; place-items: start; }
 html:not(.tv) body:has(#game:not(.hidden)) .cc-board-box.zoomed .cc-board { width: calc(min(100cqw, 100cqh) * 1.7); height: calc(min(100cqw, 100cqh) * 1.7); }
 
-@media (max-width: 899px) {
+/* A phone turned sideways (wide and short) gets the side-by-side layout, like a
+   computer, instead of the stacked one: stacked, the board had no height left. */
+@media (max-width: 899px) and (orientation: portrait), (max-width: 899px) and (min-height: 601px) {
   html:not(.tv):has(#game:not(.hidden)) { height: 100%; overflow: hidden; }
   html:not(.tv) body:has(#game:not(.hidden)) { height: var(--app-h, 100dvh); min-height: 0; overflow: hidden; display: flex; flex-direction: column; padding-bottom: 0; box-sizing: border-box; }
   html:not(.tv) body:has(#game:not(.hidden)) > :not(#game) { flex: none; }
@@ -230,14 +232,14 @@ html:not(.tv) body:has(#game:not(.hidden)) .cc-board-box.zoomed .cc-board { widt
   html:not(.tv) body.cc-moves-open .cc-moves-x { display: inline-flex; }
 }
 
-@media (min-width: 900px) {
+@media (min-width: 900px), (orientation: landscape) and (max-height: 600px) {
   /* The stage is exactly as wide as the top bar, so the board's left edge and the
      side column's right edge line up with the bar's ends, and the board's top and
      bottom line up with the scores and the bottom buttons. */
   html:not(.tv) body:has(#game:not(.hidden)) {
     max-width: none; padding-left: 0; padding-right: 0; padding-bottom: 0;
     --bar-w: calc(min(1100px, 100vw) - 32px); --gap: 24px;
-    --board: clamp(360px, min(calc(100dvh - 76px - 44px - 24px), calc(var(--bar-w) - var(--gap) - 340px)), 900px);
+    --board: clamp(200px, min(calc(var(--app-h, 100dvh) - 76px - 44px - 24px), calc(var(--bar-w) - var(--gap) - 340px)), 900px);
   }
   html:not(.tv) body:has(#game:not(.hidden)) > header.top { width: var(--bar-w); margin: 0 auto; box-sizing: border-box; }
   html:not(.tv) #game:not(.hidden) {
@@ -260,4 +262,29 @@ html:not(.tv) body:has(#game:not(.hidden)) .cc-board-box.zoomed .cc-board { widt
   html:not(.tv) #game > .cc-moves-panel .cc-moves { overflow: auto; min-height: 0; }
   html:not(.tv) #game > .stack { grid-area: stack; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0 0; }
   html:not(.tv) #game > .stack button { margin: 0; }
+}
+/* A phone turned sideways is too short for everything beside the board. The page's
+   title row goes (the top bar already says where you are), the words played and the
+   lower buttons wait in the top bar's menu as on a phone held upright, and the gaps
+   between the rest get smaller. */
+@media (orientation: landscape) and (max-height: 600px) {
+  html:not(.tv) body:has(#game:not(.hidden)) > header.top { display: none; }
+  html:not(.tv) body:has(#game:not(.hidden)) {
+    --board: clamp(200px, min(calc(var(--app-h, 100dvh) - 76px - 16px), calc(var(--bar-w) - var(--gap) - 340px)), 900px);
+  }
+  html:not(.tv) #game > .cc-moves-panel, html:not(.tv) #game > .stack { display: none; }
+  html:not(.tv) #game > #status { margin: 6px 0 0; }
+  html:not(.tv) #game > #rack { margin: 8px 0 0; }
+  html:not(.tv) #game > #rack .cc-tile { flex: 0 1 40px; font-size: 21px; }
+  html:not(.tv) #game > #preview { margin: 6px 0; }
+  html:not(.tv) #game .cc-scores li { padding: 6px 4px 4px; }
+  html:not(.tv) #game .cc-scores small { display: none; }
+  html:not(.tv) body:has(#game:not(.hidden)) .fb-corner { display: none; }
+  /* Words played, opened from the menu, slides up over the game. */
+  html:not(.tv) body.cc-moves-open #game > .cc-moves-panel {
+    display: flex; flex-direction: column; position: fixed; left: 10px; right: 10px; bottom: 10px; z-index: 62; max-height: 70dvh; margin: 0;
+    box-shadow: 0 -10px 40px rgba(0,0,0,.55);
+  }
+  html:not(.tv) body.cc-moves-open #game > .cc-moves-panel .cc-moves { overflow: auto; }
+  html:not(.tv) body.cc-moves-open .cc-moves-x { display: inline-flex; }
 }
