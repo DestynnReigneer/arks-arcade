@@ -119,3 +119,56 @@ for (const game of GAMES) {
     });
   }
 }
+
+// Opens a page at a size, with Chrome's tab row reported the way the check above does.
+async function openAt(browser, path, viewport, covered) {
+  const ctx = await browser.newContext({ viewport, hasTouch: true, isMobile: true });
+  const page = await ctx.newPage();
+  if (covered) {
+    await page.addInitScript(cov => {
+      const vv = new EventTarget();
+      for (const [k, get] of Object.entries({ height: () => innerHeight - cov, width: () => innerWidth, scale: () => 1, offsetTop: () => 0, offsetLeft: () => 0, pageTop: () => scrollY, pageLeft: () => scrollX })) {
+        Object.defineProperty(vv, k, { get });
+      }
+      Object.defineProperty(window, 'visualViewport', { value: vv, configurable: true });
+    }, covered);
+  }
+  await quietFonts(page);
+  await openPage(page, path);
+  const guest = page.getByRole('button', { name: /Play as a guest/ });
+  if (await guest.isVisible().catch(() => false)) {
+    await guest.click();
+    await page.getByRole('button', { name: 'Play', exact: true }).click();
+  }
+  const close = page.locator('.tut-x');
+  if (await close.isVisible().catch(() => false)) await close.click();
+  return { ctx, page };
+}
+
+// A start card that shrinks with its board must still fit inside it, or its text
+// spills over the buttons around it and catches their taps.
+for (const [label, viewport, , covered = 0] of SIZES.filter(s => s[2] && s[1].height > s[1].width)) {
+  test(`Clueless Crosswords' start card fits inside the grid on a ${label}`, async ({ browser }, info) => {
+    test.skip(info.project.name !== 'phone', 'The sizes are set here, so one project runs them all.');
+    const { ctx, page } = await openAt(browser, '/clueless.html', viewport, covered);
+    await page.waitForTimeout(600);
+    const grid = await page.locator('#grid').boundingBox();
+    const card = await page.locator('.cl-cover-box').boundingBox();
+    expect(card.y).toBeGreaterThanOrEqual(grid.y - 1);
+    expect(card.y + card.height).toBeLessThanOrEqual(grid.y + grid.height + 1);
+    await ctx.close();
+  });
+}
+
+// A pop-up message sits above Chrome's tab row, where it can be seen.
+test('a pop-up message clears Chrome\'s tab row', async ({ browser }, info) => {
+  test.skip(info.project.name !== 'phone', 'The size is set here.');
+  const { ctx, page } = await openAt(browser, '/sudoku.html', { width: 412, height: 860 }, 136);
+  await page.locator('#coverBtn').click();
+  await page.locator('#undoBtn').click();   // nothing to undo yet, so it says so
+  const toast = page.locator('.toast').first();
+  await expect(toast).toBeVisible();
+  const box = await toast.boundingBox();
+  expect(box.y + box.height).toBeLessThanOrEqual(860 - 136);
+  await ctx.close();
+});

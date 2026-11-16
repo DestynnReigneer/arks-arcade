@@ -106,6 +106,14 @@ body[data-dir="down"] { --dir: var(--down); }
 .cl-cover-box { max-width: 300px; }
 .cl-cover b { font-size: 20px; letter-spacing: 0.5px; }
 .cl-cover p { color: var(--muted); font-size: 14px; line-height: 1.5; margin: 8px 0 4px; }
+/* When the grid is small (a short screen with the browser's bars showing), the card
+   keeps only its title and Start, so nothing spills over the buttons around it. The
+   grid is square, so its width says how tall it is. */
+@container (max-width: 300px) {
+  .cl-cover { padding: 10px; }
+  .cl-cover b { font-size: 17px; }
+  .cl-cover p { display: none; }
+}
 
 /* Free play's New board, shown until the first letter is typed. */
 .cl-free {
