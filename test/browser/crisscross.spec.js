@@ -124,3 +124,26 @@ test('moving and switching tiles you put down in Words with Family', async ({ pa
   const real = problems.filter(p => !/preview|status of 400/.test(p));
   expect(real, real.join('\n')).toEqual([]);
 });
+
+// Dest, 2026-11-15: on a tall phone the board sat in the middle of a box that filled
+// the screen, so the tiles and buttons ended up under Chrome's bottom bar and its
+// full-screen message. The board now sits right under the scores, and the spare
+// room is below the buttons.
+test('Words with Family keeps its tiles and buttons high on a tall phone', async ({ page }) => {
+  await page.setViewportSize({ width: 412, height: 915 });
+  await quietFonts(page);
+  await openPage(page, '/crisscross.html');
+  await page.getByRole('button', { name: /Play as a guest/ }).click();
+  await page.getByRole('button', { name: 'Play', exact: true }).click();
+  const close = page.locator('.tut-x');
+  if (await close.isVisible().catch(() => false)) await close.click();
+  await page.locator('#newLocalBtn').click();
+  await page.locator('#localPlayers input').first().fill('Tester');
+  await page.locator('#localGo').click();
+  await expect(page.locator('#game')).toBeVisible();
+  const status = await page.locator('#status').boundingBox();
+  const board = await page.locator('#boardBox').boundingBox();
+  const actions = await page.locator('#actions').boundingBox();
+  expect(board.y - (status.y + status.height), 'no big gap above the board').toBeLessThan(60);
+  expect(915 - (actions.y + actions.height), 'room left under the buttons').toBeGreaterThan(80);
+});
