@@ -85,7 +85,7 @@ db.db.exec(`
 const fail = (message, status = 400, extra = {}) => Object.assign(new Error(message), { status, ...extra });
 const profiles = () => require('../arcade/profiles');
 const levelOf = level => {
-  if (!maker.LEVELS[level]) throw fail('Pick a puzzle: the family mini or the adults\' one.');
+  if (typeof level !== 'string' || !Object.hasOwn(maker.LEVELS, level)) throw fail('Pick a puzzle: the family mini or the adults\' one.');
   return level;
 };
 

@@ -91,7 +91,7 @@ function puzzleFor(day, level) {
   return cache.get(key);
 }
 const levelOf = level => {
-  if (!gen.LEVELS[level]) throw fail('Pick a level: Family, Easy, Medium or Hard.');
+  if (typeof level !== 'string' || !Object.hasOwn(gen.LEVELS, level)) throw fail('Pick a level: Family, Easy, Medium or Hard.');
   return level;
 };
 
