@@ -69,3 +69,21 @@ body[data-state="over"] .pad, body[data-state="over"] .keys-hint { display: none
    board can use the room; they're back between games (2026-11-13). Not on the TV,
    which lays the page out its own way. */
 html:not(.tv) body[data-state="playing"] > .options { display: none; }
+
+/* A phone turned sideways (a short touch screen): the board on the left and the
+   scores, choices and thumb buttons beside it, instead of stacked under each other
+   with the board pushed off the bottom. The page's title row goes, since the top
+   bar already says where you are. Tower Defense has its own panel and layout. */
+@media (orientation: landscape) and (max-height: 600px) and (pointer: coarse) {
+  html:not(.tv) body:has(> .stage):not(:has(#info)) {
+    display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); column-gap: 20px;
+    grid-auto-flow: row dense; align-content: start; align-items: start;
+  }
+  html:not(.tv) body:has(> .stage):not(:has(#info)) > * { grid-column: 1 / -1; }
+  html:not(.tv) body:has(> .stage):not(:has(#info)) > header.top { display: none; }
+  html:not(.tv) body:has(> .stage):not(:has(#info)) > .stage { grid-column: 1; grid-row: span 4; margin: 0; }
+  html:not(.tv) body:has(> .stage):not(:has(#info)) > :is(.hud, .options, .pad, .keys-hint) { grid-column: 2; margin: 0 0 10px; }
+  html:not(.tv) body:has(> .stage):not(:has(#info)) > .keys-hint { display: none; }
+  /* The thumb buttons shrink with the screen, down to a size a thumb still hits. */
+  html:not(.tv) body:has(> .stage):not(:has(#info)) .pad-btn { height: clamp(44px, calc((var(--app-h, 100dvh) - 260px) / 2), 62px); }
+}

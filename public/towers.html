@@ -62,7 +62,7 @@
   .tower-actions button:disabled { opacity: 0.45; cursor: default; }
   /* On a computer the map sits on the left, as tall as the screen allows, with the
      map picker, the wave button and the tower panel beside it, so nothing scrolls. */
-  @media (min-width: 900px) {
+  @media (min-width: 900px), (orientation: landscape) and (max-height: 600px) and (pointer: coarse) {
     html:not(.tv) body {
       max-width: none; padding-left: 0; padding-right: 0; padding-bottom: 0;
       --bar-w: calc(min(1100px, 100vw) - 32px); --gap: 24px; --side: 360px;
@@ -82,6 +82,14 @@
     html:not(.tv) .td-play > .info { grid-area: info; }
     html:not(.tv) .td-play > .keys-hint { grid-area: keys; }
     html:not(.tv) .td-play > .over-panel, html:not(.tv) .td-play > #overPanel { grid-column: 1 / -1; }
+  }
+  /* A phone turned sideways gets the same map-and-panel layout, sized to the short
+     screen, and the page's title row goes (the top bar already says where you are). */
+  @media (orientation: landscape) and (max-height: 600px) and (pointer: coarse) {
+    html:not(.tv) body { --side: 300px; --map-h: clamp(200px, calc(var(--app-h, 100dvh) - 76px - 70px), 1000px); }
+    html:not(.tv) body > header.top { display: none; }
+    html:not(.tv) body > .hud { margin-bottom: 8px; }
+    html:not(.tv) .td-play > .keys-hint { display: none; }
   }
 </style>
 </head>

@@ -175,9 +175,13 @@ const GameShell = (() => {
     function room() {
       const top = box.getBoundingClientRect().top + window.scrollY;
       let below = 0;
+      const across = box.getBoundingClientRect();
       for (let n = box.nextElementSibling; n; n = n.nextElementSibling) {
         const cs = getComputedStyle(n);
         if (n.tagName === 'SCRIPT' || cs.display === 'none' || cs.position === 'fixed' || cs.position === 'absolute') continue;
+        // Something beside the board (a phone turned sideways) doesn't take its height.
+        const r = n.getBoundingClientRect();
+        if (r.left >= across.right || r.right <= across.left) continue;
         below += n.getBoundingClientRect().height + parseFloat(cs.marginTop) + parseFloat(cs.marginBottom);
       }
       const frame = box.offsetHeight - box.clientHeight;   // the stage's own border
