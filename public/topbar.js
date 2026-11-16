@@ -1,5 +1,22 @@
 'use strict';
 
+// The height you can really see, as --app-h on the page. A browser bar that covers
+// the bottom of the page without making it shorter (Chrome's row of tabs on a phone)
+// leaves 100dvh too tall, so the games that fit the screen use var(--app-h, 100dvh).
+// Where the browser reports the covered part (the visual viewport), this leaves it
+// out. While someone has zoomed in with two fingers it stays put, so the game
+// doesn't shrink under their fingers.
+(() => {
+  const vv = window.visualViewport;
+  if (!vv) return;
+  const set = () => {
+    if (Math.abs(vv.scale - 1) > 0.01) return;
+    document.documentElement.style.setProperty('--app-h', `${Math.round(vv.height)}px`);
+  };
+  vv.addEventListener('resize', set);
+  set();
+})();
+
 // The top bar on every game page (2026-10-29), the same bar as the home page
 // and as the maintainer's other apps: a way back to the arcade on the left,
 // the arcade's name (or the owner's logo lockup) in the middle, and How to

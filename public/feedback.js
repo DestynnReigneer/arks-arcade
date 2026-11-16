@@ -98,12 +98,12 @@
 
   const css = `
   .fb-root, .fb-root * { box-sizing: border-box; }
-  .fb-bug { position: fixed; right: 4px; bottom: 4px; width: 32px; height: 32px; padding: 10px; z-index: 900; border: 0; background: none;
+  .fb-bug { position: fixed; right: 4px; bottom: max(4px, calc(100dvh - var(--app-h, 100dvh) + 4px)); width: 32px; height: 32px; padding: 10px; z-index: 900; border: 0; background: none;
     cursor: pointer; filter: drop-shadow(0 0 3px rgba(229,37,33,.6)); animation: fbWander 9s steps(1) infinite; -webkit-tap-highlight-color: transparent; }
   .fb-bug svg { width: 100%; height: 100%; display: block; }
   .fb-bug:hover, .fb-bug:focus-visible { animation-play-state: paused; outline: none; transform: scale(1.25); }
   @keyframes fbWander { 0%, 70% { translate: 0 0; } 74% { translate: -4px 0; } 78% { translate: -6px -2px; } 82% { translate: -3px -1px; } 86%, 100% { translate: 0 0; } }
-  .fb-tip { position: fixed; right: 40px; bottom: 7px; z-index: 900; padding: 7px 11px; border-radius: 9px; background: #22103f; color: #f5eaff;
+  .fb-tip { position: fixed; right: 40px; bottom: max(7px, calc(100dvh - var(--app-h, 100dvh) + 7px)); z-index: 900; padding: 7px 11px; border-radius: 9px; background: #22103f; color: #f5eaff;
     border: 1px solid ${RED}; font: 600 13px/1.2 system-ui, sans-serif; white-space: nowrap; cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,.5);
     opacity: 0; transform: translateX(8px); pointer-events: none; transition: opacity .2s ease, transform .2s ease; }
   .fb-tip::after { content: ''; position: absolute; right: -6px; top: 50%; margin-top: -5px; border: 5px solid transparent; border-left-color: ${RED}; border-right: 0; }

@@ -114,12 +114,15 @@ html:not(.tv) .sd-wrap { container-type: size; }
   html:not(.tv) .sd-wrap { aspect-ratio: 1; height: auto; }
 
   html:not(.tv):has(body:not([data-state="over"])) { height: 100%; overflow: hidden; }
-  html:not(.tv) body:not([data-state="over"]) { height: 100dvh; overflow: hidden; padding-bottom: 0; box-sizing: border-box; }
+  html:not(.tv) body:not([data-state="over"]) { height: var(--app-h, 100dvh); min-height: 0; overflow: hidden; padding-bottom: 0; box-sizing: border-box; }
   html:not(.tv) body:not([data-state="over"]) > * { flex: none; }
   html:not(.tv) body:not([data-state="over"]) #levelSeg { margin: 0 0 6px; }
   html:not(.tv) body:not([data-state="over"]) .sd-side > .hud { margin: 0 0 6px; }
   html:not(.tv) body:not([data-state="over"]) .sd-wrap {
-    flex: 1 1 auto; min-height: 0; aspect-ratio: auto; max-width: none; width: 100%; display: grid; place-items: center;
+    /* Words with Family's fit: the board's box is square, shrinks when the screen is
+       short, and the tools and numbers sit right under it. Spare room goes to the
+       bottom of the page, so Chrome's row of tabs there never covers a button. */
+    flex: 0 1 auto; min-height: 0; aspect-ratio: 1; max-width: none; width: 100%; display: grid; place-items: center;
   }
   html:not(.tv) body:not([data-state="over"]) .sd-board { width: min(100cqw, 100cqh); }
   html:not(.tv) body:not([data-state="over"]) .sd-cover { inset: auto; left: 50%; top: 50%; width: min(100cqw, 100cqh); height: min(100cqw, 100cqh); transform: translate(-50%, -50%); }

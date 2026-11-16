@@ -182,7 +182,11 @@ const GameShell = (() => {
       }
       const frame = box.offsetHeight - box.clientHeight;   // the stage's own border
       const bodyEnd = parseFloat(getComputedStyle(document.body).paddingBottom) || 0;   // the page's own bottom padding
-      return window.innerHeight - top - below - frame - bodyEnd - 8;
+      // The height you can really see (a browser bar can cover the bottom of the page
+      // without making it shorter; topbar.js says more), unless someone has zoomed in.
+      const vv = window.visualViewport;
+      const seen = vv && Math.abs(vv.scale - 1) < 0.01 ? Math.min(window.innerHeight, vv.height) : window.innerHeight;
+      return seen - top - below - frame - bodyEnd - 8;
     }
     function resize() {
       const dpr = Math.max(1, window.devicePixelRatio || 1);
@@ -203,6 +207,7 @@ const GameShell = (() => {
     }
     new ResizeObserver(resize).observe(box);
     window.addEventListener('resize', resize);
+    if (window.visualViewport) window.visualViewport.addEventListener('resize', resize);
     // Starting and ending a game shows and hides things around the board.
     new MutationObserver(() => requestAnimationFrame(resize)).observe(document.body, { attributes: true, attributeFilter: ['data-state'] });
     resize();
