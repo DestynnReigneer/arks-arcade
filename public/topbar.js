@@ -179,7 +179,7 @@
       // A game can keep an item for phones and small tablets only (data-menu="phone",
       // under 900px wide or turned sideways, where games use the whole screen), or only while a
       // part of the page is showing (data-when="#game").
-      if (b.dataset.menu === 'phone' && !window.matchMedia('(max-width: 899px), (orientation: landscape) and (max-height: 600px)').matches) continue;
+      if (b.dataset.menu === 'phone' && !window.matchMedia('(max-width: 899px), (orientation: landscape) and (max-height: 600px) and (pointer: coarse)').matches) continue;
       if (b.dataset.when) { const part = document.querySelector(b.dataset.when); if (!part || part.classList.contains('hidden') || part.hidden) continue; }
       const label = (b.getAttribute('aria-label') || b.title || '').replace(/\s*\(.*?\)\s*$/, '').trim() || b.textContent.trim();
       // data-note shows a setting's state under its name, and data-stay keeps the menu

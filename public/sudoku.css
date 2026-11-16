@@ -163,13 +163,15 @@ html:not(.tv) .sd-wrap { container-type: size; }
 /* A phone turned sideways: the page's title row goes (the top bar already says
    where you are) so the board gets its height, the numbers go back to one row of
    nine, and the two settings move to the top bar's menu, as on a phone held upright. */
-@media (orientation: landscape) and (max-height: 600px) {
+@media (orientation: landscape) and (max-height: 600px) and (pointer: coarse) {
   html:not(.tv) body:not([data-state="over"]) > header.top { display: none; }
   html:not(.tv) body { --board: clamp(200px, min(calc(var(--app-h, 100dvh) - 76px - 16px), calc(var(--bar-w) - var(--gap) - 340px)), 860px); }
   html:not(.tv) .sd-side #levelSeg { margin: 0 0 8px; }
   html:not(.tv) .sd-side > .hud { margin: 0 0 8px; }
   html:not(.tv) .sd-side .sd-pad { flex: none; margin: 8px 0 0; grid-template-columns: repeat(9, 1fr); grid-auto-rows: auto; }
-  html:not(.tv) .sd-side .sd-num { height: 46px; font-size: 22px; }
+  /* The numbers grow into the room left beside the board, up to a comfortable size. */
+  html:not(.tv) .sd-side .sd-pad { flex: 1 1 auto; min-height: 46px; max-height: 72px; grid-auto-rows: 1fr; }
+  html:not(.tv) .sd-side .sd-num { height: auto; min-height: 46px; font-size: 24px; }
   html:not(.tv) body:not([data-state="over"]) .sd-settings,
   html:not(.tv) body:not([data-state="over"]) .keys-hint { display: none; }
 }

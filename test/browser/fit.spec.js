@@ -26,6 +26,7 @@ const SIZES = [
   ['phone with the browser bars showing', { width: 412, height: 640 }, true],
   ["phone with Chrome's tab row", { width: 412, height: 860 }, true, 136],
   ['phone turned sideways', { width: 844, height: 390 }, true],
+  ['small phone turned sideways', { width: 740, height: 360 }, true],
   ['tablet', { width: 768, height: 1024 }, true],
   ['laptop', { width: 1366, height: 768 }, false]
 ];
@@ -52,7 +53,12 @@ const KNOWN = {
   "Tower Defense @ phone turned sideways": "Turned sideways, the board and the buttons are stacked, and the screen is too short for that.",
   "Spin & Solve @ phone with the browser bars showing": "The wheel keeps a minimum size, so Spin, Buy a vowel and Solve fall off the bottom; the puzzle, the host and the players need to make room.",
   "Spin & Solve @ phone with Chrome's tab row": "skip: Spin, Buy a vowel and Solve sit right at the edge of the tab row, under it on some machines and just above it on others, until the puzzle, the host and the players make room.",
-  "Spin & Solve @ phone turned sideways": "Turned sideways, the puzzle, the wheel and the buttons are stacked, and the screen is too short for that."
+  "Spin & Solve @ phone turned sideways": "Turned sideways, the puzzle, the wheel and the buttons are stacked, and the screen is too short for that.",
+  "Snake @ small phone turned sideways": "Turned sideways, the board and the buttons are stacked, and the screen is too short for that.",
+  "Block Drop @ small phone turned sideways": "Turned sideways, the board and the buttons are stacked, and the screen is too short for that.",
+  "Brick Breaker @ small phone turned sideways": "skip: The game runs a couple of pixels off the bottom on some machines and fits on others, so it's left out until the sideways layout fixes it for good.",
+  "Tower Defense @ small phone turned sideways": "Turned sideways, the board and the buttons are stacked, and the screen is too short for that.",
+  "Spin & Solve @ small phone turned sideways": "Turned sideways, the puzzle, the wheel and the buttons are stacked, and the screen is too short for that."
 };
 
 test.describe.configure({ mode: 'parallel' });
@@ -179,3 +185,36 @@ test('a pop-up message clears Chrome\'s tab row', async ({ browser }, info) => {
   expect(box.y + box.height).toBeLessThanOrEqual(860 - 136);
   await ctx.close();
 });
+
+// Turned sideways, the menu holds what moved off the screen, so all of it has to be
+// reachable, and what moved has to work there.
+for (const [label, viewport] of SIZES.filter(s => s[2] && s[1].width > s[1].height)) {
+  test(`Clueless Crosswords sideways on a ${label}: the menu, the clues and pausing work`, async ({ browser }, info) => {
+    test.skip(info.project.name !== 'phone', 'The sizes are set here, so one project runs them all.');
+    const { ctx, page } = await openAt(browser, '/clueless.html', viewport, 0);
+    await expect(page.locator('#levelSeg')).toBeVisible();
+    await page.locator('#coverBtn').click();
+    await expect(page.locator('#levelSeg')).toBeHidden();
+    // The keyboard is all on the screen.
+    const keys = await page.locator('#keys').boundingBox();
+    expect(keys.y + keys.height).toBeLessThanOrEqual(viewport.height + 1);
+    // Every item in the menu is on the screen.
+    await page.locator('.ah-waffle, [aria-label="Menu"]').first().click();
+    const items = page.locator('.ah-menu .grid button');
+    await expect(items.first()).toBeVisible();
+    const last = await items.last().boundingBox();
+    const menu = await page.locator('.ah-menu').boundingBox();
+    expect(menu.y + menu.height).toBeLessThanOrEqual(viewport.height + 1);
+    // All the clues opens a sheet that's on the screen.
+    await page.locator('.ah-menu .grid button', { hasText: /clues/i }).first().click();
+    const lists = page.locator('#lists');
+    await expect(lists).toBeVisible();
+    const box = await lists.boundingBox();
+    expect(box.y).toBeGreaterThanOrEqual(0);
+    expect(box.y + box.height).toBeLessThanOrEqual(viewport.height + 1);
+    await page.locator('#cluesClose').click();
+    await expect(lists).toBeHidden();
+    expect(last).toBeTruthy();
+    await ctx.close();
+  });
+}

@@ -290,19 +290,27 @@ html:not(.tv) .cl-fit > .cl-wrap { width: min(100cqw, 100cqh); margin: 0; }
   html:not(.tv) body[data-state="over"] .cl-stage { height: auto; }
 }
 /* A phone turned sideways is too short for everything beside the grid. The page's
-   title row goes (the top bar already says where you are), the level and mode
-   buttons show only while no puzzle is going (they're back when it's paused), the
-   keyboard shows only while one is, and the keys are a little shorter. */
-@media (orientation: landscape) and (max-height: 600px) {
+   title row goes (the top bar already says where you are). The level and mode
+   buttons show while the start or paused card is up, and the keyboard while you're
+   typing. The keys get shorter on a shorter screen, and the clue lists open from
+   the menu as a sheet over the game, as on a phone held upright. */
+@media (orientation: landscape) and (max-height: 600px) and (pointer: coarse) {
   html:not(.tv) body:not([data-state="over"]) > header.top { display: none; }
   html:not(.tv) body { --board: clamp(200px, min(calc(var(--app-h, 100dvh) - 76px - 16px), calc(var(--bar-w) - var(--gap) - 380px)), 820px); }
-  html:not(.tv) body[data-state="playing"] .cl-picks,
-  html:not(.tv) body:not([data-state="playing"]) .cl-keys,
+  html:not(.tv) body:has(#cover:not(.hidden)) .cl-keys,
+  html:not(.tv) body:not(:has(#cover:not(.hidden))):not([data-state="over"]) .cl-picks,
   html:not(.tv) body:not([data-state="over"]) .cl-legend,
-  html:not(.tv) body:not([data-state="over"]) .keys-hint { display: none; }
+  html:not(.tv) body:not([data-state="over"]) .keys-hint,
+  html:not(.tv) body:not(.cl-clues-open):not([data-state="over"]) .cl-side .cl-lists { display: none; }
   html:not(.tv) .cl-side > .hud { margin: 0 0 6px; }
   html:not(.tv) .cl-side .cl-tools { margin: 6px 0 0; }
-  html:not(.tv) .cl-side .cl-keys { margin: 4px 0 0; }
+  html:not(.tv) .cl-side .cl-keys { margin: 2px 0 0; }
   html:not(.tv) .cl-side .cl-keys .row { margin-top: 4px; gap: 4px; }
-  html:not(.tv) .cl-side .cl-key { height: 34px; font-size: 15px; }
+  html:not(.tv) .cl-side .cl-key { height: clamp(26px, calc((var(--app-h, 100dvh) - 270px) / 3), 34px); font-size: 15px; }
+  html:not(.tv) body.cl-clues-open:not([data-state="over"]) .cl-side .cl-lists {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; position: fixed; left: 10px; right: 10px; bottom: 10px; z-index: 62;
+    max-height: calc(var(--app-h, 100dvh) - 20px); overflow: auto;
+    margin: 0; padding: 14px; border-radius: 18px; background: var(--card); border: 1px solid var(--border); box-shadow: 0 -10px 40px rgba(0,0,0,.55);
+  }
+  html:not(.tv) body.cl-clues-open .cl-lists-x { display: inline-flex; justify-self: end; grid-column: 1 / -1; }
 }

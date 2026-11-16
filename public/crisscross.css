@@ -267,7 +267,7 @@ html:not(.tv) body:has(#game:not(.hidden)) .cc-board-box.zoomed .cc-board { widt
    title row goes (the top bar already says where you are), the words played and the
    lower buttons wait in the top bar's menu as on a phone held upright, and the gaps
    between the rest get smaller. */
-@media (orientation: landscape) and (max-height: 600px) {
+@media (orientation: landscape) and (max-height: 600px) and (pointer: coarse) {
   html:not(.tv) body:has(#game:not(.hidden)) > header.top { display: none; }
   html:not(.tv) body:has(#game:not(.hidden)) {
     --board: clamp(200px, min(calc(var(--app-h, 100dvh) - 76px - 16px), calc(var(--bar-w) - var(--gap) - 340px)), 900px);
