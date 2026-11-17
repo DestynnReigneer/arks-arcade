@@ -258,7 +258,9 @@
         thread.hidden = false;
       } catch (e) { say($('feedbackMsg'), e.message, false); }
     };
-    card.querySelector('[data-act="delete"]').onclick = async () => {
+    // Older notes have no Delete button once ARKS ID has the inbox (taken off above).
+    const del = card.querySelector('[data-act="delete"]');
+    if (del) del.onclick = async () => {
       if (!confirm('Delete your copy? The person who sent it keeps theirs until they delete it too.')) return;
       try {
         await api(`/feedback/${item.id}`, { method: 'DELETE' });
