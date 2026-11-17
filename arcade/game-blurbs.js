@@ -19,7 +19,7 @@ const decode = s => s.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;
 let originals = null;
 function readOriginals() {
   if (originals) return originals;
-  originals = {};
+  originals = Object.create(null);
   let html = '';
   try { html = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8'); } catch { /* no page, no lines */ }
   const card = /<a class="game ([a-z]+)"[^>]*>([\s\S]*?)<\/a>/g;
@@ -46,7 +46,7 @@ function changed() {
 function list() {
   const orig = readOriginals();
   const now = changed();
-  return GAMES.filter(id => orig[id]).map(id => ({ id, label: orig[id].label, original: orig[id].line, line: now[id] || orig[id].line }));
+  return GAMES.filter(id => Object.hasOwn(orig, id)).map(id => ({ id, label: orig[id].label, original: orig[id].line, line: now[id] || orig[id].line }));
 }
 
 // lines: { id: text }. A blank line, or the one the game came with, goes back to the original.
@@ -55,7 +55,7 @@ function set(lines) {
   const orig = readOriginals();
   const next = changed();
   for (const [id, raw] of Object.entries(lines)) {
-    if (!orig[id]) continue;
+    if (!Object.hasOwn(orig, id)) continue;
     // One line of plain text: no line breaks or control characters.
     const text = String(raw == null ? '' : raw).replace(/[\u0000-\u001f\u007f]+/g, ' ').replace(/\s+/g, ' ').trim();
     if (text.length > MAX) throw Object.assign(new Error(`${orig[id].label}'s line is ${text.length} characters. Keep it to ${MAX}.`), { status: 400 });
