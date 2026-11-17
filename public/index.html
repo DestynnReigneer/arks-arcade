@@ -137,7 +137,9 @@
   .game .turn-badge, .game .tv-badge, .game .short, .game .tap-hint { grid-column: 1 / -1; }
   .game .turn-badge { justify-self: start; margin: 8px 0 0; }
   .game p.short { margin-top: 6px; font-size: 13px; line-height: 1.35; color: #e4d7f5; }
-  .game .tap-hint { display: block; margin-top: 6px; font-size: 11px; line-height: 1.45; color: #a993c4; letter-spacing: .2px; }
+  /* How to open a card sits at the bottom of every card, so the cards in a row line up. */
+  html:not(.tv) .game { padding-bottom: 38px; }
+  .game .tap-hint { display: block; position: absolute; left: 0; right: 0; bottom: 8px; margin: 0; font-size: 10px; line-height: 1.4; color: #a993c4; letter-spacing: .2px; }
   .game .tap-hint b { color: #d9c6f0; }
   .game .tap-hint .h-mouse { display: none; }
   @media (hover: hover) and (pointer: fine) {
@@ -149,6 +151,7 @@
   .games.reorder .game { border: 2px dashed #2de2e6; padding-right: 28px; touch-action: pan-y; cursor: grab; }
   .games.reorder .game:hover { transform: none; }
   .games.reorder .game .tap-hint { display: none; }
+  .games.reorder .game { padding-bottom: 10px; }
   .games.reorder .game::after { content: '\283F'; position: absolute; right: 8px; top: 6px; font-size: 20px; color: #2de2e6; }
   .games.reorder .game.lifted { transform: scale(1.05) rotate(-1.5deg); box-shadow: 0 12px 30px rgba(0,0,0,.6), 0 0 18px rgba(45,226,230,.5); z-index: 5; background: var(--card-hover); cursor: grabbing; }
   .reorder-bar { position: sticky; top: 62px; z-index: 50; display: flex; align-items: center; gap: 10px; padding: 10px 12px; margin: 14px 0 0; width: 100%; max-width: 680px; box-sizing: border-box;
@@ -470,7 +473,7 @@
   <a class="game rambler" href="rambler.html">
     <div class="emoji"><img src="rambler-logo.svg" alt="" style="width:40px;height:40px;display:block"></div>
     <h2>Rambler</h2>
-    <p class="short">Chain letters into words. Don't flix this net!</p>
+    <p class="short">Chain letters into words. Hope you can spell...</p>
     <span class="tv-only tv-badge">📺 On the TV: the board goes up big and everyone plays on their own device</span>
     <span class="tap-hint no-tv" aria-hidden="true"><span class="h-touch"><b>Tap:</b> Open<br><b>Long Press:</b> Quick Menu</span><span class="h-mouse"><b>Click:</b> Open<br><b>Right-click:</b> Quick Menu</span></span>
   </a>
@@ -478,7 +481,7 @@
   <a class="game spinsolve" href="spinsolve.html">
     <div class="emoji"><img src="spin-wheel-logo.svg" alt="" style="width:40px;height:40px;display:block"></div>
     <h2>Spin &amp; Solve</h2>
-    <p class="short">Spin a wheel, guess letters, robot talks crap, solve puzzles, glimpse of the future 2030s</p>
+    <p class="short">Spin a wheel, guess letters, robot talks crap, solve puzzles.</p>
     <span class="tv-only tv-badge">📺 On the TV: pass the remote around, and solve on the keyboard on the screen</span>
     <span class="tap-hint no-tv" aria-hidden="true"><span class="h-touch"><b>Tap:</b> Open<br><b>Long Press:</b> Quick Menu</span><span class="h-mouse"><b>Click:</b> Open<br><b>Right-click:</b> Quick Menu</span></span>
   </a>
@@ -601,7 +604,7 @@
   <a class="game trivia" href="trivia.html" data-tv-start>
     <div class="emoji">🧠</div>
     <h2>Know-It-All</h2>
-    <p class="short">Trivia of everything, like learning from an expert or Dad!</p>
+    <p class="short">Trivia of everything, like talking to Dad, an expert!</p>
     <span class="tv-only tv-badge">📺 Made for the TV: play on your own devices, pass one around, or use the remote</span>
     <span class="tap-hint no-tv" aria-hidden="true"><span class="h-touch"><b>Tap:</b> Open<br><b>Long Press:</b> Quick Menu</span><span class="h-mouse"><b>Click:</b> Open<br><b>Right-click:</b> Quick Menu</span></span>
   </a>
