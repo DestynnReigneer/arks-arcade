@@ -28,7 +28,8 @@
 // shorter than the window, and it's placed again when its question replaces its list.
 // An item with `ask` asks inside the same card before it runs (the safe answer,
 // Cancel, has the focus). Up and Down move between the choices. Escape, a tap outside, or Back
-// closes it, and the focus goes back where it was.
+// closes it, and the focus goes back where it was. Back works because opening the menu adds
+// a step to the browser's history, which closing it takes off again.
 
 const LongPress = (() => {
   const HOLD_MS = 500, SLOP = 10;
@@ -80,8 +81,27 @@ const LongPress = (() => {
     document.head.appendChild(s);
   }
 
-  function close() {
-    if (!open) return;
+  // The history step the open menu added. Back takes it off, which closes the menu.
+  let entry = false;
+  window.addEventListener('popstate', () => { if (entry) { entry = false; close(true); } });
+  // Takes the menu's history step off when the menu closes some other way, and waits for
+  // that before anything else navigates, so the page isn't left with an extra step.
+  function dropEntry() {
+    if (!entry) return Promise.resolve();
+    entry = false;
+    return new Promise(res => {
+      let t = 0;
+      const done = () => { window.removeEventListener('popstate', done); clearTimeout(t); res(); };
+      t = setTimeout(done, 400);
+      window.addEventListener('popstate', done);
+      history.back();
+    });
+  }
+
+  // keep: leave the history step alone (Back already took it off, or another menu is
+  // about to open in its place).
+  function close(keep) {
+    if (!open) return keep === true ? Promise.resolve() : dropEntry();
     const { veil, card, back, key, again } = open;
     open = null;
     document.removeEventListener('keydown', key, true);
@@ -89,6 +109,7 @@ const LongPress = (() => {
     veil.classList.remove('in'); card.classList.remove('in');
     setTimeout(() => { veil.remove(); card.remove(); }, 170);
     if (back && back.isConnected) back.focus({ preventScroll: true });
+    return keep === true ? Promise.resolve() : dropEntry();
   }
 
   // How much of the window can be seen: Chrome's tab row on a phone covers the bottom
@@ -128,8 +149,9 @@ const LongPress = (() => {
   }
 
   function show(menu, at, from) {
-    close();
-    if (!menu || !menu.items || !menu.items.length) return;
+    close(true);
+    if (!menu || !menu.items || !menu.items.length) { dropEntry(); return; }
+    if (!entry) { try { history.pushState({ lpMenu: 1 }, ''); entry = true; } catch { /* Back just leaves */ } }
     addStyle();
     const veil = document.createElement('div');
     veil.className = 'lp-veil';
@@ -188,10 +210,10 @@ const LongPress = (() => {
       cancel.type = 'button';
       cancel.className = 'lp-cancel';
       cancel.textContent = 'Cancel';
-      cancel.onclick = close;
+      cancel.onclick = () => close();
       list.appendChild(cancel);
     };
-    const run = async it => { close(); try { await it.run(); } catch (e) { console.error(e); } };
+    const run = async it => { await close(); try { await it.run(); } catch (e) { console.error(e); } };
     const confirm = it => {
       list.replaceChildren();
       const q = document.createElement('div');

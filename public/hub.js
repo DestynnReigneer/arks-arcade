@@ -201,7 +201,13 @@
 
   // Every room being hosted anywhere in the arcade, refreshed every few seconds.
   const STATUS = { open: 'Join', live: 'Join game in progress?', playing: 'Playing now', full: 'Full' };
+  // While a finger is on a row, or its menu is open, the list isn't rebuilt under it.
+  // A touch that never reports lifting off stops counting after a few seconds.
+  let touchingRow = 0;
+  $('lobbyList').addEventListener('pointerdown', () => { touchingRow = Date.now(); });
+  for (const t of ['pointerup', 'pointercancel']) document.addEventListener(t, () => { touchingRow = 0; });
   async function loadLobby() {
+    if (Date.now() - touchingRow < 4000 || (window.LongPress && LongPress.isOpen)) return;
     try {
       // With a profile, the lobby you're already in is marked as yours.
       const token = typeof ArcadeProfile !== 'undefined' ? ArcadeProfile.token() : null;
@@ -225,6 +231,8 @@
         join.textContent = STATUS[r.status];
         if (r.status === 'open' || r.status === 'live') join.href = r.href;
         else join.classList.add('off');
+        // Press and hold (or right-click) for the lobby's quick menu.
+        if (window.LongPress) LongPress.attach(li, () => lobbyMenu(r, li));
         list.appendChild(li);
       }
       // With nobody hosting there's nothing to show, so the LIVE pill stays out of the bar.
@@ -237,6 +245,21 @@
         ? 'Those games have already started or are full. Please pick another game to play or choose to <b>Host</b> your own.'
         : 'Nobody\'s hosting right now. Pick a game below and choose <b>Create a game lobby</b> to start one; it shows up here for everyone.';
     } catch { /* the server's away; try again shortly */ }
+  }
+  // The quick menu on a lobby row: join it, show its QR code so someone else can scan
+  // in, or go to that game to make your own lobby, read how to play or see trophies.
+  function lobbyMenu(r, li) {
+    const page = r.page;
+    const items = [];
+    if (r.status === 'open' || r.status === 'live') {
+      items.push({ icon: '▶️', label: STATUS[r.status].replace(/\?$/, ''), run: () => { location.href = r.href; } });
+      if (r.code) items.push({ icon: '📷', label: 'Show QR code', run: () => ArcadeQR.open(page, r.code) });
+      items.push({ sep: true });
+    }
+    items.push({ icon: '👥', label: 'Create a game lobby', run: () => { location.href = `${page}?go=create`; } });
+    items.push({ icon: '❓', label: 'How to play', run: () => { location.href = `${page}?go=help`; } });
+    if (trophyGames.includes(r.game)) items.push({ icon: '🏆', label: 'Trophies', run: () => { location.href = `trophies.html#${r.game}`; } });
+    return { title: li.querySelector('.l-title').textContent, items };
   }
   loadLobby();
 
