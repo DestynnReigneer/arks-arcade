@@ -104,7 +104,7 @@
       li.innerHTML = '<span class="l-emoji"></span><span class="l-main"><div class="l-title"></div><div class="l-sub"></div></span><a class="l-join">Play</a>';
       li.querySelector('.l-emoji').textContent = CONTINUE_EMOJI[g.game] || '🎮';
       li.querySelector('.l-title').textContent = g.title;
-      li.querySelector('.l-sub').textContent = g.detail;
+      li.querySelector('.l-sub').textContent = detailOf(g);
       li.querySelector('.l-join').href = g.href;
       // Press and hold (or right-click) for Resume and Leave.
       if (window.LongPress) LongPress.attach(li, () => continueMenu(g));
@@ -115,6 +115,16 @@
   // What leaving means depends on the game, so each says it its own way. The server
   // says which kind of leaving a row is (g.leave, arcade/continue.js). The words are
   // the maintainer's.
+  // A waiting Words with Family lobby says when it was opened, so two of them can be told
+  // apart: "Waiting for players, opened 2:14 PM" (the date goes in front when it isn't today).
+  function detailOf(g) {
+    if (!g.openedAt) return g.detail;
+    const at = new Date(g.openedAt);
+    if (Number.isNaN(at.getTime())) return g.detail;
+    const time = at.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    const day = at.toDateString() === new Date().toDateString() ? '' : `${at.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}, `;
+    return `${g.detail}, opened ${day}${time}`;
+  }
   function leaveWords(g) {
     const me = ArcadeProfile.name() || 'you';
     // The server names the other players in Words with Family and Chess.
@@ -151,7 +161,7 @@
     const leave = leaveWords(g);
     const items = [{ icon: '▶️', label: 'Resume', run: () => { location.href = g.href; } }];
     if (leave) items.push({ ...leave, danger: true, run: () => leaveGame(g) });
-    return { title: `${g.title} · ${g.detail}`, items };
+    return { title: `${g.title} · ${detailOf(g)}`, items };
   }
   async function leaveGame(g) {
     const token = ArcadeProfile.token();

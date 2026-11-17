@@ -8,7 +8,7 @@
 //
 // Each game that keeps its progress on the server adds itself to SOURCES with
 // a function that takes a profile and hands back its unfinished games as
-// { game, ref, leave, others, title, detail, href, yourTurn, updatedAt }. ref is what
+// { game, ref, leave, others, openedAt, title, detail, href, yourTurn, updatedAt }. ref is what
 // POST /leave needs to find that game again, and leave says what leaving does
 // there, so the page can ask the right question (others: who else is in it).
 
@@ -36,6 +36,8 @@ function wordsWithFamily(profile) {
     const leave = g.status !== 'playing' ? (g.host ? 'close' : 'lobby') : others.length === 1 ? 'ends' : 'continues';
     return {
       game: 'crisscross', ref: g.id, leave, others,
+      // When a waiting lobby was opened, so several of them can be told apart (the page words it).
+      openedAt: g.status === 'playing' ? undefined : g.createdAt,
       title: others.length ? `Words with Family with ${others.join(', ')}` : 'Words with Family',
       detail, href: `crisscross.html?game=${encodeURIComponent(g.id)}`, yourTurn: !!g.yourTurn, updatedAt: g.updatedAt
     };

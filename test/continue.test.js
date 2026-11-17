@@ -94,6 +94,7 @@ async function run({ base }) {
   const lobby = (await ww(Ana.h)).data;
   const lobbyRow = (await mine(Ana)).find(g => g.ref === lobby.id);
   ok('a host\'s waiting lobby says leaving closes it', lobbyRow && lobbyRow.leave === 'close', JSON.stringify(lobbyRow));
+  ok('…and says when it was opened, so two lobbies can be told apart', lobbyRow && Number.isFinite(lobbyRow.openedAt) && Math.abs(Date.now() - lobbyRow.openedAt) < 60000, JSON.stringify(lobbyRow));
   const closed = await leave(Ana, 'crisscross', lobby.id);
   ok('…and leaving closes it', closed.status === 200 && !closed.data.games.some(g => g.ref === lobby.id) &&
     (await api(`/api/crisscross/games/${lobby.id}`, 'GET', null, Ana.h)).status === 404);
