@@ -171,6 +171,17 @@ async function run({ base }) {
     ok('…it can still be solved, but the time won\'t go on the board', done.status === 200 && done.data.finished && saved.status === 409 && /Just for fun/.test(saved.data.error),
       `${done.status} ${saved.status} ${saved.text}`);
 
+    // Playing as a guest doesn't get around it: a guest's time can't be saved as a profile.
+    const asGuest = (await api('/api/sudoku/start', 'POST', { level: 'hard' })).data;
+    await wait(1500);
+    await api(`/api/sudoku/run/${asGuest.runId}/finish`, 'POST', { grid: gen.solve(asGuest.puzzle.split('').map(Number)).join('') });
+    ok('a guest\'s solve can\'t be saved under a profile', (await api(`/api/sudoku/run/${asGuest.runId}/save`, 'POST', { profileToken: Dee.token })).status === 403);
+    const deeFamily = (await api('/api/sudoku/start', 'POST', { level: 'family', profileToken: Dee.token })).data;
+    await wait(1500);
+    await api(`/api/sudoku/run/${deeFamily.runId}/finish`, 'POST', { grid: gen.solve(deeFamily.puzzle.split('').map(Number)).join('') });
+    ok('…nor under someone else\'s profile', (await api(`/api/sudoku/run/${deeFamily.runId}/save`, 'POST', { profileToken: Ana.token })).status === 403);
+    ok('…but it can go on under initials, like any guest', (await api(`/api/sudoku/run/${asGuest.runId}/save`, 'POST', { initials: 'GST' })).status === 201);
+
     // A first try given up after "a minute" carries its clock into the next try.
     const long = (await api('/api/sudoku/start', 'POST', { level: 'medium', profileToken: Dee.token })).data;
     await wait(1700);

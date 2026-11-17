@@ -350,7 +350,12 @@ function save(id, { initials, profileToken }) {
   if (run.puzzle_key) throw fail('Free play crosswords don\'t go on the board, because everyone gets a different one. Today\'s puzzle is the one to race on.', 409);
   if (run.saved) throw fail('This time is already on the board.', 409);
   if (run.unscored) throw fail('Just for fun, this try won\'t be scored', 409);
-  const profile = profileToken ? profiles().verify(profileToken) : null;
+  // A time goes on the board as whoever played it: a profile's run only under that
+  // profile, and a guest's run only under typed initials. Otherwise a profile could
+  // play as a guest with a fresh clock and save it as themselves.
+  let profile = profileToken ? profiles().verify(profileToken) : null;
+  if (profile && run.profile_id && profile.id !== run.profile_id) throw fail('This puzzle belongs to a different profile.', 403);
+  if (profile && !run.profile_id) throw fail('This puzzle was played as a guest, so it goes on the board under initials.', 403);
   const ini = profile ? profile.initials || initialsOf(profile.name) : String(initials || '').toUpperCase().trim();
   if (!INITIALS_RE.test(ini)) throw fail('Initials must be 1-3 letters or numbers.');
   const who = profile ? `p:${profile.id}` : `g:${ini}`;
