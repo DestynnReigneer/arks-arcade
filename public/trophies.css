@@ -76,3 +76,5 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--turq); outline-
   .tr-stat .t { font-size: 14px; }
   .tr-close { flex-wrap: wrap; }
 }
+/* The game the home page's quick menu asked for */
+.tr-game.wanted { border-color: var(--accent); box-shadow: 0 0 16px rgba(255, 79, 163, 0.35); scroll-margin-top: 90px; }

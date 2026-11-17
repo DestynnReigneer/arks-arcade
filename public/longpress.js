@@ -7,9 +7,14 @@
 //     items: [
 //       { icon: '▶️', label: 'Resume', run: () => { location.href = '...'; } },
 //       { icon: '🚪', label: 'Leave this game', danger: true,
-//         ask: 'Leave this game? ...', yes: 'Leave', run: async () => { ... } }
+//         ask: 'Leave this game? ...', yes: 'Leave', run: async () => { ... } },
+//       { sep: true },                                   // a thin line between groups
+//       { row: 'Jump to today\'s puzzle', choices: [      // a row of small buttons
+//         { label: 'Easy', run: () => { ... } }, ... ] }
 //     ]
 //   }));
+//
+// Every menu ends with a Cancel button, since closing the menu is what it does.
 //
 // How it opens: holding a finger on the element for half a second (the device buzzes
 // once where it can), a right-click on a computer, or the keyboard's menu key or
@@ -21,8 +26,8 @@
 // cover it. With a mouse it opens by the pointer. Either way it stays inside the part
 // of the screen that can be seen, which on a phone with Chrome's tab row showing is
 // shorter than the window, and it's placed again when its question replaces its list.
-// An item with `ask` asks inside the same card before it runs (the safe answer has
-// the focus). Up and Down move between the choices. Escape, a tap outside, or Back
+// An item with `ask` asks inside the same card before it runs (the safe answer,
+// Cancel, has the focus). Up and Down move between the choices. Escape, a tap outside, or Back
 // closes it, and the focus goes back where it was.
 
 const LongPress = (() => {
@@ -52,6 +57,13 @@ const LongPress = (() => {
 .lp-row button{flex:1;min-height:46px;border-radius:10px;font:inherit;font-size:15px;font-weight:800;cursor:pointer}
 .lp-safe{border:0;background:#00ffc2;color:#14082b}
 .lp-go{border:1px solid #ff2ec4;background:transparent;color:#f5eaff}
+.lp-sep{height:1px;background:rgba(245,234,255,.1);margin:4px 8px}
+.lp-chips{padding:4px 12px 8px}
+.lp-chips-t{font-size:13px;color:#c9a8dd;margin:2px 0 6px}
+.lp-chips-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(64px,1fr));gap:6px}
+.lp-chips-row button{min-height:44px;border-radius:10px;border:1px solid rgba(77,208,255,.6);background:rgba(77,208,255,.08);color:#f5eaff;font:inherit;font-size:14px;font-weight:700;cursor:pointer}
+.lp-chips-row button:hover,.lp-chips-row button:focus-visible{background:rgba(77,208,255,.2);outline:none}
+.lp-cancel{display:block;width:100%;min-height:46px;margin-top:6px;border:0;border-radius:10px;background:#00ffc2;color:#14082b;font:inherit;font-size:15px;font-weight:800;cursor:pointer}
 .lp-hold{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 @media (prefers-reduced-motion:reduce){.lp-veil,.lp-card{transition:none}}`;
 
@@ -125,6 +137,32 @@ const LongPress = (() => {
     const items = () => {
       list.replaceChildren();
       for (const it of menu.items) {
+        if (it.sep) {
+          const d = document.createElement('div');
+          d.className = 'lp-sep';
+          list.appendChild(d);
+          continue;
+        }
+        if (it.row) {
+          const box = document.createElement('div');
+          box.className = 'lp-chips';
+          const t = document.createElement('div');
+          t.className = 'lp-chips-t';
+          t.textContent = it.row;
+          const row = document.createElement('div');
+          row.className = 'lp-chips-row';
+          for (const c of it.choices || []) {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.setAttribute('role', 'menuitem');
+            b.textContent = c.label;
+            b.onclick = () => run(c);
+            row.appendChild(b);
+          }
+          box.append(t, row);
+          list.appendChild(box);
+          continue;
+        }
         const b = document.createElement('button');
         b.type = 'button';
         b.className = 'lp-item' + (it.danger ? ' danger' : '');
@@ -135,6 +173,12 @@ const LongPress = (() => {
         b.onclick = () => (it.ask ? confirm(it) : run(it));
         list.appendChild(b);
       }
+      const cancel = document.createElement('button');
+      cancel.type = 'button';
+      cancel.className = 'lp-cancel';
+      cancel.textContent = 'Cancel';
+      cancel.onclick = close;
+      list.appendChild(cancel);
     };
     const run = async it => { close(); try { await it.run(); } catch (e) { console.error(e); } };
     const confirm = it => {
@@ -145,7 +189,7 @@ const LongPress = (() => {
       const row = document.createElement('div');
       row.className = 'lp-row';
       const safe = document.createElement('button');
-      safe.type = 'button'; safe.className = 'lp-safe'; safe.textContent = it.no || 'Never mind';
+      safe.type = 'button'; safe.className = 'lp-safe'; safe.textContent = it.no || 'Cancel';
       const go = document.createElement('button');
       go.type = 'button'; go.className = 'lp-go'; go.textContent = it.yes || it.label;
       safe.onclick = close;
@@ -177,7 +221,7 @@ const LongPress = (() => {
       : from && (from.matches('a[href],button') ? from : from.querySelector('a[href],button'));
     open = { veil, card, back, key };
     requestAnimationFrame(() => { veil.classList.add('in'); card.classList.add('in'); });
-    const first = card.querySelector('.lp-item');
+    const first = card.querySelector('.lp-item, .lp-chips-row button');
     if (first) first.focus({ preventScroll: true });
   }
 

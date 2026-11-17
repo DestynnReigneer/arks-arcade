@@ -270,8 +270,9 @@
     // unless sorting by most played is on (the default).
     if (!info.games) return;
     homeGames = info.games;
+    trophyGames = info.trophies || [];
     placeGames(homeGames.order);
-    sortByPlayed();
+    orderGames();
   }).catch(() => {});
 
   let homeGames = null;
@@ -302,7 +303,7 @@
   // so one game played once doesn't jump up and push the others around.
   const orderKey = () => `arcade.homeOrder.${(ArcadeProfile.get() || {}).id || 'guest'}`;
   async function sortByPlayed() {
-    if (!homeGames || homeGames.sort !== 'played') return;
+    if (!homeGames || homeGames.sort !== 'played' || arranged) return;
     let previous = null;
     try { previous = JSON.parse(localStorage.getItem(orderKey()) || 'null'); } catch { /* nothing kept */ }
     try {
@@ -316,7 +317,200 @@
       try { localStorage.setItem(orderKey(), JSON.stringify(order)); } catch { /* private mode */ }
     } catch { /* keep the admin's order */ }
   }
-  ArcadeProfile.onChange(sortByPlayed);
+  ArcadeProfile.onChange(orderGames);
+
+  // ---- your own order (2026-11-16) -----------------------------------------
+  // Once you pin a game to the front, move one to the bottom or reorder them, your
+  // games stay exactly where you put them and the most-played order stops for you.
+  // Pinned games come first (the newest pin first), then the rest; a game the arcade
+  // adds later goes on the end. A profile's order is kept by the arcade, so it
+  // follows you to any device (arcade/stats.js); a guest's stays on this device.
+  let arranged = null;              // { pinned: [...], order: [...] } or null
+  let trophyGames = [];
+  const guestKey = 'arcade.arranged.guest';
+  const cardId = card => card.classList[1];
+  const allCards = () => [...document.querySelectorAll('.games > .game')];
+
+  async function loadArranged() {
+    const token = ArcadeProfile.token();
+    if (!token) {
+      try { return JSON.parse(localStorage.getItem(guestKey) || 'null'); } catch { return null; }
+    }
+    try {
+      const res = await fetch('/api/stats/arrangement', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token })
+      });
+      return res.ok ? (await res.json()).arranged : null;
+    } catch { return null; }
+  }
+  async function orderGames() {
+    if (!homeGames) return;
+    const asked = ArcadeProfile.token();
+    const a = await loadArranged();
+    if (ArcadeProfile.token() !== asked) return;   // the profile changed while this was loading
+    arranged = a && Array.isArray(a.pinned) && Array.isArray(a.order) ? a : null;
+    if (arranged) showArranged();
+    else { markPins(); sortByPlayed(); }
+  }
+  function showArranged() {
+    const listed = [...arranged.pinned, ...arranged.order];
+    placeGames([...listed, ...homeGames.order.filter(id => !listed.includes(id))]);
+    markPins();
+  }
+  function markPins() {
+    const pinned = arranged ? arranged.pinned : [];
+    for (const card of allCards()) {
+      const on = pinned.includes(cardId(card));
+      let pin = card.querySelector(':scope > .pin');
+      if (on && !pin) {
+        pin = document.createElement('span');
+        pin.className = 'pin';
+        pin.textContent = '📌';
+        pin.title = 'Pinned to the front';
+        card.appendChild(pin);
+      }
+      if (!on && pin) pin.remove();
+    }
+  }
+  async function saveArranged(pinned, order) {
+    arranged = { pinned, order };
+    showArranged();
+    const token = ArcadeProfile.token();
+    if (!token) {
+      try { localStorage.setItem(guestKey, JSON.stringify(arranged)); } catch { /* private mode */ }
+      return;
+    }
+    try {
+      const res = await fetch('/api/stats/arrangement/save', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, pinned, order })
+      });
+      if (!res.ok) throw new Error();
+    } catch { toast("Your order didn't save. Try again in a moment.", 3200); }
+  }
+  // The games as they're shown now, split into the pinned ones and the rest.
+  function shownNow() {
+    const ids = allCards().map(cardId);
+    const pinned = arranged ? arranged.pinned.filter(id => ids.includes(id)) : [];
+    return { pinned, rest: ids.filter(id => !pinned.includes(id)) };
+  }
+  function moveToFront(id) {
+    const { pinned, rest } = shownNow();
+    saveArranged([id, ...pinned.filter(x => x !== id)], rest.filter(x => x !== id));
+  }
+  function unpin(id) {
+    const { pinned, rest } = shownNow();
+    saveArranged(pinned.filter(x => x !== id), [id, ...rest.filter(x => x !== id)]);
+  }
+  function moveToBottom(id) {
+    const { pinned, rest } = shownNow();
+    saveArranged(pinned.filter(x => x !== id), [...rest.filter(x => x !== id), id]);
+  }
+
+  // ---- Reorder games: dotted outlines, drag them where you want, Done or Cancel.
+  let reorder = null;
+  function startReorder() {
+    if (reorder) return;
+    const list = document.querySelector('.games');
+    const before = allCards().map(cardId);
+    const bar = document.createElement('div');
+    bar.className = 'reorder-bar';
+    bar.innerHTML = '<span>Drag the games into the order you want.</span><button type="button" class="rb-cancel">Cancel</button><button type="button" class="rb-done">Done</button>';
+    list.before(bar);
+    list.classList.add('reorder');
+    let lifted = null;
+    const stopClick = e => { e.preventDefault(); e.stopPropagation(); };
+    const down = e => {
+      const card = e.target.closest('.games > .game');
+      if (!card || e.button > 0) return;
+      e.preventDefault();
+      lifted = card;
+      card.classList.add('lifted');
+      try { card.setPointerCapture(e.pointerId); } catch { /* fine without */ }
+    };
+    const move = e => {
+      if (!lifted) return;
+      // Near the top or bottom of the screen, the page scrolls along.
+      if (e.clientY < 90) window.scrollBy(0, -12);
+      else if (e.clientY > innerHeight - 70) window.scrollBy(0, 12);
+      const over = document.elementsFromPoint(e.clientX, e.clientY).map(el => el.closest && el.closest('.games > .game')).find(c => c && c !== lifted);
+      if (!over) return;
+      const cards = allCards();
+      if (cards.indexOf(over) < cards.indexOf(lifted)) over.before(lifted); else over.after(lifted);
+    };
+    const up = () => { if (lifted) lifted.classList.remove('lifted'); lifted = null; };
+    // With a keyboard: the arrow keys move the focused game earlier or later.
+    const key = e => {
+      const card = e.target.closest && e.target.closest('.games > .game');
+      if (!card) return;
+      const back = e.key === 'ArrowLeft' || e.key === 'ArrowUp', on = e.key === 'ArrowRight' || e.key === 'ArrowDown';
+      if (!back && !on) return;
+      e.preventDefault();
+      const sib = back ? card.previousElementSibling : card.nextElementSibling;
+      if (sib && sib.classList.contains('game')) { if (back) sib.before(card); else sib.after(card); card.focus(); }
+    };
+    list.addEventListener('pointerdown', down);
+    list.addEventListener('pointermove', move);
+    list.addEventListener('pointerup', up);
+    list.addEventListener('pointercancel', up);
+    list.addEventListener('click', stopClick, true);
+    list.addEventListener('keydown', key);
+    const finish = keep => {
+      list.removeEventListener('pointerdown', down);
+      list.removeEventListener('pointermove', move);
+      list.removeEventListener('pointerup', up);
+      list.removeEventListener('pointercancel', up);
+      list.removeEventListener('click', stopClick, true);
+      list.removeEventListener('keydown', key);
+      list.classList.remove('reorder');
+      up();
+      bar.remove();
+      reorder = null;
+      if (!keep) { placeGames(before); markPins(); return; }
+      // Pinned games stay pinned while they're still at the front.
+      const ids = allCards().map(cardId);
+      const was = arranged ? arranged.pinned : [];
+      const pinned = [];
+      for (const id of ids) { if (was.includes(id)) pinned.push(id); else break; }
+      saveArranged(pinned, ids.slice(pinned.length));
+    };
+    bar.querySelector('.rb-cancel').onclick = () => finish(false);
+    bar.querySelector('.rb-done').onclick = () => finish(true);
+    reorder = { finish };
+    bar.scrollIntoView({ block: 'nearest' });
+  }
+
+  // ---- the quick menu: press and hold a game card (or right-click it) -------
+  const TODAY = {
+    sudoku: { row: "Jump to today's puzzle", levels: [['family', 'Family'], ['easy', 'Easy'], ['medium', 'Medium'], ['hard', 'Hard']] },
+    clueless: { row: "Jump to today's crossword", levels: [['mini', 'Family mini'], ['big', 'Big']] }
+  };
+  const LOBBIES = ['chess', 'rambler', 'crisscross', 'daredevil', 'partdeux', 'scuffle', 'trivia'];
+  function cardMenu(card) {
+    const id = cardId(card);
+    const href = card.getAttribute('href');
+    const go = where => () => { location.href = `${href}?go=${where}`; };
+    const items = [];
+    if (!card.classList.contains('closed')) {
+      items.push({ icon: '▶️', label: 'Play', run: () => { location.href = href; } });
+      const t = TODAY[id];
+      if (t) items.push({ row: t.row, choices: t.levels.map(([lv, label]) => ({ label, run: () => { location.href = `${href}?level=${lv}`; } })) });
+      if (LOBBIES.includes(id)) {
+        items.push({ icon: '👥', label: 'Create a game lobby', run: go('create') });
+        items.push({ icon: '🔎', label: 'List Hosted Games', run: go('list') });
+      }
+      items.push({ icon: '❓', label: 'How to play', run: go('help') });
+      if (trophyGames.includes(id)) items.push({ icon: '🏆', label: 'Trophies', run: () => { location.href = `trophies.html#${id}`; } });
+      items.push({ sep: true });
+    }
+    const pinned = !!(arranged && arranged.pinned.includes(id));
+    items.push(pinned ? { icon: '📌', label: 'Unpin', run: () => unpin(id) } : { icon: '📌', label: 'Move to the front', run: () => moveToFront(id) });
+    items.push({ icon: '⤵️', label: 'Move to the bottom', run: () => moveToBottom(id) });
+    items.push({ icon: '↕️', label: 'Reorder games', run: startReorder });
+    return { title: card.querySelector('h2').textContent, items };
+  }
+  if (window.LongPress && !document.documentElement.classList.contains('tv')) {
+    for (const card of allCards()) LongPress.attach(card, () => (reorder ? null : cardMenu(card)));
+  }
 
   // ---- Comm Center ----------------------------------------------------------
 

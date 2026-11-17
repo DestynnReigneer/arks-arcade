@@ -452,3 +452,22 @@ window.ArcadeEnd = (() => {
   sync();
   return { sync };
 })();
+
+// The home page's quick menu (press and hold a game card) opens a game at one spot:
+// ?go=help opens How to play, ?go=create the Create a game lobby choice, and
+// ?go=list List Hosted Games (each game marks its own with data-go). It happens
+// once: the address goes back to plain, so a reload starts the game as usual.
+(() => {
+  let go = '';
+  try { go = new URLSearchParams(location.search).get('go') || ''; } catch { return; }
+  if (!/^(help|create|list)$/.test(go)) return;
+  const url = new URL(location.href);
+  url.searchParams.delete('go');
+  window.addEventListener('load', () => setTimeout(() => {
+    try { history.replaceState(history.state, '', url.pathname + url.search + url.hash); } catch { /* keep it */ }
+    const el = document.querySelector(go === 'help' ? '#helpBtn' : `[data-go="${go}"]`);
+    if (!el) return;
+    if (el.tagName === 'BUTTON') { if (!el.disabled) el.click(); }
+    else el.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  }, 250));
+})();
