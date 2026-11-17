@@ -84,6 +84,11 @@ test('Chess: creating a lobby, finding it, Ready, the chat and starting', async 
   await expect(joinMenu.getByRole('menuitem', { name: /Copy message/ })).toBeVisible();
   await expect(joinMenu.getByRole('menuitem', { name: /Mute|Remove/ })).toHaveCount(0);
   await joinMenu.getByRole('button', { name: 'Cancel', exact: true }).click();
+  // The host can hold Milo's seat for the same two.
+  await host.locator('#lobbySeats .lb-seat', { hasText: 'Milo' }).click({ button: 'right' });
+  await expect(hostMenu.getByRole('menuitem', { name: /Mute/ })).toBeVisible();
+  await expect(hostMenu.getByRole('menuitem', { name: /Remove Player/ })).toBeVisible();
+  await hostMenu.getByRole('button', { name: 'Cancel', exact: true }).click();
 
   // The emoji picker: every standard emoji in groups; tapping one types it.
   await joiner.locator('#lobbyChat .lb-emo-btn').click();

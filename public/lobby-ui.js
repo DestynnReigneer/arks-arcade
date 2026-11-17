@@ -9,6 +9,7 @@
 //   LobbyUI.seats(el, seats, { max, canMute, onMute, onRemove })
 //   LobbyUI.chat(el, { send })               builds the chat once; returns { render(messages, { muted }) }
 //
+// The host can press and hold someone's seat for Mute or Unmute and Remove Player.
 // Press and hold a message (or right-click it) for Copy message, and, for the host, Mute or
 // Unmute and Remove Player for whoever sent it: the same buttons as on their seat, taken
 // from the last LobbyUI.seats call while that seat is showing.
@@ -97,6 +98,13 @@ window.LobbyUI = (() => {
           x.type = 'button';
           x.addEventListener('click', () => onRemove(s.id));
           box.append(x);
+        }
+        // The host can also press and hold (or right-click) the seat for the same two.
+        if (window.LongPress) {
+          LongPress.attach(box, () => ({ title: s.name, items: [
+            { icon: '🔇', label: s.muted ? 'Unmute' : 'Mute', run: () => onMute(s.id, !s.muted) },
+            ...(onRemove ? [{ icon: '🚪', label: 'Remove Player', danger: true, run: () => onRemove(s.id) }] : [])
+          ] }));
         }
       }
       el.append(box);
