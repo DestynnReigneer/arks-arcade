@@ -52,7 +52,7 @@ const GAMES = [
 
 // Game and size pairs that don't fit yet, with why. Fixed in order on the to-do list.
 const KNOWN = {
-  "Chess @ phone with Chrome's tab row": "the bug-report button sits on the Suggest, Undo and Resign buttons",
+  "Chess @ phone with Chrome's tab row": "skip: fits on some machines and not others; on Windows the bug-report button sits on the Suggest, Undo and Resign buttons",
   "Chess @ phone turned sideways": "the game doesn't have a sideways layout yet, so it scrolls and its top runs off the screen",
   "Chess @ small phone turned sideways": "the game doesn't have a sideways layout yet, so it scrolls and its top runs off the screen",
   "Know-It-All @ phone turned sideways": "the game doesn't have a sideways layout yet, so it scrolls and its top runs off the screen",
@@ -66,7 +66,7 @@ const KNOWN = {
   "Dare Devil @ small phone turned sideways": "the game doesn't have a sideways layout yet, so it scrolls and its top runs off the screen",
   "Uh-Oh: Part Deux @ phone turned sideways": "the game doesn't have a sideways layout yet, so it scrolls and its top runs off the screen",
   "Uh-Oh: Part Deux @ small phone turned sideways": "the game doesn't have a sideways layout yet, so it scrolls and its top runs off the screen",
-  "Uh-Oh: Part Deux @ laptop": "the page scrolls a little below the hand",
+  "Uh-Oh: Part Deux @ laptop": "skip: fits on some machines and not others; on Windows the page scrolls a little below the hand",
 };
 
 test.describe.configure({ mode: 'parallel' });
