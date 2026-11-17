@@ -72,7 +72,8 @@ db.db.exec(`
   CREATE INDEX IF NOT EXISTS sudoku_scores_all ON sudoku_scores (level, time_ms);
 `);
 // Where a profile got to: { grid, notes, marks } as JSON, and when it was saved.
-for (const col of ['progress TEXT', 'progress_at INTEGER']) {
+// gave_up_at, carry_ms and unscored: tries given up from the Continue row (2026-11-16, see giveUp).
+for (const col of ['progress TEXT', 'progress_at INTEGER', 'gave_up_at INTEGER', 'carry_ms INTEGER NOT NULL DEFAULT 0', 'unscored INTEGER NOT NULL DEFAULT 0']) {
   try { db.db.exec(`ALTER TABLE sudoku_runs ADD COLUMN ${col}`); } catch { /* already there */ }
 }
 
@@ -99,7 +100,7 @@ const levelOf = level => {
 const getRun = id => db.db.prepare('SELECT * FROM sudoku_runs WHERE id = ?').get(String(id || ''));
 function needRun(id) {
   const run = getRun(id);
-  if (!run) throw fail('That puzzle has expired. Start it again from the level buttons.', 404);
+  if (!run || run.gave_up_at) throw fail('That puzzle has expired. Start it again from the level buttons.', 404);
   return run;
 }
 
@@ -107,7 +108,8 @@ function needRun(id) {
 // paused, or finished), leaving out every pause.
 function playMs(run, now = Date.now()) {
   const end = run.finished_at || run.paused_at || now;
-  return Math.max(0, end - run.started_at - run.paused_ms);
+  // carry_ms: the clock carried over from a try given up (see giveUp).
+  return Math.max(0, end - run.started_at - run.paused_ms) + (run.carry_ms || 0);
 }
 
 // withProgress: also hand back the saved progress (opening, reopening or
@@ -122,7 +124,7 @@ function view(run, now = Date.now(), { withProgress = false } = {}) {
     puzzle: p.puzzle, clues: p.clues,
     playMs: playMs(run, now), penaltyMs: run.penalty_ms,
     paused: !!run.paused_at, hints: run.hints, checks: run.checks, mistakes: run.mistakes,
-    finished: !!run.finished_at, timeMs: run.time_ms, saved: !!run.saved,
+    finished: !!run.finished_at, timeMs: run.time_ms, saved: !!run.saved, unscored: !!run.unscored,
     resetsAt: nextMidnight().toISOString()
   };
 }
@@ -141,14 +143,15 @@ function start({ level, profileToken }, now = Date.now()) {
   // A profile has one clock per puzzle: opening it again (on any device)
   // carries on with the run it already has, so starting over doesn't reset the time.
   if (profile) {
-    const had = db.db.prepare('SELECT * FROM sudoku_runs WHERE day = ? AND level = ? AND profile_id = ? ORDER BY started_at LIMIT 1')
+    const had = db.db.prepare('SELECT * FROM sudoku_runs WHERE day = ? AND level = ? AND profile_id = ? AND gave_up_at IS NULL ORDER BY started_at LIMIT 1')
       .get(day, level, profile.id);
     if (had) return view(had, now, { withProgress: true });
   }
   puzzleFor(day, level);
   const id = crypto.randomBytes(16).toString('hex');
-  db.db.prepare('INSERT INTO sudoku_runs (id, day, level, profile_id, started_at) VALUES (?, ?, ?, ?, ?)')
-    .run(id, day, level, profile ? profile.id : null, now);
+  const next = profile ? nextTry(profile.id, day, level, now) : { carryMs: 0, unscored: 0 };
+  db.db.prepare('INSERT INTO sudoku_runs (id, day, level, profile_id, started_at, carry_ms, unscored) VALUES (?, ?, ?, ?, ?, ?, ?)')
+    .run(id, day, level, profile ? profile.id : null, now, next.carryMs, next.unscored);
   return view(getRun(id), now, { withProgress: true });
 }
 
@@ -273,6 +276,7 @@ function save(id, { initials, profileToken }) {
   const run = needRun(id);
   if (!run.finished_at) throw fail('Finish the puzzle first.', 409);
   if (run.saved) throw fail('This time is already on the board.', 409);
+  if (run.unscored) throw fail('Just for fun, this try won\'t be scored', 409);
   const profile = profileToken ? profiles().verify(profileToken) : null;
   const ini = profile ? profile.initials || initialsOf(profile.name) : String(initials || '').toUpperCase().trim();
   if (!INITIALS_RE.test(ini)) throw fail('Initials must be 1-3 letters or numbers.');
@@ -366,17 +370,43 @@ router.use((err, req, res, next) => {
 // Today's puzzles a profile has started and not solved, for the home page's
 // Continue row (arcade/continue.js).
 function inProgress(profileId, now = Date.now()) {
-  return db.db.prepare('SELECT * FROM sudoku_runs WHERE profile_id = ? AND day = ? AND finished_at IS NULL ORDER BY started_at')
+  return db.db.prepare('SELECT * FROM sudoku_runs WHERE profile_id = ? AND day = ? AND finished_at IS NULL AND gave_up_at IS NULL ORDER BY started_at')
     .all(String(profileId), today(new Date(now)))
-    .map(run => ({ level: run.level, label: gen.LEVELS[run.level].label, playMs: playMs(run, now), updatedAt: run.progress_at || run.paused_at || run.started_at }));
+    .map(run => ({ level: run.level, label: gen.LEVELS[run.level].label, playMs: playMs(run, now), giveUp: afterGiveUp(run, now), updatedAt: run.progress_at || run.paused_at || run.started_at }));
 }
 
-// Giving up today's puzzle from the home page's Continue row: today's unfinished run
-// is thrown away, so opening the level again starts over with a new clock.
+// Giving up today's puzzle from the home page's Continue row (the maintainer's rule,
+// 2026-11-16). The run is kept, marked given up, so the next start knows how the
+// last try went. The board always starts over; the clock and the score go like this:
+//   - the first give-up before a minute of play: the next try starts at 0:00 (once);
+//   - the first give-up at a minute or more: the next try picks the clock up where it
+//     stopped (play time and help penalty together);
+//   - after a second give-up, every later try can be played but isn't scored.
+// The suite can't wait a whole minute, so it asks for a shorter one (test/run.js).
+const FREE_RESTART_MS = process.env.NODE_ENV === 'test' && process.env.PUZZLE_FREE_RESTART_MS
+  ? Number(process.env.PUZZLE_FREE_RESTART_MS) : 60 * 1000;
 function giveUp(profileId, level, now = Date.now()) {
   levelOf(level);
-  db.db.prepare('DELETE FROM sudoku_runs WHERE profile_id = ? AND day = ? AND level = ? AND finished_at IS NULL')
-    .run(String(profileId), today(new Date(now)), level);
+  db.db.prepare('UPDATE sudoku_runs SET gave_up_at = ?, paused_at = COALESCE(paused_at, ?) WHERE profile_id = ? AND day = ? AND level = ? AND finished_at IS NULL AND gave_up_at IS NULL')
+    .run(now, now, String(profileId), today(new Date(now)), level);
+}
+// How a new try starts after the tries given up today.
+function nextTry(profileId, day, level, now = Date.now()) {
+  const quit = db.db.prepare('SELECT * FROM sudoku_runs WHERE profile_id = ? AND day = ? AND level = ? AND gave_up_at IS NOT NULL ORDER BY started_at')
+    .all(String(profileId), day, level);
+  if (quit.length >= 2) return { carryMs: 0, unscored: 1, tries: quit.length };
+  if (quit.length === 1) {
+    const played = playMs(quit[0], now);
+    return { carryMs: played >= FREE_RESTART_MS ? played + quit[0].penalty_ms : 0, unscored: 0, tries: 1 };
+  }
+  return { carryMs: 0, unscored: 0, tries: 0 };
+}
+// What giving up the try in progress would do, for the Continue row's question:
+// 'fresh', 'carry', 'last' (the second give-up) or 'unscored' (already just for fun).
+function afterGiveUp(run, now = Date.now()) {
+  if (run.unscored) return 'unscored';
+  if (nextTry(run.profile_id, run.day, run.level, now).tries >= 1) return 'last';
+  return playMs(run, now) >= FREE_RESTART_MS ? 'carry' : 'fresh';
 }
 
 module.exports = { router, start, giveUp, pause, saveProgress, check, cell, hint, finish, save, board, puzzleFor, inProgress, PENALTY, MIN_MS_PER_SQUARE };

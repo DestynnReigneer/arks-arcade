@@ -541,6 +541,7 @@
     $('penalty').textContent = pen ? `+${clock(pen)}` : '0:00';
     $('dayLabel').textContent = run && run.free ? 'Free play' : run ? new Date(`${run.day}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
       : mode === 'free' ? 'Free play' : 'Today';
+    $('funLine').classList.toggle('hidden', !(run && run.unscored));
     Blip.musicPlaying(!!run && !run.paused && !run.finished);
   }
   setInterval(tick, 500);
@@ -572,7 +573,7 @@
     const p = profile();
     // A TV has no keyboard for initials: the time goes on the board from your own phone.
     const noBoard = TV && !p;
-    $('savePart').classList.toggle('hidden', run.saved || run.free);
+    $('savePart').classList.toggle('hidden', run.saved || run.free || run.unscored);
     $('iniRow').classList.toggle('hidden', !!p || noBoard);
     $('saveBtn').classList.toggle('hidden', noBoard);
     $('saveHint').textContent = noBoard ? 'Times solved on the TV don\'t go on the board, because there\'s no keyboard for initials. Solve it on your own device to get on it.'
@@ -580,7 +581,8 @@
     $('saveMsg').textContent = '';
     $('saveBtn').disabled = false;
     $('rankLine').textContent = run.saved ? 'Your time is on the board.'
-      : run.free ? 'Free play times don\'t go on the board, because everyone gets a different crossword. Today\'s puzzle is the one to race on.' : '';
+      : run.free ? 'Free play times don\'t go on the board, because everyone gets a different crossword. Today\'s puzzle is the one to race on.'
+      : run.unscored ? "Just for fun, this try won't be scored" : '';
     if (!p && !run.saved) initials.reset();
     $('over').classList.remove('hidden');
     // It pops up over the page (topbar.js), except on a TV, where it sits in the page.

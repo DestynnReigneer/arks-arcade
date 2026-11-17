@@ -121,7 +121,16 @@
     const others = Array.isArray(g.others) ? g.others : [];
     switch (g.leave) {
       case 'give-up':
-        return { icon: '🚪', label: "Give up today's puzzle", yes: 'Give up', ask: `Give up ${g.title.split(', ')[1] || "today's puzzle"}? It comes off your list, and today's time won't go on the board.` };
+      {
+        const which = g.title.split(', ')[1] || "today's puzzle";
+        // The server says what giving up would do next (sudoku/routes.js, giveUp).
+        const then = {
+          fresh: 'You can start over once with a fresh clock.',
+          carry: 'If you try again, the clock picks up where you left off.',
+          last: "This is your last scored try. After this, you can still play, but your time won't go on the board."
+        }[g.giveUp] || "It comes off your list, and today's time won't go on the board.";
+        return { icon: '🚪', label: "Give up today's puzzle", yes: 'Give up', ask: `Give up ${which}? ${then}` };
+      }
       case 'close':
         return { icon: '🚪', label: 'Close lobby', yes: 'Close', ask: 'Close this lobby? Nobody can join after this.' };
       case 'lobby':
@@ -159,7 +168,7 @@
       toast("That didn't work. Try again in a moment.", 3200);
       return;
     }
-    // A puzzle given up is gone from the arcade, so this device forgets which run it was
+    // A puzzle given up is closed on the arcade, so this device forgets which run it was
     // on for that level (sudoku.current.<day>.<level>), and the page starts a new one
     // instead of asking for the old one first.
     if (g.leave === 'give-up') {

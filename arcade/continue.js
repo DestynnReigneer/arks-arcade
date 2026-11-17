@@ -46,7 +46,7 @@ function wordsWithFamily(profile) {
 // yesterday's puzzle is gone at midnight.
 function daily(game, name, page) {
   return profile => require(`../${game}/routes`).inProgress(profile.id).map(r => ({
-    game, ref: r.level, leave: 'give-up',
+    game, ref: r.level, leave: 'give-up', giveUp: r.giveUp,
     title: `${name}, today's ${r.label} Challenge`,
     detail: `${clock(r.playMs)} played so far`,
     href: `${page}?level=${encodeURIComponent(r.level)}`, yourTurn: false, updatedAt: r.updatedAt
@@ -114,8 +114,8 @@ const LEAVE = {
     const g = game.games.get(ref);
     if (g && g.profileId === profile.id) game.drop(ref);
   },
-  // Giving up a daily puzzle throws away today's unfinished run, so opening it
-  // again starts over from the beginning with a new clock (the maintainer's call).
+  // Giving up a daily puzzle: the board starts over next time, and the clock and
+  // the score follow the give-up rule in sudoku/routes.js (giveUp).
   sudoku: (profile, ref) => require('../sudoku/routes').giveUp(profile.id, ref),
   clueless: (profile, ref) => require('../clueless/routes').giveUp(profile.id, ref)
 };

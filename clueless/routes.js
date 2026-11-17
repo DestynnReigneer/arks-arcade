@@ -80,6 +80,10 @@ db.db.exec(`
   // when it was saved, so it follows them to another device (2026-11-13).
   if (!cols.includes('progress')) db.db.exec('ALTER TABLE clueless_runs ADD COLUMN progress TEXT');
   if (!cols.includes('progress_at')) db.db.exec('ALTER TABLE clueless_runs ADD COLUMN progress_at INTEGER');
+  // Tries given up from the Continue row (2026-11-16, see giveUp).
+  if (!cols.includes('gave_up_at')) db.db.exec('ALTER TABLE clueless_runs ADD COLUMN gave_up_at INTEGER');
+  if (!cols.includes('carry_ms')) db.db.exec('ALTER TABLE clueless_runs ADD COLUMN carry_ms INTEGER NOT NULL DEFAULT 0');
+  if (!cols.includes('unscored')) db.db.exec('ALTER TABLE clueless_runs ADD COLUMN unscored INTEGER NOT NULL DEFAULT 0');
 }
 
 const fail = (message, status = 400, extra = {}) => Object.assign(new Error(message), { status, ...extra });
@@ -93,14 +97,15 @@ const levelOf = level => {
 const getRun = id => db.db.prepare('SELECT * FROM clueless_runs WHERE id = ?').get(String(id || ''));
 function needRun(id) {
   const run = getRun(id);
-  if (!run) throw fail('That puzzle has expired. Start it again from the buttons at the top.', 404);
+  if (!run || run.gave_up_at) throw fail('That puzzle has expired. Start it again from the buttons at the top.', 404);
   return run;
 }
 const revealedOf = run => JSON.parse(run.revealed || '[]');
 
 function playMs(run, now = Date.now()) {
   const end = run.finished_at || run.paused_at || now;
-  return Math.max(0, end - run.started_at - run.paused_ms);
+  // carry_ms: the clock carried over from a try given up (see giveUp).
+  return Math.max(0, end - run.started_at - run.paused_ms) + (run.carry_ms || 0);
 }
 
 function nextMidnight(now = new Date()) {
@@ -132,7 +137,7 @@ function view(run, now = Date.now()) {
     revealed: Object.fromEntries(revealed.map(i => [i, p.letters[i]])),
     playMs: playMs(run, now), penaltyMs: run.penalty_ms, paused: !!run.paused_at,
     checks: run.checks, reveals: revealed.length,
-    finished: !!run.finished_at, timeMs: run.time_ms, saved: !!run.saved,
+    finished: !!run.finished_at, timeMs: run.time_ms, saved: !!run.saved, unscored: !!run.unscored,
     resetsAt: nextMidnight().toISOString()
   };
 }
@@ -177,15 +182,16 @@ function start({ level, profileToken, free }, now = Date.now()) {
   // A profile has one clock per puzzle: opening it again (on any device)
   // carries on with the run it already has.
   if (profile) {
-    const had = db.db.prepare('SELECT * FROM clueless_runs WHERE day = ? AND level = ? AND profile_id = ? AND puzzle_key IS NULL ORDER BY started_at LIMIT 1')
+    const had = db.db.prepare('SELECT * FROM clueless_runs WHERE day = ? AND level = ? AND profile_id = ? AND puzzle_key IS NULL AND gave_up_at IS NULL ORDER BY started_at LIMIT 1')
       .get(day, level, profile.id);
     if (had) return view(had, now);
   }
   puzzles.puzzleFor(day, level);
   puzzles.sweep(day);
   const id = crypto.randomBytes(16).toString('hex');
-  db.db.prepare('INSERT INTO clueless_runs (id, day, level, profile_id, started_at) VALUES (?, ?, ?, ?, ?)')
-    .run(id, day, level, profile ? profile.id : null, now);
+  const next = profile ? nextTry(profile.id, day, level, now) : { carryMs: 0, unscored: 0 };
+  db.db.prepare('INSERT INTO clueless_runs (id, day, level, profile_id, started_at, carry_ms, unscored) VALUES (?, ?, ?, ?, ?, ?, ?)')
+    .run(id, day, level, profile ? profile.id : null, now, next.carryMs, next.unscored);
   return view(getRun(id), now);
 }
 
@@ -343,6 +349,7 @@ function save(id, { initials, profileToken }) {
   if (!run.finished_at) throw fail('Finish the puzzle first.', 409);
   if (run.puzzle_key) throw fail('Free play crosswords don\'t go on the board, because everyone gets a different one. Today\'s puzzle is the one to race on.', 409);
   if (run.saved) throw fail('This time is already on the board.', 409);
+  if (run.unscored) throw fail('Just for fun, this try won\'t be scored', 409);
   const profile = profileToken ? profiles().verify(profileToken) : null;
   const ini = profile ? profile.initials || initialsOf(profile.name) : String(initials || '').toUpperCase().trim();
   if (!INITIALS_RE.test(ini)) throw fail('Initials must be 1-3 letters or numbers.');
@@ -458,17 +465,43 @@ module.exports = function cluelessRoutes({ requireAdmin }) {
 // Today's daily crosswords a profile has started and not solved, for the home
 // page's Continue row (arcade/continue.js). Free boards belong to no profile.
 function inProgress(profileId, now = Date.now()) {
-  return db.db.prepare('SELECT * FROM clueless_runs WHERE profile_id = ? AND day = ? AND puzzle_key IS NULL AND finished_at IS NULL ORDER BY started_at')
+  return db.db.prepare('SELECT * FROM clueless_runs WHERE profile_id = ? AND day = ? AND puzzle_key IS NULL AND finished_at IS NULL AND gave_up_at IS NULL ORDER BY started_at')
     .all(String(profileId), today(new Date(now)))
-    .map(run => ({ level: run.level, label: maker.LEVELS[run.level].label, playMs: playMs(run, now), updatedAt: run.progress_at || run.paused_at || run.started_at }));
+    .map(run => ({ level: run.level, label: maker.LEVELS[run.level].label, playMs: playMs(run, now), giveUp: afterGiveUp(run, now), updatedAt: run.progress_at || run.paused_at || run.started_at }));
 }
 
-// Giving up today's puzzle from the home page's Continue row: today's unfinished run
-// is thrown away, so opening the level again starts over with a new clock.
+// Giving up today's puzzle from the home page's Continue row (the maintainer's rule,
+// 2026-11-16). The run is kept, marked given up, so the next start knows how the
+// last try went. The board always starts over; the clock and the score go like this:
+//   - the first give-up before a minute of play: the next try starts at 0:00 (once);
+//   - the first give-up at a minute or more: the next try picks the clock up where it
+//     stopped (play time and help penalty together);
+//   - after a second give-up, every later try can be played but isn't scored.
+// The suite can't wait a whole minute, so it asks for a shorter one (test/run.js).
+const FREE_RESTART_MS = process.env.NODE_ENV === 'test' && process.env.PUZZLE_FREE_RESTART_MS
+  ? Number(process.env.PUZZLE_FREE_RESTART_MS) : 60 * 1000;
 function giveUp(profileId, level, now = Date.now()) {
   levelOf(level);
-  db.db.prepare('DELETE FROM clueless_runs WHERE profile_id = ? AND day = ? AND level = ? AND puzzle_key IS NULL AND finished_at IS NULL')
-    .run(String(profileId), today(new Date(now)), level);
+  db.db.prepare('UPDATE clueless_runs SET gave_up_at = ?, paused_at = COALESCE(paused_at, ?) WHERE profile_id = ? AND day = ? AND level = ? AND puzzle_key IS NULL AND finished_at IS NULL AND gave_up_at IS NULL')
+    .run(now, now, String(profileId), today(new Date(now)), level);
+}
+// How a new try starts after the tries given up today.
+function nextTry(profileId, day, level, now = Date.now()) {
+  const quit = db.db.prepare('SELECT * FROM clueless_runs WHERE profile_id = ? AND day = ? AND level = ? AND puzzle_key IS NULL AND gave_up_at IS NOT NULL ORDER BY started_at')
+    .all(String(profileId), day, level);
+  if (quit.length >= 2) return { carryMs: 0, unscored: 1, tries: quit.length };
+  if (quit.length === 1) {
+    const played = playMs(quit[0], now);
+    return { carryMs: played >= FREE_RESTART_MS ? played + quit[0].penalty_ms : 0, unscored: 0, tries: 1 };
+  }
+  return { carryMs: 0, unscored: 0, tries: 0 };
+}
+// What giving up the try in progress would do, for the Continue row's question:
+// 'fresh', 'carry', 'last' (the second give-up) or 'unscored' (already just for fun).
+function afterGiveUp(run, now = Date.now()) {
+  if (run.unscored) return 'unscored';
+  if (nextTry(run.profile_id, run.day, run.level, now).tries >= 1) return 'last';
+  return playMs(run, now) >= FREE_RESTART_MS ? 'carry' : 'fresh';
 }
 
 Object.assign(module.exports, { start, giveUp, pause, check, reveal, finish, solved, save, saveProgress, board, inProgress, PENALTY, MIN_MS_PER_SQUARE, LINE_RULE });
