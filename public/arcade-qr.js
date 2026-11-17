@@ -64,7 +64,7 @@ const ArcadeQR = (() => {
     o.style.cssText = 'position:fixed;inset:0;z-index:2147483000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:16px;background:rgba(5,4,10,.9)';
     const img = document.createElement('img');
     img.width = img.height = 280;
-    img.style.cssText = 'width:min(280px,80vw);height:auto;aspect-ratio:1;background:#fff;padding:12px;border-radius:16px';
+    img.style.cssText = 'box-sizing:border-box;width:min(280px,80vw,max(140px,calc(100dvh - 150px)));height:auto;aspect-ratio:1;background:#fff;padding:12px;border-radius:16px';
     const line = document.createElement('p');
     line.textContent = 'Scan to join';
     line.style.cssText = 'margin:0;color:#fff;font-size:20px;font-weight:800';
@@ -72,7 +72,18 @@ const ArcadeQR = (() => {
     close.type = 'button';
     close.textContent = 'Close';
     close.style.cssText = 'padding:10px 26px;border-radius:12px;border:1px solid #fff;background:transparent;color:#fff;font:inherit;font-weight:700;cursor:pointer';
-    const done = () => { o.remove(); document.removeEventListener('keydown', esc); };
+    // Back closes it: opening it adds a step to the browser's history.
+    let entry = false;
+    try { history.pushState({ qrBig: 1 }, ''); entry = true; } catch { /* Back just leaves */ }
+    const pop = () => { entry = false; done(); };
+    window.addEventListener('popstate', pop);
+    const done = () => {
+      if (!o.isConnected) return;
+      o.remove();
+      document.removeEventListener('keydown', esc);
+      window.removeEventListener('popstate', pop);
+      if (entry) { entry = false; history.back(); }
+    };
     const esc = e => { if (e.key === 'Escape') done(); };
     close.addEventListener('click', done);
     o.addEventListener('click', e => { if (e.target === o) done(); });

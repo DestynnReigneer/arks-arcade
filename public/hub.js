@@ -202,11 +202,12 @@
   // Every room being hosted anywhere in the arcade, refreshed every few seconds.
   const STATUS = { open: 'Join', live: 'Join game in progress?', playing: 'Playing now', full: 'Full' };
   // While a finger is on a row, or its menu is open, the list isn't rebuilt under it.
-  let touchingRow = false;
-  $('lobbyList').addEventListener('pointerdown', () => { touchingRow = true; });
-  for (const t of ['pointerup', 'pointercancel']) document.addEventListener(t, () => { touchingRow = false; });
+  // A touch that never reports lifting off stops counting after a few seconds.
+  let touchingRow = 0;
+  $('lobbyList').addEventListener('pointerdown', () => { touchingRow = Date.now(); });
+  for (const t of ['pointerup', 'pointercancel']) document.addEventListener(t, () => { touchingRow = 0; });
   async function loadLobby() {
-    if (touchingRow || (window.LongPress && LongPress.isOpen)) return;
+    if (Date.now() - touchingRow < 4000 || (window.LongPress && LongPress.isOpen)) return;
     try {
       // With a profile, the lobby you're already in is marked as yours.
       const token = typeof ArcadeProfile !== 'undefined' ? ArcadeProfile.token() : null;

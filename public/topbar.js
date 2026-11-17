@@ -362,6 +362,9 @@ window.ArcadeBack = (() => {
   window.addEventListener('popstate', () => {
     if (skipPops) { skipPops--; return; }
     if (!cfg || !pushed) return;
+    // Back only closed something laid over the page (a hold menu, a big QR code) that
+    // added its own step on top of ours: ours is still there, so the screen stays.
+    if (ours(history.state)) return;
     pushed = false;
     // A Back while the question is up just answers it "keep playing".
     if (asking) { const stay = document.querySelector('.ab-confirm [data-stay], .tv-confirm .tv-btn'); if (stay) stay.click(); return; }

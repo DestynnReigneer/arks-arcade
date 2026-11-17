@@ -207,3 +207,46 @@ test('a row in the Lobbies list opens its quick menu', async ({ page }) => {
   await expect(page).toHaveURL(/chess\.html\?go=create/);
   expect(problems, problems.join('\n')).toEqual([]);
 });
+
+// Back on a phone closes the hold menu or the big QR code instead of leaving the arcade,
+// and the QR code fits a small phone turned sideways.
+test('Back closes the hold menu and the QR code, and the QR fits sideways', async ({ browser }) => {
+  const ctx = await browser.newContext({ viewport: { width: 740, height: 360 }, hasTouch: true, isMobile: true });
+  const page = await ctx.newPage();
+  const room = {
+    game: 'chess', label: 'Chess', emoji: '♞', page: 'chess.html', href: 'chess.html?join=ABCD',
+    code: 'ABCD', host: 'Sam', players: 1, max: 2, status: 'open', detail: 'Multiplayer-Multiple devices'
+  };
+  await page.route('**/api/lobby', route => route.fulfill({ json: { rooms: [room], publicUrl: 'http://localhost' } }));
+  await home(page);
+  const at = page.url();
+  const row = page.locator('#lobbyList li').first();
+  const card = page.locator('.lp-card');
+
+  await row.click({ button: 'right' });
+  await expect(card).toBeVisible();
+  await page.goBack();
+  await expect(card).toHaveCount(0);
+  expect(page.url()).toBe(at);
+
+  await row.click({ button: 'right' });
+  await card.getByRole('menuitem', { name: /Show QR code/ }).click();
+  const big = page.locator('.qr-big');
+  await expect(big).toBeVisible();
+  for (const part of [big.locator('img'), big.getByRole('button', { name: 'Close' })]) {
+    const r = await part.boundingBox();
+    expect(r.y).toBeGreaterThanOrEqual(0);
+    expect(r.y + r.height).toBeLessThanOrEqual(360);
+  }
+  await page.goBack();
+  await expect(big).toHaveCount(0);
+  expect(page.url()).toBe(at);
+
+  // Closing them with Cancel or Close leaves no extra step behind: one Back still
+  // goes to wherever the page was opened from.
+  await row.click({ button: 'right' });
+  await card.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(card).toHaveCount(0);
+  expect(await page.evaluate(() => history.state && (history.state.lpMenu || history.state.qrBig))).toBeFalsy();
+  await ctx.close();
+});
