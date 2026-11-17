@@ -397,7 +397,7 @@ function mine(profile) {
       id: row.id, status: row.status, dictionary: v.dictionary, players: v.players, you: v.you,
       yourTurn: !!v.yourTurn, turn: v.turn === undefined ? null : v.turn, seats: v.seats || null, host: v.host,
       lastMove: last ? { seat: last.seat, kind: last.kind, score: last.score, words: (last.words || []).map(w => w.word), at: last.at } : null,
-      over: v.over || null, updatedAt: row.updated_at
+      over: v.over || null, updatedAt: row.updated_at, createdAt: row.created_at
     };
   });
   return { yourTurn: games.filter(g => g.yourTurn).length, games };
