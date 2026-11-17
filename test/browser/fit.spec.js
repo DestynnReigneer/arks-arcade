@@ -47,10 +47,6 @@ const GAMES = [
 
 // Game and size pairs that don't fit yet, with why. Fixed in order on the to-do list.
 const KNOWN = {
-  "Spin & Solve @ phone with the browser bars showing": "The wheel keeps a minimum size, so Spin, Buy a vowel and Solve fall off the bottom; the puzzle, the host and the players need to make room.",
-  "Spin & Solve @ phone with Chrome's tab row": "skip: Spin, Buy a vowel and Solve sit right at the edge of the tab row, under it on some machines and just above it on others, until the puzzle, the host and the players make room.",
-  "Spin & Solve @ phone turned sideways": "Turned sideways, the puzzle, the wheel and the buttons are stacked, and the screen is too short for that.",
-  "Spin & Solve @ small phone turned sideways": "Turned sideways, the puzzle, the wheel and the buttons are stacked, and the screen is too short for that."
 };
 
 test.describe.configure({ mode: 'parallel' });

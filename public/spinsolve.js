@@ -644,6 +644,27 @@
     $('wheel').classList.add('idle');
   }
 
+  // On a phone held upright only the top half of the wheel shows (spinsolve.css): as big
+  // as the room allows, cut off at the hub, never across the half moon, so the pointer
+  // still fits above the rim. It may run past the sides of the screen.
+  const cutWheel = window.matchMedia('(max-width: 599px) and (orientation: portrait)');
+  function fitWheel() {
+    const area = document.querySelector('#game > .wheel-area');
+    if (!area) return;
+    if (!fitWheel.watching) {
+      fitWheel.watching = true;
+      if (window.ResizeObserver) new ResizeObserver(() => fitWheel()).observe(area);
+      cutWheel.addEventListener('change', () => fitWheel());
+    }
+    const { width: aw, height: ah } = area.getBoundingClientRect();
+    if (TV || !cutWheel.matches || !aw || !ah) { area.style.removeProperty('--ww'); area.style.removeProperty('--ft'); return; }
+    const RIM = 104 / 232;      // the rim's radius, as a share of the drawing's width
+    const POINTER = 18;          // room above the rim for the pointer
+    const size = Math.max(100, Math.min((ah - POINTER) / RIM, aw * 1.6));
+    area.style.setProperty('--ww', size + 'px');
+    area.style.setProperty('--ft', (ah - RIM * size - 14) + 'px');
+  }
+
   function setLeds(on) {
     const leds = $('wheelStatic').querySelectorAll('.led');
     leds.forEach((led, i) => led.classList.toggle('on', on(i)));
@@ -874,7 +895,7 @@
   const overlayOpen = id => !$(id).classList.contains('hidden');
   function clockPaused() {
     return document.hidden || $('game').classList.contains('hidden') || S.busy || help.isOpen ||
-      overlayOpen('roundView') || overlayOpen('overView') || overlayOpen('scoresView');
+      overlayOpen('roundView') || overlayOpen('overView') || overlayOpen('scoresView') || overlayOpen('totalsView');
   }
 
   const CLOCK_FOR = { letter: 'to call a letter', vowel: 'to pick a vowel', solve: 'to solve' };
@@ -991,7 +1012,8 @@
     h.style.transition = 'none';
     h.style.transform = `translateX(${offstage}px)`;
     h.classList.remove('hidden');
-    $('hecklerSay').classList.toggle('left', !fromLeft);
+    // Its bubble opens toward the middle, so it stays on the screen.
+    $('hecklerSay').classList.toggle('left', stop > lane.clientWidth / 2);
     h.getBoundingClientRect();
     h.style.transition = '';
     h.style.transform = `translateX(${stop}px)`;
@@ -1147,6 +1169,20 @@
     }
   }
 
+  // On a phone each player's total isn't on their card, so it's here, from the top bar's menu.
+  function openTotals() {
+    const list = $('totalsList');
+    list.innerHTML = '';
+    for (const p of S.players) {
+      const li = document.createElement('li');
+      li.innerHTML = '<span></span><b></b>';
+      li.firstChild.textContent = p.name;
+      li.lastChild.textContent = money(p.total);
+      list.appendChild(li);
+    }
+    $('totalsView').classList.remove('hidden');
+  }
+
   function openScores(highlightId, board = isAdult() ? 'adult' : 'solo') {
     // Both boards are open to everyone; only playing the adult level needs the PIN.
     $('scoreBoardSeg').classList.remove('hidden');
@@ -1267,6 +1303,8 @@
   $('menuBtn').addEventListener('click', backToSetup);
   $('quitBtn').addEventListener('click', async () => { if (await ArcadeBack.ask('Leave this game?')) backToSetup(); });
   $('setupMenuBtn').addEventListener('click', () => $('quitBtn').click());
+  $('totalsBtn').addEventListener('click', openTotals);
+  $('totalsClose').addEventListener('click', () => $('totalsView').classList.add('hidden'));
   if (TV) {
     buildSolveKeys();
     // Typing on a TV pops up its own keyboard over everything; the one on the screen is easier.
@@ -1304,6 +1342,7 @@
   initials = ArcadeKit.wireInitials([...document.querySelectorAll('#overScore .ini')], saveScore);
 
   buildWheel();
+  fitWheel();
   Host.setHost('vee');
   renderNames();
   // Once the levels are known: a game this page was in the middle of comes back.
