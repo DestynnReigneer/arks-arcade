@@ -1012,7 +1012,8 @@
     h.style.transition = 'none';
     h.style.transform = `translateX(${offstage}px)`;
     h.classList.remove('hidden');
-    $('hecklerSay').classList.toggle('left', !fromLeft);
+    // Its bubble opens toward the middle, so it stays on the screen.
+    $('hecklerSay').classList.toggle('left', stop > lane.clientWidth / 2);
     h.getBoundingClientRect();
     h.style.transition = '';
     h.style.transform = `translateX(${stop}px)`;

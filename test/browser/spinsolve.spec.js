@@ -99,3 +99,38 @@ test('on a phone, the totals are in the menu and the wheel is cut at the hub', a
   expect(problems, problems.join('\n')).toEqual([]);
   await ctx.close();
 });
+
+// A two-line message under the wheel ("2 N's! Player 1, go again: ...") mustn't
+// push the buttons off a short phone or make the wheel jump in size, and the turn
+// clock is a bar you can read, not a sliver.
+for (const [w, h] of [[412, 640], [360, 740], [390, 844]]) {
+  test(`a long turn message keeps everything in place on a ${w}×${h} phone`, async ({ browser }, info) => {
+    test.skip(info.project.name !== 'phone', 'A phone-only layout.');
+    const ctx = await browser.newContext({ viewport: { width: w, height: h }, hasTouch: true, isMobile: true });
+    const page = await ctx.newPage();
+    await quietFonts(page);
+    await openPage(page, '/spinsolve.html');
+    const guest = page.getByRole('button', { name: /Play as a guest/ });
+    if (await guest.isVisible().catch(() => false)) {
+      await guest.click();
+      await page.getByRole('button', { name: 'Play', exact: true }).click();
+    }
+    const close = page.locator('.tut-x');
+    if (await close.isVisible().catch(() => false)) await close.click();
+    await page.locator('#goBtn').click();
+    await expect(page.locator('#game')).toBeVisible();
+    await page.waitForTimeout(400);
+    const wheelWidth = () => page.locator('#wheel').evaluate(el => el.getBoundingClientRect().width);
+    const before = await wheelWidth();
+    await page.locator('#turnLine').evaluate(el => { el.textContent = "2 N's! Player 1, go again: spin, buy a vowel, or solve."; });
+    await page.waitForTimeout(300);
+    expect(Math.abs((await wheelWidth()) - before)).toBeLessThan(2);
+    for (const sel of ['#spinBtn', '#vowelBtn', '#solveBtn']) {
+      const r = await page.locator(sel).boundingBox();
+      expect(r.y + r.height, `${sel} runs off the bottom`).toBeLessThanOrEqual(h + 1);
+    }
+    const timer = await page.locator('#turnTimer').boundingBox();
+    expect(timer && timer.width).toBeGreaterThan(150);
+    await ctx.close();
+  });
+}
