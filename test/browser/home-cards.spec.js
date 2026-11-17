@@ -165,3 +165,45 @@ for (const [game, show] of [['rambler', '#startBtn'], ['trivia', '#goBtn']]) {
     await ctx.close();
   });
 }
+
+// A row in the Lobbies list has its own quick menu: join it, show its QR code, or go to
+// that game to make your own lobby or read how to play.
+test('a row in the Lobbies list opens its quick menu', async ({ page }) => {
+  const problems = watchProblems(page);
+  const room = {
+    game: 'chess', label: 'Chess', emoji: '♞', page: 'chess.html', href: 'chess.html?join=ABCD',
+    code: 'ABCD', host: 'Sam', players: 1, max: 2, status: 'open', detail: 'Multiplayer-Multiple devices'
+  };
+  await page.route('**/api/lobby', route => route.fulfill({ json: { rooms: [room], publicUrl: 'http://localhost' } }));
+  await home(page);
+  const row = page.locator('#lobbyList li').first();
+  await expect(row).toContainText("Sam's game");
+
+  await row.click({ button: 'right' });
+  const card = page.locator('.lp-card');
+  await expect(card).toContainText("Chess · Sam's game");
+  for (const name of ['Join', 'Show QR code', 'Create a game lobby', 'How to play', 'Trophies']) {
+    await expect(card.getByRole('menuitem', { name: new RegExp(name) })).toBeVisible();
+  }
+  // The list refreshing every few seconds leaves the open menu alone.
+  await page.waitForTimeout(5600);
+  await expect(card).toBeVisible();
+
+  await card.getByRole('menuitem', { name: /Show QR code/ }).click();
+  const big = page.locator('.qr-big');
+  await expect(big).toBeVisible();
+  await expect(big.locator('img')).toHaveAttribute('src', /join%3DABCD/);
+  await big.getByRole('button', { name: 'Close' }).click();
+  await expect(big).toHaveCount(0);
+
+  // A full lobby can't be joined, so its menu has no Join or QR code.
+  room.status = 'full';
+  await page.reload();
+  await page.locator('#lobbyList li').first().click({ button: 'right' });
+  await expect(card.getByRole('menuitem', { name: /Create a game lobby/ })).toBeVisible();
+  await expect(card.getByRole('menuitem', { name: /Join/ })).toHaveCount(0);
+  await expect(card.getByRole('menuitem', { name: /QR/ })).toHaveCount(0);
+  await card.getByRole('menuitem', { name: /Create a game lobby/ }).click();
+  await expect(page).toHaveURL(/chess\.html\?go=create/);
+  expect(problems, problems.join('\n')).toEqual([]);
+});

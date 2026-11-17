@@ -83,5 +83,5 @@ const ArcadeQR = (() => {
     close.focus();
   }
 
-  return { base, url, show, forGame, lobbyButton };
+  return { base, url, show, forGame, lobbyButton, open };
 })();
