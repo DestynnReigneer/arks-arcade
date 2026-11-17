@@ -205,16 +205,54 @@
     li.querySelector('.cc-li-sub').textContent = sub;
     li.querySelector('.cc-li-tag').textContent = tag;
     li.onclick = () => openGame(g.id);
+    const clear = async () => { try { await call(`/games/${g.id}/hide`, {}); li.remove(); } catch (err) { toast(err.message); } };
     if (g.status === 'over') {
       const x = document.createElement('button');
       x.className = 'cc-x'; x.title = 'Clear it from my list'; x.setAttribute('aria-label', 'Clear it from my list'); x.textContent = '✕';
-      x.onclick = async e => {
-        e.stopPropagation();
-        try { await call(`/games/${g.id}/hide`, {}); li.remove(); } catch (err) { toast(err.message); }
-      };
+      x.onclick = e => { e.stopPropagation(); clear(); };
       li.appendChild(x);
     }
+    // Press and hold (or right-click) for Resume and leaving, worded the way the home page's
+    // Continue row words them, or Clear it from my list once the game is over.
+    if (window.LongPress && !TV) LongPress.attach(li, () => gameMenu(g, clear));
     return li;
+  }
+
+  function gameMenu(g, clear) {
+    const others = g.players.filter(p => !p.you && !p.bot).map(p => p.name);
+    const title = others.length ? `Words with Family with ${others.join(', ')}` : 'Words with Family';
+    if (g.status === 'over') {
+      return { title, items: [
+        { icon: '▶️', label: 'Resume', run: () => openGame(g.id) },
+        { icon: '✕', label: 'Clear it from my list', run: clear }
+      ] };
+    }
+    // Your own lobby closes when you leave it; someone else's you just leave. In a game, two
+    // players means it ends; with more, the others play on (arcade/continue.js says the same).
+    const me = ArcadeProfile.name() || 'you';
+    const leave = g.status !== 'playing'
+      ? (g.host
+        ? { icon: '🚪', label: 'Close lobby', yes: 'Close', ask: 'Close this lobby? Nobody can join after this.' }
+        : { icon: '🚪', label: 'Leave lobby', yes: 'Leave', ask: 'Leave this lobby? Your seat opens up for someone else.' })
+      : others.length === 1
+        ? { icon: '🚪', label: 'Leave this game', yes: 'Leave', ask: `Leave your game with ${others[0]}? The game ends, and ${others[0]} wins.` }
+        : { icon: '🚪', label: 'Leave this game', yes: 'Leave', ask: `Leave this game, ${me}? Everyone else keeps playing without you.` };
+    return { title, items: [
+      { icon: '▶️', label: 'Resume', run: () => openGame(g.id) },
+      { ...leave, danger: true, run: () => leaveGame(g) }
+    ] };
+  }
+  async function leaveGame(g) {
+    try {
+      const r = await fetch('/api/continue/leave', {
+        method: 'POST', cache: 'no-store',
+        headers: { 'Content-Type': 'application/json', 'X-Profile-Token': ArcadeProfile.token() || '' },
+        body: JSON.stringify({ game: 'crisscross', ref: g.id })
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) { toast(data.error || "That didn't work. Try again in a moment."); return; }
+    } catch { toast("That didn't work. Try again in a moment."); return; }
+    loadMine();
   }
 
   function paintLocalList() {
