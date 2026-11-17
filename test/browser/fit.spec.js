@@ -42,11 +42,31 @@ const GAMES = [
   { name: 'Brick Breaker', path: '/bricks.html', start: [], board: '#canvas', need: ['#canvas'] },
   { name: 'Tower Defense', path: '/towers.html', start: ['#waveBtn'], board: '#stage', need: ['#stage', '#waveBtn', '#info'] },
   { name: 'Words with Family', path: '/crisscross.html', start: ['#newLocalBtn', { fill: '#localPlayers input', text: 'Tester' }, '#localGo'], board: '#board', need: ['#board', '#rack', '#playBtn'] },
-  { name: 'Spin & Solve', path: '/spinsolve.html', start: ['#goBtn'], board: null, need: ['#puzzleBoard', '#spinBtn', '#vowelBtn', '#solveBtn'] }
+  { name: 'Spin & Solve', path: '/spinsolve.html', start: ['#goBtn'], board: null, need: ['#puzzleBoard', '#spinBtn', '#vowelBtn', '#solveBtn'] },
+  { name: 'Chess', path: '/chess.html', start: ['#goBtn'], board: '#board', need: ['#board', '#statusLine', '#gameBtns'] },
+  { name: 'Know-It-All', path: '/trivia.html', start: ['#goBtn'], board: null, need: ['#qText', '#answers'] },
+  { name: 'Rambler', path: '/rambler.html', start: ['#startBtn'], board: '#board', need: ['#board', '#traceBar', '#doneBtn'] },
+  { name: 'Dare Devil', path: '/daredevil.html', start: ['#goBtn'], board: '#deckBtn', need: ['#scoreStrip', '#deckBtn'] },
+  { name: 'Uh-Oh: Part Deux', path: '/partdeux.html', start: ['#goBtn', '#passReady'], board: null, need: ['#drawPile', '#discard', '#hand', '#drawBtn'] },
 ];
 
 // Game and size pairs that don't fit yet, with why. Fixed in order on the to-do list.
 const KNOWN = {
+  "Chess @ phone with Chrome's tab row": "the bug-report button sits on the Suggest, Undo and Resign buttons",
+  "Chess @ phone turned sideways": "the game doesn't have a sideways layout yet, so it scrolls and its top runs off the screen",
+  "Chess @ small phone turned sideways": "the game doesn't have a sideways layout yet, so it scrolls and its top runs off the screen",
+  "Know-It-All @ phone turned sideways": "the game doesn't have a sideways layout yet, so it scrolls and its top runs off the screen",
+  "Know-It-All @ small phone turned sideways": "the game doesn't have a sideways layout yet, so it scrolls and its top runs off the screen",
+  "Rambler @ phone with the browser bars showing": "the Done button is below the screen",
+  "Rambler @ phone with Chrome's tab row": "the Done button is below the screen",
+  "Rambler @ phone turned sideways": "the game doesn't have a sideways layout yet, so the board and buttons are below the screen",
+  "Rambler @ small phone turned sideways": "the game doesn't have a sideways layout yet, so the board and buttons are below the screen",
+  "Rambler @ laptop": "the Done button is just below the screen",
+  "Dare Devil @ phone turned sideways": "the game doesn't have a sideways layout yet, so it scrolls and its top runs off the screen",
+  "Dare Devil @ small phone turned sideways": "the game doesn't have a sideways layout yet, so it scrolls and its top runs off the screen",
+  "Uh-Oh: Part Deux @ phone turned sideways": "the game doesn't have a sideways layout yet, so it scrolls and its top runs off the screen",
+  "Uh-Oh: Part Deux @ small phone turned sideways": "the game doesn't have a sideways layout yet, so it scrolls and its top runs off the screen",
+  "Uh-Oh: Part Deux @ laptop": "the page scrolls a little below the hand",
 };
 
 test.describe.configure({ mode: 'parallel' });
