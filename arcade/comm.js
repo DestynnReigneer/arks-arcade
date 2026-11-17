@@ -411,6 +411,13 @@ function adminRouter(requireAdmin) {
     try { res.json({ cars: trainCars.clearPicture(req.params.n) }); } catch (e) { next(e); }
   });
 
+  // The line under each game's name on the home page (the Game settings tab).
+  const blurbs = require('./game-blurbs');
+  admin.get('/game-blurbs', (req, res) => res.json({ games: blurbs.list(), max: blurbs.MAX }));
+  admin.post('/game-blurbs', (req, res, next) => {
+    try { res.json({ games: blurbs.set((req.body || {}).lines), max: blurbs.MAX }); } catch (e) { next(e); }
+  });
+
   // Whether adult levels are on (only with ARKS ID), for the admin page's Adult levels card.
   admin.get('/adult-pin', (req, res) => res.json(adultPin.status()));
   // There's no adult PIN to set any more (adult levels follow ARKS ID); kept so an old admin page gets a clear answer.

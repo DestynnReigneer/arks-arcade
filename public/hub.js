@@ -294,6 +294,11 @@
     if (!info.games) return;
     homeGames = info.games;
     trophyGames = info.trophies || [];
+    // The card lines changed on the admin page's Game settings tab.
+    for (const [id, line] of Object.entries(info.blurbs || {})) {
+      const short = document.querySelector(`.games > .game.${CSS.escape(id)} .short`);
+      if (short && typeof line === 'string') short.textContent = line;
+    }
     placeGames(homeGames.order);
     orderGames();
   }).catch(() => {});

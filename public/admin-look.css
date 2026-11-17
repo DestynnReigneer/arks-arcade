@@ -87,3 +87,17 @@
 
 /* The top bar's ? opens a game's How to play; the admin page has none. */
 .admin-page .ah-ib.help[hidden] { display: none; }
+
+/* The Game settings tab: one Save that follows you down the page, and turns turquoise
+   with a check for a moment once everything is saved. */
+.games-save-bar { position: sticky; bottom: 12px; z-index: 20; display: flex; justify-content: flex-end; align-items: center; gap: 12px; margin-top: 12px; pointer-events: none; }
+.games-save-bar > * { pointer-events: auto; }
+.games-save { min-width: 120px; min-height: 44px; padding: 10px 22px; border-radius: 12px; border: 1px solid var(--adm-turq); background: #1a1030; color: var(--adm-turq); font: inherit; font-weight: 800; cursor: pointer; box-shadow: 0 6px 20px rgba(0, 0, 0, .45); transition: background .2s, color .2s; }
+.games-save.saved { background: var(--adm-turq); color: #14082b; }
+.blurb-row { display: grid; grid-template-columns: minmax(110px, 160px) minmax(0, 1fr) auto; gap: 8px; align-items: start; padding: 8px 0; border-top: 1px solid var(--border); }
+.blurb-row:first-child { border-top: 0; }
+.blurb-row label { font-weight: 700; padding-top: 8px; }
+.blurb-row textarea { width: 100%; box-sizing: border-box; min-height: 44px; resize: vertical; font: inherit; }
+.blurb-row .blurb-count { font-size: 11px; color: var(--dim, #a993c4); padding-top: 10px; min-width: 52px; text-align: right; }
+.blurb-row .blurb-orig { grid-column: 2 / -1; font-size: 12px; color: var(--dim, #a993c4); }
+@media (max-width: 600px) { .blurb-row { grid-template-columns: minmax(0, 1fr) auto; } .blurb-row label { grid-column: 1 / -1; padding: 0; } .blurb-row .blurb-orig { grid-column: 1 / -1; } }

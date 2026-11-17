@@ -845,6 +845,22 @@ async function run({ base, root }) {
   ok('…until the admin turns them on', (await wl('/arcade-info')).data.games.closed.length === 0);
   await asAdmin('/comm/admin/home-games', 'POST', { order: startInfo.games.order, hidden: [] });
 
+  // ---- the line under each game's name (the admin page's Game settings tab) ----------
+  const blurbs = (await asAdmin('/comm/admin/game-blurbs')).data;
+  ok('the admin page lists every game with the line it came with',
+    blurbs.games.length === startInfo.games.order.length && blurbs.games.every(g => g.label && g.original && g.line === g.original),
+    JSON.stringify(blurbs.games.filter(g => !g.original).map(g => g.id)));
+  ok('only the admin can see them', (await asAdmin('/comm/admin/game-blurbs', 'GET', null, 'nope')).status === 401);
+  ok('…or change them', (await asAdmin('/comm/admin/game-blurbs', 'POST', { lines: { snake: 'Hiss.' } }, 'nope')).status === 401);
+  ok('nothing changed means the home page gets nothing to swap', JSON.stringify((await wl('/arcade-info')).data.blurbs) === '{}');
+  const changedBlurbs = await asAdmin('/comm/admin/game-blurbs', 'POST', { lines: { snake: '  Hiss\nand grow.  ', nogame: 'x' } });
+  ok('the admin changes one line, kept as one line of plain text',
+    changedBlurbs.status === 200 && changedBlurbs.data.games.find(g => g.id === 'snake').line === 'Hiss and grow.', JSON.stringify(changedBlurbs.data));
+  ok('the home page gets the changed line, and only that one', JSON.stringify((await wl('/arcade-info')).data.blurbs) === JSON.stringify({ snake: 'Hiss and grow.' }));
+  ok('a line over 140 characters is refused', (await asAdmin('/comm/admin/game-blurbs', 'POST', { lines: { snake: 'x'.repeat(141) } })).status === 400);
+  await asAdmin('/comm/admin/game-blurbs', 'POST', { lines: { snake: '' } });
+  ok('a cleared box goes back to the line the game came with', JSON.stringify((await wl('/arcade-info')).data.blurbs) === '{}');
+
   // ---- arcade high scores ---------------------------------------------------------
   const savedRun = await wl('/scores/dino', 'POST', { initials: 'dd1', score: 1234, board: 'run' });
   ok('a Dino Dash score saves and ranks', savedRun.status === 201 && savedRun.data.rank === 1);

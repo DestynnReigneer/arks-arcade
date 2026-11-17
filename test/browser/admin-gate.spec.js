@@ -34,7 +34,7 @@ test('the admin page opens with the password, every tab is there, and Lock close
   expect((await page.request.post('/api/admin/login', { data: { password: 'browser-test-admin' } })).ok()).toBe(true);
   await openPage(page, '/admin.html');
   await expect(page.locator('#adminContent')).toBeVisible();
-  for (const tab of ['tabArcade', 'tabBoards', 'tabStats', 'tabRambler', 'tabWordless', 'tabSpin', 'tabTrivia', 'tabClueless']) {
+  for (const tab of ['tabArcade', 'tabBoards', 'tabStats', 'tabGames', 'tabRambler', 'tabWordless', 'tabSpin', 'tabTrivia', 'tabClueless']) {
     await page.locator('#' + tab).click();
     await expect(page.locator('#' + tab)).toHaveAttribute('aria-pressed', 'true');
   }
@@ -44,4 +44,37 @@ test('the admin page opens with the password, every tab is there, and Lock close
   await page.locator('#lockBtn').click();
   await expect(page.locator('#adminContent')).toBeHidden();
   await expect(page.locator('#lockScreen')).toBeVisible();
+});
+
+// The Game settings tab: change the line under a game's name, Save, and the home page
+// shows it. Clearing the box puts back the line the game came with.
+test('the Game settings tab changes a game card line on the home page', async ({ page }, info) => {
+  // It changes a line every page shares, so one project runs it (two at once would race).
+  test.skip(info.project.name !== 'phone', 'One project is enough.');
+  expect((await page.request.post('/api/admin/login', { data: { password: 'browser-test-admin' } })).ok()).toBe(true);
+  await openPage(page, '/admin.html');
+  await page.locator('#tabGames').click();
+  const box = page.locator('#blurb-snake');
+  await expect(box).toBeVisible();
+  const original = await box.inputValue();
+  await expect(page.locator('#trainCars .train-name')).toHaveCount(8);
+  await box.fill('Eat the dots, dodge your tail.');
+  await expect(page.locator('.blurb-row[data-id="snake"] .blurb-orig')).toContainText(original);
+  await page.locator('#gamesSave').click();
+  await expect(page.locator('#gamesSave')).toHaveText('✓ Saved');
+
+  await openPage(page, '/');
+  const guest = page.getByRole('button', { name: /Play as a guest/ });
+  if (await guest.waitFor({ timeout: 4000 }).then(() => true, () => false)) {
+    await guest.click();
+    await page.getByRole('button', { name: 'Play', exact: true }).click();
+  }
+  await expect(page.locator('.games > .game.snake .short')).toHaveText('Eat the dots, dodge your tail.');
+
+  await openPage(page, '/admin.html');
+  await page.locator('#tabGames').click();
+  await page.locator('#blurb-snake').fill('');
+  await page.locator('#gamesSave').click();
+  await expect(page.locator('#gamesSave')).toHaveText('✓ Saved');
+  await expect(page.locator('#blurb-snake')).toHaveValue(original);
 });
