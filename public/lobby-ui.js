@@ -8,6 +8,10 @@
 //
 //   LobbyUI.seats(el, seats, { max, canMute, onMute, onRemove })
 //   LobbyUI.chat(el, { send })               builds the chat once; returns { render(messages, { muted }) }
+//
+// Press and hold a message (or right-click it) for Copy message, and, for the host, Mute or
+// Unmute and Remove Player for whoever sent it: the same buttons as on their seat, taken
+// from the last LobbyUI.seats call while that seat is showing.
 
 window.LobbyUI = (() => {
   const make = (tag, cls, text) => {
@@ -74,7 +78,9 @@ window.LobbyUI = (() => {
   // Who's in, and the empty seats. A seat with `ready` (true or
   // false) says Ready or Not ready under the name; an open seat's dots grow and start
   // over while it waits for someone.
+  let seatsShown = null;   // { el, list, canMute, onMute, onRemove } from the last seats() call
   function seats(el, list, { max = 2, canMute = false, onMute, onRemove } = {}) {
+    seatsShown = { el, list, canMute, onMute, onRemove };
     el.replaceChildren();
     for (const s of list) {
       const box = make('div', 'lb-seat' + (s.ready === false ? ' waiting' : ''));
@@ -173,11 +179,37 @@ window.LobbyUI = (() => {
         const who = make('b', '', m.mine ? 'You' : m.name);
         who.style.color = hue(m.name);
         row.append(who, document.createTextNode(' ' + m.text));
+        if (window.LongPress) LongPress.attach(row, () => messageMenu(m));
         lines.append(row);
       }
       lines.scrollTop = lines.scrollHeight;
     }
     return { render };
+  }
+
+  // What a held message offers.
+  function messageMenu(m) {
+    const items = [{ icon: '📋', label: 'Copy message', run: () => copy(m.text) }];
+    const s = seatsShown;
+    const seat = s && s.canMute && !m.mine && m.seat && s.list.find(x => x.id === m.seat && !x.host && !x.you);
+    // The host's buttons only while the seats are on the screen (in the lobby).
+    if (seat && s.el.isConnected && s.el.offsetParent) {
+      items.push({ sep: true });
+      items.push({ icon: '🔇', label: seat.muted ? 'Unmute' : 'Mute', run: () => s.onMute(seat.id, !seat.muted) });
+      if (s.onRemove) items.push({ icon: '🚪', label: 'Remove Player', danger: true, run: () => s.onRemove(seat.id) });
+    }
+    return { title: `${m.mine ? 'You' : m.name}: ${m.text.length > 60 ? m.text.slice(0, 57) + '...' : m.text}`, items };
+  }
+  async function copy(text) {
+    try { await navigator.clipboard.writeText(text); }
+    catch {
+      // Without the clipboard (an address that isn't https), a hidden box is copied instead.
+      const t = document.createElement('textarea');
+      t.value = text; t.setAttribute('readonly', ''); t.style.cssText = 'position:fixed;opacity:0';
+      document.body.append(t); t.select();
+      try { document.execCommand('copy'); } catch { /* nothing more to try */ }
+      t.remove();
+    }
   }
 
   return { seats, chat };
