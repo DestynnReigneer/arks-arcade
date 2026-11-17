@@ -348,3 +348,72 @@ html.tv .stage { width: 100%; max-width: 640px; margin: 0 auto; box-sizing: bord
   html:not(.tv) #game > .actions { grid-area: actions; }
   html:not(.tv) #game > #quitBtn { grid-area: quit; margin-top: 10px; }
 }
+
+/* ---- On a phone (2026-11-16) ---------------------------------------------------------
+   The game fills the screen down to the bottom on a tall phone too (the rule above that
+   stops everything in body from growing would otherwise stop the game as well). */
+@media (max-width: 899px) {
+  html:not(.tv) body:has(#game:not(.hidden)) > #game { flex: 1 1 auto; }
+}
+/* Held upright: only the top half of the wheel shows, cut off at the hub along a gold
+   line, as big as the room allows. It can run past the sides of the screen, but the
+   half moon is never cut across. spinsolve.js sizes it (--ww) and puts the pointer on
+   the rim (--ft). The SPIN in the hub would be cut in half, so it's hidden; the Spin
+   button says it. Each player's total moves to the top bar's menu (Scores so far). */
+@media (max-width: 599px) and (orientation: portrait) {
+  html:not(.tv) #game .round-line { margin-bottom: 4px; }
+  html:not(.tv) #game .host-lane { height: 62px; }
+  html:not(.tv) #game .host { width: 34px; height: 62px; }
+  html:not(.tv) #game .host-say { font-size: 11px; bottom: 30px; left: 34px; }
+  html:not(.tv) #game .host-say.left { left: auto; right: 34px; }
+  html:not(.tv) #game .category { margin: 6px auto; padding: 5px 14px; font-size: 12px; }
+  html:not(.tv) #game .players li { padding: 4px 6px; }
+  html:not(.tv) #game .players .pt { display: none; }
+  html:not(.tv) #game .turn-line { margin: 2px 0 6px; }
+  html:not(.tv) #game > .wheel-area {
+    display: block; position: relative; overflow: hidden; min-height: 110px; margin: 4px 0 2px;
+    border-bottom: 2px solid var(--gold); box-shadow: 0 10px 14px -12px rgba(255, 210, 63, 0.9);
+  }
+  html:not(.tv) #game > .wheel-area > .wheel {
+    position: absolute; left: 50%; bottom: 0; width: var(--ww, 240px); height: var(--ww, 240px); max-width: none;
+    transform: translate(-50%, 50%);
+  }
+  html:not(.tv) #wheelStatic > text { display: none; }
+  html:not(.tv) #game .flapper { top: var(--ft, -10px); z-index: 4; }
+}
+/* Turned sideways: the puzzle on the left and the whole wheel on the right. The robot
+   is hidden to make room, but its jokes still show, just under the puzzle on the right,
+   so they never cover a letter. Each player's total is in the top bar's menu. */
+@media (orientation: landscape) and (max-height: 600px) and (pointer: coarse) {
+  html:not(.tv) body:has(#game:not(.hidden)) > header.top { display: none; }
+  html:not(.tv) body:has(#game:not(.hidden)) > #game:not(.hidden) {
+    display: grid; width: auto; margin: 0; column-gap: 16px; align-items: stretch; padding-bottom: max(8px, env(safe-area-inset-bottom));
+    grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
+    grid-template-areas: "round wheel" "stage wheel" "cat turn" "players actions";
+  }
+  html:not(.tv) #game > .round-line { grid-area: round; margin-bottom: 4px; }
+  html:not(.tv) #game > .stage { grid-area: stage; align-self: start; }
+  html:not(.tv) #game > .category { grid-area: cat; justify-self: center; margin: 6px auto; padding: 4px 14px; font-size: 12px; }
+  html:not(.tv) #game > #playerList { grid-area: players; margin: 0; }
+  html:not(.tv) #game > .wheel-area { grid-area: wheel; justify-self: stretch; width: auto; min-height: 0; margin: 0; display: grid; justify-items: center; align-items: start; container-type: size; }
+  html:not(.tv) #game > .wheel-area > .wheel { width: min(100cqw, 100cqh); }
+  html:not(.tv) #game > .turn-line { grid-area: turn; margin: 2px 0 4px; align-self: end; }
+  html:not(.tv) #game > #turnTimer, html:not(.tv) #game > #usedLetters, html:not(.tv) #game > #quitBtn { display: none; }
+  html:not(.tv) #game > .actions { grid-area: actions; align-self: end; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  html:not(.tv) #game .actions button { padding: 8px 4px; min-width: 0; font-size: 13px; }
+  html:not(.tv) #game .stage { padding: 4px 4px 0; }
+  html:not(.tv) #game .puzzle-board { padding: 4px; gap: 3px; }
+  html:not(.tv) #game .tile { font-size: 16px; aspect-ratio: 1; }
+  html:not(.tv) #game .host-lane { height: 0; overflow: visible; }
+  html:not(.tv) #game .host { left: 0; right: 0; top: 0; bottom: auto; width: auto; height: 0; transform: none !important; }
+  html:not(.tv) #game .host-art, html:not(.tv) #game .gesture { display: none; }
+  html:not(.tv) #game .host-say, html:not(.tv) #game .host-say.left { top: 6px; bottom: auto; left: auto; right: 0; border-radius: 3px 12px 12px 12px; }
+  html:not(.tv) #game .players li { padding: 3px 6px; }
+  html:not(.tv) #game .players .pt { display: none; }
+}
+
+/* Scores so far (from the top bar's menu on a phone) */
+.totals { list-style: none; padding: 0; margin: 10px 0; }
+.totals li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 4px; border-bottom: 1px solid var(--border); font-size: 15px; }
+.totals li b { font-family: var(--show-font); color: var(--gold); }

@@ -56,3 +56,46 @@ test('the Spin & Solve clock waits for the first spin', async ({ page }) => {
   }
   expect(problems, problems.join('\n')).toEqual([]);
 });
+
+// On a phone held upright, only the top half of the wheel shows and each player's
+// total moves off their card into the top bar's menu, as Scores so far.
+test('on a phone, the totals are in the menu and the wheel is cut at the hub', async ({ browser }, info) => {
+  test.skip(info.project.name !== 'phone', 'A phone-only layout.');
+  test.setTimeout(60000);
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  const page = await ctx.newPage();
+  await quietFonts(page);
+  const problems = watchProblems(page);
+  await openPage(page, '/spinsolve.html');
+  const guest = page.getByRole('button', { name: /Play as a guest/ });
+  if (await guest.isVisible().catch(() => false)) {
+    await guest.click();
+    await page.getByRole('button', { name: 'Play', exact: true }).click();
+  }
+  const close = page.locator('.tut-x');
+  if (await close.isVisible().catch(() => false)) await close.click();
+  await page.locator('#goBtn').click();
+  await expect(page.locator('#game')).toBeVisible();
+
+  // The wheel's middle sits on the gold line at the bottom of its window, and the
+  // top of the rim (with room for the pointer) is inside it.
+  const fit = await page.evaluate(() => {
+    const area = document.querySelector('#game > .wheel-area').getBoundingClientRect();
+    const wheel = document.getElementById('wheel').getBoundingClientRect();
+    const rim = document.querySelector('#wheelStatic circle[r="104"]').getBoundingClientRect();
+    // area.bottom is under the 2px gold line; the middle sits right on top of it.
+    return { mid: wheel.top + wheel.height / 2 - (area.bottom - 2), rimTop: rim.top - area.top };
+  });
+  expect(Math.abs(fit.mid)).toBeLessThan(2);
+  expect(fit.rimTop).toBeGreaterThanOrEqual(14);
+  await expect(page.locator('#playerList .pt').first()).toBeHidden();
+
+  await page.locator('.ah-waffle').click();
+  await page.locator('.ah-menu .grid button', { hasText: 'Scores so far' }).click();
+  await expect(page.locator('#totalsView')).toBeVisible();
+  await expect(page.locator('#totalsList li')).toHaveCount(await page.locator('#playerList li').count());
+  await page.locator('#totalsClose').click();
+  await expect(page.locator('#totalsView')).toBeHidden();
+  expect(problems, problems.join('\n')).toEqual([]);
+  await ctx.close();
+});

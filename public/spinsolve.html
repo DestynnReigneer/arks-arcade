@@ -34,6 +34,7 @@
     <button class="icon-btn" id="helpBtn" title="How to play">?</button>
     <!-- In the top bar's menu on a phone, where the game uses the whole screen. -->
     <button class="icon-btn no-tv" id="setupMenuBtn" data-menu="phone" data-when="#game" title="Back to setup">↩️</button>
+    <button class="icon-btn no-tv" id="totalsBtn" data-menu="phone" data-when="#game" title="Scores so far">💰</button>
   </div>
 </header>
 
@@ -202,6 +203,15 @@
       <div class="big-emoji">🙌</div>
       <p>Thanks! Your idea is on its way.</p>
     </div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="totalsView">
+  <div class="card-panel">
+    <h2>💰 Scores so far</h2>
+    <p class="hint">The money from every round each player has won.</p>
+    <ul class="totals" id="totalsList"></ul>
+    <div class="stack"><button class="ghost" id="totalsClose">Close</button></div>
   </div>
 </div>
 
