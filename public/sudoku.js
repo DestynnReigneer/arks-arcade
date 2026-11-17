@@ -396,6 +396,7 @@
     $('clock').textContent = clock(play + pen);
     $('penalty').textContent = pen ? `+${clock(pen)}` : '0:00';
     $('dayLabel').textContent = run ? new Date(`${run.day}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Today';
+    $('funLine').classList.toggle('hidden', !(run && run.unscored));
     Blip.musicPlaying(!!run && !run.paused && !run.finished);
   }
   setInterval(tick, 500);
@@ -422,12 +423,12 @@
       ? `${clock(run.timeMs - run.penaltyMs)} solving, plus ${clock(run.penaltyMs)} for help (${help}).`
       : 'No help used. That\'s a clean solve!';
     const p = profile();
-    $('savePart').classList.toggle('hidden', run.saved);
+    $('savePart').classList.toggle('hidden', run.saved || run.unscored);
     $('iniRow').classList.toggle('hidden', !!p);
     $('saveHint').textContent = p ? `Saving as ${p.name}.` : 'Type your initials to put your time on today\'s board and see where you stack up.';
     $('saveMsg').textContent = '';
     $('saveBtn').disabled = false;
-    $('rankLine').textContent = run.saved ? 'Your time is on the board.' : '';
+    $('rankLine').textContent = run.saved ? 'Your time is on the board.' : run.unscored ? "Just for fun, this try won't be scored" : '';
     if (!p && !run.saved) initials.reset();
     $('over').classList.remove('hidden');
     // It pops up over the page (topbar.js), except on a TV, where it sits in the page.

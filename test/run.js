@@ -111,6 +111,8 @@ function startServer(port, extraEnv = {}) {
         SCUFFLE_TEST_SECONDS: '2',
         // Clueless turns away a finish faster than this per square.
         CLUELESS_MIN_MS_PER_SQUARE: '20',
+        // Giving up a daily puzzle restarts the clock only before this much play (a minute for real).
+        PUZZLE_FREE_RESTART_MS: '1500',
         // Tumbler Rumble refuses taps later than the run has really lasted;
         // this lets the suite send a whole run without playing it in real time.
         TUMBLER_SLACK_MS: '60000',

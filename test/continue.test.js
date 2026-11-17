@@ -127,7 +127,7 @@ async function run({ base }) {
   ok('…and they do', (await mine(Ana)).some(g => g.ref === trio.id) && (await mine(Ben)).some(g => g.ref === trio.id));
   await leave(Ana, 'crisscross', trio.id);
 
-  // Giving up today's Sudoku starts it over with a new clock.
+  // Giving up today's Sudoku starts it over.
   const before = (await mine(Ben)).find(g => g.game === 'sudoku');
   ok('a daily puzzle says leaving gives it up', before && before.leave === 'give-up' && before.ref === 'easy');
   ok('…nobody else can give it up for them', (await leave(Ana, 'sudoku', 'easy')).status === 200 && (await mine(Ben)).some(g => g.game === 'sudoku'));
@@ -137,6 +137,68 @@ async function run({ base }) {
   ok('…and starting again is a new run', again.status === 200 && again.data.runId !== sudoku.data.runId, JSON.stringify(again.data).slice(0, 120));
   await leave(Cy, 'clueless', 'mini');
   ok('giving up today\'s crossword works the same', !(await mine(Cy)).some(g => g.game === 'clueless'));
+
+  // The give-up rule for daily puzzles: before a minute, the next try starts the
+  // clock over (once); after a minute, it picks the clock up where it stopped; after
+  // a second give-up, every try is just for fun. The suite's "minute" is 1.5 seconds.
+  {
+    const path = require('node:path');
+    const gen = require(path.join(__dirname, '..', 'sudoku', 'generator.js'));
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    const asked = await api('/api/profiles', 'POST', { name: 'CT Dee', avatar: 'shiba:1' });
+    await api(`/api/profiles/admin/${asked.data.id}/approve`, 'POST', {}, ADMIN);
+    const used = await api(`/api/profiles/${asked.data.id}/use`, 'POST', {});
+    const Dee = { token: used.data.token, h: { 'X-Profile-Token': used.data.token } };
+    const startHard = async () => (await api('/api/sudoku/start', 'POST', { level: 'hard', profileToken: Dee.token })).data;
+    const row = async () => (await mine(Dee)).find(g => g.game === 'sudoku' && g.ref === 'hard');
+
+    const first = await startHard();
+    ok('give-up rule: a quick first give-up offers a fresh clock', (await row()).giveUp === 'fresh', JSON.stringify(await row()));
+    await leave(Dee, 'sudoku', 'hard');
+    ok('…the old try can\'t be opened again', (await api(`/api/sudoku/run/${first.runId}`)).status === 404);
+    await wait(300);
+    const second = await startHard();
+    ok('…the second try starts at 0:00', second.runId !== first.runId && second.playMs < 1000 && !second.unscored, JSON.stringify(second).slice(0, 160));
+    ok('…and giving that up is the last scored try', (await row()).giveUp === 'last');
+    await leave(Dee, 'sudoku', 'hard');
+    const third = await startHard();
+    ok('…the third try is just for fun', third.unscored === true && (await row()).giveUp === 'unscored');
+    // Past the too-fast guard (20 ms a square in the suite).
+    await wait(1500);
+    const answer = gen.solve(third.puzzle.split('').map(Number)).join('');
+    const done = await api(`/api/sudoku/run/${third.runId}/finish`, 'POST', { grid: answer });
+    const saved = await api(`/api/sudoku/run/${third.runId}/save`, 'POST', { profileToken: Dee.token });
+    ok('…it can still be solved, but the time won\'t go on the board', done.status === 200 && done.data.finished && saved.status === 409 && /Just for fun/.test(saved.data.error),
+      `${done.status} ${saved.status} ${saved.text}`);
+
+    // Playing as a guest doesn't get around it: a guest's time can't be saved as a profile.
+    const asGuest = (await api('/api/sudoku/start', 'POST', { level: 'hard' })).data;
+    await wait(1500);
+    await api(`/api/sudoku/run/${asGuest.runId}/finish`, 'POST', { grid: gen.solve(asGuest.puzzle.split('').map(Number)).join('') });
+    ok('a guest\'s solve can\'t be saved under a profile', (await api(`/api/sudoku/run/${asGuest.runId}/save`, 'POST', { profileToken: Dee.token })).status === 403);
+    const deeFamily = (await api('/api/sudoku/start', 'POST', { level: 'family', profileToken: Dee.token })).data;
+    await wait(1500);
+    await api(`/api/sudoku/run/${deeFamily.runId}/finish`, 'POST', { grid: gen.solve(deeFamily.puzzle.split('').map(Number)).join('') });
+    ok('…nor under someone else\'s profile', (await api(`/api/sudoku/run/${deeFamily.runId}/save`, 'POST', { profileToken: Ana.token })).status === 403);
+    ok('…but it can go on under initials, like any guest', (await api(`/api/sudoku/run/${asGuest.runId}/save`, 'POST', { initials: 'GST' })).status === 201);
+
+    // A first try given up after "a minute" carries its clock into the next try.
+    const long = (await api('/api/sudoku/start', 'POST', { level: 'medium', profileToken: Dee.token })).data;
+    await wait(1700);
+    ok('a first give-up after a minute says the clock carries on', (await mine(Dee)).find(g => g.ref === 'medium').giveUp === 'carry');
+    await leave(Dee, 'sudoku', 'medium');
+    const carried = (await api('/api/sudoku/start', 'POST', { level: 'medium', profileToken: Dee.token })).data;
+    ok('…the next try picks the clock up where it stopped', carried.runId !== long.runId && carried.playMs >= 1600 && carried.playMs < 3500 && !carried.unscored,
+      String(carried.playMs));
+
+    // Clueless follows the same rule.
+    const c1 = (await api('/api/clueless/start', 'POST', { level: 'mini', profileToken: Dee.token })).data;
+    await leave(Dee, 'clueless', 'mini');
+    const c2 = (await api('/api/clueless/start', 'POST', { level: 'mini', profileToken: Dee.token })).data;
+    await leave(Dee, 'clueless', 'mini');
+    const c3 = (await api('/api/clueless/start', 'POST', { level: 'mini', profileToken: Dee.token })).data;
+    ok('Clueless: two give-ups make the next crossword just for fun', c1.runId !== c2.runId && !c2.unscored && c3.unscored === true);
+  }
 
   // Chess: resigning counts as a loss.
   const room = (await api('/api/chess/rooms', 'POST', {}, Ana.h)).data;
