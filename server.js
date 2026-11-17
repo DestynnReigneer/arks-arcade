@@ -280,6 +280,8 @@ app.get('/api/arcade-info', async (req, res) => {
     name: String(process.env.ARCADE_NAME || '').trim().slice(0, 30),
     adultRequiresPin: adultPin.status().set,
     games,
+    // Which games have a board on the trophies page (the home page's quick menu links there).
+    trophies: require('./arcade/trophies').games().map(g => g.id),
     publicUrl: require('./arcade/lobby').publicUrl()
   });
 });

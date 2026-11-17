@@ -59,6 +59,11 @@
       data = d;
       $('loadMsg').hidden = true;
       paint();
+      // From the home page's quick menu (trophies.html#sudoku): straight to that game's boards, once.
+      let wanted = '';
+      try { wanted = decodeURIComponent(location.hash.slice(1)); } catch { /* a broken address */ }
+      const card = wanted && [...document.querySelectorAll('.tr-game')].find(c => c.dataset.game === wanted);
+      if (card) { card.classList.add('wanted'); card.scrollIntoView({ block: 'start' }); }
     } catch (e) {
       $('loadMsg').hidden = false;
       $('loadMsg').textContent = e.message || 'The boards didn\'t load. Try again in a moment.';

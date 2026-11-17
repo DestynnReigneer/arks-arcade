@@ -1370,6 +1370,18 @@ async function run({ base, root }) {
   }
   const mayaOrder = (await statsPost('/game-order', { token: mayaTok, previous: everyoneOrder })).data.order;
   ok('a profile\'s own steady play moves its game to the top', mayaOrder[0] === 'chess', mayaOrder.join());
+  // ---- your own order: pin, move to the bottom, reorder --------------------------
+  ok('a profile with no order of its own gets none', (await statsPost('/arrangement', { token: mayaTok })).data.arranged === null);
+  ok('a guest can\'t keep an order on the arcade (it stays on the device)',
+    (await statsPost('/arrangement/save', { pinned: ['dino'], order: ['chess'] })).status === 401);
+  const arrSaved = (await statsPost('/arrangement/save', { token: mayaTok, pinned: ['sudoku', 'nope', 'sudoku'], order: ['dino', 'sudoku', 'chess', 7] })).data.arranged;
+  ok('an order is saved cleaned up: known games, each once, pins first', JSON.stringify(arrSaved) === JSON.stringify({ pinned: ['sudoku'], order: ['dino', 'chess'] }), JSON.stringify(arrSaved));
+  const back = (await statsPost('/arrangement', { token: mayaTok })).data.arranged;
+  ok('the order follows the profile', JSON.stringify(back) === JSON.stringify(arrSaved), JSON.stringify(back));
+  await statsPost('/arrangement/save', { token: mayaTok, order: null });
+  ok('saving no order puts the automatic order back', (await statsPost('/arrangement', { token: mayaTok })).data.arranged === null);
+  const info = (await wl('/arcade-info')).data;
+  ok('the arcade says which games have trophies', Array.isArray(info.trophies) && info.trophies.includes('sudoku') && !info.trophies.includes('daredevil'), JSON.stringify(info.trophies));
   // ---- the owner's own logos and clips ------------------------------------------
   const custom = (await wl('/custom')).data;
   ok('clips in media/clips are listed, with their type', custom.clips.length === 1 && custom.clips[0].name === 'rickroll' && custom.clips[0].type === 'image', JSON.stringify(custom.clips));

@@ -34,6 +34,12 @@ db.db.exec(`
     plays INTEGER NOT NULL DEFAULT 0
   );
   CREATE INDEX IF NOT EXISTS arcade_visits_started ON arcade_visits (started_at);
+  CREATE TABLE IF NOT EXISTS home_arrangement (
+    profile_id TEXT PRIMARY KEY,
+    pinned TEXT NOT NULL DEFAULT '[]',
+    order_list TEXT NOT NULL DEFAULT '[]',
+    updated_at INTEGER NOT NULL
+  );
   CREATE TABLE IF NOT EXISTS arcade_errors (
     code TEXT PRIMARY KEY,
     source TEXT NOT NULL,
@@ -103,6 +109,46 @@ function gameOrder({ token, previous, now = Date.now() } = {}) {
   const start = GameOrder.cleanPrevious(previous, order) || fresh;
   if (!me) return GameOrder.dampedOrder(start, everyone);
   return GameOrder.dampedOrder(start, GameOrder.playScores(visitsOf('AND profile_id = ?', [me.id]), { now }));
+}
+
+// ---- your own order ------------------------------------------------------------------------
+// Once a player pins a game to the front, moves one to the bottom or reorders them,
+// their games stay exactly where they put them, on any device: the most-played order
+// above stops for them. Pinned games come first (the newest pin first), then the
+// rest. A game the arcade adds later goes on the end. Guests keep theirs on the
+// device (public/hub.js). Saving order: null puts the automatic order back.
+function cleanIds(list, seen) {
+  const out = [];
+  if (!Array.isArray(list)) return out;
+  for (const id of list.slice(0, 100)) {
+    if (typeof id === 'string' && homeGames.GAMES.includes(id) && !seen.has(id)) { seen.add(id); out.push(id); }
+  }
+  return out;
+}
+function cleanArrangement(pinned, order) {
+  const seen = new Set();
+  const p = cleanIds(pinned, seen);
+  return { pinned: p, order: cleanIds(order, seen) };
+}
+function arrangementOf(token) {
+  const me = token ? profiles.verify(token) : null;
+  if (!me) return null;
+  const row = db.db.prepare('SELECT pinned, order_list FROM home_arrangement WHERE profile_id = ?').get(me.id);
+  if (!row) return null;
+  try { return cleanArrangement(JSON.parse(row.pinned), JSON.parse(row.order_list)); } catch { return null; }
+}
+function saveArrangement({ token, pinned, order, now = Date.now() }) {
+  const me = token ? profiles.verify(token) : null;
+  if (!me) throw Object.assign(new Error("Pick who's playing first."), { status: 401 });
+  if (order === null) {
+    db.db.prepare('DELETE FROM home_arrangement WHERE profile_id = ?').run(me.id);
+    return null;
+  }
+  const a = cleanArrangement(pinned, order);
+  db.db.prepare(`INSERT INTO home_arrangement (profile_id, pinned, order_list, updated_at) VALUES (?, ?, ?, ?)
+    ON CONFLICT(profile_id) DO UPDATE SET pinned = excluded.pinned, order_list = excluded.order_list, updated_at = excluded.updated_at`)
+    .run(me.id, JSON.stringify(a.pinned), JSON.stringify(a.order), now);
+  return a;
 }
 
 // ---- visits ------------------------------------------------------------------------------
@@ -212,6 +258,14 @@ function routes({ requireAdmin }) {
   router.post('/game-order', limiter(300, 'requests'), send((req, res) => {
     res.json({ order: gameOrder({ token: (req.body || {}).token, previous: (req.body || {}).previous }) });
   }));
+  // Your own order (POST so the profile token stays out of URLs and logs).
+  router.post('/arrangement', limiter(300, 'requests'), send((req, res) => {
+    res.json({ arranged: arrangementOf((req.body || {}).token) });
+  }));
+  router.post('/arrangement/save', limiter(120, 'changes'), send((req, res) => {
+    const b = req.body || {};
+    res.json({ arranged: saveArrangement({ token: b.token, pinned: b.pinned, order: b.order === null ? null : b.order }) });
+  }));
   router.post('/error', limiter(60, 'error reports'), send((req, res) => {
     const b = req.body || {};
     const code = recordError({
@@ -297,4 +351,4 @@ function watchProcess() {
   });
 }
 
-module.exports = { routes, errorHandler, watchResponses, watchProcess, recordError, startVisit, beat, summary, codeFor, deviceOf, gameOrder };
+module.exports = { arrangementOf, saveArrangement, cleanArrangement, routes, errorHandler, watchResponses, watchProcess, recordError, startVisit, beat, summary, codeFor, deviceOf, gameOrder };

@@ -84,8 +84,8 @@ test('holding a Continue row asks before leaving the game, then takes it off', a
   await expect(card.getByRole('menuitem', { name: /Resume/ })).toBeVisible();
   await card.getByRole('menuitem', { name: /Leave this game/ }).click();
   await expect(card).toContainText('Leave your game with Ben? The game ends, and Ben wins.');
-  // Never mind changes nothing.
-  await card.getByRole('button', { name: 'Never mind' }).click();
+  // Cancel changes nothing.
+  await card.getByRole('button', { name: 'Cancel', exact: true }).click();
   await expect(card).toBeHidden();
   expect(sent).toBeNull();
 

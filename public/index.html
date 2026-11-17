@@ -127,6 +127,36 @@
     text-transform: uppercase;
     color: var(--dim);
   }
+  /* Smaller cards (2026-11-16): the name, one short line, and how to open the
+     quick menu. Two to a row on a phone, four on a computer. */
+  .games { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-top: 24px; }
+  .game { position: relative; padding: 12px 12px 10px; display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 10px; align-content: start; align-items: center; }
+  .game .emoji { font-size: 26px; }
+  .game .emoji img { width: auto !important; height: 30px !important; max-width: 64px; object-fit: contain; }
+  .game h2 { margin: 0; font-size: 15px; line-height: 1.2; overflow-wrap: anywhere; }
+  .game .turn-badge, .game .tv-badge, .game .short, .game .tap-hint { grid-column: 1 / -1; }
+  .game .turn-badge { justify-self: start; margin: 8px 0 0; }
+  .game p.short { margin-top: 6px; font-size: 13px; line-height: 1.35; color: #e4d7f5; }
+  .game .tap-hint { display: block; margin-top: 6px; font-size: 11px; line-height: 1.45; color: #a993c4; letter-spacing: .2px; }
+  .game .tap-hint b { color: #d9c6f0; }
+  .game .tap-hint .h-mouse { display: none; }
+  @media (hover: hover) and (pointer: fine) {
+    .game .tap-hint .h-mouse { display: inline; }
+    .game .tap-hint .h-touch { display: none; }
+  }
+  .game .pin { position: absolute; top: 6px; right: 8px; font-size: 13px; }
+  /* Reorder games: every card in a dotted outline with a handle, dragged into place. */
+  .games.reorder .game { border: 2px dashed #2de2e6; padding-right: 28px; touch-action: pan-y; cursor: grab; }
+  .games.reorder .game:hover { transform: none; }
+  .games.reorder .game .tap-hint { display: none; }
+  .games.reorder .game::after { content: '\283F'; position: absolute; right: 8px; top: 6px; font-size: 20px; color: #2de2e6; }
+  .games.reorder .game.lifted { transform: scale(1.05) rotate(-1.5deg); box-shadow: 0 12px 30px rgba(0,0,0,.6), 0 0 18px rgba(45,226,230,.5); z-index: 5; background: var(--card-hover); cursor: grabbing; }
+  .reorder-bar { position: sticky; top: 62px; z-index: 50; display: flex; align-items: center; gap: 10px; padding: 10px 12px; margin: 14px 0 0; width: 100%; max-width: 680px; box-sizing: border-box;
+    background: #1e0e39; border: 1px solid #2de2e6; border-radius: 14px; box-shadow: 0 8px 24px rgba(0,0,0,.5); color: #f5eaff; font-size: 14px; }
+  .reorder-bar span { flex: 1; }
+  .reorder-bar button { min-height: 40px; padding: 0 14px; border-radius: 10px; font: inherit; font-weight: 800; cursor: pointer; }
+  .reorder-bar .rb-cancel { background: transparent; border: 1px solid #ff2ec4; color: #f5eaff; }
+  .reorder-bar .rb-done { background: #00ffc2; border: 0; color: #14082b; }
   footer {
     margin-top: 44px;
     font-size: 12px;
@@ -431,164 +461,164 @@
   <a class="game wordless" href="wordless.html">
     <div class="emoji">🔤</div>
     <h2>Wordless</h2>
-    <p>Guess the themed word in six tries. Pick a theme and a difficulty, use your hints wisely, and get on the board to see where you stack up.</p>
-    <div class="meta">1 player · Themed · Easy to Ludicrous</div>
+    <p class="short">Guess the themed word in six tries.</p>
     <span class="tv-only tv-badge">📺 On the TV: type with the remote on the keyboard on the screen</span>
+    <span class="tap-hint no-tv" aria-hidden="true"><span class="h-touch"><b>Tap:</b> Open<br><b>Long Press:</b> Quick Menu</span><span class="h-mouse"><b>Click:</b> Open<br><b>Right-click:</b> Quick Menu</span></span>
   </a>
 
   <a class="game rambler" href="rambler.html">
     <div class="emoji"><img src="rambler-logo.svg" alt="" style="width:40px;height:40px;display:block"></div>
     <h2>Rambler</h2>
-    <p>Ramble across a grid of letters, chaining them into every word you can find before the timer runs out. Play solo, share a device, or everyone on their own.</p>
-    <div class="meta">1–8 players · Timed · Kids &amp; adult word lists</div>
+    <p class="short">Chain letters into words. Don't flix this net!</p>
     <span class="tv-only tv-badge">📺 On the TV: the board goes up big and everyone plays on their own device</span>
+    <span class="tap-hint no-tv" aria-hidden="true"><span class="h-touch"><b>Tap:</b> Open<br><b>Long Press:</b> Quick Menu</span><span class="h-mouse"><b>Click:</b> Open<br><b>Right-click:</b> Quick Menu</span></span>
   </a>
 
   <a class="game spinsolve" href="spinsolve.html">
     <div class="emoji"><img src="spin-wheel-logo.svg" alt="" style="width:40px;height:40px;display:block"></div>
     <h2>Spin &amp; Solve</h2>
-    <p>Spin the wheel, call a letter, buy a vowel, and solve the puzzle before anyone else. Play solo for the board or pass the device.</p>
-    <div class="meta">1–4 players · Puzzles · Game-show fun</div>
+    <p class="short">Spin a wheel, guess letters, robot talks crap, solve puzzles, glimpse of the future 2030s</p>
     <span class="tv-only tv-badge">📺 On the TV: pass the remote around, and solve on the keyboard on the screen</span>
+    <span class="tap-hint no-tv" aria-hidden="true"><span class="h-touch"><b>Tap:</b> Open<br><b>Long Press:</b> Quick Menu</span><span class="h-mouse"><b>Click:</b> Open<br><b>Right-click:</b> Quick Menu</span></span>
   </a>
 
   <a class="game chess" href="chess.html">
     <div class="emoji">♞</div>
     <h2>Chess</h2>
-    <p>Take on the computer from Easy to Hard, share a device, or each play on your own device from a game lobby. Tap a piece to see where it can go.</p>
-    <div class="meta">1–2 players · Strategy · Learn as you play</div>
+    <p class="short">A battlefield of infinite depth on 64 squares.</p>
+    <span class="tap-hint no-tv" aria-hidden="true"><span class="h-touch"><b>Tap:</b> Open<br><b>Long Press:</b> Quick Menu</span><span class="h-mouse"><b>Click:</b> Open<br><b>Right-click:</b> Quick Menu</span></span>
   </a>
 
   <a class="game dino" href="dino.html">
     <div class="emoji">🦖</div>
     <h2>Dino Dash</h2>
-    <p>Run, jump the cactuses, duck the birds. It only gets faster. How far can you go?</p>
-    <div class="meta">1 player · Endless runner · One-thumb</div>
+    <p class="short">Jump, duck, and keep running.</p>
+    <span class="tap-hint no-tv" aria-hidden="true"><span class="h-touch"><b>Tap:</b> Open<br><b>Long Press:</b> Quick Menu</span><span class="h-mouse"><b>Click:</b> Open<br><b>Right-click:</b> Quick Menu</span></span>
   </a>
 
   <a class="game snake" href="snake.html">
     <div class="emoji">🐍</div>
     <h2>Snake</h2>
-    <p>Eat the apples, grow longer, and don&#39;t bite your own tail. Swipe, tap the arrows, or use the keyboard.</p>
-    <div class="meta">1 player · Classic · Swipe or keys</div>
+    <p class="short">Eat treats and grow, just watch your a$$.</p>
+    <span class="tap-hint no-tv" aria-hidden="true"><span class="h-touch"><b>Tap:</b> Open<br><b>Long Press:</b> Quick Menu</span><span class="h-mouse"><b>Click:</b> Open<br><b>Right-click:</b> Quick Menu</span></span>
   </a>
 
   <a class="game bricks" href="bricks.html">
     <div class="emoji">🧱</div>
     <h2>Brick Breaker</h2>
-    <p>Bounce the ball, smash every brick, and catch the power-ups. Eight levels that keep getting faster.</p>
-    <div class="meta">1 player · Arcade · One finger</div>
+    <p class="short">Smash every brick.</p>
+    <span class="tap-hint no-tv" aria-hidden="true"><span class="h-touch"><b>Tap:</b> Open<br><b>Long Press:</b> Quick Menu</span><span class="h-mouse"><b>Click:</b> Open<br><b>Right-click:</b> Quick Menu</span></span>
   </a>
 
   <a class="game blocks" href="blocks.html">
     <div class="emoji">🟪</div>
     <h2>Block Drop</h2>
-    <p>Turn and drop the falling pieces to fill whole rows. Clear four at once for big points. Endless or a two-minute rush.</p>
-    <div class="meta">1 player · Puzzle · Marathon or rush</div>
+    <p class="short">Defy the falling chaos while ordering the blocks, or build that wall.</p>
+    <span class="tap-hint no-tv" aria-hidden="true"><span class="h-touch"><b>Tap:</b> Open<br><b>Long Press:</b> Quick Menu</span><span class="h-mouse"><b>Click:</b> Open<br><b>Right-click:</b> Quick Menu</span></span>
   </a>
 
   <a class="game towers" href="towers.html">
     <div class="emoji">🏰</div>
     <h2>Tower Defense</h2>
-    <p>Build archers, cannons, frost and lightning towers to stop 25 waves of monsters before they reach your castle.</p>
-    <div class="meta">1 player · Strategy · Three maps</div>
+    <p class="short">Build towers and stop the monsters.</p>
+    <span class="tap-hint no-tv" aria-hidden="true"><span class="h-touch"><b>Tap:</b> Open<br><b>Long Press:</b> Quick Menu</span><span class="h-mouse"><b>Click:</b> Open<br><b>Right-click:</b> Quick Menu</span></span>
   </a>
 
   <a class="game sudoku" href="sudoku.html">
     <div class="emoji">🧩</div>
     <h2>Sudoku</h2>
-    <p>Fill the grid so every row, column and box has 1 to 9. There's a new puzzle every day, the same one for everybody, so you can race the family for the fastest time.</p>
-    <div class="meta">1 player · Daily puzzle · Family to Hard</div>
+    <p class="short">One wrong number triggers absolute lockdown like traffic cones.</p>
+    <span class="tap-hint no-tv" aria-hidden="true"><span class="h-touch"><b>Tap:</b> Open<br><b>Long Press:</b> Quick Menu</span><span class="h-mouse"><b>Click:</b> Open<br><b>Right-click:</b> Quick Menu</span></span>
   </a>
 
   <a class="game clueless" href="clueless.html">
     <div class="emoji">📰</div>
     <h2>Clueless Crosswords</h2>
-    <p>A small crossword every day, the same one for everybody: a quick 5 by 5 for the family and a bigger, trickier one. Fill it in from the clues and race the family for the fastest time, or pick free play for as many random ones as you like.</p>
-    <div class="meta">1 player · Daily crossword · Free play</div>
+    <p class="short">Letters clash, secrets unfold, and one word changes everything.</p>
     <span class="tv-only tv-badge">📺 On the TV: the arrows move around the grid and the remote types</span>
+    <span class="tap-hint no-tv" aria-hidden="true"><span class="h-touch"><b>Tap:</b> Open<br><b>Long Press:</b> Quick Menu</span><span class="h-mouse"><b>Click:</b> Open<br><b>Right-click:</b> Quick Menu</span></span>
   </a>
 
   <a class="game tumbler" href="tumbler.html">
     <div class="emoji">🔓</div>
     <h2>Tumbler Rumble</h2>
-    <p>A light races around a dial. Tap the moment it lands on the glowing lock to pop it, and it turns around for the next one. See how many locks you can pop in a row.</p>
-    <div class="meta">1 player · Timing · Endless locks</div>
+    <p class="short">Pop locks, and drop it... Pop locks an...</p>
+    <span class="tap-hint no-tv" aria-hidden="true"><span class="h-touch"><b>Tap:</b> Open<br><b>Long Press:</b> Quick Menu</span><span class="h-mouse"><b>Click:</b> Open<br><b>Right-click:</b> Quick Menu</span></span>
   </a>
 
   <a class="game racer" href="racer.html">
     <div class="emoji">🏎️</div>
     <h2>ARKS Racer</h2>
-    <p>Three laps against the clock on eight synthwave tracks, from a desert highway at sunset to a road floating through space. Tap or slide to steer, let off the gas for the turns, and hit the speed pads. Every track has its own board for the fastest times.</p>
-    <div class="meta">1 player · 3D cabinet · A board for each track</div>
+    <p class="short">The need... three laps, race the clock, ...for speed.</p>
+    <span class="tap-hint no-tv" aria-hidden="true"><span class="h-touch"><b>Tap:</b> Open<br><b>Long Press:</b> Quick Menu</span><span class="h-mouse"><b>Click:</b> Open<br><b>Right-click:</b> Quick Menu</span></span>
   </a>
 
   <a class="game train" href="train.html">
     <div class="emoji">🚂</div>
     <h2>ARKS Train Station</h2>
-    <p>A ball runs down a spiral and drops into a train circling the track. Land in every car to light the board for All Aboard, then take on ten levels: Express, Rush Hour, a tunnel, cars that swap places, Lights Out and more. The bots at the station have opinions.</p>
-    <div class="meta">1 player · 3D cabinet · Points board · 10 levels</div>
+    <p class="short">Drop the ball strategically, and get the jackpot with all train cars.</p>
+    <span class="tap-hint no-tv" aria-hidden="true"><span class="h-touch"><b>Tap:</b> Open<br><b>Long Press:</b> Quick Menu</span><span class="h-mouse"><b>Click:</b> Open<br><b>Right-click:</b> Quick Menu</span></span>
   </a>
 
   <a class="game launcher" href="launcher.html">
     <div class="emoji">🚀</div>
     <h2>ARKS Launcher</h2>
-    <p>Hold to pull the plunger back and let go to launch a ball up a long lane of one-way gates. Where it stops is what you win, and the glowing Super Bonus moves you up a level. Twenty levels of ramps, bead curtains, potholes, a headwind and a sliding jackpot.</p>
-    <div class="meta">1 player · 3D cabinet · Points board · 20 levels</div>
+    <p class="short">Launch it, land the jackpot, see what mystery level is next!</p>
+    <span class="tap-hint no-tv" aria-hidden="true"><span class="h-touch"><b>Tap:</b> Open<br><b>Long Press:</b> Quick Menu</span><span class="h-mouse"><b>Click:</b> Open<br><b>Right-click:</b> Quick Menu</span></span>
   </a>
 
   <a class="game bucketdrop" href="bucketdrop.html">
     <div class="emoji">🪣</div>
     <h2>Bucket Drop</h2>
-    <p>Five clear cups ride a spinning turntable, and every tap drops a ball from the tube above them. 50 balls, 30 seconds, 10 points a catch and more for a streak. Catch all 50 to win the jackpot the whole arcade plays for.</p>
-    <div class="meta">1 player · 3D cabinet · Points board · Shared jackpot</div>
+    <p class="short">Catch all 50 balls... for the jackpot. giggity giggity giggity goo</p>
+    <span class="tap-hint no-tv" aria-hidden="true"><span class="h-touch"><b>Tap:</b> Open<br><b>Long Press:</b> Quick Menu</span><span class="h-mouse"><b>Click:</b> Open<br><b>Right-click:</b> Quick Menu</span></span>
   </a>
 
   <a class="game bigswing" href="bigswing.html">
     <div class="emoji">⚾</div>
     <h2>Big Swing</h2>
-    <p>A ball rolls down from the pitching machine to your bat at home plate. Hold to pull the bat back and let go to swing: early goes left, late goes right, and a full swing right over the plate flies into the home-run target. Three outs and you're done.</p>
-    <div class="meta">1 player · 3D cabinet · Runs board</div>
+    <p class="short">Time your swing, hit a homer. Doh!</p>
+    <span class="tap-hint no-tv" aria-hidden="true"><span class="h-touch"><b>Tap:</b> Open<br><b>Long Press:</b> Quick Menu</span><span class="h-mouse"><b>Click:</b> Open<br><b>Right-click:</b> Quick Menu</span></span>
   </a>
 
   <a class="game scuffle" href="scuffle.html">
     <div class="emoji">🔀</div>
     <h2>Shuffle Scuffle</h2>
-    <p>Everyone gets the same mixed-up letters. Race to find the word hiding in them, and score for every smaller word you spot along the way. Play the daily set or a room with a device each.</p>
-    <div class="meta">1-12 players · Word race · Daily set</div>
+    <p class="short">Find the word in the letters.</p>
     <span class="tv-only tv-badge">📺 On the TV: everyone races on their own devices, or play the daily letters with the remote</span>
+    <span class="tap-hint no-tv" aria-hidden="true"><span class="h-touch"><b>Tap:</b> Open<br><b>Long Press:</b> Quick Menu</span><span class="h-mouse"><b>Click:</b> Open<br><b>Right-click:</b> Quick Menu</span></span>
   </a>
 
   <a class="game crisscross" href="crisscross.html">
     <div class="emoji"><img src="words-with-family-logo.svg" alt="" style="width:96px;height:auto;display:block"></div>
     <h2>Words with Family</h2>
-    <p>Take turns laying letter tiles on the board to build words that cross each other, and land on the bonus squares for big points. Each person plays on their own device, and a turn can wait until you're ready.</p>
-    <div class="meta">2-4 players · Word tiles · Take your time</div>
+    <p class="short">Build words, score points till you give up. Rinse and repeat.</p>
     <span class="tv-only tv-badge">📺 On the TV: play the computer with the remote, or pass it around</span>
+    <span class="tap-hint no-tv" aria-hidden="true"><span class="h-touch"><b>Tap:</b> Open<br><b>Long Press:</b> Quick Menu</span><span class="h-mouse"><b>Click:</b> Open<br><b>Right-click:</b> Quick Menu</span></span>
   </a>
 
   <a class="game trivia" href="trivia.html" data-tv-start>
     <div class="emoji">🧠</div>
     <h2>Know-It-All</h2>
-    <p>Trivia on everything: movies, science, sports, games. Play solo, take turns on one device, or race on everyone's own devices. Adults can turn up the heat.</p>
-    <div class="meta">1–12 players · Quiz · Family to 🌶️🌶️🌶️</div>
+    <p class="short">Trivia of everything, like learning from an expert or Dad!</p>
     <span class="tv-only tv-badge">📺 Made for the TV: play on your own devices, pass one around, or use the remote</span>
+    <span class="tap-hint no-tv" aria-hidden="true"><span class="h-touch"><b>Tap:</b> Open<br><b>Long Press:</b> Quick Menu</span><span class="h-mouse"><b>Click:</b> Open<br><b>Right-click:</b> Quick Menu</span></span>
   </a>
 
   <a class="game partdeux" href="partdeux.html">
     <div class="emoji">🚨</div>
     <h2>Uh-Oh: Part Deux</h2>
-    <p>Match the color or number and dump your hand first. Skips, draw twos and wilds wear the funniest names in the arcade. Don't forget to say "Uh-Oh!"</p>
-    <div class="meta">2–8 players · Cards · Kids to 🌶️🌶️🌶️</div>
+    <p class="short">Drop cards till the last one, "Uh-Oh!"</p>
     <span class="tv-only tv-badge">📺 On the TV: the table goes up big and the cards stay on your own devices</span>
+    <span class="tap-hint no-tv" aria-hidden="true"><span class="h-touch"><b>Tap:</b> Open<br><b>Long Press:</b> Quick Menu</span><span class="h-mouse"><b>Click:</b> Open<br><b>Right-click:</b> Quick Menu</span></span>
   </a>
 
   <a class="game daredevil" href="daredevil.html">
     <div class="emoji">😈</div>
     <h2>Dare Devil</h2>
-    <p>Draw a card, do the dare, spill the truth, or chicken out. Silly for the family, wild for the adults. Most points is the Dare Devil.</p>
-    <div class="meta">2–12 players · Party · Family to 🌶️🌶️🌶️</div>
+    <p class="short">Do the dare, spill the truth or don't play, this isn't your grandma's spin the bottle!</p>
     <span class="tv-only tv-badge">📺 On the TV: play on your own devices, pass one around, or use the remote</span>
+    <span class="tap-hint no-tv" aria-hidden="true"><span class="h-touch"><b>Tap:</b> Open<br><b>Long Press:</b> Quick Menu</span><span class="h-mouse"><b>Click:</b> Open<br><b>Right-click:</b> Quick Menu</span></span>
   </a>
 </div>
 
