@@ -467,7 +467,12 @@ window.ArcadeEnd = (() => {
     try { history.replaceState(history.state, '', url.pathname + url.search + url.hash); } catch { /* keep it */ }
     const el = document.querySelector(go === 'help' ? '#helpBtn' : `[data-go="${go}"]`);
     if (!el) return;
-    if (el.tagName === 'BUTTON') { if (!el.disabled) el.click(); }
-    else el.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    if (el.tagName === 'BUTTON') {
+      if (el.disabled) return;
+      el.click();
+      // What the click opened, when it opens further down the page (data-go-show).
+      const show = el.dataset.goShow && document.querySelector(el.dataset.goShow);
+      if (show) setTimeout(() => show.scrollIntoView({ block: 'center', behavior: 'smooth' }), 150);
+    } else el.scrollIntoView({ block: 'start', behavior: 'smooth' });
   }, 250));
 })();

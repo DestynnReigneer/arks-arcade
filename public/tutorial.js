@@ -10,6 +10,10 @@
 //   help.open(2);             // jump to a step
 
 const Tutorial = (() => {
+  // Opened from the home page's quick menu to create or find a lobby (?go=create or
+  // ?go=list): the rules don't pop up by themselves over that.
+  const cameFor = (() => { try { return /^(create|list)$/.test(new URLSearchParams(location.search).get('go') || ''); } catch { return false; } })();
+
   function seenKey(id) { return `tutorial.${id}.seen`; }
 
   function hasSeen(id) {
@@ -93,7 +97,7 @@ const Tutorial = (() => {
     // with its button: leaving the game with the rules still open used to
     // bring them back every time (found by the maintainer, 2026-11-01).
     function autoOpen() {
-      if (hasSeen(id)) return;
+      if (hasSeen(id) || cameFor) return;
       markSeen(id);
       open(0);
     }

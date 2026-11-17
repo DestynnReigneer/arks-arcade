@@ -60,7 +60,8 @@
       $('loadMsg').hidden = true;
       paint();
       // From the home page's quick menu (trophies.html#sudoku): straight to that game's boards, once.
-      const wanted = decodeURIComponent(location.hash.slice(1));
+      let wanted = '';
+      try { wanted = decodeURIComponent(location.hash.slice(1)); } catch { /* a broken address */ }
       const card = wanted && [...document.querySelectorAll('.tr-game')].find(c => c.dataset.game === wanted);
       if (card) { card.classList.add('wanted'); card.scrollIntoView({ block: 'start' }); }
     } catch (e) {

@@ -47,6 +47,11 @@ const LongPress = (() => {
 .lp-card{position:fixed;z-index:2147482001;min-width:240px;max-width:min(360px,calc(100vw - 24px));background:#1e0e39;color:#f5eaff;border:1px solid rgba(255,46,196,.55);border-radius:16px;box-shadow:0 10px 40px rgba(0,0,0,.5),0 0 24px rgba(255,46,196,.18);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;padding:8px;transform:scale(.96);opacity:0;transition:transform .16s,opacity .16s}
 .lp-card.in{transform:none;opacity:1}
 .lp-card.wide{max-width:none}
+.lp-card.short{max-width:none}
+.lp-card.short .lp-list{display:grid;grid-template-columns:1fr 1fr;column-gap:4px}
+.lp-card.short .lp-list>:not(.lp-item){grid-column:1/-1}
+.lp-card.short .lp-item{min-height:42px;padding:7px 12px}
+.lp-card.short .lp-title{padding:4px 12px 6px}
 .lp-title{font-size:13px;color:#c9a8dd;padding:8px 12px 10px;border-bottom:1px solid rgba(245,234,255,.1);margin-bottom:4px;line-height:1.35}
 .lp-item{display:flex;align-items:center;gap:12px;width:100%;min-height:48px;padding:10px 12px;border:0;border-radius:10px;background:transparent;color:inherit;font:inherit;font-size:16px;font-weight:600;text-align:left;cursor:pointer}
 .lp-item:hover,.lp-item:focus-visible{background:rgba(245,234,255,.08);outline:none}
@@ -77,9 +82,10 @@ const LongPress = (() => {
 
   function close() {
     if (!open) return;
-    const { veil, card, back, key } = open;
+    const { veil, card, back, key, again } = open;
     open = null;
     document.removeEventListener('keydown', key, true);
+    window.removeEventListener('resize', again);
     veil.classList.remove('in'); card.classList.remove('in');
     setTimeout(() => { veil.remove(); card.remove(); }, 170);
     if (back && back.isConnected) back.focus({ preventScroll: true });
@@ -99,9 +105,13 @@ const LongPress = (() => {
     const { w, h } = seen();
     const pad = 12;
     const wide = innerWidth < 600;
+    // A short screen (a phone turned sideways) gets a wide menu in two columns.
+    const short = !wide && h < 500 && card.querySelectorAll('.lp-item').length > 4;
     card.classList.toggle('wide', wide);
-    card.style.width = wide ? (w - pad * 2) + 'px' : '';
-    const r = card.getBoundingClientRect();
+    card.classList.toggle('short', short);
+    card.style.width = wide ? (w - pad * 2) + 'px' : short ? Math.min(w - pad * 2, 560) + 'px' : '';
+    // Measured without the opening animation's scale, which would make it look smaller.
+    const r = { width: card.offsetWidth, height: card.offsetHeight };
     let x, y;
     if (from && (near() || !at)) {
       const b = from.getBoundingClientRect();
@@ -133,6 +143,7 @@ const LongPress = (() => {
       card.appendChild(t);
     }
     const list = document.createElement('div');
+    list.className = 'lp-list';
     card.appendChild(list);
     const items = () => {
       list.replaceChildren();
@@ -219,7 +230,10 @@ const LongPress = (() => {
     const had = document.activeElement;
     const back = from && from.contains(had) && had !== document.body ? had
       : from && (from.matches('a[href],button') ? from : from.querySelector('a[href],button'));
-    open = { veil, card, back, key };
+    // Placed again when the screen changes size or the device turns.
+    const again = () => { if (open && open.card === card) place(card, null, from && from.isConnected ? from : null); };
+    window.addEventListener('resize', again);
+    open = { veil, card, back, key, again };
     requestAnimationFrame(() => { veil.classList.add('in'); card.classList.add('in'); });
     const first = card.querySelector('.lp-item, .lp-chips-row button');
     if (first) first.focus({ preventScroll: true });

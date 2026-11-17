@@ -146,9 +146,9 @@
   }
   .game .pin { position: absolute; top: 6px; right: 8px; font-size: 13px; }
   /* Reorder games: every card in a dotted outline with a handle, dragged into place. */
-  .games.reorder .game { border: 2px dashed #2de2e6; padding-right: 28px; touch-action: none; cursor: grab; }
+  .games.reorder .game { border: 2px dashed #2de2e6; padding-right: 28px; touch-action: pan-y; cursor: grab; }
   .games.reorder .game:hover { transform: none; }
-  .games.reorder .game .tap-hint { visibility: hidden; }
+  .games.reorder .game .tap-hint { display: none; }
   .games.reorder .game::after { content: '\283F'; position: absolute; right: 8px; top: 6px; font-size: 20px; color: #2de2e6; }
   .games.reorder .game.lifted { transform: scale(1.05) rotate(-1.5deg); box-shadow: 0 12px 30px rgba(0,0,0,.6), 0 0 18px rgba(45,226,230,.5); z-index: 5; background: var(--card-hover); cursor: grabbing; }
   .reorder-bar { position: sticky; top: 62px; z-index: 50; display: flex; align-items: center; gap: 10px; padding: 10px 12px; margin: 14px 0 0; width: 100%; max-width: 680px; box-sizing: border-box;

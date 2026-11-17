@@ -107,3 +107,61 @@ test('pinning, sinking and reordering games stays put after a reload', async ({ 
   await expect(page.locator('.games > .game').first()).toHaveClass(/bricks/);
   expect(problems, problems.join('\n')).toEqual([]);
 });
+
+// The whole menu, Cancel included, fits on the screen: low on a laptop, on a phone
+// turned sideways, and after the phone turns while it's open.
+for (const [label, size, touch] of [['a laptop', { width: 1366, height: 768 }, false], ['a phone turned sideways', { width: 844, height: 390 }, true], ['a small phone turned sideways', { width: 740, height: 360 }, true]]) {
+  test(`the quick menu fits on ${label}`, async ({ browser }, info) => {
+    test.skip(info.project.name !== 'phone', 'The sizes are set here.');
+    const ctx = await browser.newContext({ viewport: size, hasTouch: touch, isMobile: touch });
+    const page = await ctx.newPage();
+    await home(page);
+    const last = page.locator('.games > .game').last();
+    await last.scrollIntoViewIfNeeded();
+    await last.click({ button: 'right' });
+    await page.waitForTimeout(300);
+    const box = await page.locator('.lp-card').boundingBox();
+    expect(box.y).toBeGreaterThanOrEqual(0);
+    expect(box.y + box.height).toBeLessThanOrEqual(size.height + 1);
+    const cancel = await page.locator('.lp-cancel').boundingBox();
+    expect(cancel.y + cancel.height).toBeLessThanOrEqual(size.height + 1);
+    await ctx.close();
+  });
+}
+
+test('the quick menu is placed again when the phone turns', async ({ browser }, info) => {
+  test.skip(info.project.name !== 'phone', 'The sizes are set here.');
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  const page = await ctx.newPage();
+  await home(page);
+  await page.locator('.game.sudoku').click({ button: 'right' });
+  await page.waitForTimeout(300);
+  await page.setViewportSize({ width: 844, height: 390 });
+  await page.waitForTimeout(300);
+  const box = await page.locator('.lp-card').boundingBox();
+  expect(box.y + box.height).toBeLessThanOrEqual(391);
+  await ctx.close();
+});
+
+// A lobby link from the menu lands with what it opened in view, and the game's
+// rules don't pop up over it on a first visit.
+for (const [game, show] of [['rambler', '#startBtn'], ['trivia', '#goBtn']]) {
+  test(`Create a game lobby in ${game} lands in view`, async ({ browser }, info) => {
+    test.skip(info.project.name !== 'phone', 'A phone check.');
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+    const page = await ctx.newPage();
+    await quietFonts(page);
+    await openPage(page, `/${game}.html?go=create`);
+    const guest = page.getByRole('button', { name: /Play as a guest/ });
+    if (await guest.waitFor({ timeout: 4000 }).then(() => true, () => false)) {
+      await guest.click();
+      await page.getByRole('button', { name: 'Play', exact: true }).click();
+    }
+    await page.waitForTimeout(1500);
+    await expect(page.locator('.tut-x')).toBeHidden();
+    const r = await page.locator(show).boundingBox();
+    expect(r.y).toBeGreaterThanOrEqual(0);
+    expect(r.y + r.height).toBeLessThanOrEqual(844);
+    await ctx.close();
+  });
+}

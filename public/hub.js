@@ -417,27 +417,54 @@
     bar.innerHTML = '<span>Drag the games into the order you want.</span><button type="button" class="rb-cancel">Cancel</button><button type="button" class="rb-done">Done</button>';
     list.before(bar);
     list.classList.add('reorder');
-    let lifted = null;
+    let lifted = null, waiting = null, at = null, edgeLoop = 0;
     const stopClick = e => { e.preventDefault(); e.stopPropagation(); };
-    const down = e => {
-      const card = e.target.closest('.games > .game');
-      if (!card || e.button > 0) return;
-      e.preventDefault();
+    const lift = (card, e) => {
       lifted = card;
       card.classList.add('lifted');
       try { card.setPointerCapture(e.pointerId); } catch { /* fine without */ }
+      if (navigator.vibrate) try { navigator.vibrate(10); } catch { /* no buzz here */ }
+      edgeLoop = requestAnimationFrame(edge);
     };
-    const move = e => {
+    // A mouse lifts a card at once. A finger lifts it after a short hold, so a quick
+    // swipe still scrolls the page.
+    const down = e => {
+      const card = e.target.closest('.games > .game');
+      if (!card || e.button > 0) return;
+      at = { x: e.clientX, y: e.clientY };
+      if (e.pointerType === 'mouse') { e.preventDefault(); lift(card, e); return; }
+      clearTimeout(waiting);
+      waiting = setTimeout(() => { waiting = null; lift(card, e); }, 220);
+    };
+    // While a card is held near the top or bottom of the screen, the page keeps scrolling.
+    const edge = () => {
       if (!lifted) return;
-      // Near the top or bottom of the screen, the page scrolls along.
-      if (e.clientY < 90) window.scrollBy(0, -12);
-      else if (e.clientY > innerHeight - 70) window.scrollBy(0, 12);
-      const over = document.elementsFromPoint(e.clientX, e.clientY).map(el => el.closest && el.closest('.games > .game')).find(c => c && c !== lifted);
+      const zone = 90;
+      const speed = at.y < zone ? -Math.ceil((zone - at.y) / 6) : at.y > innerHeight - zone ? Math.ceil((at.y - innerHeight + zone) / 6) : 0;
+      if (speed) { window.scrollBy(0, speed); follow(); }
+      edgeLoop = requestAnimationFrame(edge);
+    };
+    const follow = () => {
+      const over = document.elementsFromPoint(at.x, at.y).map(el => el.closest && el.closest('.games > .game')).find(c => c && c !== lifted);
       if (!over) return;
       const cards = allCards();
       if (cards.indexOf(over) < cards.indexOf(lifted)) over.before(lifted); else over.after(lifted);
     };
-    const up = () => { if (lifted) lifted.classList.remove('lifted'); lifted = null; };
+    const move = e => {
+      if (waiting && Math.hypot(e.clientX - at.x, e.clientY - at.y) > 10) { clearTimeout(waiting); waiting = null; }
+      if (!lifted) return;
+      at = { x: e.clientX, y: e.clientY };
+      follow();
+    };
+    // Once a card is lifted, a finger moving it doesn't scroll the page.
+    const noScroll = e => { if (lifted && e.cancelable) e.preventDefault(); };
+    const up = () => {
+      clearTimeout(waiting); waiting = null;
+      cancelAnimationFrame(edgeLoop);
+      if (lifted) lifted.classList.remove('lifted');
+      lifted = null;
+    };
+    const esc = e => { if (e.key === 'Escape' && reorder) { e.preventDefault(); reorder.finish(false); } };
     // With a keyboard: the arrow keys move the focused game earlier or later.
     const key = e => {
       const card = e.target.closest && e.target.closest('.games > .game');
@@ -454,6 +481,8 @@
     list.addEventListener('pointercancel', up);
     list.addEventListener('click', stopClick, true);
     list.addEventListener('keydown', key);
+    list.addEventListener('touchmove', noScroll, { passive: false });
+    document.addEventListener('keydown', esc);
     const finish = keep => {
       list.removeEventListener('pointerdown', down);
       list.removeEventListener('pointermove', move);
@@ -461,6 +490,8 @@
       list.removeEventListener('pointercancel', up);
       list.removeEventListener('click', stopClick, true);
       list.removeEventListener('keydown', key);
+      list.removeEventListener('touchmove', noScroll);
+      document.removeEventListener('keydown', esc);
       list.classList.remove('reorder');
       up();
       bar.remove();
