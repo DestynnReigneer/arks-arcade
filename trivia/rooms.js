@@ -35,7 +35,7 @@ const clock = require('../arcade/room-clock');
 const rooms = new Map();
 const MAX_ROOMS = 200;
 const MAX_PLAYERS = 12;
-const MAX_TURN_QUESTIONS = 100;
+const MAX_TURN_QUESTIONS = 240;     // 12 players x 20 questions each
 const REVEAL_MS = 6000;
 const REVEAL_EXTRA_MS = 3500;       // more time to read a drink or a dare
 const TTL_MS = 6 * 60 * 60 * 1000;
@@ -47,6 +47,7 @@ function fail(message, status = 400) {
 }
 const makeToken = () => crypto.randomBytes(24).toString('hex');
 const makeId = () => crypto.randomBytes(8).toString('hex');
+const cleanDevice = d => (typeof d === 'string' && /^[a-f0-9]{16,64}$/.test(d) ? d : null);
 const cleanName = (raw, fallback) => String(raw || '').trim().replace(/\s+/g, ' ').slice(0, 16) || fallback;
 
 function makeCode() {
@@ -76,10 +77,11 @@ const turns = r => r.settings.style === 'turns';
 
 // screen: this device shows the game (a TV) and doesn't play.
 // profile: { id, name } when the host has one.
-function create({ name, settings, password, screen = false, profile = null }) {
+// device: the random key the page keeps for not repeating questions (store.memoryKeys).
+function create({ name, settings, password, screen = false, profile = null, device = null }) {
   if (rooms.size >= MAX_ROOMS) throw fail('Too many trivia games running. Try again later.', 503);
   const host = { id: makeId(), token: makeToken(), name: cleanName(profile && !screen ? profile.name : name, screen ? 'TV' : 'Host'), score: 0, streak: 0, clients: 0, owner: null,
-    profileId: profile && !screen ? profile.id : null, ready: true };
+    profileId: profile && !screen ? profile.id : null, ready: true, device: cleanDevice(device) };
   const r = {
     code: makeCode(), hostId: host.id, players: screen ? [] : [host], screen: screen ? { ...host, screen: true } : null,
     settings: cleanSettings(settings),
@@ -102,7 +104,7 @@ function create({ name, settings, password, screen = false, profile = null }) {
 function pack(r) {
   const seat = p => ({
     id: p.id, token: p.token || null, name: p.name, score: p.score, streak: p.streak, owner: p.owner || null,
-    profileId: p.profileId || null, ready: !!p.ready
+    profileId: p.profileId || null, ready: !!p.ready, device: p.device || null
   });
   return {
     code: r.code, hostId: r.hostId, players: r.players.map(seat), screen: r.screen ? seat(r.screen) : null, settings: r.settings,
@@ -118,7 +120,8 @@ function pack(r) {
 function restore(now = Date.now()) {
   const seat = p => ({
     id: String(p.id), token: p.token ? String(p.token) : null, name: cleanName(p.name, 'Player'), score: Number(p.score) || 0,
-    streak: Number(p.streak) || 0, clients: 0, owner: p.owner || null, profileId: p.profileId || null, ready: !!p.ready
+    streak: Number(p.streak) || 0, clients: 0, owner: p.owner || null, profileId: p.profileId || null, ready: !!p.ready,
+    device: cleanDevice(p.device)
   });
   // A room that can't be put back together is left out and removed (room-store.js), so it can't stop the arcade from starting.
   const back = saved.restoreEach(({ code, data, savedAt }) => {
@@ -186,7 +189,7 @@ function uniqueName(r, raw) {
 }
 
 // profile: { id, name } when the person joining has one.
-function join(code, name, password, profile = null) {
+function join(code, name, password, profile = null, device = null) {
   const r = room(code);
   roomPassword.check(r, password);
   if (r.phase !== 'lobby' && !joinsLate(r)) {
@@ -195,7 +198,7 @@ function join(code, name, password, profile = null) {
   if (r.players.length >= MAX_PLAYERS) throw fail('That game is full.', 409);
   const late = r.phase !== 'lobby';
   const p = { id: makeId(), token: makeToken(), name: uniqueName(r, profile ? profile.name : name), score: 0, streak: 0, clients: 0, owner: null,
-    profileId: profile ? profile.id : null, ready: false };
+    profileId: profile ? profile.id : null, ready: false, device: cleanDevice(device) };
   r.players.push(p);
   // Joining late: this question is already being answered, so you start with the next one.
   if (late && r.phase === 'question') r.answers[p.id] = { choice: null, at: 0, late: true };
@@ -291,7 +294,10 @@ function start(code, playerId, token) {
   const s = r.settings;
   // Taking turns: everyone gets the number of questions picked.
   const count = turns(r) ? Math.min(MAX_TURN_QUESTIONS, s.count * r.players.length) : s.count;
-  r.questions = store.pick({ level: s.level, genres: s.genres, difficulty: s.difficulty, count, packId: s.packId }).map(store.deal);
+  // Questions anyone at the table saw lately wait for another night.
+  const keys = [...r.players, ...(r.screen ? [r.screen] : [])].flatMap(x => store.memoryKeys({ profileId: x.profileId, device: x.device }));
+  r.questions = store.pick({ level: s.level, genres: s.genres, difficulty: s.difficulty, count, packId: s.packId, seen: store.seenBy(keys) }).map(store.deal);
+  store.remember(keys, r.questions.map(q => q.id));
   if (!r.questions.length) throw fail('No questions match those settings.', 409);
   for (const x of r.players) { x.score = 0; x.streak = 0; }
   r.qIndex = -1;
@@ -445,7 +451,7 @@ function snapshot(r, viewerId) {
     turn: turn ? { id: turn.id, name: turn.name, yours: mine.includes(turn.id) } : null,
     question: showQ ? {
       index: r.qIndex, total: r.questions.length, genre: q.genre, difficulty: q.difficulty,
-      question: q.question, answers: q.answers
+      question: q.question, picture: q.picture || null, answers: q.answers
     } : null,
     upNext: q && r.phase === 'ready' ? { index: r.qIndex, total: r.questions.length, genre: q.genre, difficulty: q.difficulty } : null,
     answeringFor: answering,
@@ -523,4 +529,4 @@ if (typeof sweeper.unref === 'function') sweeper.unref();
 const cameBack = restore();
 if (cameBack) console.log(`Know-It-All picked ${cameBack} room${cameBack === 1 ? '' : 's'} back up.`);
 
-module.exports = { create, join, lobbyReady, say, mute, remove, lobbies, addSeat, removeSeat, start, ready, answer, next, leave, snapshot, room, authenticate, subscribe, cleanSettings, _rooms: rooms };
+module.exports = { create, join, lobbyReady, say, mute, remove, lobbies, addSeat, removeSeat, start, ready, answer, next, leave, snapshot, room, authenticate, subscribe, cleanSettings, MAX_PLAYERS, MAX_TURN_QUESTIONS, _rooms: rooms };

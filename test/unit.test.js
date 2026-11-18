@@ -414,6 +414,48 @@ async function run() {
     .map(q => `${q.question} (${tstore.checkQuestion(q).error})`);
   ok('every built-in question passes the pack checks', badQs.length === 0, badQs.join('; '));
   ok('every level has its own questions', ['kids', 'cheeky', 'spicy', 'filthy'].every(l => tbank.QUESTIONS[l].length >= 20));
+  // The adult banks (trivia/questions/<level>.txt): big enough for many nights, with real choice in the genres.
+  const adultLevels = ['cheeky', 'spicy', 'filthy'];
+  const adultSizes = Object.fromEntries(adultLevels.map(l => [l, tbank.QUESTIONS[l].length]));
+  ok('each adult level has at least 250 questions', adultLevels.every(l => adultSizes[l] >= 250), JSON.stringify(adultSizes));
+  const thinGenres = adultLevels.flatMap(l => {
+    const c = {};
+    for (const q of tbank.QUESTIONS[l]) c[q.genre] = (c[q.genre] || 0) + 1;
+    return Object.entries(c).filter(([, n]) => n < 20).map(([g, n]) => `${l}/${g}: ${n}`);
+  });
+  ok('every adult genre has at least 20 questions', thinGenres.length === 0, thinGenres.join('; '));
+  ok('each adult level has at least 10 genres', adultLevels.every(l => new Set(tbank.QUESTIONS[l].map(q => q.genre)).size >= 10));
+  const allQs = Object.values(tbank.QUESTIONS).flat();
+  const askKey = q => `${q.picture || ''}|${q.question.toLowerCase().replace(/\s+/g, ' ').trim()}`;
+  const dupQs = [];
+  for (const l of Object.keys(tbank.QUESTIONS)) {
+    const seenQ = new Set();
+    for (const q of tbank.QUESTIONS[l]) { if (seenQ.has(askKey(q))) dupQs.push(`${l}: ${q.question}`); seenQ.add(askKey(q)); }
+  }
+  ok('no question is asked twice in a level', dupQs.length === 0, dupQs.slice(0, 5).join('; '));
+  ok('every built-in question has its own id', new Set(allQs.map(q => q.id)).size === allQs.length);
+  ok('the right answer is never among the wrong ones', allQs.every(q => !q.wrong.some(w => w.toLowerCase() === q.correct.toLowerCase())));
+  const tf = allQs.filter(q => /^True or false:/.test(q.question));
+  ok('true or false questions answer True or False only', tf.length >= 60 && tf.every(q => q.wrong.length === 1 &&
+    [q.correct, q.wrong[0]].sort().join() === 'False,True'), String(tf.length));
+  const pics = allQs.filter(q => q.picture);
+  ok('picture questions carry their emojis apart from the question', pics.length >= 60 &&
+    pics.every(q => !/[[\]]/.test(q.picture + q.question) && !/[A-Za-z]{2}/.test(q.picture)), String(pics.length));
+  ok('the text files never say "grown-up"', !allQs.some(q => /grown-?up/i.test([q.question, q.correct, ...q.wrong].join(' '))));
+  // Not repeating questions: pick() leaves out what was seen, then brings back the oldest first.
+  const fq = tbank.QUESTIONS.filthy;
+  const seenMap = new Map(fq.slice(0, fq.length - 5).map((q, i) => [q.id, i + 1]));
+  const picked = tstore.pick({ level: 'filthy', count: 10, seen: seenMap });
+  const freshIds = new Set(fq.slice(-5).map(q => q.id));
+  ok('pick() takes every question not seen yet first', fq.slice(-5).every(q => picked.some(p => p.id === q.id)));
+  ok('…and fills up with the ones seen longest ago', picked.filter(p => !freshIds.has(p.id)).every(p => seenMap.get(p.id) <= 5) && picked.length === 10);
+  ok('memory keys need a real device key', tstore.memoryKeys({ device: 'x' }).length === 0 &&
+    tstore.memoryKeys({ profileId: 7, device: 'a'.repeat(32) }).join() === `p:7,d:${'a'.repeat(32)}`);
+  const memWho = [`d:${'9'.repeat(32)}`];
+  tstore.remember(memWho, ['b-filthy-0', 'b-filthy-1'], 1000);
+  tstore.remember(memWho, ['b-filthy-1'], 2000);
+  const mem = tstore.seenBy(memWho);
+  ok('remember() keeps the latest time a question was asked', mem.get('b-filthy-0') === 1000 && mem.get('b-filthy-1') === 2000);
   ok('faster right answers score more', TR.points('hard', true, 9000, 10000) > TR.points('hard', true, 1000, 10000));
   ok('wrong answers score nothing', TR.points('hard', false, 9000, 10000) === 0);
   const calls = TR.afterQuestion([{ id: 'a', name: 'A', correct: false, streak: 0 }, { id: 'b', name: 'B', correct: true, streak: 3 }],
