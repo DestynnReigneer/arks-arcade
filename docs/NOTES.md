@@ -12,7 +12,7 @@ order they were clicked, and keep the rest pinned here.
 The maintainer found Filthy had three genres and a handful of questions, and asked for adult levels with enough
 for hundreds of games, solo or with up to 12 players, without repeats.
 
-- **The questions:** Cheeky 311, Spicy 264, Filthy 268 (about 790 new ones). The new ones live in plain text files,
+- **The questions:** Cheeky 311, Spicy 264, Filthy 268 (765 new ones). The new ones live in plain text files,
   `trivia/questions/<level>.txt`, one question to a line under a `## Genre` heading; the format is at the top of
   `cheeky.txt`. `trivia/bank.js` reads them after the ones written in it. A file question's id is a fingerprint of
   its text (`b-<level>-<12 hex>`), so moving lines around keeps ids; the old ones keep their place numbers.
