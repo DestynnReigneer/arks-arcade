@@ -152,7 +152,10 @@ async function run({ base, root }) {
   const notesSent = new Array(81).fill(0);
   const pencil = phone.puzzle.split('').findIndex((v, i) => v === '0' && !empties3.includes(i));
   notesSent[pencil] = (1 << 2) | (1 << 7);
-  const sent = await api(`/run/${phone.runId}/progress`, 'POST', { grid: fill.join(''), notes: notesSent, marks: { [empties3[0]]: 'hinted', 99: 'wrong', 5: 'sparkly' }, profileToken: sam });
+  // A made-up mark on another square (on some days square 5 is the first empty one, and the
+  // two marks would land on the same square).
+  const odd = empties3[0] === 5 ? 6 : 5;
+  const sent = await api(`/run/${phone.runId}/progress`, 'POST', { grid: fill.join(''), notes: notesSent, marks: { [empties3[0]]: 'hinted', 99: 'wrong', [odd]: 'sparkly' }, profileToken: sam });
   ok('the page can save its progress for the profile', sent.status === 200 && sent.data.saved === true, JSON.stringify(sent.data));
   const laptop = (await api('/start', 'POST', { level: 'easy', profileToken: sam })).data;
   ok('opening the puzzle on another device carries on the same run', laptop.runId === phone.runId);
