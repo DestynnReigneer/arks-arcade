@@ -410,6 +410,22 @@ Know-It-All, the party games, Rambler and Shuffle Scuffle.
 - **Not yet:** the wording waits for the maintainer's rewrite, and a restart test (the rooms are read back at startup,
   but no test restarts the server).
 
+## No PIN screen anywhere for adult levels (2026-11-17)
+
+The maintainer picked Unfiltered in Rambler and got a PIN screen saying "Enter the PIN." Nobody has a PIN for adult
+levels (the server stopped taking one on 2026-11-11), but every game still opened its old PIN screen and let the
+pad fetch the adult pass behind it, and Rambler's screen ignored the pass and asked for digits.
+
+- **`AdultPass.get()`** (in `public/pin-pad.js`) asks `/api/arksid/adult-pass` for this device's pass, with nothing on
+  screen. Everyone gets one but a kid's or a teen's device, which gets the server's "not on a kid's account" line.
+- **Every game calls it straight away** when someone picks an adult level (Wordless, Rambler, Words with Family,
+  Shuffle Scuffle, Spin & Solve, Know-It-All, Part Deux, Dare Devil). The PIN screens (`pinView`, `adultOverlay`) are
+  gone from their pages. A refusal shows as a short message and the level stays where it was.
+- The TV's setup line says an adult approves it on their phone (ARKS ID has no PINs), and Tumbler Rumble says lock,
+  never pin, on screen.
+- **Test:** `test/browser/adult.spec.js` picks Unfiltered as a guest in Rambler and Shuffle Scuffle and checks it turns
+  on with no PIN or password box.
+
 ## Adult levels need ARKS ID, and the adult PIN is gone (2026-11-11)
 
 The maintainer asked for the adult unlock to be the ARKS ID login, so there's no PIN to guess.

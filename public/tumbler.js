@@ -180,7 +180,7 @@
     if (!sim) { big = '🔒'; small = 'TAP TO PLAY'; }
     else if (over) { big = '✕'; small = sim.endedBy === 'slip' ? 'SLIPPED PAST' : 'MISSED'; }
     else if (count > 0) { big = String(count); small = 'GET READY'; }
-    else if (t < E.RULES.LEAD_MS + 700) { big = 'GO!'; small = 'POP THE PIN'; }
+    else if (t < E.RULES.LEAD_MS + 700) { big = 'GO!'; small = 'POP THE LOCK'; }
     else { big = String(sim.pops); small = sim.pops === 1 ? 'POP' : 'POPS'; }
     ctx.fillStyle = over ? COLORS.miss : big === 'GO!' || count > 0 ? COLORS.pin : COLORS.text;
     ctx.font = `800 ${Math.round(R * (big.length > 2 ? 0.5 : 0.72))}px Orbitron, system-ui, sans-serif`;
@@ -437,7 +437,7 @@
     overSince = now();
     const local = E.summary(sim);
     const r = result || local;
-    $('overTitle').textContent = local.endedBy === 'slip' ? 'The light slipped past the pin!' : 'Missed! The light wasn\'t on the pin.';
+    $('overTitle').textContent = local.endedBy === 'slip' ? 'The light slipped past the lock!' : 'Missed! The light wasn\'t on the lock.';
     $('overScore').textContent = '0';
     if (window.Fx) Fx.countUp($('overScore'), 0, r.score, 900); else $('overScore').textContent = r.score.toLocaleString('en-US');
     $('overDetail').textContent = !r.score ? 'You didn\'t pop any locks this time.' : `You popped ${plural(r.score, 'lock')} in a row and made it to wave ${r.wave}, with ${plural(r.bullseyes, 'perfect pop')}` +

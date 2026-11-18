@@ -52,3 +52,19 @@ for (const game of ['partdeux', 'daredevil']) {
     await kidCtx.close();
   });
 }
+
+// Picking an adult level just turns it on: no PIN, no password, no screen in between.
+for (const [game, seg] of [['rambler', '#profileSeg'], ['scuffle', '#dictSeg']]) {
+  test(`a guest picks Unfiltered in ${game} with nothing to type`, async ({ page }) => {
+    test.skip(test.info().project.name !== 'phone', 'once is enough');
+    await quietFonts(page);
+    await openPage(page, `/${game}.html`);
+    await page.getByRole('button', { name: /Play as a guest/ }).click();
+    await page.getByRole('button', { name: 'Play', exact: true }).click();
+    const pick = page.locator(seg).getByRole('button', { name: /Unfiltered/ });
+    await pick.click();
+    await expect(pick).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByText(/Enter the PIN|lobby password/i)).toHaveCount(0);
+    await expect(page.locator('input[type="password"]:visible')).toHaveCount(0);
+  });
+}

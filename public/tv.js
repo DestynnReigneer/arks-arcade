@@ -270,7 +270,7 @@ const ArcadeTV = (() => {
       }
       const ui = codeCard(o, {
         title: 'Set up this TV',
-        line: 'Scan this with an adult\'s phone. Their phone asks them to name this TV and type their PIN there, never on the TV.',
+        line: 'Scan this with an adult\'s phone. Their phone asks them to name this TV and approve it there.',
         code: started.userCode, qr: started.qr, enterUrl: started.enterUrl
       });
       ui.status.textContent = 'Waiting for an adult\'s phone…';
@@ -321,7 +321,7 @@ const ArcadeTV = (() => {
         if (u.adultMode) { setMode(u.adultMode); finish(true); return; }
         const ui = codeCard(o, {
           title: '🔞 Adults\' night',
-          line: 'An adult scans this with their own phone and types their PIN there to unlock adult levels on this TV. It goes back to family by itself after 30 minutes without a game, or at 4 AM.',
+          line: 'An adult scans this with their own phone and approves it there to unlock adult levels on this TV. It goes back to family by itself after 30 minutes without a game, or at 4 AM.',
           code: u.userCode, qr: u.qr, enterUrl: u.enterUrl
         });
         ui.status.textContent = 'Waiting for an adult\'s phone…';

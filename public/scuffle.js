@@ -166,21 +166,15 @@
         return ok;
       });
     }
-    return new Promise(resolve => {
-      $('pinInput').value = '';
-      $('pinMsg').textContent = '';
-      $('pinView').classList.remove('hidden');
-      $('pinInput').focus();
-      const done = ok => { $('pinView').classList.add('hidden'); $('pinCancel').onclick = null; resolve(ok); };
-      PinPad.attach($('pinInput'), async pin => {
-        const r = await api('/api/scuffle/unlock', { pin }).catch(() => ({ ok: false }));
-        if (!r.ok) { $('pinMsg').textContent = 'Adult games aren\'t available on this device.'; PinPad.clear($('pinInput')); return; }
-        S.pin = pin;
-        try { sessionStorage.setItem('scuffle.adultPin', pin); } catch { /* unavailable */ }
-        done(true);
-      });
-      $('pinCancel').onclick = () => done(false);
-    });
+    // Nothing to type: the arcade asks for this device's adult pass, and a kid's or a
+    // teen's device is told no.
+    return AdultPass.get().then(async pin => {
+      const r = await api('/api/scuffle/unlock', { pin }).catch(() => ({ ok: false }));
+      if (!r.ok) throw new Error('Adult games aren\'t available on this device.');
+      S.pin = pin;
+      try { sessionStorage.setItem('scuffle.adultPin', pin); } catch { /* unavailable */ }
+      return true;
+    }).catch(e => { toast(e.message); return false; });
   }
 
   async function go() {

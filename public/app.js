@@ -219,37 +219,17 @@
       showMessage(themes.some(t => t.adult) ? 'Adult themes unlocked. Pick one from the Theme menu.' : 'Unlocked, but no adult themes have been made yet.');
       return;
     }
-    const pinInput = document.getElementById('adultPinInput');
-    pinInput.value = '';
-    PinPad.attach(pinInput, confirmAdult);
-    PinPad.show(pinInput, adult.requiresPin);
-    document.getElementById('adultError').textContent = '';
-    document.getElementById('adultHint').textContent = adult.requiresPin
-      ? 'Naughty themes. Not for kids.'
-      : 'Naughty themes for adults. Are you 18 or older?';
-    // With a PIN the pad checks it on the 6th digit, so there's no button.
-    document.getElementById('adultOkBtn').classList.toggle('hidden', adult.requiresPin);
-    document.getElementById('adultOverlay').classList.remove('hidden');
-    if (adult.requiresPin) pinInput.focus();
-  }
-
-  async function confirmAdult() {
-    const pin = document.getElementById('adultPinInput').value.trim();
-    const err = document.getElementById('adultError');
+    // Nothing to type: the arcade asks for this device's adult pass, and a kid's or a
+    // teen's device is told no.
     try {
-      if (adult.requiresPin) {
-        const r = await apiPost('/api/adult-check', { pin });
-        if (!r.ok) { err.textContent = 'Adult games aren\'t available on this device.'; PinPad.clear(document.getElementById('adultPinInput')); return; }
-      }
-      setAdult(true, pin);
-      document.getElementById('adultOverlay').classList.add('hidden');
+      const pass = await AdultPass.get();
+      const r = await apiPost('/api/adult-check', { pin: pass });
+      if (!r.ok) throw new Error('Adult games aren\'t available on this device.');
+      setAdult(true, pass);
       await refreshThemes();
       themeSelect.value = currentTheme.id;
-      const first = themes.find(t => t.adult);
-      showMessage(first ? 'Adult themes unlocked — pick one from the Theme menu. 😈' : 'Unlocked, but no adult themes have been made yet.');
-    } catch (e) {
-      err.textContent = e.message;
-    }
+      showMessage(themes.some(t => t.adult) ? 'Adult themes unlocked — pick one from the Theme menu. 😈' : 'Unlocked, but no adult themes have been made yet.');
+    } catch (e) { showMessage(e.message); }
   }
 
   // ---- Board / keyboard ----
@@ -588,7 +568,6 @@
     if (!leaderboardOverlay.classList.contains('hidden')) return;
     if (!themeRequestOverlay.classList.contains('hidden')) return;
     if (!difficultyOverlay.classList.contains('hidden')) return;
-    if (!document.getElementById('adultOverlay').classList.contains('hidden')) return;
     if (window.wordlessTutorial && window.wordlessTutorial.isOpen) return;
     handleKey(e.key);
   });
@@ -598,8 +577,6 @@
   difficultyBtn.addEventListener('click', openDifficulty);
   document.getElementById('helpBtn').addEventListener('click', () => window.wordlessTutorial.open());
   document.getElementById('adultBtn').addEventListener('click', openAdult);
-  document.getElementById('adultOkBtn').addEventListener('click', confirmAdult);
-  document.getElementById('adultCancelBtn').addEventListener('click', () => document.getElementById('adultOverlay').classList.add('hidden'));
   themeSelect.addEventListener('change', (e) => { setTheme(e.target.value); newGame(); });
 
   // ---- End of game / scoring / initials ----
