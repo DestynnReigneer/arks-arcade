@@ -63,7 +63,6 @@ app.use('/api/rambler', ramblerRoutes);
 
 const WORD_RE = /^[a-zA-Z]{3,10}$/;
 const HEX_COLOR_RE = /^#[0-9a-fA-F]{3,8}$/;
-const INITIALS_RE = /^[A-Z0-9]{1,3}$/;
 
 // ---- Admin auth ----
 // An ARKS ID admin is straight in; the PIN and password in .env are for
@@ -481,11 +480,17 @@ app.get('/api/leaderboard', (req, res) => {
 
 app.post('/api/leaderboard', leaderboardLimiter, (req, res) => {
   const body = req.body || {};
-  // Playing as an arcade profile: the score is theirs, and the initials are
-  // the ones the profile chose (or come from its name).
-  const profile = body.profileToken ? require('./arcade/profiles').verify(body.profileToken) : null;
-  const initials = profile ? profile.initials : String(body.initials || '').toUpperCase().trim();
-  const shout = profile ? require('./arcade/profiles').boardName(profile.id).label : initials;
+  // Signed in, the score is the profile's; a guest's goes under the name they play
+  // under (arcade/board-who.js). Nobody types initials.
+  let as;
+  try {
+    as = require('./arcade/board-who').boardWho({ profileToken: body.profileToken, name: body.name, avatar: body.avatar, initials: body.initials });
+  } catch (e) {
+    return res.status(e.status || 400).json({ error: e.message });
+  }
+  const profile = as.profile;
+  const initials = as.initials;
+  const shout = profile ? require('./arcade/profiles').boardName(profile.id).label : as.name || initials;
   const themeId = String(body.themeId || '');
   const won = !!body.won;
   const guesses = Math.max(0, Math.min(20, parseInt(body.guesses, 10) || 0));
@@ -494,15 +499,14 @@ app.post('/api/leaderboard', leaderboardLimiter, (req, res) => {
   const elapsedMs = Math.max(0, Math.min(3600000, parseInt(body.elapsedMs, 10) || 0));
   const difficulty = Object.hasOwn(DIFFICULTIES, body.difficulty) ? body.difficulty : 'normal';
 
-  if (!INITIALS_RE.test(initials)) {
-    return res.status(400).json({ error: 'Initials must be 1-3 letters or numbers.' });
-  }
   const theme = db.getTheme(themeId);
   if (!theme) {
     return res.status(400).json({ error: 'Unknown theme.' });
   }
 
-  const result = db.insertScore({ initials, themeId, won, guesses, hintsUsed, word, elapsedMs, difficulty, profile });
+  // A guest's name and avatar are kept like a profile's, with no profile id.
+  const result = db.insertScore({ initials, themeId, won, guesses, hintsUsed, word, elapsedMs, difficulty,
+    profile: profile || (as.name ? { id: null, name: as.name, avatar: as.avatar } : null) });
   if (won && result.rank === 1 && !theme.adult) {
     const level = difficulty[0].toUpperCase() + difficulty.slice(1);
     comm.safePost({

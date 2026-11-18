@@ -403,10 +403,8 @@
 
   // ---- solved ----------------------------------------------------------------------------------
   const iniBoxes = [...document.querySelectorAll('#iniRow .ini')];
-  const initials = ArcadeKit.wireInitials(iniBoxes, () => saveTime(), { guest: TvPlay.on });
-  function profile() {
-    try { return token() ? ArcadeProfile.get() : null; } catch { return null; }
-  }
+  // On a TV, initials picked with the remote; everywhere else nothing to type.
+  const initials = ArcadeKit.wireInitials(iniBoxes, () => saveTime(), { tv: () => TvPlay.on });
   function helpLine(r) {
     const bits = [];
     if (r.hints) bits.push(`${r.hints} hint${r.hints === 1 ? '' : 's'}`);
@@ -422,29 +420,26 @@
     $('overDetail').textContent = help
       ? `${clock(run.timeMs - run.penaltyMs)} solving, plus ${clock(run.penaltyMs)} for help (${help}).`
       : 'No help used. That\'s a clean solve!';
-    const p = profile();
     $('savePart').classList.toggle('hidden', run.saved || run.unscored);
-    $('iniRow').classList.toggle('hidden', !!p);
-    $('saveHint').textContent = p ? `Saving as ${p.name}.` : 'Type your initials to put your time on today\'s board and see where you stack up.';
+    // The time goes under the profile or the guest's name, with nothing to type.
+    ArcadeKit.readySave(initials, $('saveHint'), $('saveBtn'), 'Pick your initials with the arrows to put your time on today\'s board.');
     $('saveMsg').textContent = '';
     $('saveBtn').disabled = false;
     $('rankLine').textContent = run.saved ? 'Your time is on the board.' : run.unscored ? "Just for fun, this try won't be scored" : '';
-    if (!p && !run.saved) initials.reset();
     $('over').classList.remove('hidden');
     // It pops up over the page (topbar.js), except on a TV, where it sits in the page.
     if (!$('over').classList.contains('end-pop')) setTimeout(() => $('over').scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
   }
   async function saveTime() {
     if (!run || !run.finished || run.saved) return;
-    const p = profile();
-    // A profile sends its initials too, in case its sign-in has run out on
-    // the server; then the time goes on the board under the initials.
-    const ini = p ? ArcadeProfile.initials() : initials.value();
-    if (!p && !ini) { $('saveMsg').textContent = 'Type your initials first.'; return; }
+    // A profile sends its name too, in case its sign-in has run out on the
+    // server; then the time goes on the board under that name.
+    let who;
+    try { who = ArcadeKit.saveFields(initials); } catch (e) { $('saveMsg').textContent = e.message; return; }
     $('saveBtn').disabled = true;
     try {
-      const r = await api(`/api/sudoku/run/${run.runId}/save`, { initials: ini, profileToken: token() });
-      if (!p) initials.remember(ini);
+      const r = await api(`/api/sudoku/run/${run.runId}/save`, who);
+      if (who.initials) initials.remember(who.initials);
       run.saved = true;
       $('savePart').classList.add('hidden');
       $('rankLine').textContent = r.allRank === 1 ? `That's the fastest ${LABEL[run.level]} time ever! 🏆`

@@ -70,14 +70,14 @@ test('a countdown, then three pops in Tumbler Rumble', async ({ page, isMobile }
   await expect(page.locator('#overScore')).toHaveText('3');
   await expect(pop).toBeDisabled();
 
-  const boxes = page.locator('#iniRow .ini');
-  await boxes.nth(0).fill('T');
-  await boxes.nth(1).fill('R');
-  await boxes.nth(2).fill('B');
+  // Nobody types initials: the guest's score goes on the board under the guest's name.
+  await expect(page.locator('#iniRow')).toBeHidden();
+  const guest = await page.evaluate(() => ArcadeProfile.name());
+  await expect(page.locator('#saveHint')).toHaveText(`Saving as ${guest}.`);
   await page.locator('#saveBtn').click();
   await expect(page.locator('#rankLine')).toContainText(/#\d+|best Tumbler Rumble score ever/);
   await expect(page.locator('#scores')).toBeVisible();
-  await expect(page.locator('#scoreList li.me')).toContainText('TRB');
+  await expect(page.locator('#scoreList li.me')).toContainText(guest);
 
   expect(problems, problems.join('\n')).toEqual([]);
   const sizes = await page.evaluate(() => ({ page: document.documentElement.scrollWidth, screen: window.innerWidth }));

@@ -31,7 +31,7 @@ const MIN_MS_PER_SQUARE = process.env.NODE_ENV === 'test' && process.env.SUDOKU_
   ? Number(process.env.SUDOKU_MIN_MS_PER_SQUARE) : 400;
 // Unfinished runs are forgotten after this long.
 const KEEP_RUNS_MS = 3 * 24 * 60 * 60 * 1000;
-const INITIALS_RE = /^[A-Z0-9]{1,3}$/;
+const { boardWho } = require('../arcade/board-who');
 const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 db.db.exec(`
@@ -270,22 +270,22 @@ function finish(id, grid, now = Date.now()) {
 }
 
 // ---- the boards --------------------------------------------------------------------
-const initialsOf = name => (String(name).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 3) || 'P');
 
-function save(id, { initials, profileToken }) {
+function save(id, { initials, name, avatar, profileToken }) {
   const run = needRun(id);
   if (!run.finished_at) throw fail('Finish the puzzle first.', 409);
   if (run.saved) throw fail('This time is already on the board.', 409);
   if (run.unscored) throw fail('Just for fun, this try won\'t be scored', 409);
   // A time goes on the board as whoever played it: a profile's run only under that
-  // profile, and a guest's run only under typed initials. Otherwise a profile could
-  // play as a guest with a fresh clock and save it as themselves.
+  // profile, and a guest's run only under the guest's name (or, on a TV, the initials
+  // picked with the remote). Otherwise a profile could play as a guest with a fresh
+  // clock and save it as themselves.
   let profile = profileToken ? profiles().verify(profileToken) : null;
   if (profile && run.profile_id && profile.id !== run.profile_id) throw fail('This puzzle belongs to a different profile.', 403);
-  if (profile && !run.profile_id) throw fail('This puzzle was played as a guest, so it goes on the board under initials.', 403);
-  const ini = profile ? profile.initials || initialsOf(profile.name) : String(initials || '').toUpperCase().trim();
-  if (!INITIALS_RE.test(ini)) throw fail('Initials must be 1-3 letters or numbers.');
-  const who = profile ? `p:${profile.id}` : `g:${ini}`;
+  if (profile && !run.profile_id) throw fail('This puzzle was played as a guest, so it goes on the board under the guest\'s name.', 403);
+  const as = boardWho({ profile, name, avatar, initials });
+  const ini = as.initials;
+  const who = as.key;
   const label = gen.LEVELS[run.level].label;
   // The puzzle is the same all day, so only the first finish counts: a second
   // go, already knowing the answer, would always be faster.
@@ -294,7 +294,7 @@ function save(id, { initials, profileToken }) {
   }
   const info = db.db.prepare(`INSERT INTO sudoku_scores (day, level, who, initials, profile_id, profile_name, profile_avatar, time_ms, hints, checks, mistakes)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(run.day, run.level, who, ini, profile ? profile.id : null,
-    profile ? profile.name : null, profile ? profile.avatar : null, run.time_ms, run.hints, run.checks, run.mistakes);
+    as.name, as.avatar, run.time_ms, run.hints, run.checks, run.mistakes);
   db.db.prepare('UPDATE sudoku_runs SET saved = 1 WHERE id = ?').run(run.id);
   const scoreId = Number(info.lastInsertRowid);
   const dayRank = db.db.prepare('SELECT COUNT(*) AS c FROM sudoku_scores WHERE level = ? AND day = ? AND (time_ms < ? OR (time_ms = ? AND id < ?))')
@@ -302,7 +302,7 @@ function save(id, { initials, profileToken }) {
   const allRank = db.db.prepare('SELECT COUNT(*) AS c FROM sudoku_scores WHERE level = ? AND (time_ms < ? OR (time_ms = ? AND id < ?))')
     .get(run.level, run.time_ms, run.time_ms, scoreId).c + 1;
   if (allRank === 1) {
-    const shout = profile ? (profiles().boardName(profile.id) || {}).label || profile.name : ini;
+    const shout = profile ? (profiles().boardName(profile.id) || {}).label || profile.name : as.name || ini;
     comm.safePost({
       trophy: { game: 'Sudoku', profileId: profile ? profile.id : null, name: shout, score: clock(run.time_ms), board: label, url: '/sudoku.html' },
       kind: 'highscore', emoji: '🧩', game: 'sudoku',

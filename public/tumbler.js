@@ -428,10 +428,6 @@
   }
 
   const plural = (n, word) => `${n.toLocaleString('en-US')} ${word}${n === 1 ? '' : 's'}`;
-  function profile() {
-    try { return token() ? ArcadeProfile.get() : null; } catch { return null; }
-  }
-
   async function showOver(error) {
     mode = 'over';
     overSince = now();
@@ -446,7 +442,6 @@
     $('rankLine').textContent = '';
     $('saveMsg').textContent = '';
     $('saveBtn').disabled = false;
-    const p = profile();
     if (error || !result) {
       $('savePart').classList.add('hidden');
       $('rankLine').textContent = `The arcade couldn't check this run, so it can't go on the board. (${error || 'No answer.'})`;
@@ -455,9 +450,9 @@
       $('rankLine').textContent = 'Pop at least one pin to get a score on the board. Wait until the light is on the gold pin, then tap, and give it another go!';
     } else {
       $('savePart').classList.remove('hidden');
-      $('iniRow').classList.toggle('hidden', !!p);
-      $('saveHint').textContent = p ? `Saving as ${p.name}.` : 'Type your initials to put your score on today\'s board and the all-time board.';
-      if (!p) initials.reset();
+      // The score goes under the profile or the guest's name, with nothing to type (on a TV,
+      // initials picked with the remote).
+      ArcadeKit.readySave(initials, $('saveHint'), $('saveBtn'), 'Pick your initials with the arrows to put your score on today\'s board and the all-time board.');
       chase(result.score);
     }
     $('over').classList.remove('hidden');
@@ -489,18 +484,17 @@
     } catch { /* the line is a bonus */ }
   }
 
-  const initials = ArcadeKit.wireInitials([...document.querySelectorAll('#iniRow .ini')], () => saveScore(), { guest: TvPlay.on });
+  const initials = ArcadeKit.wireInitials([...document.querySelectorAll('#iniRow .ini')], () => saveScore(), { tv: () => TvPlay.on });
   async function saveScore() {
     if (!result || !result.finished || result.saved) return;
-    const p = profile();
-    // A profile sends its initials too, in case its sign-in has run out on
-    // the server; then the score goes on the board under the initials.
-    const ini = p ? ArcadeProfile.initials() : initials.value();
-    if (!p && !ini) { $('saveMsg').textContent = 'Type your initials first.'; return; }
+    // A profile sends its name too, in case its sign-in has run out on the
+    // server; then the score goes on the board under that name.
+    let who;
+    try { who = ArcadeKit.saveFields(initials); } catch (e) { $('saveMsg').textContent = e.message; return; }
     $('saveBtn').disabled = true;
     try {
-      const r = await api(`/api/tumbler/run/${result.runId}/save`, { initials: ini, profileToken: token() });
-      if (!p) initials.remember(ini);
+      const r = await api(`/api/tumbler/run/${result.runId}/save`, who);
+      if (who.initials) initials.remember(who.initials);
       result.saved = true;
       $('savePart').classList.add('hidden');
       $('chaseLine').textContent = '';
@@ -646,7 +640,7 @@
     {
       emoji: '🏆', title: 'The high scores',
       html: `<p>When a run ends, the arcade checks it by playing your taps back through the same game, and works out the score itself. That's the score that counts, so nobody can fake one.</p>
-        <p>Save it with your initials (or your profile) to go on today's board and the all-time board. Today's board starts fresh every night at midnight.</p>
+        <p>Save it to go on today's board and the all-time board under your name. Today's board starts fresh every night at midnight.</p>
         <div class="tut-tip">Opening How to play or leaving the page pauses the run. When you come back you get a short countdown before the light moves again.</div>`
     }
   ], { onClose: () => { if (pausedForHelp) { pausedForHelp = false; resume(); } } });

@@ -49,7 +49,7 @@ Because of Marathon, boards are rectangular internally. Anything that takes a bo
 - **Milestones** — sixteen of them, from "find your first word" to "play thirty days running". Each pays coins.
 - **Theme packs** — a pack of words about a subject (Halloween, Minecraft, whatever) that a season can wear. Its words become **valid** so `ENDERMAN` scores, they are **flagged** so finding one fires a celebration and pays **double**, boards are **re-rolled** until they actually contain some, and the accent color changes to match. Written by pasting a generated prompt into any chatbot and pasting the answer back — no API key, no cost.
 - **Seasons** — the arcade boards run on a schedule you set (monthly by default, or any interval, or manual). When a season ends every board is frozen into **badges** and then cleared, so everyone starts level. A badge records the year, season, which board, the rank and the score. Streaks, coins, milestones and lifetime bests are **never** reset — only the walls are. Players get a countdown in the last few days.
-- **The arcade board** — three walls (4x4, 5x5, Marathon), ten slots each. You only get to type your initials by beating the tenth score, and when you do, somebody is knocked off for good. Your profile keeps your personal best either way, so missing the wall costs you nothing but the wall.
+- **The arcade board** — three walls (4x4, 5x5, Marathon), ten slots each. You only get on by beating the tenth score, and when you do, your score goes up under your name and somebody is knocked off for good. Your profile keeps your personal best either way, so missing the wall costs you nothing but the wall.
 - **Coins and hints** — earned slowly, spent on a hint that reveals a word still sitting on the board. A hinted word buys you time but scores nothing, so coins can't be converted straight into points.
 
 ### What has an interface
@@ -257,7 +257,7 @@ The classic 9x9 number puzzle: fill every empty square with 1 to 9 so no row, co
 - **Made on the server, with no outside library** (`sudoku/generator.js`): a seeded random full grid, then numbers taken away in mirrored pairs while a solver checks there's still only one answer. A whole day's puzzles take a few milliseconds and are kept in memory.
 - **The server keeps the time.** Start records the moment on the server and hands the page a long random run id and the puzzle, never the answer. When the board is full the page sends the grid; the server checks it against the answer and works the time out itself, leaving out pauses (Pause, or leaving the page, stops the clock and hides the board). A finish quicker than 0.4 seconds per square is turned away.
 - **Help costs time, decided by the server:** a hint fills in (or fixes) one square for 30 seconds, Check marks every wrong number for 15 seconds, and the "Show my mistakes as I go" setting (off to start with) adds 10 seconds for each wrong number it catches.
-- **Fastest-time boards** for today and for all time, per level. Only a player's first finish of the day counts, because a second go at the same puzzle would be easy. Profiles show their name or initials (their own choice, as on every board), and guests type initials. A profile has one clock per puzzle, and its filled-in squares and pencil marks are saved on the arcade too (a moment after you stop tapping, and when you leave the page), so opening the puzzle on another device carries on with the same time and the same board. Guests keep their progress on their own device. Saved progress is only ever handed back to the page: the finish still checks the whole grid it's sent. A new fastest-ever time posts to the Comm Center.
+- **Fastest-time boards** for today and for all time, per level. Only a player's first finish of the day counts, because a second go at the same puzzle would be easy. Profiles show their name or initials (their own choice, as on every board), and guests show the name they're playing under. Nobody types anything to save. A profile has one clock per puzzle, and its filled-in squares and pencil marks are saved on the arcade too (a moment after you stop tapping, and when you leave the page), so opening the puzzle on another device carries on with the same time and the same board. Guests keep their progress on their own device. Saved progress is only ever handed back to the page: the finish still checks the whole grid it's sent. A new fastest-ever time posts to the Comm Center.
 - **Phones first:** the board fills the width, a row of nine big number buttons sits under it, and the keyboard works too (arrows, 1-9, Delete, N for notes, P to pause).
 
 #### The Sudoku API
@@ -276,7 +276,7 @@ Everything is under `/api/sudoku`. A grid is 81 characters, row by row, with `0`
 | `POST /run/:id/hint` `{ grid }` | The right number for one square. Adds 30 seconds. |
 | `POST /run/:id/solved` `{ grid }` | Which clues to cross off: `{ rule, across: [numbers], down: [numbers] }`, where `rule` is `word` (the mini) or `line` (the adults' one). Free, and says nothing about wrong letters. |
 | `POST /run/:id/finish` `{ grid }` | Checks the full grid and fixes the time. A wrong grid is refused. |
-| `POST /run/:id/save` `{ initials?, profileToken? }` | Puts a finished time on the boards. Returns today's and all-time rank. Free play runs are refused. |
+| `POST /run/:id/save` `{ profileToken?, name?, avatar? }` | Puts a finished time on the boards. Returns today's and all-time rank. Free play runs are refused. |
 | `GET /board?level=&scope=day\|all&day=` | The fastest times, quickest first. |
 
 ### Shuffle Scuffle (`/scuffle.html`)
@@ -304,7 +304,7 @@ Everything is under `/api/scuffle`. `dictionary` is `kids` or `adult` (the adult
 | `POST /solo/:id/word` `{ word }` | Checks one word. Returns `ok`, the reason if not (`short`, `letters`, `again`, `unknown`), the points and the game. |
 | `POST /solo/:id/stop` | Ends the round early. |
 | `GET /solo/:id` | Where the game stands; after a round, its full word and every word. |
-| `POST /solo/:id/save` `{ initials?, profileToken? }` | Puts a finished daily on its list's board. Only the first per player per day for each list. |
+| `POST /solo/:id/save` `{ profileToken?, name?, avatar? }` | Puts a finished daily on its list's board. Only the first per player per day for each list. |
 | `GET /board?scope=day\|all&day=&dictionary=kids\|adult` | One daily's high scores (the family board when `dictionary` is left out). |
 | `POST /daily-status` `{ profileToken? }` | Which of today's dailies a profile has played: `{ day, kids, adult }`, each `open`, `playing` (started and still going) or `done`. Without a profile both say `open`. |
 | `GET /lobbies` | List Hosted Games: every lobby, with its host, who's in, the seats, the rounds, the time, the word list, and the round it's on if a game is going. |
@@ -397,7 +397,7 @@ Everything is under `/api/clueless`. A grid is one character per square, row by 
 | `POST /run/:id/check` `{ scope, index, dir, grid }` | Which letters are wrong in one square, one word or (`scope: puzzle`) the whole grid. Adds 5, 10 or 20 seconds. |
 | `POST /run/:id/reveal` `{ scope, index, dir }` | The right letters for one square or one word. Adds 15 seconds for each letter not revealed before. |
 | `POST /run/:id/finish` `{ grid }` | Checks the full grid and fixes the time. A wrong grid is refused. Only now does the answer come back. |
-| `POST /run/:id/save` `{ initials?, profileToken? }` | Puts a finished time on the boards. Returns today's and all-time rank. |
+| `POST /run/:id/save` `{ profileToken?, name?, avatar? }` | Puts a finished time on the boards. Returns today's and all-time rank. |
 | `GET /board?level=&scope=day\|all&day=` | The fastest times, quickest first. |
 | `GET /admin/summary`, `/admin/batch?kind=kids\|grownup&count=`, `/admin/packs` | Admin only: how many words have clues, words for the next prompt, and the clue packs. |
 | `POST /admin/packs` `{ label, kind, text }`, `DELETE /admin/packs/:id` | Admin only: checks and saves a pasted clue pack (it lists what it skipped and why), or deletes one. |
@@ -413,7 +413,7 @@ A timing game in the style of a coin-op cabinet. A bright light races around a d
 
 - **Controls:** tap anywhere on the dial or the big POP! button on a touch screen, press Space or Enter on a keyboard, or press a game controller's A, X, R1 or right trigger (through the browser's Gamepad API; Start pauses). The dial is drawn on a canvas at the screen's frame rate. With reduced motion turned on, the glowing trail, the shake and most of the confetti are left out, and the game plays the same.
 - **The server works out every score.** Starting a run writes down the moment on the server's clock and hands the page a random seed, which decides where every lock goes. The page and the server run the same small simulation (`public/tumbler-engine.js`): the page plays it live, and when the run ends it sends only the list of its tap times, in whole milliseconds since the run started. The server replays those taps through the simulation and gets the score itself. It refuses taps that couldn't have come from a real run: two taps closer together than 60 milliseconds, taps out of order, more than 4,000 of them, a tap after the run was already over, or times later than the run has really lasted by the server's clock. Opening How to play or leaving the page pauses the run, and there's a countdown before the light moves again.
-- **High-score boards** for today and for all time, counted in locks popped. Every run you save counts, profiles show their name or initials the way they chose, and guests type initials. After a run the game says how many more locks would have passed the next real score on today's board. A new best score ever posts to the Comm Center. Scores from the first version of the game (points over locks that opened) are kept in the database, marked `rules = 1`, but left off the boards, since the two kinds of score can't be compared.
+- **High-score boards** for today and for all time, counted in locks popped. Every run you save counts, profiles show their name or initials the way they chose, and guests show the name they're playing under. After a run the game says how many more locks would have passed the next real score on today's board. A new best score ever posts to the Comm Center. Scores from the first version of the game (points over locks that opened) are kept in the database, marked `rules = 1`, but left off the boards, since the two kinds of score can't be compared.
 
 #### The Tumbler Rumble API
 
@@ -424,7 +424,7 @@ Everything is under `/api/tumbler`.
 | `POST /start` `{ profileToken? }` | Starts a run. Returns the run id, the seed and the rules. |
 | `GET /run/:id` | Where a run stands, and its score once it's finished. |
 | `POST /run/:id/finish` `{ taps }` | Replays the tap times (whole milliseconds since the run started) and keeps the score the server worked out: `score` (pins popped), `wave`, `bullseyes` and `bestStreak`. Impossible taps are refused. |
-| `POST /run/:id/save` `{ initials?, profileToken? }` | Puts a finished run's score on the boards. Returns today's and all-time rank. |
+| `POST /run/:id/save` `{ profileToken?, name?, avatar? }` | Puts a finished run's score on the boards. Returns today's and all-time rank. |
 | `GET /board?scope=day\|all&day=` | The best scores, highest first. |
 
 ### Know-It-All (`/trivia.html`)
@@ -477,7 +477,7 @@ The puzzles and Spin & Solve are played on the TV with the remote alone, and the
 | Words with Family | Against the computer, or with the remote passed between players: OK on one of your tiles picks it up and sends the highlight to the board, the arrows take it to a square, and OK puts it down. The tiles show on the TV, so for secret tiles play on your own devices. The games on everyone's own device stay on those devices. |
 | Spin & Solve | One to four players pass the remote around. The arrows move between Spin, Buy a vowel and Solve and across the letters, and solving uses a keyboard on the screen. |
 
-Initials can't be typed on a TV, so a solo score made there only goes on a board when the TV is signed in as a profile; otherwise the page says to play on your own device for that.
+A solo score made on the TV in these games doesn't go on a board, because the TV is signed in as itself and not as whoever has the remote. The page says to play on your own device for that.
 
 #### The cabinet games and the classics on a TV
 

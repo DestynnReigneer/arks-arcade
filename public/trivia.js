@@ -695,20 +695,20 @@
     $('againBtn').classList.toggle('hidden', !isHost);
     $('overView').classList.remove('hidden');
     Blip.tune([[523, 0.12], [659, 0.12], [784, 0.12], [1047, 0.3]], { type: 'triangle' });
-    if (canSave) setTimeout(() => initials.reset(), 50);
+    // The score goes under the profile or the guest's name, with nothing to type.
+    if (canSave) ArcadeKit.readySave(initials, $('saveHint'), $('saveScoreBtn'));
   }
 
   async function saveScore() {
-    const who = initials.value();
-    if (!who) { $('scoreMsg').textContent = 'Type your initials first.'; return; }
+    let who;
+    try { who = ArcadeKit.saveFields(initials); } catch (e) { $('scoreMsg').textContent = e.message; return; }
     $('saveScoreBtn').disabled = true;
     try {
       const g = S.game;
       const r = await ArcadeKit.saveScore('trivia', {
-        initials: who, score: g.players[0].score, board: isAdult() ? 'adult' : 'solo',
+        ...who, score: g.players[0].score, board: isAdult() ? 'adult' : 'solo',
         detail: `${g.questions.length} Qs · ${levelInfo(S.level).label}${g.settings.difficulty !== 'mixed' ? ' · ' + g.settings.difficulty : ''}`
       });
-      initials.remember(who);
       $('overScore').classList.add('hidden');
       openScores(r.id);
       toast(r.rank === 1 ? '🏆 New #1!' : `Saved: #${r.rank}`);

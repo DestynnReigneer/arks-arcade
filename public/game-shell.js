@@ -40,7 +40,7 @@ const GameShell = (() => {
         <div class="over-detail hint"></div>
         <div class="save-part">
           <p class="hint save-hint">Get on the board and see where you stack up.</p>
-          <div class="initials">
+          <div class="initials hidden">
             <input maxlength="1" class="ini" autocomplete="off" aria-label="First initial"><input maxlength="1" class="ini" autocomplete="off" aria-label="Second initial"><input maxlength="1" class="ini" autocomplete="off" aria-label="Third initial">
           </div>
           <button class="primary big save-btn">Save score</button>
@@ -53,27 +53,22 @@ const GameShell = (() => {
     mount.before(over);
     const q = sel => over.querySelector(sel);
     q('.again-btn').textContent = againLabel;
-    // On a TV the arcade is signed in as the TV, not as whoever has the
-    // remote, so scores there go on the board under the initials picked on
-    // the screen (tv-play.js).
+    // Signed in, the score goes under the profile; a guest's under their name.
+    // Nobody types initials, except on a TV: the arcade is signed in as the TV
+    // there, not as whoever has the remote, so scores go under the initials
+    // picked with the remote (tv-play.js).
     const onTv = () => typeof TvPlay !== 'undefined' && TvPlay.on;
-    const initials = ArcadeKit.wireInitials([...over.querySelectorAll('.ini')], () => save(), { guest: onTv });
+    const initials = ArcadeKit.wireInitials([...over.querySelectorAll('.ini')], () => save(), { tv: onTv });
     let pending = null;
-
-    function profile() {
-      if (onTv()) return null;
-      try { return typeof ArcadeProfile !== 'undefined' && ArcadeProfile.token() ? ArcadeProfile.get() : null; } catch { return null; }
-    }
 
     async function save() {
       if (!pending) return;
-      const p = profile();
-      const who = p ? 'P' : initials.value();
-      if (!who) { q('.msg').textContent = 'Type your initials first.'; return; }
+      let who;
+      try { who = ArcadeKit.saveFields(initials); } catch (e) { q('.msg').textContent = e.message; return; }
       q('.save-btn').disabled = true;
       try {
-        const r = await ArcadeKit.saveScore(game, { initials: who, score: pending.score, board: pending.board, detail: pending.detail || '', ...(p ? {} : { profileToken: null }) });
-        if (!p) initials.remember(who);
+        const r = await ArcadeKit.saveScore(game, { ...who, score: pending.score, board: pending.board, detail: pending.detail || '' });
+        if (who.initials) initials.remember(who.initials);
         q('.save-part').classList.add('hidden');
         toast(r.rank === 1 ? '🏆 New #1!' : `Saved: #${r.rank}`);
         openScores(pending.board, r.id);
@@ -96,10 +91,8 @@ const GameShell = (() => {
       q('.final-score').textContent = fmt(score);
       q('.over-detail').textContent = detail;
       pending = score > 0 ? { score, board, detail } : null;
-      const p = profile();
       q('.save-part').classList.toggle('hidden', !pending);
-      q('.initials').classList.toggle('hidden', !!p);
-      q('.save-hint').textContent = p ? `Saving as ${p.name}.` : 'Get on the board and see where you stack up.';
+      ArcadeKit.readySave(initials, q('.save-hint'), q('.save-btn'));
       q('.save-btn').disabled = false;
       q('.msg').textContent = '';
       over.classList.remove('hidden');

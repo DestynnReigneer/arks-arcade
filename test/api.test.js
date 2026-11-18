@@ -102,6 +102,11 @@ async function run({ base, root }) {
     `${forged.data.score} vs ${me.score}`);
   const badInitials = await api('/leaderboard', 'POST', { boardId, playerId: 'p0', initials: 'TOOLONG' });
   ok('bad initials are refused', badInitials.status === 400);
+  ok('a score with no name and no profile is refused, and says to sign in',
+    (await api('/leaderboard', 'POST', { boardId, playerId: 'p0', mode: 'solo' })).data.error === 'Sign in with ARKS ID to put your score on the board.');
+  const named = await api('/leaderboard', 'POST', { boardId, playerId: 'p0', mode: 'solo', name: 'Guest 12', avatar: 'shiba:1' });
+  ok('a guest\'s score goes on the board under their name', named.status === 201 &&
+    (await api('/arcade?board=4')).data.entries.some(e => e.name === 'Guest 12' && e.avatar === 'shiba:1' && e.initials === 'GUE'));
   ok('an unknown board is a 404', (await api('/check', 'POST', { boardId: 'deadbeef', word: 'CAT' })).status === 404);
 
   console.log('\n-- the arcade board --');
@@ -697,6 +702,11 @@ async function run({ base, root }) {
   const easyBoard = (await wl('/leaderboard?difficulty=easy')).data;
   ok('each difficulty has its own board',
     easyBoard.some(r => r.initials === 'EZY') && easyBoard.every(r => r.difficulty === 'easy'));
+  const wlGuest = await wl('/leaderboard', 'POST', { name: 'Kiddo', avatar: 'shiba:4', themeId: 'classic', won: true, guesses: 3, hintsUsed: 0, word: 'dog', elapsedMs: 6000, difficulty: 'hard' });
+  ok('a guest\'s Wordless score goes on the board under their name',
+    wlGuest.status === 201 && (await wl('/leaderboard?difficulty=hard')).data.some(r => r.profileName === 'Kiddo' && r.profileAvatar === 'shiba:4'));
+  ok('…and one with no name at all says to sign in',
+    (await wl('/leaderboard', 'POST', { themeId: 'classic', won: true, guesses: 3, hintsUsed: 0, word: 'dog', elapsedMs: 6000 })).data.error === 'Sign in with ARKS ID to put your score on the board.');
 
   ok('the arcade name endpoint answers', typeof (await wl('/arcade-info')).data.name === 'string');
   ok('without a sign-in service there is no banner', (await wl('/banner')).data.banner === null);
@@ -873,6 +883,25 @@ async function run({ base, root }) {
   ok('chess boards are kept apart by level',
     (await wl('/scores/chess?board=hard')).data.some(r => r.initials === 'CHE') &&
     !(await wl('/scores/chess?board=easy')).data.some(r => r.initials === 'CHE'));
+
+  // Nobody types initials: a guest's score goes under the name they play under.
+  const guestRun = await wl('/scores/dino', 'POST', { name: '  Guest   7 ', avatar: 'shiba:3', score: 1111, board: 'run' });
+  const guestRow = (await wl('/scores/dino?board=run&limit=100')).data.find(r => r.id === guestRun.data.id);
+  ok('a guest\'s score goes on the board under their name, with their avatar', guestRun.status === 201 && !!guestRow &&
+    guestRow.profileName === 'Guest 7' && guestRow.profileAvatar === 'shiba:3' && guestRow.initials === 'GUE', JSON.stringify(guestRow));
+  const oddAvatar = await wl('/scores/dino', 'POST', { name: 'Sam', avatar: 'javascript:alert(1)', score: 1112, board: 'run' });
+  ok('…an avatar that isn\'t one of the arcade\'s is left off',
+    (await wl('/scores/dino?board=run&limit=100')).data.find(r => r.id === oddAvatar.data.id).profileAvatar === null);
+  ok('…a long name is cut to 16 characters',
+    (await wl('/scores/dino', 'POST', { name: 'A really very long guest name', score: 1113, board: 'run' })).status === 201 &&
+    (await wl('/scores/dino?board=run&limit=100')).data.some(r => r.profileName === 'A really very lo'));
+  const nobody = await wl('/scores/dino', 'POST', { score: 5, board: 'run' });
+  ok('with no name, no profile and no initials, the score stays off the board and says to sign in',
+    nobody.status === 400 && nobody.data.error === 'Sign in with ARKS ID to put your score on the board.', JSON.stringify(nobody.data));
+  ok('…and a blank name counts as no name', (await wl('/scores/dino', 'POST', { name: '   ', score: 5, board: 'run' })).status === 400);
+  ok('a guest\'s new #1 is announced under their name',
+    (await wl('/scores/chess', 'POST', { name: 'Robin', score: 4999, board: 'easy' })).data.rank === 1 &&
+    (await wl('/comm/posts')).data.some(p => p.title.startsWith('Robin took #1') && p.game === 'chess'));
 
   // ---- two-phone chess -------------------------------------------------------------
   // (The lobby, invites and chat have their own suite, test/chess.test.js.)
@@ -1090,6 +1119,10 @@ async function run({ base, root }) {
   // A guest's game can't be handed to a profile afterwards.
   const prof = await wl('/profiles', 'POST', { name: 'Spin Pat', avatar: 'shiba:1' });
   await asAdmin(`/profiles/admin/${prof.data.id}/approve`, 'POST', {});
+  // A guest can't post scores that look like a family member's: their row says (guest).
+  const lookalike = await wl('/scores/dino', 'POST', { name: 'spin  PAT', score: 1114, board: 'run' });
+  ok('a guest using a profile\'s name goes on the board as "(guest)"',
+    lookalike.status === 201 && (await wl('/scores/dino?board=run&limit=100')).data.find(r => r.id === lookalike.data.id).profileName === 'spin PAT (guest)');
   const patToken = (await wl(`/profiles/${prof.data.id}/use`, 'POST', {})).data.token;
   const asPat = async (p, body) => {
     const res = await fetch(base + '/api/spinsolve' + p, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Profile-Token': patToken }, body: JSON.stringify(body || {}) });
@@ -1262,6 +1295,12 @@ async function run({ base, root }) {
   ok('a profile without a PIN can be picked straight away', !!maya.token);
   const mayaScore = await wl('/scores/dino', 'POST', { score: 321, board: 'run', profileToken: maya.token });
   ok('a score saved as a profile needs no initials', mayaScore.status === 201);
+  const mayaRow = (await wl('/scores/dino?board=run&limit=100')).data.find(r => r.id === mayaScore.data.id);
+  ok('…and the board shows the profile\'s name and avatar', !!mayaRow && mayaRow.profileName === 'Maya' && mayaRow.profileAvatar === 'shiba:2', JSON.stringify(mayaRow));
+  // A profile's page sends its name too (in case its sign-in ran out); the profile still wins.
+  const mayaNamed = await wl('/scores/dino', 'POST', { score: 322, board: 'run', profileToken: maya.token, name: 'Someone else' });
+  ok('a profile\'s score goes under the profile even when a name is sent',
+    (await wl('/scores/dino?board=run&limit=100')).data.find(r => r.id === mayaNamed.data.id).profileName === 'Maya');
 
   // ---- My feedback: tracked GitHub-style (2026-11-01) ----
   const mfbRes = await wl('/comm/feedback', 'POST', { kind: 'issue', message: 'Snake is too fast', game: 'snake', profileToken: maya.token });

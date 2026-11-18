@@ -56,19 +56,15 @@
 <div id="board"></div>
 <div id="keyboard"></div>
 
-<!-- Initials entry (arcade score submission) -->
+<!-- The score card at the end of a game: the score goes on the board under
+     the player's profile or guest name, with nothing to type. -->
 <div id="initialsOverlay" class="overlay hidden">
   <div class="overlay-card">
     <div class="over-top"><button id="playAgainBtn" class="primary-btn">Play again</button></div>
     <div id="finalScoreLabel">SCORE</div>
     <div id="finalScoreValue">0</div>
     <div id="finalScoreDetail"></div>
-    <div id="initialsHint">Enter your initials</div>
-    <div id="initialsBoxes">
-      <input maxlength="1" class="initial-box" data-idx="0" autocomplete="off" spellcheck="false">
-      <input maxlength="1" class="initial-box" data-idx="1" autocomplete="off" spellcheck="false">
-      <input maxlength="1" class="initial-box" data-idx="2" autocomplete="off" spellcheck="false">
-    </div>
+    <div id="initialsHint"></div>
     <div class="overlay-actions">
       <button id="skipScoreBtn" class="ghost-btn">Skip</button>
       <button id="saveScoreBtn">Save Score</button>
@@ -114,7 +110,7 @@
       <label>Anything specific to include? <span class="hint-text">(optional)</span>
         <input type="text" id="requestNoteInput" maxlength="200" placeholder="e.g. Bingo, Muffin, Chilli...">
       </label>
-      <label>Your name/initials <span class="hint-text">(optional)</span>
+      <label>Your name <span class="hint-text">(optional)</span>
         <input type="text" id="requestByInput" maxlength="30" placeholder="e.g. Ava">
       </label>
       <div id="themeRequestError" class="form-error"></div>
@@ -195,7 +191,7 @@
       emoji: '🏆',
       title: 'Score big',
       html: `<p>Win with <b>fewer guesses</b>, <b>fewer hints</b> and <b>faster</b> for more points.</p>
-        <p>When you finish, type your initials to get on the board and see where you stack up. 🏆 shows the leaderboard.</p>
+        <p>When you finish, save your score and it goes on the board under your name, so you can see where you stack up. 🏆 shows the leaderboard.</p>
         <div class="tut-tip">Tap <b>?</b> at the top any time to see this again.</div>`
     }
   ]);

@@ -43,12 +43,14 @@ test('playing Bucket Drop and saving the points', async ({ page, isMobile }) => 
   // at least 10 more (the phone and laptop runs can play at the same time, each adding 10)
   await expect.poll(async () => (await (await page.request.get('/api/cab-jackpot/bucketdrop')).json()).amount).toBeGreaterThanOrEqual(before + 10);
 
-  const boxes = page.locator('.over-panel .ini');
-  for (const [i, c] of ['B', 'D', 'R'].entries()) await boxes.nth(i).fill(c);
+  // Nobody types initials: the guest's score goes on the board under the guest's name.
+  await expect(page.locator('.over-panel .initials')).toBeHidden();
+  const guest = await page.evaluate(() => ArcadeProfile.name());
+  await expect(page.locator('.over-panel .save-hint')).toHaveText(`Saving as ${guest}.`);
   await page.locator('.over-panel .save-btn').click();
   await expect.poll(async () => {
     const list = await (await page.request.get('/api/scores/bucketdrop?board=big-fast')).json();
-    return list.some(r => r.initials === 'BDR' && r.score === points);
+    return list.some(r => r.profileName === guest && r.score === points);
   }).toBe(true);
   expect(problems).toEqual([]);
 });

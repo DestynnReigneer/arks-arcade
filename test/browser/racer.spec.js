@@ -53,12 +53,14 @@ test('driving ARKS Racer and saving a time', async ({ page, isMobile }) => {
   await expect(page.locator('.over-panel')).toBeVisible({ timeout: 5000 });
   await expect(page.locator('.over-panel .final-score')).toHaveText('0:55.12');
 
-  const boxes = page.locator('.over-panel .ini');
-  for (const [i, c] of ['R', 'C', 'E'].entries()) await boxes.nth(i).fill(c);
+  // Nobody types initials: the guest's score goes on the board under the guest's name.
+  await expect(page.locator('.over-panel .initials')).toBeHidden();
+  const guest = await page.evaluate(() => ArcadeProfile.name());
+  await expect(page.locator('.over-panel .save-hint')).toHaveText(`Saving as ${guest}.`);
   await page.locator('.over-panel .save-btn').click();
   await expect.poll(async () => {
     const list = await (await page.request.get('/api/scores/racer?board=sunset')).json();
-    return list.some(r => r.initials === 'RCE' && r.score === 55123);
+    return list.some(r => r.profileName === guest && r.score === 55123);
   }).toBe(true);
   // The board shows times, not raw numbers.
   await expect(page.locator('.overlay:not(.hidden) .scores .pts').first()).toHaveText(/^\d+:\d\d\.\d\d$/);

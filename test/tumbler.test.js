@@ -104,7 +104,7 @@ async function run({ base, root }) {
   ok('no taps at all is a run that ends on the first pin with no score', zeroDone.data.score === 0 && zeroDone.data.wave === 1);
   ok('…and a score of nothing can\'t go on the board', (await api(`/run/${zero.runId}/save`, 'POST', { initials: 'ZZZ' })).status === 400);
 
-  ok('initials have to be 1-3 letters or numbers', (await api(`/run/${started.runId}/save`, 'POST', { initials: 'TOO LONG' })).status === 400);
+  ok('a save with no name or profile (and no TV initials) is refused', (await api(`/run/${started.runId}/save`, 'POST', { initials: 'TOO LONG' })).status === 400);
   const saved = await api(`/run/${started.runId}/save`, 'POST', { initials: 'one' });
   ok('saving puts the score on the board, ranked', saved.status === 201 && saved.data.dayRank === 1 && saved.data.allRank === 1 && saved.data.score === 3, JSON.stringify(saved.data));
   ok('a score can only be saved once', (await api(`/run/${started.runId}/save`, 'POST', { initials: 'ONE' })).status === 409);

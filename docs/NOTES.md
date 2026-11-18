@@ -7,6 +7,39 @@ to-do list as checkboxes (the rule is in the maintainer's global CLAUDE.md
 and `arks-internal/conventions/sessions.md`): do the checked items in the
 order they were clicked, and keep the rest pinned here.
 
+## Nobody types initials for a board anymore (2026-11-17)
+
+The maintainer found some games still asking for three initials at the end, when the board is supposed to show
+the profile's name. Whether the boxes showed depended on checks like "is the profile's token there yet", so they
+popped up seemingly at random. The initials prompt is gone from every game.
+
+- **Signed in:** the score goes on the board under the profile, which shows its name (or the initials it chose in
+  its settings, the `boardShow` choice, which still works) and its avatar. Nothing to type.
+- **A guest:** the score goes on the board under the name they're playing under (`ArcadeProfile.name()`, "Guest 7"
+  or what they typed), with their avatar if it's one of the arcade's own. It's stored like a profile's name
+  (`profile_name` and `profile_avatar`, no `profile_id`), so every board already shows it. A guest with no name at
+  all gets "Sign in with ARKS ID to put your score on the board." and no Save button.
+- **The server** asks one place who a score goes under: `arcade/board-who.js` (`boardWho`). The shared board
+  (`arcade/scores.js`), Wordless (`server.js`), Sudoku, Clueless Crosswords, Tumbler Rumble, Shuffle Scuffle's daily,
+  Spin & Solve and Rambler all use it. The `initials` column stays (filled in from the name), so old rows still show
+  and the admin's Boards tab still works. A guest's daily key is `n:<name>` (one first finish per name per day).
+- **Rambler** keeps the name and avatar with each score (`player_name`, `player_avatar` on `rambler_scores`), and its
+  board and ladder show them (`name`, `avatar` in the API; old rows show their initials). A score that made the
+  board goes up by itself after the banner. In a room or a pass-around game it goes under the name the round knows
+  that player by. `saveMarathonScore` was never called and still isn't: Marathon runs don't go on the board from
+  the page, as before.
+- **The TV keeps what it did:** the games with the remote's letter picker (the cabinet games, Snake and the other
+  GameShell games, Dino Dash, Chess, Sudoku, Tumbler Rumble) still save a TV's score under the initials picked with
+  the arrows, since the TV is signed in as itself. The others leave TV scores off the board and now say so without
+  mentioning a keyboard for initials. `ArcadeKit.wireInitials(boxes, onEnter, { tv })` only ever shows the boxes on
+  a TV; `ArcadeKit.readySave` and `ArcadeKit.saveFields` do the rest for each game.
+- How to play, the README and the home page's help say the score goes on the board under your name.
+- **Tests:** `test/api.test.js` (a guest's name and avatar on the shared board, Wordless and Rambler, a profile still
+  winning over a sent name, no name refused with the sign-in line), `test/sudoku.test.js` and `test/scuffle.test.js`
+  (guests by name), and `test/browser/no-initials.spec.js` (signed in and as a guest in Dino Dash, no boxes and the
+  name on the board; a guest with no name; Rambler sending the name by itself). The cabinet games', Tumbler Rumble's
+  and Spin & Solve's browser tests now check for the guest's name instead of typing letters.
+
 ## Sign out signs out of the arcade only (2026-11-15, ARKS ID contract v19)
 
 - **The maintainer's call:** Sign out ends the arcade's sign-in on this device and nothing else. The sign-in

@@ -83,7 +83,6 @@
   const initialsOverlay = document.getElementById('initialsOverlay');
   const finalScoreValue = document.getElementById('finalScoreValue');
   const finalScoreDetail = document.getElementById('finalScoreDetail');
-  const initialBoxes = Array.from(document.querySelectorAll('.initial-box'));
   const saveScoreBtn = document.getElementById('saveScoreBtn');
   const skipScoreBtn = document.getElementById('skipScoreBtn');
 
@@ -603,35 +602,27 @@
     finalScoreDetail.textContent = `${DIFFICULTIES[lastResult.difficulty].label} · ` + (lastResult.won
       ? `${lastResult.guesses} guess${lastResult.guesses === 1 ? '' : 'es'} · ${lastResult.hintsUsed} hint${lastResult.hintsUsed === 1 ? '' : 's'} · ${secs}s`
       : `Not solved — word was ${lastResult.word.toUpperCase()}`);
-    // Playing as a profile: the score is theirs, so don't ask for initials.
-    const mine = typeof ArcadeProfile !== 'undefined' && ArcadeProfile.token() ? ArcadeProfile.initials() : '';
-    initialBoxes.forEach((b, i) => { b.value = mine[i] || ''; b.classList.remove('error'); });
-    // A TV has no keyboard for initials: the score goes on the board from your own phone.
-    const noBoard = TV && !mine;
-    document.getElementById('initialsHint').textContent = noBoard
-      ? 'Scores from the TV don\'t go on the board, because there\'s no keyboard for initials. Play on your own device to get on it.'
-      : 'Enter your initials';
-    document.getElementById('initialsHint').classList.toggle('hidden', !!mine);
-    document.getElementById('initialsBoxes').classList.toggle('hidden', !!mine || noBoard);
-    saveScoreBtn.classList.toggle('hidden', noBoard);
+    // Nothing to type: the score goes under the profile, or a guest's name.
+    // A TV is signed in as itself, so scores from the TV stay off the board.
+    const who = scoreWho();
+    document.getElementById('initialsHint').textContent = TV
+      ? 'Scores from the TV don\'t go on the board. Play on your own device to get on it.'
+      : who ? `Saving as ${who.name}.` : 'Sign in with ARKS ID to put your score on the board.';
+    saveScoreBtn.classList.toggle('hidden', !who);
     initialsOverlay.classList.remove('hidden');
     if (TV) document.getElementById('playAgainBtn').focus();
-    else if (!mine) initialBoxes[0].focus();
   }
 
-  initialBoxes.forEach((box, i) => {
-    box.addEventListener('input', () => {
-      box.value = box.value.replace(/[^a-zA-Z0-9]/g, '').slice(0, 1).toUpperCase();
-      initialBoxes.forEach(b => b.classList.remove('error'));
-      if (box.value && i < initialBoxes.length - 1) initialBoxes[i + 1].focus();
-    });
-    box.addEventListener('keydown', (e) => {
-      if (e.key === 'Backspace' && !box.value && i > 0) {
-        initialBoxes[i - 1].focus();
-      }
-      e.stopPropagation();
-    });
-  });
+  // Who the score goes on the board as: the signed-in profile (the server
+  // checks its token), or the name a guest plays under. Null on a TV, or for
+  // someone with no name at all.
+  function scoreWho() {
+    if (TV || typeof ArcadeProfile === 'undefined') return null;
+    const token = ArcadeProfile.token() || null;
+    const name = ArcadeProfile.name() || '';
+    if (!token && !name) return null;
+    return { profileToken: token, name, avatar: (ArcadeProfile.get() || {}).avatar || undefined };
+  }
 
   skipScoreBtn.addEventListener('click', () => {
     initialsOverlay.classList.add('hidden');
@@ -644,23 +635,18 @@
   });
 
   saveScoreBtn.addEventListener('click', async () => {
-    const initials = initialBoxes.map(b => b.value.trim()).join('');
-    if (!initials) {
-      initialBoxes.forEach(b => b.classList.add('error'));
-      initialBoxes[0].focus();
-      return;
-    }
+    const who = scoreWho();
+    if (!who) return;
     try {
       const { id } = await apiPost('/api/leaderboard', {
-        initials,
+        ...who,
         themeId: lastResult.themeId,
         won: lastResult.won,
         guesses: lastResult.guesses,
         hintsUsed: lastResult.hintsUsed,
         word: lastResult.word,
         elapsedMs: lastResult.elapsedMs,
-        difficulty: lastResult.difficulty,
-        profileToken: typeof ArcadeProfile !== 'undefined' ? ArcadeProfile.token() : null
+        difficulty: lastResult.difficulty
       });
       initialsOverlay.classList.add('hidden');
       await openLeaderboard(lastResult.themeId, id, lastResult.difficulty);

@@ -36,7 +36,7 @@ project, and the arcade uses both:
 
 | Where | Palette | Why |
 |---|---|---|
-| Arcade hub, Wordless, Rambler (kids dictionary) | **8-Bit** | The spec assigns it to "a retro arcade/game-room mode — the kid request board as a *quest log*, achievement pop-ups, anything that wants a coin-op wink." That is a literal description of what got built: a theme-request board the kids submit to, a milestone system, and an initials leaderboard. |
+| Arcade hub, Wordless, Rambler (kids dictionary) | **8-Bit** | The spec assigns it to "a retro arcade/game-room mode — the kid request board as a *quest log*, achievement pop-ups, anything that wants a coin-op wink." That is a literal description of what got built: a theme-request board the kids submit to, a milestone system, and a coin-op style leaderboard. |
 | Rambler on the unfiltered dictionary | **Vice** | The spec's "late-night lights-off vibe". Switching palette with the dictionary makes adult mode *look* different the moment it is on — which is a safety feature as much as a style one, since you can tell across the room which mode a kid is holding. |
 
 Summit is the other candidate — the spec assigns it to "anything with a

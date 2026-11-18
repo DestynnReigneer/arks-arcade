@@ -129,14 +129,14 @@
            <span class="num"></span>
            <button class="danger">Remove</button>`;
         row.children[0].textContent = String(i + 1).padStart(2, '0');
-        row.querySelector('b').textContent = e.initials;
+        row.querySelector('b').textContent = e.playerName || e.initials;
         row.querySelector('.muted').textContent =
           `${e.wordCount} words${e.bestWord ? ' · ' + e.bestWord : ''}${e.playerId ? ' · profile linked' : ' · guest'}`;
         row.children[2].textContent = String(e.score);
         row.querySelector('button').onclick = async () => {
           try {
             await api(`/arcade/entry/${e.id}`, { method: 'DELETE' });
-            say($('boardMsg'), `Removed ${e.initials}.`);
+            say($('boardMsg'), `Removed ${e.playerName || e.initials}.`);
             loadBoards();
           } catch (err) {
             say($('boardMsg'), err.message, false);

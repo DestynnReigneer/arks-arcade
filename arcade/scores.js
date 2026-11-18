@@ -37,7 +37,7 @@ const GAMES = {
   towers: { label: 'Tower Defense', boards: { meadow: 'Meadow', lake: 'Frozen Lake', canyon: 'Canyon', swamp: 'Swamp', castle: 'Castle', volcano: 'Volcano' }, max: 9999999 }
 };
 
-const INITIALS_RE = /^[A-Z0-9]{1,3}$/;
+const { boardWho } = require('./board-who');
 // A game whose score is a time (lower is better) keeps it in thousandths of a second.
 const shown = (g, points) => (g.lowerIsBetter ? `${(points / 1000).toFixed(2)} seconds` : points.toLocaleString('en-US'));
 
@@ -63,7 +63,6 @@ for (const r of db.db.prepare("SELECT id, detail FROM arcade_scores WHERE game =
   const m = /(Big|Normal|Small) cups, (chill|normal|fast|wild)/.exec(r.detail || '');
   if (m) db.db.prepare('UPDATE arcade_scores SET board = ? WHERE id = ?').run(`${m[1].toLowerCase()}-${m[2]}`, r.id);
 }
-const initialsOf = name => (String(name).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 3) || 'P');
 
 function fail(message, status) {
   return Object.assign(new Error(message), { status });
@@ -92,26 +91,27 @@ function list(game, board, limit = 25) {
   });
 }
 
-function save(game, { initials, score, board, detail, profileToken, fromServer }) {
+function save(game, { initials, name, avatar, score, board, detail, profileToken, fromServer }) {
   const { g, key } = boardOf(game, board);
   if (g.serverOnly && !fromServer) throw fail(`${g.label} saves its scores from the game itself.`, 403);
-  // Playing as a profile: the score is theirs, no initials needed.
-  const profile = profileToken ? require('./profiles').verify(profileToken) : null;
-  const who = profile ? profile.initials || initialsOf(profile.name) : String(initials || '').toUpperCase().trim();
-  if (!INITIALS_RE.test(who)) throw fail('Initials must be 1-3 letters or numbers.', 400);
+  // Signed in, the score is the profile's; a guest's goes under their name, and a TV's under
+  // the initials picked with the remote (arcade/board-who.js).
+  const as = boardWho({ profileToken, name, avatar, initials });
+  const { profile } = as;
+  const who = as.initials;
   const points = Math.round(Number(score));
   if (!Number.isFinite(points) || points < (g.min || 1) || points > g.max) throw fail('That score does not look right.', 400);
   // a game with its own check (a jackpot that must really have been won here)
   if (g.check && !g.check(points)) throw fail('That score does not look right.', 400);
   const info = db.db.prepare(`
     INSERT INTO arcade_scores (game, board, initials, score, detail, profile_id, profile_name, profile_avatar) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(game, key, who, points, String(detail || '').slice(0, 80), profile ? profile.id : null, profile ? profile.name : null, profile ? profile.avatar : null);
+  `).run(game, key, who, points, String(detail || '').slice(0, 80), profile ? profile.id : null, as.name, as.avatar);
   const rank = db.db.prepare(`
     SELECT COUNT(*) AS c FROM arcade_scores WHERE game = ? AND board = ? AND score ${g.lowerIsBetter ? '<' : '>'} ?
   `).get(game, key, points).c + 1;
   if (rank === 1 && !(g.adultBoards || []).includes(key)) {
     const where = Object.keys(g.boards).length > 1 ? ` (${g.boards[key]})` : '';
-    const shout = profile ? require('./profiles').boardName(profile.id).label : who;
+    const shout = profile ? require('./profiles').boardName(profile.id).label : as.name || who;
     comm.safePost({
       trophy: { game: g.label, profileId: profile ? profile.id : null, name: shout, score: shown(g, points) + (g.lowerIsBetter ? '' : ' points'), board: Object.keys(g.boards).length > 1 ? g.boards[key] : '', url: `/${game}.html` },
       kind: 'highscore', emoji: '🏆', game,
