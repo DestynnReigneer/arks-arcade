@@ -138,6 +138,30 @@ async function run({ base, root }) {
     ok('putting it back brings the win back', await winsOf(fay) === 1);
   }
 
+  console.log('\n-- boards: Tower Defense\'s All levels keeps a carried-on game up to date --');
+  {
+    const post = body => call('/api/scores/towers', 'POST', body);
+    ok('one map\'s board takes up to 100,000', (await post({ initials: 'MAP', score: 100000, board: 'meadow' })).status === 201);
+    ok('…and refuses more, since no single map can give that', (await post({ initials: 'MAP', score: 100001, board: 'meadow' })).status === 400);
+    ok('…and a map\'s board never hands out a run key', !('runKey' in (await post({ initials: 'MAP', score: 500, board: 'canyon' })).data));
+    const first = await post({ initials: 'RUN', score: 20000, board: 'all', detail: 'Meadow' });
+    ok('All levels takes a carried-on game and hands back its key', first.status === 201 && first.data.board === 'all' && /^[0-9a-f]{36}$/.test(first.data.runKey || ''), JSON.stringify(first.data));
+    const run = { id: first.data.id, key: first.data.runKey };
+    const raised = await post({ score: 45000, board: 'all', detail: 'Meadow and Canyon', run });
+    ok('saving the same game again raises its own row', raised.status === 201 && raised.data.id === run.id && raised.data.score === 45000, JSON.stringify(raised.data));
+    const rows = (await call('/api/scores/towers?board=all&limit=100')).data.filter(r => r.id === run.id);
+    ok('…so the game is on the board once, with its new score and maps', rows.length === 1 && rows[0].score === 45000 && rows[0].detail === 'Meadow and Canyon' && rows[0].initials === 'RUN');
+    ok('…and the key never shows on the board', !JSON.stringify(rows).includes(run.key));
+    ok('a wrong key can\'t touch it', (await post({ score: 60000, board: 'all', run: { id: run.id, key: 'f'.repeat(36) } })).status === 404);
+    ok('…nor can no key', (await post({ score: 60000, board: 'all', run: { id: run.id } })).status === 404);
+    ok('a game\'s score can\'t go down', (await post({ score: 100, board: 'all', run })).status === 400);
+    ok('a map\'s board doesn\'t take a run', (await post({ score: 60000, board: 'meadow', run })).status === 400);
+    ok('All levels takes up to 300,000 (three maps)', (await post({ score: 300000, board: 'all', run })).status === 201);
+    ok('…and no more', (await post({ score: 300001, board: 'all', run })).status === 400);
+    const admin2 = (await admin('')).data.games.find(g => g.id === 'towers');
+    ok('All levels is one of Tower Defense\'s boards on the Boards tab', admin2 && admin2.boards.some(b => b.id === 'all'), JSON.stringify(admin2 && admin2.boards));
+  }
+
   console.log(`\n  ${pass} passed, ${fail} failed`);
   return { pass, fail };
 }

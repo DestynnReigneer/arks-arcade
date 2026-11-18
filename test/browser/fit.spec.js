@@ -34,13 +34,14 @@ const SIZES = [
 // start: what a person taps to get to the first move ({ fill, text } types into a box). need: what must be on the
 // screen then (touch: only on a touch screen). board: the part that can't get tiny
 // (null for a game whose board is a wide strip, like Spin & Solve's puzzle).
+// cell: a board of squares to tap ({ cols, min }): on a touch screen each square is at least min pixels across.
 const GAMES = [
   { name: 'Sudoku', path: '/sudoku.html', start: ['#coverBtn'], board: '#board, .sd-board', need: ['.sd-board', '#tools', '#pad'] },
   { name: 'Clueless Crosswords', path: '/clueless.html', start: ['#coverBtn'], board: '#grid', need: ['#clueBar', '#grid', '#tools'], touch: ['#keys'] },
   { name: 'Snake', path: '/snake.html', start: [], board: '#canvas', need: ['#canvas'], touch: ['#pad'] },
   { name: 'Block Drop', path: '/blocks.html', start: [], board: '#canvas', need: ['#canvas'], touch: ['#pad'] },
   { name: 'Brick Breaker', path: '/bricks.html', start: [], board: '#canvas', need: ['#canvas'] },
-  { name: 'Tower Defense', path: '/towers.html', start: ['#waveBtn'], board: '#stage', need: ['#stage', '#waveBtn', '#buildRow'] },
+  { name: 'Tower Defense', path: '/towers.html', start: ['#waveBtn'], board: '#canvas', cell: { cols: 10, min: 22 }, need: ['#stage', '#waveBtn', '#buildRow'] },
   { name: 'Words with Family', path: '/crisscross.html', start: ['#newLocalBtn', { fill: '#localPlayers input', text: 'Tester' }, '#localGo'], board: '#board', need: ['#board', '#rack', '#playBtn'] },
   { name: 'Spin & Solve', path: '/spinsolve.html', start: ['#goBtn'], board: null, need: ['#puzzleBoard', '#spinBtn', '#vowelBtn', '#solveBtn'] },
   { name: 'Chess', path: '/chess.html', start: ['#goBtn'], board: '#board', need: ['#board', '#statusLine', '#gameBtns'] },
@@ -108,7 +109,7 @@ for (const game of GAMES) {
       await page.waitForTimeout(1000);
 
       const need = [...game.need, ...(touch ? game.touch || [] : [])];
-      const report = await page.evaluate(({ need, board, covered }) => {
+      const report = await page.evaluate(({ need, board, covered, cell, touch }) => {
         const vw = innerWidth, vh = innerHeight - covered, out = [];
         for (const sel of need) {
           const el = document.querySelector(sel);
@@ -129,6 +130,8 @@ for (const game of GAMES) {
           // A board narrower than a third of the screen's short side is too small to play.
           const least = Math.min(vw, vh) * 0.33;
           if (Math.min(r.width, r.height) < least) out.push(`the board is squashed to ${Math.round(r.width)}×${Math.round(r.height)}`);
+          // A board of squares to tap: each one at least this many pixels across on a touch screen.
+          if (cell && touch && r.width / cell.cols < cell.min - 0.01) out.push(`the board's squares are ${(r.width / cell.cols).toFixed(1)}px, under ${cell.min}px`);
         }
         if (document.documentElement.scrollWidth > vw + 1) out.push(`the page scrolls sideways (${document.documentElement.scrollWidth} wide)`);
         // Turned sideways there's no room to spare, so the page mustn't scroll at all.
@@ -144,7 +147,7 @@ for (const game of GAMES) {
           }
         }
         return out;
-      }, { need, board: game.board, covered });
+      }, { need, board: game.board, covered, cell: game.cell || null, touch });
       await page.screenshot({ path: info.outputPath('screen.png') });
       expect(report, report.join('\n')).toEqual([]);
       expect(problems, problems.join('\n')).toEqual([]);
@@ -255,6 +258,59 @@ for (const [label, viewport] of SIZES.filter(s => s[2] && s[1].width > s[1].heig
     for (const b of await buttons.all()) {
       const r = await b.boundingBox();
       expect(r.y + r.height, await b.innerText()).toBeLessThanOrEqual(viewport.height + 1);
+    }
+    await ctx.close();
+  });
+}
+
+// Tower Defense at every size: the build bar is whole on the screen before the first
+// wave, a picked tower's Upgrade and Sell are whole on the screen during one, and the
+// bug-report button never sits on either.
+for (const [label, viewport, , covered = 0] of SIZES) {
+  test(`Tower Defense on a ${label}: the towers, and a picked tower's Upgrade and Sell, are on the screen`, async ({ browser }, info) => {
+    test.skip(info.project.name !== 'phone', 'The sizes are set here, so one project runs them all.');
+    const { ctx, page } = await openAt(browser, '/towers.html', viewport, covered);
+    // Who's playing? can open a moment after the page settles.
+    await page.waitForTimeout(800);
+    const guest = page.getByRole('button', { name: /Play as a guest/ });
+    if (await guest.isVisible().catch(() => false)) {
+      await guest.click();
+      await page.getByRole('button', { name: 'Play', exact: true }).click();
+    }
+    await expect(page.locator('.apf').first()).toBeHidden();
+    // Whole on the screen, not covered by anything, and clear of the bug-report button.
+    const check = sel => page.evaluate(({ sel, covered }) => {
+      const vw = innerWidth, vh = innerHeight - covered, out = [];
+      const bug = document.querySelector('.fb-corner');
+      const b = bug && bug.getBoundingClientRect();
+      const bugOn = b && b.width && b.height && getComputedStyle(bug).display !== 'none' && getComputedStyle(bug).visibility !== 'hidden';
+      for (const el of document.querySelectorAll(sel)) {
+        const r = el.getBoundingClientRect();
+        const name = `${sel} "${el.textContent.trim().replace(/\s+/g, ' ')}"`;
+        if (!r.width || !r.height) { out.push(`${name} is hidden`); continue; }
+        if (r.top < -1 || r.left < -1 || r.bottom > vh + 1 || r.right > vw + 1) out.push(`${name} runs off the screen (${Math.round(r.top)}-${Math.round(r.bottom)} of ${vh})`);
+        const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        if (hit && hit !== el && !el.contains(hit) && !hit.contains(el)) out.push(`${name} is covered by ${hit.tagName.toLowerCase()}.${String(hit.className).split(' ')[0]}`);
+        if (bugOn && b.left < r.right && b.right > r.left && b.top < r.bottom && b.bottom > r.top) out.push(`the bug-report button sits on ${name}`);
+      }
+      if (!document.querySelectorAll(sel).length) out.push(`${sel} isn't on the page`);
+      if (document.documentElement.scrollWidth > vw + 1) out.push('the page scrolls sideways');
+      return out;
+    }, { sel, covered });
+    expect(await check('#buildRow, #buildRow button')).toEqual([]);
+    await page.locator('#waveBtn').click();
+    await page.waitForTimeout(600);
+    expect(await check('#buildRow button')).toEqual([]);
+    const sq = await page.evaluate(() => window.TowersTest.free());
+    const map = await page.locator('#canvas').boundingBox();
+    await page.touchscreen.tap(map.x + (sq.x + 0.5) * map.width / sq.cols, map.y + (sq.y + 0.5) * map.height / sq.rows);
+    await page.locator('#buildRow button', { hasText: 'Archer' }).tap();
+    await expect(page.locator('.tower-actions')).toBeVisible();
+    await page.waitForTimeout(300);
+    expect(await check('.tower-actions button')).toEqual([]);
+    expect(await check('#buildRow button')).toEqual([]);
+    if (viewport.width > viewport.height && viewport.height < 600) {
+      expect(await page.evaluate(() => document.documentElement.scrollHeight - innerHeight)).toBeLessThanOrEqual(1);
     }
     await ctx.close();
   });

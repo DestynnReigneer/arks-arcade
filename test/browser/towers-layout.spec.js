@@ -23,7 +23,7 @@ for (const [label, viewport, beside] of [['a laptop', { width: 1440, height: 900
     await page.locator('#waveBtn').click();
     await expect(page.locator('body')).toHaveAttribute('data-state', 'playing');
     const stage = await page.locator('#stage').boundingBox();
-    const info = await page.locator('#info').boundingBox();
+    const info = await page.locator('#buildBar').boundingBox();
     if (beside) {
       expect(info.x).toBeGreaterThan(stage.x + stage.width);
       expect(stage.y + stage.height).toBeLessThanOrEqual(viewport.height);

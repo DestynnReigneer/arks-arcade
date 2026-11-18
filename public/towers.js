@@ -40,7 +40,10 @@
   let particles = [], castleHurt = 0;
   let ground = null, groundKey = '';
 
-  const shell = GameShell.create({ game: 'towers', boards: Object.fromEntries(Object.entries(E.MAPS).map(([id, m]) => [id, m.label])), mount: $('stage'), onAgain: () => reset() });
+  // A board per map, and All levels for a game carried on from one level to the next.
+  const BOARDS = { ...Object.fromEntries(Object.entries(E.MAPS).map(([id, m]) => [id, m.label])), all: 'All levels' };
+  // Play again after a carried-on game starts over from the map it began on.
+  const shell = GameShell.create({ game: 'towers', boards: BOARDS, mount: $('stage'), onAgain: () => { if (run) { mapId = run.maps[0]; store('towers.map', mapId); } reset(); } });
   let view = null;
 
   function paintOptions() {
@@ -198,11 +201,13 @@
   // ---- the info panel under the map ------------------------------------------------------------
   function renderInfo(force) {
     const tower = picked && E.towerAt(g, picked.x, picked.y);
-    const key = JSON.stringify([picked, tower && tower.level, g.gold, state]);
+    const key = JSON.stringify([picked, tower && tower.level, g.gold, state, g.towers.length]);
     if (!force && key === infoKey) return;
     infoKey = key;
     const box = $('info');
     box.innerHTML = '';
+    box.classList.remove('on-map');
+    box.style.top = box.style.left = box.style.width = '';
     if (state === 'over') { box.classList.add('hidden'); return; }
     box.classList.remove('hidden');
     if (tower) {
@@ -231,15 +236,31 @@
       sellBtn.onclick = () => doSell();
       actions.append(upBtn, sellBtn);
       box.append(head, st, actions);
+      placeCard(tower);
       return;
     }
     const p = document.createElement('p');
     p.className = 'hint';
-    p.textContent = state === 'ready'
+    p.textContent = !g.towers.length
       ? `Once you build, wave 1 comes in ${E.FIRST_BREAK} seconds, and after each wave you get a short break to build more.`
       : `${TvPlay.on ? 'Press OK on a tower' : 'Tap a tower'} to upgrade or sell it. Monsters walk the road to your castle: don't let them in!`;
     box.appendChild(p);
   }
+
+  // On a phone held upright the map gets all the room under it, so a picked
+  // tower's card floats over the map instead: over its bottom edge for a tower
+  // in the top half, over its top edge for one in the bottom half.
+  const upright = () => !TvPlay.on && window.matchMedia('(max-width: 899px) and (orientation: portrait)').matches;
+  function placeCard(tower) {
+    if (!upright()) return;
+    const box = $('info'), stage = $('stage');
+    box.classList.add('on-map');
+    box.style.left = `${stage.offsetLeft + 6}px`;
+    box.style.width = `${stage.offsetWidth - 12}px`;
+    const low = tower.y >= g.map.rows / 2;
+    box.style.top = `${low ? stage.offsetTop + 6 : stage.offsetTop + stage.offsetHeight - box.offsetHeight - 6}px`;
+  }
+  window.addEventListener('resize', () => { infoKey = barKey = ''; });
 
   // ---- the build bar: every tower with its picture, name and price -------------------------------
   const touchOnly = () => !TvPlay.on && window.matchMedia('(hover: none)').matches;
@@ -285,17 +306,20 @@
       }
       couldPay[type] = can;
     }
-    const how = $('buildHow');
+    // On an upright phone the line is kept short enough for one line.
+    const how = $('buildHow'), short = upright();
     if (armed) {
       const name = E.TOWERS[armed].label;
       how.textContent = TvPlay.on ? `Now press OK on a lit square for the ${name}.`
-        : touchOnly() ? `Now tap a lit square for the ${name}, or tap the ${name} again to cancel.`
-          : `Now pick a lit square for the ${name}. Esc or a right-click cancels.`;
+        : short ? `Tap a lit square, or the ${name} again to cancel.`
+          : touchOnly() ? `Now tap a lit square for the ${name}, or tap the ${name} again to cancel.`
+            : `Now pick a lit square for the ${name}. Esc or a right-click cancels.`;
     } else if (spot) {
-      how.textContent = touchOnly() ? 'Now pick a tower to build on that square, or tap the square again to cancel.'
-        : TvPlay.on ? 'Now pick a tower to build on that square.'
-          : 'Now pick a tower to build on that square. Esc or a right-click cancels.';
-    } else how.textContent = 'Pick an empty square and then a tower, or pick a tower and then a square.';
+      how.textContent = short ? 'Now pick a tower, or tap the square again to cancel.'
+        : touchOnly() ? 'Now pick a tower to build on that square, or tap the square again to cancel.'
+          : TvPlay.on ? 'Now pick a tower to build on that square.'
+            : 'Now pick a tower to build on that square. Esc or a right-click cancels.';
+    } else how.textContent = short ? 'Pick a square then a tower, or a tower then a square.' : 'Pick an empty square and then a tower, or pick a tower and then a square.';
     document.body.classList.toggle('td-armed', !!armed);
   }
   $('buildRow').addEventListener('animationend', e => e.target.classList.remove('lit'));
@@ -373,11 +397,38 @@
   function nextLevel() {
     const to = state === 'over' && g.phase === 'won' && nextMap(mapId);
     if (!to) return;
-    const carry = { maps: [...(run ? run.maps : [mapId]), to], score: g.score, kills: (run ? run.kills : 0) + g.kills };
+    const done = run ? run.maps : [mapId];
+    const carry = { maps: [...done, to], score: g.score, kills: (run ? run.kills : 0) + g.kills, saved: run ? run.saved : null, saving: run ? run.saving : null };
+    // The game so far goes on the All levels board now, so leaving later never loses it.
+    const saving = saveRun(carry, g.score, listed(done.map(id => E.MAPS[id].label)));
+    if (saving) saving.catch(e => toast(e.message));
     nextBtn.classList.add('hidden');
     mapId = to;
     store('towers.map', to);
     reset(carry);
+  }
+
+  // A carried-on game saves itself on the All levels board: the first save adds
+  // it, and each one after raises that same row (the server hands back a key for
+  // it). Nothing to save on a TV (its scores go under initials picked on the end
+  // card) or for a guest with no name.
+  function saveRun(r, score, detail) {
+    if (ArcadeKit.onTvDevice() || !ArcadeKit.boardWho()) return null;
+    r.saving = (r.saving || Promise.resolve()).catch(() => {}).then(() =>
+      ArcadeKit.saveScore('towers', { score, board: 'all', detail, ...(r.saved ? { run: r.saved } : {}) })
+    ).then(res => {
+      r.saved = { id: res.id, key: res.runKey || (r.saved && r.saved.key) };
+      return res;
+    });
+    return r.saving;
+  }
+  // The end card of a carried-on game says where it was saved instead of offering Save.
+  function showRunSave(p) {
+    const panel = document.querySelector('.over-panel');
+    const hint = panel.querySelector('.save-hint');
+    panel.querySelector('.save-btn').classList.add('hidden');
+    hint.textContent = 'Saving it on the All levels board…';
+    p.then(r => { hint.textContent = `Saved on the All levels board at #${r.rank}.`; }, e => { hint.textContent = e.message; });
   }
 
   function end(won) {
@@ -394,17 +445,26 @@
     const kills = (run ? run.kills : 0) + g.kills;
     const before = run ? run.maps.slice(0, -1).map(id => E.MAPS[id].label) : [];
     const next = won ? nextMap(mapId) : null;
+    // The lives left are this map's, so a game carried on says which map.
+    const all = listed([...before, m]);
+    const lives = before.length ? `, with ${g.lives} lives left on ${m}` : ` with ${g.lives} lives left`;
     let detail;
     if (!won) detail = `${before.length ? `Beat ${listed(before)}, then held` : 'Held'} out to wave ${g.wave} on ${m} · ${kills} monsters defeated`;
-    else if (next) detail = `All ${E.WAVES} waves on ${listed([...before, m])} with ${g.lives} lives left. Take on ${E.MAPS[next].label} next and your score keeps going.`;
-    else detail = `All ${E.WAVES} waves on ${listed([...before, m])} with ${g.lives} lives left${before.length >= LEVELS.length - 1 ? '. You beat every level in one game!' : ''}`;
+    else if (next) detail = `All ${E.WAVES} waves on ${all}${lives}. Take on ${E.MAPS[next].label} next and your score keeps going.`;
+    else if (before.length >= LEVELS.length - 1) detail = `All ${E.WAVES} waves on ${all}. You beat every level in one game!`;
+    else detail = `All ${E.WAVES} waves on ${all}${lives}`;
     nextBtn.classList.toggle('hidden', !next);
     if (next) nextBtn.textContent = `Next level: ${E.MAPS[next].level}`;
-    setTimeout(() => shell.over({
-      score: g.score, board: mapId,
-      title: won ? 'Victory! The castle is safe! 🏰' : undefined,
-      detail
-    }), 700);
+    // A carried-on game belongs on All levels, never on one map's board, and saves itself.
+    const saving = run && saveRun(run, g.score, won ? all : `${listed(before)}, then wave ${g.wave} on ${m}`);
+    setTimeout(() => {
+      shell.over({
+        score: g.score, board: run ? 'all' : mapId,
+        title: won ? 'Victory! The castle is safe! 🏰' : undefined,
+        detail
+      });
+      if (saving) showRunSave(saving);
+    }, 700);
   }
 
   function frame(now) {
@@ -972,7 +1032,7 @@
     else if (k === 'Escape') { if (cancelPick()) e.preventDefault(); }
   });
   $('pauseBtn').addEventListener('click', () => pause());
-  $('scoresBtn').addEventListener('click', () => shell.openScores(mapId));
+  $('scoresBtn').addEventListener('click', () => shell.openScores(run ? 'all' : mapId));
   document.addEventListener('visibilitychange', () => { if (document.hidden && state !== 'over') pause(true); });
   Blip.muteButton($('muteBtn'));
   Blip.musicButton($('musicBtn'));
@@ -1002,7 +1062,8 @@
     },
     {
       emoji: '⭐', title: 'On to the next level',
-      html: `<p>Beat all ${E.WAVES} waves and you can carry on to the next level: from Easy to Medium, then to Hard. Your score keeps going, and you start the new map with its own gold and lives and no towers.</p>`
+      html: `<p>Beat all ${E.WAVES} waves and you can carry on to the next level: from Easy to Medium, then to Hard. Your score keeps going, and you start the new map with its own gold and lives and no towers.</p>
+        <p>A game played on from one level to the next goes on its own <b>All levels</b> board, by itself, so it's kept even if you stop partway.</p>`
     }
   ]);
   $('helpBtn').addEventListener('click', () => help.open());
@@ -1057,7 +1118,9 @@
   // navigator.webdriver): set the gold, and jump to the last wave and win it.
   if (navigator.webdriver) {
     window.TowersTest = {
-      state: () => ({ state, gold: g.gold, score: g.score, wave: g.wave, map: mapId, towers: g.towers.length, armed, picked }),
+      state: () => ({ state, gold: g.gold, score: g.score, wave: g.wave, map: mapId, towers: g.towers.length, armed, picked, run: run && { maps: run.maps, saved: run.saved && run.saved.id } }),
+      // Waits for a carried-on game's save to finish, and says where it went.
+      runSaved: () => (run && run.saving ? run.saving.then(r => r.id, () => null) : null),
       setGold: n => { g.gold = n; hud(); },
       // An empty square to build on, nearest the middle of the map, with the map's size.
       free: () => {

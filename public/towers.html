@@ -94,12 +94,23 @@
   .tower-actions { display: flex; gap: 8px; }
   .tower-actions button { flex: 1; justify-content: center; font-weight: 700; }
   .tower-actions button:disabled { opacity: 0.45; cursor: default; }
-  /* On a phone held upright, the page's title steps aside while you play so the map gets the room. */
-  /* Before the first tower the wave button already says when wave 1 comes, so the tip under the towers waits. */
-  @media (max-width: 600px) {
+  /* On a phone held upright the map gets all the room there is: the page's title steps
+     aside while you play, the tips go (the wave button says when wave 1 comes), the
+     how-to line is one short line, and a picked tower's card floats over the map
+     (towers.js puts it over the half the tower isn't in). The bug-report button would
+     sit on the towers, so it waits in the top bar's menu, and the page keeps no empty
+     strip at the bottom for it. */
+  @media (max-width: 899px) and (orientation: portrait) {
+    html:not(.tv) body { padding-bottom: 4px; }
     html:not(.tv) body[data-setup="off"] > header.top { display: none; }
-    html:not(.tv) body[data-setup="on"] .td-play > .info { display: none; }
-    .build-how { font-size: 12px; margin-bottom: 5px; }
+    html:not(.tv) .td-play { position: relative; }
+    html:not(.tv) .td-play > .info:not(.on-map) { display: none; }
+    html:not(.tv) .td-play > .info.on-map {
+      position: absolute; z-index: 5; margin: 0; padding: 10px 12px; min-height: 0; box-sizing: border-box;
+      background: color-mix(in srgb, var(--card) 94%, transparent); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
+    }
+    html:not(.tv) .fb-corner { display: none; }
+    .build-how { font-size: 12px; margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .build-row { gap: 6px; }
     .build-row button {
       display: grid; grid-template-columns: auto auto; grid-template-areas: "em nm" "em cost";
@@ -108,8 +119,6 @@
     .build-row .em { grid-area: em; font-size: 22px; }
     .build-row .nm { grid-area: nm; font-size: 12px; }
     .build-row .cost { grid-area: cost; font-size: 12px; }
-    /* A picked tower's card, trimmed to fit the room kept for it under the towers. */
-    html:not(.tv) .td-play > .info { padding: 10px 12px; min-height: 112px; box-sizing: border-box; }
     html:not(.tv) .tower-head { margin-bottom: 4px; }
     html:not(.tv) .tower-head .em { font-size: 22px; }
     html:not(.tv) .tower-head small { display: none; }
@@ -147,10 +156,13 @@
   /* A phone turned sideways gets the same map-and-panel layout, sized to the short
      screen, and the page's title row goes (the top bar already says where you are). */
   @media (orientation: landscape) and (max-height: 600px) and (pointer: coarse) {
-    html:not(.tv) body { --side: 300px; --map-h: clamp(200px, calc(var(--app-h, 100dvh) - 84px), 1000px); }
+    /* The map starts just under the top bar and runs to the bottom, so its squares stay big enough to tap. */
+    html:not(.tv) body { --side: 300px; --map-h: clamp(200px, calc(var(--app-h, 100dvh) - 66px), 1000px); }
+    html:not(.tv) .ah-spacer { height: 64px; }
+    html:not(.tv) .td-play > .stage { border-width: 1px; }
     html:not(.tv) body > header.top { display: none; }
     html:not(.tv) .td-play > .keys-hint { display: none; }
-    html:not(.tv) .td-play > .hud { gap: 6px; margin-bottom: 6px; }
+    html:not(.tv) .td-play > .hud { gap: 6px; margin: 4px 0 6px; }
     html:not(.tv) .hud div { padding: 3px 8px; }
     html:not(.tv) .hud small { font-size: 9px; }
     html:not(.tv) .hud b { font-size: 15px; }
@@ -162,19 +174,26 @@
     html:not(.tv) .td-play > .build-bar { margin-top: 6px; }
     html:not(.tv) .build-how { font-size: 12px; margin-bottom: 4px; }
     html:not(.tv) .build-row { gap: 6px; }
-    html:not(.tv) .build-row button { flex-direction: row; justify-content: center; gap: 4px; padding: 4px; min-height: 44px; flex-wrap: wrap; }
-    html:not(.tv) .build-row .em { font-size: 20px; }
-    html:not(.tv) .build-row .nm { font-size: 11.5px; }
-    html:not(.tv) .build-row .cost { font-size: 12px; }
+    /* Every tower button the same shape: the picture, with the name over the price beside it. */
+    html:not(.tv) .build-row button {
+      display: grid; grid-template-columns: auto auto; grid-template-areas: "em nm" "em cost";
+      justify-content: center; align-items: center; column-gap: 5px; padding: 4px; min-height: 44px;
+    }
+    html:not(.tv) .build-row .em { grid-area: em; font-size: 20px; }
+    html:not(.tv) .build-row .nm { grid-area: nm; font-size: 11.5px; }
+    html:not(.tv) .build-row .cost { grid-area: cost; font-size: 11.5px; }
     /* The tips under the towers would push the side past the bottom; the wave button already says when wave 1 comes. */
-    html:not(.tv) .td-play > .info { margin-top: 6px; min-height: 0; }
+    html:not(.tv) .td-play > .info { margin-top: 6px; min-height: 0; padding: 6px 10px; }
     html:not(.tv) .td-play > .info:has(> .hint) { display: none; }
-    html:not(.tv) .td-play > .info { padding: 8px 12px; }
-    html:not(.tv) .tower-head { margin-bottom: 4px; }
-    html:not(.tv) .tower-head .em { font-size: 22px; }
+    /* A picked tower's card in two short rows: its name with Upgrade and Sell, then its numbers. */
+    html:not(.tv) #info:has(.tower-actions) { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: 8px; }
+    html:not(.tv) .tower-head { margin: 0; gap: 6px; min-width: 0; }
+    html:not(.tv) .tower-head b { font-size: 13px; }
+    html:not(.tv) .tower-head .em { font-size: 20px; }
     html:not(.tv) .tower-head small { display: none; }
-    html:not(.tv) .tower-stats { margin-bottom: 6px; }
-    html:not(.tv) .tower-actions button { min-height: 44px; padding-top: 4px; padding-bottom: 4px; }
+    html:not(.tv) .tower-stats { grid-row: 2; grid-column: 1 / -1; margin: 4px 0 0; font-size: 12px; }
+    html:not(.tv) .tower-actions { grid-row: 1; grid-column: 2; }
+    html:not(.tv) .tower-actions button { min-height: 44px; padding: 4px 10px; flex: 0 0 auto; white-space: nowrap; }
     /* With a tower picked, its card needs the room more than the how-to line does. */
     html:not(.tv) .td-play:has(#info .tower-actions) .build-how { display: none; }
     html:not(.tv) .speed button { width: 44px; height: 44px; }

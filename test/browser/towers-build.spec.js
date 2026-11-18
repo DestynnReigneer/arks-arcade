@@ -43,7 +43,12 @@ test('the build bar shows every tower with its name and price, before and during
     await expect(bar(page).nth(i)).toContainText(names[i]);
     await expect(bar(page).nth(i)).toContainText(costs[i]);
   }
-  await expect(page.locator('#buildHow')).toHaveText('Pick an empty square and then a tower, or pick a tower and then a square.');
+  // An upright phone gets the short line, so it fits on one line.
+  const phone = page.viewportSize().width < 600;
+  await expect(page.locator('#buildHow')).toHaveText(phone ? 'Pick a square then a tower, or a tower then a square.'
+    : 'Pick an empty square and then a tower, or pick a tower and then a square.');
+  const how = await page.locator('#buildHow').evaluate(e => ({ lines: Math.round(e.getBoundingClientRect().height / parseFloat(getComputedStyle(e).lineHeight)), cut: e.scrollWidth > e.clientWidth }));
+  if (phone) expect(how).toEqual({ lines: 1, cut: false });
   await page.locator('#waveBtn').click();
   await expect(page.locator('body')).toHaveAttribute('data-state', 'playing');
   const view = page.viewportSize();
@@ -82,7 +87,7 @@ test('building square first: pick an empty square, then a tower', async ({ page 
   const problems = await open(page);
   const sq = await freeSquare(page);
   await clickSquare(page, sq);
-  await expect(page.locator('#buildHow')).toContainText('Now pick a tower to build on that square');
+  await expect(page.locator('#buildHow')).toContainText('Now pick a tower');
   await tower(page, 'Cannon').click();
   await expect.poll(async () => (await state(page)).towers).toBe(1);
   expect((await state(page)).gold).toBe(180 - 80);
@@ -97,7 +102,7 @@ test('building tower first: pick a tower, then a square, and Esc or a right-clic
   const sq = await freeSquare(page);
   await tower(page, 'Frost').click();
   await expect(tower(page, 'Frost')).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.locator('#buildHow')).toContainText('lit square for the Frost');
+  await expect(page.locator('#buildHow')).toContainText(/lit square.*Frost/);
   await page.keyboard.press('Escape');
   await expect(tower(page, 'Frost')).toHaveAttribute('aria-pressed', 'false');
   expect((await state(page)).armed).toBe(null);
@@ -114,6 +119,12 @@ test('building tower first: pick a tower, then a square, and Esc or a right-clic
   await expect.poll(async () => (await state(page)).towers).toBe(1);
   expect((await state(page)).gold).toBe(180 - 65);
   await expect(tower(page, 'Frost')).toHaveAttribute('aria-pressed', 'false');
+  // With a tower built (before any wave), the tip is about upgrading and selling, not wave 1.
+  await page.keyboard.press('Escape');
+  if (page.viewportSize().width >= 900) {
+    await expect(page.locator('#info')).toContainText('to upgrade or sell it');
+    await expect(page.locator('#info')).not.toContainText('Once you build');
+  } else await expect(page.locator('#info')).toBeHidden();   // an upright phone keeps the room for the map
   expect(problems, problems.join('\n')).toEqual([]);
 });
 
@@ -141,18 +152,42 @@ test('after the last wave the game carries on to the next level with the score',
   await expect(page.locator('#score')).toHaveText(won.score.toLocaleString('en-US'));
   // A carried-on game is under way, so the pickers stay away.
   await expect(page.locator('#options')).toBeHidden();
+  // Taking the next level saved the game so far on All levels by itself, so Back can't lose it.
+  const id = await page.evaluate(() => window.TowersTest.runSaved());
+  expect(id).toBeGreaterThan(0);
+  const onAll = async () => (await (await page.request.get('/api/scores/towers?board=all&limit=100')).json()).filter(r => r.id === id);
+  expect((await onAll()).map(r => [r.score, r.detail])).toEqual([[won.score, 'Meadow']]);
 
   // Medium leads on to Hard; Hard is the last level.
   await page.locator('#waveBtn').click();
   await page.evaluate(() => window.TowersTest.win());
   await expect(panel.getByRole('button', { name: 'Next level: Hard' })).toBeVisible({ timeout: 10000 });
+  // The lives left are this map's, and the card says which map.
+  await expect(panel.locator('.over-detail')).toContainText('on Meadow and Canyon, with 20 lives left on Canyon.');
+  await expect(panel.locator('.save-hint')).toContainText('Saved on the All levels board at #');
+  await expect(panel.locator('.save-btn')).toBeHidden();
   await panel.getByRole('button', { name: 'Next level: Hard' }).click();
   expect((await state(page)).map).toBe('castle');
   await page.locator('#waveBtn').click();
   await page.evaluate(() => window.TowersTest.win());
   await expect(panel).toBeVisible({ timeout: 10000 });
-  await expect(panel.locator('.over-detail')).toContainText('You beat every level in one game!');
+  await expect(panel.locator('.over-detail')).toHaveText('All 25 waves on Meadow, Canyon and Castle. You beat every level in one game!');
   await expect(panel.locator('.next-btn')).toBeHidden();
+  await expect(panel.locator('.save-hint')).toContainText('Saved on the All levels board at #');
+  const final = await state(page);
+  // Still one row for the whole game, raised to the final score; no map's board has it.
+  expect((await onAll()).map(r => [r.score, r.detail])).toEqual([[final.score, 'Meadow, Canyon and Castle']]);
+  const castle = await (await page.request.get('/api/scores/towers?board=castle&limit=100')).json();
+  expect(castle.some(r => r.score === final.score)).toBe(false);
+  // The high scores have the All levels board.
+  await panel.locator('.scores-btn').click();
+  await expect(page.locator('.board-tabs button', { hasText: 'All levels' })).toHaveAttribute('aria-pressed', 'true');
+  await page.locator('.overlay:not(.hidden) .close-btn').evaluate(b => b.click());
+  // Play again starts over from the map the game began on.
+  await panel.locator('.again-btn').click();
+  const again = await state(page);
+  expect([again.map, again.score, again.run]).toEqual(['meadow', 0, null]);
+  await expect(page.locator('#options')).toBeVisible();
   expect(problems, problems.join('\n')).toEqual([]);
 });
 
