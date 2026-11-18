@@ -610,6 +610,7 @@
       row.className = 'theme-row';
       row.style.justifyContent = 'flex-start';
       row.style.gap = '8px';
+      row.style.flexWrap = 'wrap';   // the picture buttons go under the name on a phone
       const n = document.createElement('span'); n.textContent = `Car ${i + 1}`; n.style.minWidth = '48px';
       const name = document.createElement('input'); name.maxLength = 12; name.value = c.name; name.className = 'train-name'; name.setAttribute('aria-label', `Car ${i + 1}'s name`);
       const kind = document.createElement('select'); kind.className = 'train-kind'; kind.setAttribute('aria-label', `How hard car ${i + 1} is`);
@@ -662,12 +663,70 @@
       img.src = url;
     });
   }
+  // Saved by the Game settings tab's one Save (saveGameSettings below).
   async function saveTrainCars() {
     const cars = [...$('trainCars').children].map(row => ({ name: row.querySelector('.train-name').value.trim(), kind: row.querySelector('.train-kind').value }));
+    renderTrainCars((await api('/train-cars', { method: 'POST', body: { cars } })).cars);
+  }
+
+  // ---- the line under each game's name on the home page --------------------
+
+  async function loadBlurbs() {
+    try { const r = await api('/game-blurbs'); renderBlurbs(r.games, r.max); } catch (e) { $('gameBlurbs').textContent = e.message; }
+  }
+  function renderBlurbs(games, max) {
+    const box = $('gameBlurbs');
+    box.innerHTML = '';
+    for (const g of games) {
+      const row = document.createElement('div');
+      row.className = 'blurb-row';
+      row.dataset.id = g.id;
+      const label = document.createElement('label');
+      label.textContent = g.label;
+      label.htmlFor = `blurb-${g.id}`;
+      const ta = document.createElement('textarea');
+      ta.id = `blurb-${g.id}`;
+      ta.rows = 2;
+      ta.maxLength = max;
+      ta.value = g.line;
+      const count = document.createElement('span');
+      count.className = 'blurb-count';
+      const orig = document.createElement('div');
+      orig.className = 'blurb-orig';
+      const show = () => {
+        count.textContent = `${ta.value.length}/${max}`;
+        const changed = ta.value.trim() !== g.original;
+        orig.hidden = !changed;
+        orig.textContent = `It came with: ${g.original}`;
+      };
+      ta.addEventListener('input', show);
+      show();
+      row.append(label, ta, count, orig);
+      box.appendChild(row);
+    }
+  }
+  async function saveBlurbs() {
+    const lines = {};
+    for (const row of $('gameBlurbs').querySelectorAll('.blurb-row')) lines[row.dataset.id] = row.querySelector('textarea').value;
+    const r = await api('/game-blurbs', { method: 'POST', body: { lines } });
+    renderBlurbs(r.games, r.max);
+  }
+
+  // The tab's one Save: the descriptions and the train's cars together. It turns turquoise
+  // with a check for a moment once both are saved.
+  async function saveGameSettings() {
+    const btn = $('gamesSave');
+    btn.disabled = true;
     try {
-      renderTrainCars((await api('/train-cars', { method: 'POST', body: { cars } })).cars);
-      say($('trainCarsMsg'), 'Saved. The next game on the train uses these.');
-    } catch (e) { say($('trainCarsMsg'), e.message, false); }
+      await saveBlurbs();
+      await saveTrainCars();
+      say($('gamesMsg'), '');
+      btn.textContent = '✓ Saved';
+      btn.classList.add('saved');
+      setTimeout(() => { btn.textContent = 'Save'; btn.classList.remove('saved'); }, 2000);
+    } catch (e) {
+      say($('gamesMsg'), e.message, false);
+    } finally { btn.disabled = false; }
   }
 
   // ---- wiring --------------------------------------------------------------
@@ -676,7 +735,6 @@
     loadFeedback();
     loadPosts();
     loadHomeGames();
-    loadTrainCars();
     loadClips();
     loadPin();
   }
@@ -684,9 +742,12 @@
   document.addEventListener('DOMContentLoaded', () => {
     renderQuickPosts();
     $('postBtn').onclick = postAnnouncement;
-    $('trainCarsSave').onclick = saveTrainCars;
+    $('gamesSave').onclick = saveGameSettings;
     $('clipSendBtn').onclick = sendClip;
-    document.addEventListener('admin-tab', e => { if (e.detail === 'tabArcade') refresh(); });
+    document.addEventListener('admin-tab', e => {
+      if (e.detail === 'tabArcade') refresh();
+      if (e.detail === 'tabGames') { loadBlurbs(); loadTrainCars(); }
+    });
 
     // admin.js reveals #adminContent once the password is accepted.
     const content = $('adminContent');

@@ -282,6 +282,8 @@ app.get('/api/arcade-info', async (req, res) => {
     games,
     // Which games have a board on the trophies page (the home page's quick menu links there).
     trophies: require('./arcade/trophies').games().map(g => g.id),
+    // The card lines the admin changed (the rest stay as the home page has them).
+    blurbs: require('./arcade/game-blurbs').changed(),
     publicUrl: require('./arcade/lobby').publicUrl()
   });
 });

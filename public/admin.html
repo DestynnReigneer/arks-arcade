@@ -297,6 +297,7 @@
     <button id="tabBoards" aria-pressed="false">🏆 Boards</button>
     <button id="tabStats" aria-pressed="false">📊 Stats</button>
     <span class="nav-label">Game content</span>
+    <button id="tabGames" aria-pressed="false">🎮 Game settings</button>
     <button id="tabRambler" aria-pressed="false">🔠 Rambler</button>
     <button id="tabWordless" aria-pressed="false">🔤 Wordless</button>
     <button id="tabSpin" aria-pressed="false">🎡 Spin &amp; Solve</button>
@@ -398,17 +399,30 @@
     </div>
 
     <div class="admin-section">
-      <h2>🚂 ARKS Train Station cars</h2>
-      <p class="admin-note">The eight cars on the train, front to back. Each name goes on the car's side and on the light board (its first letter is the board's big letter). Easy cars are long and worth 5, medium ones 15, and hard ones are short and worth 40. Until you save names here, the train uses made-up ones. Names are 1 to 12 letters, numbers or spaces.</p>
-      <div id="trainCars">Loading…</div>
-      <button class="small-btn" id="trainCarsSave">Save the cars</button>
-      <div id="trainCarsMsg" class="admin-msg"></div>
-    </div>
-
-    <div class="admin-section">
       <h2>🔞 Adult levels</h2>
       <p class="admin-note">Every adult option in the arcade (adult Wordless themes, Rambler's Unfiltered words, the adult Uh-Oh and Dare Devil decks, and the adult levels of Know-It-All, Spin &amp; Solve, Shuffle Scuffle and Words with Family) is open to everyone but kids and teens. There's nothing to set.</p>
       <div id="pinStatus" class="admin-note">Loading…</div>
+    </div>
+  </div>
+
+  <!-- Settings that belong to one game, or to every game's card. One Save at the bottom saves the tab. -->
+  <div id="gamesPanel" class="hidden">
+    <div class="admin-section">
+      <h2>📝 Game descriptions</h2>
+      <p class="admin-note">The line under each game's name on the home page. Change any of them and press Save, and everyone sees the new line the next time the home page opens. Clear a box to go back to the line the game came with. A new game shows up here by itself.</p>
+      <div id="gameBlurbs">Loading…</div>
+    </div>
+
+    <div class="admin-section">
+      <h2>🚂 ARKS Train Station cars</h2>
+      <p class="admin-note">The eight cars on the train, front to back. Each name goes on the car's side and on the light board (its first letter is the board's big letter). Easy cars are long and worth 5, medium ones 15, and hard ones are short and worth 40. Until you save names here, the train uses made-up ones. Names are 1 to 12 letters, numbers or spaces.</p>
+      <div id="trainCars">Loading…</div>
+      <div id="trainCarsMsg" class="admin-msg"></div>
+    </div>
+
+    <div class="games-save-bar">
+      <span id="gamesMsg" class="admin-msg"></span>
+      <button type="button" id="gamesSave" class="games-save">Save</button>
     </div>
   </div>
 
