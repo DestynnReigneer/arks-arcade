@@ -27,7 +27,7 @@ const engine = require('../public/tumbler-engine');
 const SLACK_MS = process.env.NODE_ENV === 'test' && process.env.TUMBLER_SLACK_MS ? Number(process.env.TUMBLER_SLACK_MS) : 1500;
 // Runs that were never finished are forgotten after a day.
 const KEEP_RUNS_MS = 24 * 60 * 60 * 1000;
-const INITIALS_RE = /^[A-Z0-9]{1,3}$/;
+const { boardWho } = require('../arcade/board-who');
 const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 db.db.exec(`
@@ -122,21 +122,21 @@ function finish(id, taps, now = Date.now()) {
 }
 
 // ---- the boards --------------------------------------------------------------------
-const initialsOf = name => (String(name).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 3) || 'P');
 const rankIn = (sql, ...args) => db.db.prepare(sql).get(...args).c + 1;
 
-function save(id, { initials, profileToken } = {}) {
+function save(id, { initials, name, avatar, profileToken } = {}) {
   const run = needRun(id);
   if (!run.finished_at) throw fail('Finish the run first.', 409);
   if (run.saved) throw fail('This score is already on the board.', 409);
   if (run.rules !== RULES_VERSION) throw fail('That run was played under the old rules, so it can\'t go on the new board.', 409);
   if (!run.score) throw fail('Pop at least one pin to get a score on the board.');
-  const profile = profileToken ? profiles().verify(profileToken) : null;
-  const ini = profile ? profile.initials || initialsOf(profile.name) : String(initials || '').toUpperCase().trim();
-  if (!INITIALS_RE.test(ini)) throw fail('Initials must be 1-3 letters or numbers.');
+  // Signed in, the profile; a guest, their name; a TV, the initials picked with the remote.
+  const as = boardWho({ profileToken, name, avatar, initials });
+  const { profile } = as;
+  const ini = as.initials;
   const info = db.db.prepare(`INSERT INTO tumbler_scores (run_id, day, initials, profile_id, profile_name, profile_avatar, score, level, pins, best_streak, rules)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(run.id, run.day, ini, profile ? profile.id : null,
-    profile ? profile.name : null, profile ? profile.avatar : null, run.score, run.level, run.pins, run.best_streak, RULES_VERSION);
+    as.name, as.avatar, run.score, run.level, run.pins, run.best_streak, RULES_VERSION);
   db.db.prepare('UPDATE tumbler_runs SET saved = 1 WHERE id = ?').run(run.id);
   const scoreId = Number(info.lastInsertRowid);
   // Ties go to whoever got there first.
@@ -145,7 +145,7 @@ function save(id, { initials, profileToken } = {}) {
   const allRank = rankIn('SELECT COUNT(*) AS c FROM tumbler_scores WHERE rules = ? AND (score > ? OR (score = ? AND id < ?))',
     RULES_VERSION, run.score, run.score, scoreId);
   if (allRank === 1) {
-    const shout = profile ? (profiles().boardName(profile.id) || {}).label || profile.name : ini;
+    const shout = profile ? (profiles().boardName(profile.id) || {}).label || profile.name : as.name || ini;
     comm.safePost({
       trophy: { game: 'Tumbler Rumble', profileId: profile ? profile.id : null, name: shout, score: `${run.score.toLocaleString('en-US')} locks`, url: '/tumbler.html' },
       kind: 'highscore', emoji: '🔓', game: 'tumbler',

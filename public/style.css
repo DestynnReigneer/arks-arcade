@@ -287,31 +287,12 @@ header h1 span#titleSuffix { color: var(--accent); }
   opacity: 0.7;
   margin-bottom: 16px;
 }
+/* Whose name the score goes under ("Saving as Sam."). */
 #initialsHint {
-  font-size: 12px;
-  opacity: 0.7;
-  margin-bottom: 8px;
+  font-size: 13px;
+  opacity: 0.8;
+  margin-bottom: 16px;
 }
-#initialsBoxes {
-  display: flex;
-  gap: 10px;
-  justify-content: center;
-  margin-bottom: 18px;
-}
-.initial-box {
-  width: 48px;
-  height: 56px;
-  text-align: center;
-  font-size: 26px;
-  font-weight: 700;
-  text-transform: uppercase;
-  background: var(--key-bg);
-  border: 2px solid var(--tile-border);
-  border-radius: 8px;
-  color: var(--text);
-}
-.initial-box:focus { outline: none; border-color: var(--accent); }
-.initial-box.error { border-color: #f87171; animation: shake 0.4s; }
 .overlay-actions {
   display: flex;
   gap: 10px;

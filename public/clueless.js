@@ -548,10 +548,8 @@
 
   // ---- solved ----------------------------------------------------------------------------------
   const iniBoxes = [...document.querySelectorAll('#iniRow .ini')];
+  // Never shown: nothing to type here, and a TV's times stay off the board.
   const initials = ArcadeKit.wireInitials(iniBoxes, () => saveTime());
-  function profile() {
-    try { return token() ? ArcadeProfile.get() : null; } catch { return null; }
-  }
   function helpLine(r) {
     const bits = [];
     if (r.checks) bits.push(`${r.checks} check${r.checks === 1 ? '' : 's'}`);
@@ -570,33 +568,27 @@
     $('overDetail').textContent = help
       ? `${clock(run.timeMs - run.penaltyMs)} solving, plus ${clock(run.penaltyMs)} for help (${help}).`
       : 'No help used. That\'s a clean solve!';
-    const p = profile();
-    // A TV has no keyboard for initials: the time goes on the board from your own phone.
-    const noBoard = TV && !p;
     $('savePart').classList.toggle('hidden', run.saved || run.free || run.unscored);
-    $('iniRow').classList.toggle('hidden', !!p || noBoard);
-    $('saveBtn').classList.toggle('hidden', noBoard);
-    $('saveHint').textContent = noBoard ? 'Times solved on the TV don\'t go on the board, because there\'s no keyboard for initials. Solve it on your own device to get on it.'
-      : p ? `Saving as ${p.name}.` : 'Type your initials to put your time on today\'s board and see where you stack up.';
+    // The time goes under the profile or the guest's name, with nothing to type. Times solved on
+    // the TV don't go on the board (the TV is signed in as itself), and the line says so.
+    ArcadeKit.readySave(initials, $('saveHint'), $('saveBtn'));
+    if (TV) $('saveHint').textContent = 'Times solved on the TV don\'t go on the board. Solve it on your own device to get on it.';
     $('saveMsg').textContent = '';
     $('saveBtn').disabled = false;
     $('rankLine').textContent = run.saved ? 'Your time is on the board.'
       : run.free ? 'Free play times don\'t go on the board, because everyone gets a different crossword. Today\'s puzzle is the one to race on.'
       : run.unscored ? "Just for fun, this try won't be scored" : '';
-    if (!p && !run.saved) initials.reset();
     $('over').classList.remove('hidden');
     // It pops up over the page (topbar.js), except on a TV, where it sits in the page.
     if (!$('over').classList.contains('end-pop')) setTimeout(() => $('over').scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
   }
   async function saveTime() {
     if (!run || !run.finished || run.saved) return;
-    const p = profile();
-    const ini = p ? ArcadeProfile.initials() : initials.value();
-    if (!p && !ini) { $('saveMsg').textContent = 'Type your initials first.'; return; }
+    let who;
+    try { who = ArcadeKit.saveFields(initials); } catch (e) { $('saveMsg').textContent = e.message; return; }
     $('saveBtn').disabled = true;
     try {
-      const r = await api(`/api/clueless/run/${run.runId}/save`, { initials: ini, profileToken: token() });
-      if (!p) initials.remember(ini);
+      const r = await api(`/api/clueless/run/${run.runId}/save`, who);
       run.saved = true;
       $('savePart').classList.add('hidden');
       $('rankLine').textContent = r.allRank === 1 ? `That's the fastest ${LABEL[run.level]} time ever! 🏆`

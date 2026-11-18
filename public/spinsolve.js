@@ -1148,17 +1148,18 @@
     $('saveScoreBtn').disabled = false;
     $('scoreMsg').textContent = '';
     $('overView').classList.remove('hidden');
-    if (canSave) setTimeout(() => initials.reset(), 50);
+    // The score goes under the profile or the guest's name, with nothing to type.
+    if (canSave) ArcadeKit.readySave(initials, $('saveHint'), $('saveScoreBtn'));
   }
 
   async function saveScore() {
-    const who = initials.value();
-    if (!who) { $('scoreMsg').textContent = 'Type your initials first.'; return; }
+    let who;
+    try { who = ArcadeKit.saveFields(initials); } catch (e) { $('scoreMsg').textContent = e.message; return; }
     $('saveScoreBtn').disabled = true;
     try {
-      // The server saves the total it worked out; the page only says who.
-      const r = await api(`/api/spinsolve/run/${S.run}/save`, { initials: who }, { ...pinHeaders(), ...profileHeaders() });
-      initials.remember(who);
+      // The server saves the total it worked out; the page only says who (the
+      // profile rides in its header, a guest's name in the body).
+      const r = await api(`/api/spinsolve/run/${S.run}/save`, { name: who.name, avatar: who.avatar }, { ...pinHeaders(), ...profileHeaders() });
       forgetRun();
       $('overScore').classList.add('hidden');
       openScores(r.id);

@@ -752,7 +752,8 @@
     $('scoreMsg').textContent = '';
     if (scoring) {
       $('overPoints').textContent = winPoints().toLocaleString('en-US');
-      setTimeout(() => initials.reset(), 50);
+      // The score goes under the profile or the guest's name (on a TV, initials picked with the remote).
+      ArcadeKit.readySave(initials, $('saveHint'), $('saveScoreBtn'));
     }
     $('againBtn').textContent = S.mode === 'room' ? 'Rematch (swap colors)' : 'Play again';
     $('overView').classList.remove('hidden');
@@ -763,18 +764,17 @@
   }
 
   async function saveScore() {
-    const who = initials.value();
-    if (!who) { $('scoreMsg').textContent = 'Type your initials first.'; return; }
+    let who;
+    try { who = ArcadeKit.saveFields(initials); } catch (e) { $('scoreMsg').textContent = e.message; return; }
     $('saveScoreBtn').disabled = true;
     try {
       const myMoves = Math.ceil(S.moves.length / 2);
+      // On a TV it's the initials' score, not the TV's (see tv-play.js).
       const r = await ArcadeKit.saveScore('chess', {
-        initials: who, score: winPoints(), board: S.level,
-        detail: `Won as ${COLOR_NAME[S.me]} in ${myMoves} moves${S.suggestions ? ` · ${S.suggestions} 💡` : ''}`,
-        // On a TV it's the initials' score, not the TV's (see tv-play.js).
-        ...(TvPlay.on ? { profileToken: null } : {})
+        ...who, score: winPoints(), board: S.level,
+        detail: `Won as ${COLOR_NAME[S.me]} in ${myMoves} moves${S.suggestions ? ` · ${S.suggestions} 💡` : ''}`
       });
-      initials.remember(who);
+      if (who.initials) initials.remember(who.initials);
       $('overScore').classList.add('hidden');
       openScores(S.level, r.id);
       toast(r.rank === 1 ? '🏆 New #1!' : `Saved: #${r.rank}`);
@@ -947,7 +947,7 @@
   $('scoresClose').addEventListener('click', () => $('scoresView').classList.add('hidden'));
   $('helpBtn').addEventListener('click', () => help.open());
   Blip.muteButton($('muteBtn'));
-  initials = ArcadeKit.wireInitials([...document.querySelectorAll('#overScore .ini')], saveScore, { guest: TvPlay.on });
+  initials = ArcadeKit.wireInitials([...document.querySelectorAll('#overScore .ini')], saveScore, { tv: () => TvPlay.on });
 
   // Back: from a game (or its results, or the two-phone lobby) to the setup
   // screen, asking first if moves have been played, and from there to the arcade.

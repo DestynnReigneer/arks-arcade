@@ -45,7 +45,7 @@
     {
       emoji: '🏆', title: 'Three outs and you\'re done',
       html: `<p>An out slot, or three strikes, is an out. Three outs end the game, and your score is how many runs you got. Ten runs is the <b>Big Win</b>.</p>
-        <p>After the game, put your initials on the board to see where you stack up.</p>`
+        <p>After the game, your score goes on the board under your name, so you can see where you stack up.</p>`
     }
   ]);
   $('helpBtn').addEventListener('click', () => { frame.pause(); help.open(); });

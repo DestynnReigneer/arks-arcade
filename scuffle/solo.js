@@ -22,7 +22,7 @@ const GRACE_MS = 1500;               // a word sent as the clock runs out still 
 const KEEP_MS = 3 * 60 * 60 * 1000;  // unfinished games are forgotten after this
 const MAX_GAMES = 5000;
 const MAX_WORDS = 300;
-const INITIALS_RE = /^[A-Z0-9]{1,3}$/;
+const { boardWho } = require('../arcade/board-who');
 const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 db.db.exec(`
@@ -300,18 +300,18 @@ function stop(id, now = Date.now()) {
 
 // ---- the daily board ----------------------------------------------------------------
 
-const initialsOf = name => (String(name).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 3) || 'P');
 
-function save(id, { initials, profileToken }) {
+function save(id, { initials, name, avatar, profileToken }) {
   const g = need(id);
   settle(g);
   if (g.mode !== 'daily') throw fail('Only the daily set goes on the board.', 400);
   if (!g.finished) throw fail('Finish every round first.', 409);
   if (g.saved) throw fail('This score is already on the board.', 409);
-  const profile = profileToken ? profiles().verify(profileToken) : null;
-  const ini = profile ? profile.initials || initialsOf(profile.name) : String(initials || '').toUpperCase().trim();
-  if (!INITIALS_RE.test(ini)) throw fail('Initials must be 1-3 letters or numbers.');
-  const who = profile ? `p:${profile.id}` : `g:${ini}`;
+  // Signed in, the profile; a guest, their name; a TV, the initials picked with the remote.
+  const as = boardWho({ profileToken, name, avatar, initials });
+  const { profile } = as;
+  const ini = as.initials;
+  const who = as.key;
   if (db.db.prepare('SELECT 1 FROM scuffle_scores WHERE day = ? AND dictionary = ? AND who = ?').get(g.day, g.dictionary, who)) {
     throw fail(`You already have a score on today's ${LIST_NAME[g.dictionary]} board. Only your first go counts, because the letters stay the same all day.`, 409);
   }
@@ -326,8 +326,8 @@ function save(id, { initials, profileToken }) {
     }
   });
   const info = db.db.prepare(`INSERT INTO scuffle_scores (day, who, initials, profile_id, profile_name, profile_avatar, dictionary, score, words, full_words, best_word)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(g.day, who, ini, profile ? profile.id : null, profile ? profile.name : null,
-    profile ? profile.avatar : null, g.dictionary, g.total, words, fulls, best || null);
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(g.day, who, ini, profile ? profile.id : null, as.name,
+    as.avatar, g.dictionary, g.total, words, fulls, best || null);
   g.saved = true;
   const scoreId = Number(info.lastInsertRowid);
   const dayRank = db.db.prepare('SELECT COUNT(*) AS c FROM scuffle_scores WHERE day = ? AND dictionary = ? AND (score > ? OR (score = ? AND id < ?))')
@@ -335,7 +335,7 @@ function save(id, { initials, profileToken }) {
   const allRank = db.db.prepare('SELECT COUNT(*) AS c FROM scuffle_scores WHERE dictionary = ? AND (score > ? OR (score = ? AND id < ?))')
     .get(g.dictionary, g.total, g.total, scoreId).c + 1;
   if (allRank === 1 && g.total > 0) {
-    const shout = profile ? (profiles().boardName(profile.id) || {}).label || profile.name : ini;
+    const shout = profile ? (profiles().boardName(profile.id) || {}).label || profile.name : as.name || ini;
     comm.safePost({
       trophy: { game: 'Shuffle Scuffle', profileId: profile ? profile.id : null, name: shout, score: `${g.total.toLocaleString('en-US')} points`, board: `${LIST_NAME[g.dictionary]} daily`, url: '/scuffle.html' },
       kind: 'highscore', emoji: '🔀', game: 'scuffle',

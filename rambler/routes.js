@@ -24,7 +24,7 @@ const adultPin = require('../arcade/adult-pin');
 const adultJoin = require('../arcade/adult-join');
 const comm = require('../arcade/comm');
 
-const INITIALS_RE = /^[A-Z0-9]{1,3}$/;
+const { boardWho } = require('../arcade/board-who');
 
 // ---- who's asking ----------------------------------------------------------
 // A Rambler player is a profile (it has the profile's id) with coins, a streak
@@ -69,20 +69,50 @@ function assertProfileAllowed(profile, req) {
 function publicEntry(row) {
   const clean = row.bestWord && dictionary.isWord(row.bestWord, 'kids');
   // A profile's score shows what the profile chose today (its name or its
-  // initials), not the letters typed back then.
+  // initials). A guest's shows the name they played under; rows from before
+  // names were kept show their initials.
   const now = row.playerId ? require('../arcade/profiles').boardName(row.playerId) : null;
-  return { ...row, initials: now ? now.label : row.initials, bestWord: clean ? row.bestWord : '', profile: undefined };
+  return {
+    ...row, initials: now ? now.label : row.initials, bestWord: clean ? row.bestWord : '', profile: undefined,
+    name: now ? now.label : row.playerName || row.initials, avatar: now ? now.avatar : row.playerAvatar || null,
+    playerName: undefined, playerAvatar: undefined
+  };
+}
+
+// Who a score goes up as: the profile banking it (its name), the player's name
+// in a room or a pass-around game, or the name a guest plays under. Nobody types
+// initials (arcade/board-who.js).
+function boardPlayer(req, { profileId, name, avatar, initials }) {
+  const id = profileFor(req, profileId);
+  const p = id ? db.getPlayer(id) : null;
+  // (initials only ever come from a page loaded before this change)
+  const as = p ? boardWho({ profile: { id, name: p.name, avatar: p.avatar } }) : boardWho({ profile: null, name, avatar, initials });
+  return { playerId: id, initials: as.initials, name: as.name, avatar: as.avatar };
+}
+
+function evictedNames(saved) {
+  if (!saved.evicted) return saved;
+  const names = require('../arcade/profiles');
+  return {
+    ...saved,
+    evicted: saved.evicted.map(e => {
+      const now = e.playerId ? names.boardName(e.playerId) : null;
+      return { initials: e.initials, name: now ? now.label : e.name, score: e.score };
+    })
+  };
 }
 
 // Only a new number one makes the Comm Center; a whole board's worth of
 // shout-outs would bury everything else on it.
-function announceTopScore(saved, initials, board) {
+function announceTopScore(saved, who, board) {
   if (!saved.made || saved.rank !== 1) return;
+  const now = who.playerId ? require('../arcade/profiles').boardName(who.playerId) : null;
+  const name = now ? now.label : who.name || who.initials;
   comm.safePost({
-    trophy: { game: 'Rambler', name: initials, score: `${saved.score} points`, board, url: '/rambler.html' },
+    trophy: { game: 'Rambler', name, score: `${saved.score} points`, board, url: '/rambler.html' },
     kind: 'highscore', emoji: '🏆', game: 'rambler',
-    title: `${initials} took #1 on Rambler ${board}`,
-    body: `${initials} just set the top score on the ${board} board with ${saved.score} points. Think you can beat it?`
+    title: `${name} took #1 on Rambler ${board}`,
+    body: `${name} just set the top score on the ${board} board with ${saved.score} points. Think you can beat it?`
   });
 }
 
@@ -263,7 +293,7 @@ router.post('/score', scoreLimiter, (req, res, next) => {
     }
 
     // What the arcade board makes of it, so the client knows whether to offer
-    // the initials prompt or show the player how far off they were.
+    // the button to put the score on the board or show the player how far off they were.
     const top = result.results[0];
     if (top) {
       result.arcade = db.arcadeStanding(db.boardKeyFor('solo', entry.size), top.score);
@@ -325,10 +355,6 @@ router.get('/leaderboard', (req, res) => {
 router.post('/leaderboard', leaderboardLimiter, (req, res, next) => {
   try {
     const body = req.body || {};
-    const initials = String(body.initials || '').toUpperCase().trim();
-    if (!INITIALS_RE.test(initials)) {
-      throw fail('Initials must be 1-3 letters or numbers.', 400);
-    }
     // Roll the season over first, so a score submitted a minute after
     // midnight lands on the new board rather than the one being frozen.
     seasons.checkDue();
@@ -342,9 +368,9 @@ router.post('/leaderboard', leaderboardLimiter, (req, res, next) => {
     // scored, exactly like every other mode -- never off the request.
     if (body.marathonId) {
       const done = marathon.finish(body.marathonId);
-      const saved = db.insertArcadeScore({
-        initials,
-        playerId: profileFor(req, body.profileId),
+      const who = boardPlayer(req, body);
+      const saved = evictedNames(db.insertArcadeScore({
+        ...who,
         score: done.finalScore,
         mode: 'marathon',
         boardSize: 4,
@@ -354,8 +380,8 @@ router.post('/leaderboard', leaderboardLimiter, (req, res, next) => {
         longestWord: done.longest || '',
         durationSec: Math.round(done.survivedMs / 1000),
         players: 1
-      });
-      announceTopScore(saved, initials, 'Marathon');
+      }));
+      announceTopScore(saved, who, 'Marathon');
       return res.status(saved.made ? 201 : 200).json(saved);
     }
 
@@ -379,11 +405,16 @@ router.post('/leaderboard', leaderboardLimiter, (req, res, next) => {
     const player = result.results.find(r => r.playerId === playerId);
     if (!player) throw fail('Unknown player for that round.', 400);
 
-    const saved = db.insertArcadeScore({
-      initials,
-      // `playerId` above identifies the player *within the round*; the profile
-      // that banks the badge is a separate thing and has its own field.
-      playerId: profileFor(req, body.profileId),
+    // `playerId` above identifies the player *within the round*; the profile
+    // that banks the badge is a separate thing and has its own field. Without a
+    // profile, a room's or a pass-around game's player goes up under the name
+    // the round knows them by; a solo guest under the name they play under.
+    const who = boardPlayer(req, {
+      profileId: body.profileId, avatar: body.avatar, initials: body.initials,
+      name: mode === 'solo' ? body.name : player.name || body.name
+    });
+    const saved = evictedNames(db.insertArcadeScore({
+      ...who,
       score: player.score,
       mode,
       boardSize: result.size,
@@ -393,8 +424,8 @@ router.post('/leaderboard', leaderboardLimiter, (req, res, next) => {
       longestWord: player.longest || '',
       durationSec,
       players: result.results.length
-    });
-    announceTopScore(saved, initials, boardLabel(db.boardKeyFor(mode, result.size)));
+    }));
+    announceTopScore(saved, who, boardLabel(db.boardKeyFor(mode, result.size)));
     // Missing the board is not an error -- it is the answer to the question.
     res.status(saved.made ? 201 : 200).json(saved);
   } catch (e) {

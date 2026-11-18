@@ -207,6 +207,11 @@ ensureColumn('rambler_scores', 'player_id', 'TEXT');
 // Which season a score belongs to, so a board can be rebuilt after the fact.
 ensureColumn('rambler_scores', 'season_id', 'INTEGER');
 
+// The name and avatar a score went up under (a profile's or a guest's), so the
+// board shows a name instead of three letters. Older rows only have initials.
+ensureColumn('rambler_scores', 'player_name', 'TEXT');
+ensureColumn('rambler_scores', 'player_avatar', 'TEXT');
+
 // ---- Comm Center ----
 // Posts are what the home page shows: the admin's announcements plus the ones
 // the arcade writes itself (a new theme, a new top score). Feedback is the
@@ -877,6 +882,8 @@ function rowToArcade(r) {
     boardSize: r.board_size,
     profile: r.profile,
     playerId: r.player_id,
+    playerName: r.player_name || null,
+    playerAvatar: r.player_avatar || null,
     wordCount: r.word_count,
     bestWord: r.best_word,
     longestWord: r.longest_word,
@@ -937,13 +944,14 @@ function insertArcadeScore(entry) {
   const info = db.prepare(`
     INSERT INTO rambler_scores
       (initials, score, mode, board_size, board_key, profile, word_count,
-       best_word, longest_word, duration_sec, players, player_id, season_id)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       best_word, longest_word, duration_sec, players, player_id, season_id, player_name, player_avatar)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     entry.initials, entry.score, entry.mode, entry.boardSize, boardKey,
     entry.profile, entry.wordCount, entry.bestWord || '', entry.longestWord || '',
     entry.durationSec, entry.players || 1,
-    entry.playerId || null, season ? season.id : null
+    entry.playerId || null, season ? season.id : null,
+    entry.name || null, entry.avatar || null
   );
 
   const evicted = db.prepare(`
@@ -965,7 +973,7 @@ function insertArcadeScore(entry) {
     // to the incumbent. Re-querying afterwards counts this row itself and
     // reports one place too low.
     rank: standing.rank,
-    evicted: evicted.map(e => ({ initials: e.initials, score: e.score }))
+    evicted: evicted.map(e => ({ initials: e.initials, name: e.playerName || e.initials, playerId: e.playerId, score: e.score }))
   };
 }
 

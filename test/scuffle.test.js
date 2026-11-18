@@ -127,16 +127,16 @@ async function run({ base, root }) {
   ok('a daily score can\'t be saved before the last round', (await api(`/solo/${d.gameId}/save`, 'POST', { initials: 'DAY' })).status === 409);
   await api(`/solo/${d.gameId}/stop`, 'POST', {});
   for (let i = 0; i < 3; i++) { await api(`/solo/${d.gameId}/next`, 'POST', {}); await api(`/solo/${d.gameId}/stop`, 'POST', {}); }
-  ok('a daily score needs initials or a profile', (await api(`/solo/${d.gameId}/save`, 'POST', {})).status === 400);
+  ok('a daily score needs a name or a profile', (await api(`/solo/${d.gameId}/save`, 'POST', {})).status === 400);
   const saved = await api(`/solo/${d.gameId}/save`, 'POST', { initials: 'day', score: 999999 });
   ok('the daily goes on the board with the server\'s score', saved.status === 201 && saved.data.score === game.POINTS[dFull.length] + 100 && saved.data.dayRank === 1, JSON.stringify(saved.data));
   ok('…once', (await api(`/solo/${d.gameId}/save`, 'POST', { initials: 'ZZZ' })).status === 409);
   const d2 = (await api('/solo', 'POST', { mode: 'daily', dictionary: 'kids' })).data;
   for (let i = 0; i < 4; i++) { await api(`/solo/${d2.gameId}/next`, 'POST', {}); await api(`/solo/${d2.gameId}/stop`, 'POST', {}); }
   ok('only your first daily of the day counts', (await api(`/solo/${d2.gameId}/save`, 'POST', { initials: 'DAY' })).status === 409);
-  ok('…but someone else can save theirs', (await api(`/solo/${d2.gameId}/save`, 'POST', { initials: 'NIL' })).status === 201);
+  ok('…but someone else can save theirs, under their name', (await api(`/solo/${d2.gameId}/save`, 'POST', { name: 'Nil' })).status === 201);
   const board = (await api('/board?scope=day')).data;
-  ok('today\'s board is highest first and tags the word list', board.length === 2 && board[0].initials === 'DAY' && board[0].score > board[1].score && board[0].dictionary === 'kids');
+  ok('today\'s board is highest first and tags the word list', board.length === 2 && board[0].initials === 'DAY' && board[0].score > board[1].score && board[0].dictionary === 'kids' && board[1].profileName === 'Nil');
   ok('the all-time board has them too', (await api('/board?scope=all')).data.length === 2);
   ok('the family board is the default, and the unfiltered board is separate',
     (await api('/board?scope=day&dictionary=kids')).data.length === 2 && (await api('/board?scope=day&dictionary=adult')).data.length === 0);

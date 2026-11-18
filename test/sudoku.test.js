@@ -107,7 +107,7 @@ async function run({ base, root }) {
     done.data.timeMs >= empties * 20 + 300 + 70000 && done.data.timeMs === done.data.playMs + done.data.penaltyMs, JSON.stringify(done.data));
   ok('a finished puzzle takes no more hints', (await api(`/run/${a.runId}/hint`, 'POST', { grid: answer })).status === 409);
 
-  ok('a time needs initials or a profile', (await api(`/run/${a.runId}/save`, 'POST', {})).status === 400);
+  ok('a time needs a name or a profile', (await api(`/run/${a.runId}/save`, 'POST', {})).status === 400);
   const saved = await api(`/run/${a.runId}/save`, 'POST', { initials: 'slo' });
   ok('saving puts it on the board', saved.status === 201 && saved.data.dayRank === 1 && saved.data.allRank === 1);
   ok('the same run can\'t be saved twice', (await api(`/run/${a.runId}/save`, 'POST', { initials: 'ZZZ' })).status === 409);
@@ -134,6 +134,20 @@ async function run({ base, root }) {
   ok('the all-time board lists the same times, fastest first', all.data.map(r => r.initials).join() === 'QIK,SLO');
   ok('other levels\' boards are separate', (await api('/board?level=hard&scope=all')).data.length === 0);
   ok('an old day\'s board is empty, not an error', (await api('/board?level=family&scope=day&day=2001-01-01')).data.length === 0);
+
+  // Nobody types initials: a guest's time goes on the board under the name they play under.
+  const g1 = (await api('/start', 'POST', { level: 'family' })).data;
+  await wait(empties * 20 + 50);
+  await api(`/run/${g1.runId}/finish`, 'POST', { grid: answer });
+  const noName = await api(`/run/${g1.runId}/save`, 'POST', {});
+  ok('with no name and no profile, a time says to sign in', noName.status === 400 && /Sign in with ARKS ID/.test(noName.data.error));
+  const named = await api(`/run/${g1.runId}/save`, 'POST', { name: 'Nora', avatar: 'shiba:5' });
+  const nora = (await api('/board?level=family&scope=day')).data.find(r => r.id === named.data.id);
+  ok('a guest\'s time goes on the board under their name', named.status === 201 && !!nora && nora.profileName === 'Nora' && nora.profileAvatar === 'shiba:5', JSON.stringify(nora));
+  const g2 = (await api('/start', 'POST', { level: 'family' })).data;
+  await wait(empties * 20 + 50);
+  await api(`/run/${g2.runId}/finish`, 'POST', { grid: answer });
+  ok('…and only that name\'s first finish of the day counts', (await api(`/run/${g2.runId}/save`, 'POST', { name: 'nora' })).status === 409);
   ok('a made-up run id is a 404', (await api('/run/0123456789abcdef0123456789abcdef')).status === 404);
 
   console.log('\n-- sudoku: progress follows a profile --');

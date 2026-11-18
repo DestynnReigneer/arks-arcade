@@ -1340,7 +1340,7 @@ async function buildLadder(done) {
   } catch { rows = []; }
 
   // Worst first, because the climb goes upward through them.
-  const board = rows.map(r => ({ who: r.initials, score: r.score })).reverse();
+  const board = rows.map(r => ({ who: r.name || r.initials, score: r.score })).reverse();
   const landing = board.filter(r => r.score < done.finalScore).length;
   board.splice(landing, 0, { who: 'YOU', score: done.finalScore, you: true });
 
@@ -1394,10 +1394,11 @@ function celebrateProgress(p) {
   });
 }
 
-async function saveMarathonScore(initials) {
+// Not called yet: a Marathon run doesn't go on the board from the page.
+async function saveMarathonScore() {
   return api('/leaderboard', {
     method: 'POST',
-    body: { marathonId: M.id, initials, profileId: S.player ? S.player.id : undefined }
+    body: { marathonId: M.id, ...boardIdentity() }
   });
 }
 
@@ -1493,8 +1494,8 @@ function applyRoomState(snap) {
   }
 
   // The room keeps sending updates while everyone sits on the results (people
-  // leaving, reconnecting). Show each round's results once, or the initials
-  // box pops back up and wipes what was typed, even after it was saved.
+  // leaving, reconnecting). Show each round's results once, or the score
+  // would be put on the board again.
   if (snap.state === 'results' && snap.results) {
     const roundKey = `${snap.boardId}:${snap.startedAt}`;
     if (S.shownRoundKey === roundKey) {
@@ -1656,9 +1657,10 @@ function showResults(results) {
   showArcadePanel(results.arcade, scoreTarget() ? scoreTarget().score : 0);
   refreshSeason();
   $('saveScoreBtn').classList.toggle('hidden', onScreen || !canSaveScore());
-  // A score that made the board is only kept once initials go on it, and a
-  // button alone was easy to walk past. Ask straight after the banner.
-  if (!onScreen && canSaveScore()) setTimeout(() => { if (S.results === results) openInitials(); }, 2100);
+  // A score that made the board goes on it straight after the banner, under
+  // the player's name, with nothing to type. The button is there if that
+  // didn't work (no signal, say).
+  if (!onScreen && canSaveScore()) setTimeout(() => { if (S.results === results) saveToBoard(); }, 2100);
   $('againBtn').textContent = S.mode === 'room'
     ? (S.room && S.room.youAreHost ? 'New round' : 'Back to lobby')
     : S.mode === 'daily' ? 'Back to today\u2019s board'
@@ -1715,7 +1717,7 @@ function scoreTarget() {
 }
 
 // The button only appears if the round actually earned a slot. On a cabinet
-// you do not get to type your initials for a score that missed.
+// a score that missed doesn't get a spot on the board.
 function canSaveScore() {
   const target = scoreTarget();
   if (!target || target.score <= 0) return false;
@@ -1806,7 +1808,13 @@ function renderArcadeRows(host, entries, slots, { highlightScore = null } = {}) 
     if (e && highlightScore !== null && e.score === highlightScore) row.classList.add('mine');
     row.innerHTML = '<span class="r"></span><span class="i"></span><span class="d"></span><span class="s"></span>';
     row.querySelector('.r').textContent = String(i + 1).padStart(2, '0');
-    row.querySelector('.i').textContent = e ? e.initials : '\u2014\u2014\u2014';
+    const who = row.querySelector('.i');
+    // The player's name (a profile's, or a guest's), with their avatar; older
+    // scores only have initials.
+    if (e && e.avatar && typeof ArcadeProfile !== 'undefined') {
+      who.classList.add('with-av');
+      who.append(ArcadeProfile.avatarEl(e.avatar, 20), e.name || e.initials);
+    } else who.textContent = e ? e.name || e.initials : '\u2014\u2014\u2014';
     row.querySelector('.d').textContent = e
       ? `${e.wordCount} words${e.bestWord ? ' \u00B7 ' + e.bestWord : ''}`
       : 'free slot';
@@ -2201,71 +2209,67 @@ function refreshDailyCard() {
 
 // -------------------------------------------------------------- score entry
 
-function openInitials() {
-  const target = scoreTarget();
-  if (!target) return;
-  $('initialsWho').textContent = `${target.score} points \u2014 good enough for the board.`;
-  const boxes = [...document.querySelectorAll('.initial-box')];
-  // Playing as a profile: the score is theirs, so the boxes are filled in
-  // and hidden, and the board shows what the profile chose (name or initials).
-  const mine = S.player && window.ArcadeProfile && ArcadeProfile.token() ? ArcadeProfile.initials() : '';
-  boxes.forEach((b, i) => { b.value = mine[i] || ''; });
-  document.querySelector('.initials-boxes').classList.toggle('hidden', !!mine);
-  say($('initialsMsg'), '');
-  $('initialsOverlay').classList.remove('hidden');
-  if (!mine) document.querySelector('.initial-box').focus();
+const NO_BOARD_NAME = 'Sign in with ARKS ID to put your score on the board.';
+
+// Who's playing on this device, for the board: the profile banking the score
+// (the server checks it), and the name and avatar a guest plays under.
+function boardIdentity() {
+  const P = typeof ArcadeProfile !== 'undefined' ? ArcadeProfile : null;
+  const me = (P && P.get()) || {};
+  return {
+    profileId: S.player ? S.player.id : undefined,
+    name: (P && P.name()) || (S.player ? S.player.name : ''),
+    avatar: me.avatar || undefined
+  };
 }
 
-async function saveInitials() {
-  const initials = [...document.querySelectorAll('.initial-box')]
-    .map(b => b.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))
-    .join('');
-  if (!initials) return say($('initialsMsg'), 'Enter at least one letter.', 'err');
-
+// Puts the score on the board under the player's name. Nobody types
+// anything: a profile's score shows the profile's name (or the initials it
+// chose in its settings), a guest's shows the guest's name, and in a room or a
+// pass-around game the round already knows each player's name.
+async function saveToBoard() {
+  const results = S.results;
   const target = scoreTarget();
+  if (!target || !results || results.boardSaved || S.savingScore) return;
+  // In a pass-around game the winner may not be whoever owns this device, so
+  // the score goes under the name they played under in the round.
+  const shared = S.mode === 'turns' || S.mode === 'tabletop';
+  const me = boardIdentity();
+  const who = shared ? {} : me;
+  $('initialsWho').textContent = `${target.score} points — good enough for the board.`;
+  $('initialsOverlay').classList.remove('hidden');
+  if (!shared && S.mode !== 'room' && !me.profileId && !me.name) {
+    say($('initialsMsg'), NO_BOARD_NAME, 'err');
+    return;
+  }
   // profileId is who banks the badge; playerId is which player of the round
   // the score belongs to. They are only the same thing by coincidence.
-  const profileId = S.player ? S.player.id : undefined;
   const body = S.mode === 'room'
-    ? { ...S.creds, initials, profileId }
-    : { boardId: S.boardId, playerId: target.playerId, mode: S.mode, durationSec: S.duration, initials, profileId };
+    ? { ...S.creds, ...who }
+    : { boardId: S.boardId, playerId: target.playerId, mode: S.mode, durationSec: S.duration, ...who };
 
-  if (S.savingInitials) return;
-  S.savingInitials = true;
+  S.savingScore = true;
   say($('initialsMsg'), 'Saving…');
   try {
     const saved = await api('/leaderboard', { method: 'POST', body });
+    results.boardSaved = true;
+    $('saveScoreBtn').classList.add('hidden');
     if (!saved.made) {
       say($('initialsMsg'), `Somebody beat you to it — ${saved.shortBy} short now.`, 'err');
       return;
     }
     const bumped = (saved.evicted || [])[0];
     say($('initialsMsg'),
-      bumped ? `Number ${saved.rank}. You knocked ${bumped.initials} off.` : `Number ${saved.rank}.`,
+      bumped ? `Number ${saved.rank}. You knocked ${bumped.name || bumped.initials} off.` : `Number ${saved.rank}.`,
       'ok');
     Sound.fanfare();
     Fx.burst({ count: 120, coins: 18 });
-    $('saveScoreBtn').classList.add('hidden');
-    setTimeout(() => $('initialsOverlay').classList.add('hidden'), 1400);
+    setTimeout(() => $('initialsOverlay').classList.add('hidden'), 1800);
   } catch (e) {
     say($('initialsMsg'), e.message, 'err');
   } finally {
-    S.savingInitials = false;
+    S.savingScore = false;
   }
-}
-
-function bindInitialsBoxes() {
-  const boxes = [...document.querySelectorAll('.initial-box')];
-  boxes.forEach((box, i) => {
-    box.addEventListener('input', () => {
-      box.value = box.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
-      if (box.value && i < boxes.length - 1) boxes[i + 1].focus();
-    });
-    box.addEventListener('keydown', e => {
-      if (e.key === 'Backspace' && !box.value && i > 0) boxes[i - 1].focus();
-      if (e.key === 'Enter') saveInitials();
-    });
-  });
 }
 
 // -------------------------------------------------------------------- wiring
@@ -2349,8 +2353,7 @@ function bind() {
     startPressed();
   };
 
-  $('saveScoreBtn').onclick = openInitials;
-  $('confirmInitialsBtn').onclick = saveInitials;
+  $('saveScoreBtn').onclick = saveToBoard;
   $('closeInitialsBtn').onclick = () => $('initialsOverlay').classList.add('hidden');
   $('resultsScreen').addEventListener('click', e => {
     const el = e.target.closest('[data-word]');
@@ -2455,7 +2458,6 @@ function bind() {
   };
 
   bindTracing();
-  bindInitialsBoxes();
 
   window.addEventListener('beforeunload', () => {
     if (S.creds && navigator.sendBeacon) {

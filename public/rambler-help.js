@@ -51,7 +51,7 @@ window.ramblerTutorial = Tutorial.create('rambler', [
     title: 'Hints, profiles and the board',
     html: `<p>Pick a <b>profile</b> (top right) to earn <b>coins</b>, streaks and badges as you play.</p>
       <p><b>Hint</b> spends coins to show you a word that's on the board.</p>
-      <p>Score high enough and you'll be asked for your initials to get on the 🏆 board.</p>
+      <p>Score high enough and your score goes on the 🏆 board under your name, with nothing to type.</p>
       <div class="tut-tip">Tap <b>?</b> at the top any time to see this again.</div>`
   }
 ]);

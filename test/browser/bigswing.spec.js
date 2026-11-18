@@ -49,12 +49,14 @@ test('playing Big Swing and saving the runs', async ({ page, isMobile }) => {
   const runs = Number(await page.locator('.over-panel .final-score').textContent());
   expect(runs).toBeGreaterThanOrEqual(3);
 
-  const boxes = page.locator('.over-panel .ini');
-  for (const [i, c] of ['B', 'S', 'W'].entries()) await boxes.nth(i).fill(c);
+  // Nobody types initials: the guest's score goes on the board under the guest's name.
+  await expect(page.locator('.over-panel .initials')).toBeHidden();
+  const guest = await page.evaluate(() => ArcadeProfile.name());
+  await expect(page.locator('.over-panel .save-hint')).toHaveText(`Saving as ${guest}.`);
   await page.locator('.over-panel .save-btn').click();
   await expect.poll(async () => {
     const list = await (await page.request.get('/api/scores/bigswing?board=runs')).json();
-    return list.some(r => r.initials === 'BSW' && r.score === runs);
+    return list.some(r => r.profileName === guest && r.score === runs);
   }).toBe(true);
   expect(problems).toEqual([]);
 });

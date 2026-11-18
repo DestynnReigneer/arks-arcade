@@ -187,13 +187,13 @@ module.exports = function spinRoutes({ requireAdmin, notify }) {
       const g = run(req);
       const v = game.view(g);
       if (!v.canSave) throw fail(v.solo ? 'This game is already saved, or it isn\'t over yet.' : 'Only solo games go on the board.', 409);
-      // The score belongs to whoever started the game: their profile, or the initials typed for a guest.
+      // The score belongs to whoever started the game: their profile, or a guest's name.
       const token = req.get('X-Profile-Token');
       const now = token ? profileOf(req) : null;
       if (g.profileId && (!now || now.id !== g.profileId)) throw fail('Only the player account that played this game can save this score.', 403);
       const label = (P.LEVELS[g.level] || P.LEVELS.kids).label;
       const out = scores.save('spinsolve', {
-        initials: (req.body || {}).initials, score: g.players[0].total, board: g.adult ? 'adult' : 'solo',
+        name: (req.body || {}).name, avatar: (req.body || {}).avatar, initials: (req.body || {}).initials, score: g.players[0].total, board: g.adult ? 'adult' : 'solo',
         detail: `${g.rounds} rounds · ${label}${g.packLabel ? ` · ${g.packLabel}` : ''}`,
         profileToken: g.profileId ? token : null, fromServer: true
       });

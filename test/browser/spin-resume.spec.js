@@ -158,11 +158,12 @@ test('a finished round and a score that isn\'t saved yet are still there after a
   await expect(page.locator('#overView')).toBeVisible();
   await expect(page.locator('#overTitle')).toHaveText(banked);
   await expect(page.locator('#overScore')).toBeVisible();
-  const boxes = page.locator('#overScore .ini');
-  for (const [i, ch] of ['S', 'P', 'N'].entries()) await boxes.nth(i).fill(ch);
+  // Nobody types initials: the score goes on the board under the guest's name.
+  await expect(page.locator('#overScore .initials')).toBeHidden();
+  const guest = await page.evaluate(() => ArcadeProfile.name());
   await page.locator('#saveScoreBtn').click();
   await expect(page.locator('#scoresView')).toBeVisible();
-  await expect(page.locator('#scoreList')).toContainText('SPN');
+  await expect(page.locator('#scoreList')).toContainText(guest);
 
   // Saved: there's nothing left to come back to.
   expect(await remembered(page)).toBeNull();

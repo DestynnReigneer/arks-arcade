@@ -340,8 +340,8 @@
     $('savePart').classList.toggle('hidden', s < 1);
     $('saveScoreBtn').disabled = false;
     $('scoreMsg').textContent = '';
-    // Playing as a profile, the score is theirs: no initials to type (fills them in and hides them).
-    if (s >= 1 && initials) initials.reset();
+    // The score goes under the profile or the guest's name, with nothing to type (on a TV, initials picked with the remote).
+    if (s >= 1 && initials) ArcadeKit.readySave(initials, $('saveHint'), $('saveScoreBtn'));
     $('overPanel').classList.remove('hidden');
   }
 
@@ -449,13 +449,13 @@
   // ---- scores -----------------------------------------------------------------------------
   let initials = null;
   async function saveScore() {
-    const who = initials.value();
-    if (!who) { $('scoreMsg').textContent = 'Type your initials first.'; return; }
+    let who;
+    try { who = ArcadeKit.saveFields(initials); } catch (e) { $('scoreMsg').textContent = e.message; return; }
     $('saveScoreBtn').disabled = true;
     try {
       // On a TV it's the initials' score, not the TV's (see tv-play.js).
-      const r = await ArcadeKit.saveScore('dino', { initials: who, score: score(), board: 'run', detail: '', ...(TvPlay.on ? { profileToken: null } : {}) });
-      initials.remember(who);
+      const r = await ArcadeKit.saveScore('dino', { ...who, score: score(), board: 'run', detail: '' });
+      if (who.initials) initials.remember(who.initials);
       $('savePart').classList.add('hidden');
       openScores(r.id);
       toast(r.rank === 1 ? '🏆 New #1!' : `Saved: #${r.rank}`);
@@ -497,7 +497,7 @@
   $('scoresClose').addEventListener('click', () => $('scoresView').classList.add('hidden'));
   $('helpBtn').addEventListener('click', () => help.open());
   Blip.muteButton($('muteBtn'));
-  initials = ArcadeKit.wireInitials([...document.querySelectorAll('#overPanel .ini')], saveScore, { guest: TvPlay.on });
+  initials = ArcadeKit.wireInitials([...document.querySelectorAll('#overPanel .ini')], saveScore, { tv: () => TvPlay.on });
 
   // ---- on the TV ----------------------------------------------------------------------------
   // The desert on the right, wide. OK or up jumps (hold for a big jump),
