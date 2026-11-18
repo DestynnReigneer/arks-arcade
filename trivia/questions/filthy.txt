@@ -50,7 +50,6 @@ m | What does "pussy-whipped" mean? | Totally controlled by a partner | Into spa
 m | What's a "booty call text" usually sent at? | Late at night | Breakfast | Lunch | Work hours
 m | What's "the Big O"? | An orgasm | A donut | A zero score | A dance
 m | What does "finishing" mean in the bedroom? | Having an orgasm | Getting dressed | Falling asleep | Changing the sheets
-m | What is "sexsomnia"? | Having sex while asleep | Being too tired for sex | A sleep sex toy | Dreaming about sex
 e | What's a "sex tape"? | A video of yourself having sex | Bondage tape | A mixtape for sex | A ruler
 e | What does "going down on someone" mean? | Giving them oral sex | Falling over | Taking the elevator | Losing a game
 e | What is mutual masturbation? | Touching yourselves in front of each other | A solo date | A massage swap | A shared shower
@@ -256,7 +255,7 @@ m | [[⛓️ + 🛏️]] What's this? | Being tied to the bed | Locking the bedr
 m | [[🐇 + 🔋]] Which famous toy is this? | The Rabbit vibrator | The Energizer Bunny | A bunny costume | A wind-up toy
 m | [[🪄 + ✨ + 🔌]] Which famous toy is this? | The Magic Wand | A curling iron | A light saber | A massage gun
 m | [[🔵 + 🎾🎾]] Which painful condition is this? | Blue balls | Tennis elbow | Frostbite | A sprain
-m | [[👀 + 🛏️ + 👫]] Which kink is this? | Voyeurism | Insomnia | Babysitting | Housekeeping
+m | [[👀 + 🛏️ + 👫]] Which kink is this? | Voyeurism | Insomnia | Stargazing | Housekeeping
 m | [[🦄 + 💑]] In the lifestyle, who's joining this couple? | A single bi woman | A magician | A wedding planner | A therapist
 m | [[🍍 + 🙃]] What's this secret sign? | Swingers live here | Pineapple on pizza | A tropical party | Bad luck
 m | [[🐂 + 💑]] In the lifestyle, who's this extra guy? | A bull | A bouncer | A cowboy | A best man
