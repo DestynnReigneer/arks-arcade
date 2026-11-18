@@ -318,12 +318,11 @@ test('Tower Defense with the remote and a controller', async ({ page }) => {
   const moves = ['ArrowUp', 'ArrowUp', 'ArrowLeft', 'ArrowLeft', 'ArrowDown', 'ArrowDown', 'ArrowDown', 'ArrowRight', 'ArrowRight', 'ArrowRight', 'ArrowUp', 'ArrowUp', 'ArrowUp'];
   for (const key of moves) {
     await page.keyboard.press('Enter');
-    if (await page.locator('#info .build-grid').isVisible()) break;
+    if (await page.locator('#buildRow button:focus').count()) break;
     await page.keyboard.press(key);
   }
-  await expect(page.locator('#info .build-grid')).toBeVisible();
-  // The highlight went to the towers; OK builds the first one.
-  await expect(page.locator('#info .build-grid button').first()).toBeFocused();
+  // The highlight went to the towers in the build bar; OK builds the first one.
+  await expect(page.locator('#buildRow button').first()).toBeFocused();
   await page.keyboard.press('Enter');
   await expect(page.locator('#gold')).not.toHaveText('180');
   // Back on the map afterwards.

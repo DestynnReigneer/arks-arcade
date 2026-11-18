@@ -28,6 +28,11 @@
   let paused = false;
   let speed = 1;
   let picked = null;          // { x, y } square
+  let armed = null;           // a tower picked first, waiting for a square
+  let hover = null;           // the square under the mouse, while a tower is armed
+  let run = null;             // carrying on to the next level: { maps, score, kills } from the levels before
+  let barKey = '';
+  const couldPay = {};        // which towers could be paid for last time the bar was drawn
   let banner = null;          // { text, sub, t }
   let last = performance.now();
   let infoKey = '', btnKey = '', nextKey = '';
@@ -35,7 +40,10 @@
   let particles = [], castleHurt = 0;
   let ground = null, groundKey = '';
 
-  const shell = GameShell.create({ game: 'towers', boards: Object.fromEntries(Object.entries(E.MAPS).map(([id, m]) => [id, m.label])), mount: $('stage'), onAgain: () => reset() });
+  // A board per map, and All levels for a game carried on from one level to the next.
+  const BOARDS = { ...Object.fromEntries(Object.entries(E.MAPS).map(([id, m]) => [id, m.label])), all: 'All levels' };
+  // Play again after a carried-on game starts over from the map it began on.
+  const shell = GameShell.create({ game: 'towers', boards: BOARDS, mount: $('stage'), onAgain: () => { if (run) { mapId = run.maps[0]; store('towers.map', mapId); } reset(); } });
   let view = null;
 
   function paintOptions() {
@@ -54,25 +62,56 @@
     }
   }
 
-  function reset() {
+  // The levels in order (Easy, Medium, Hard), from the maps themselves.
+  const LEVELS = [...new Set(Object.values(E.MAPS).map(m => m.level))];
+  const mapIds = level => Object.keys(E.MAPS).filter(id => E.MAPS[id].level === level);
+  // The map one level up: the one in the same place in that level's list
+  // (Meadow goes on to Canyon, Frozen Lake to Swamp). None after the last level.
+  function nextMap(id) {
+    const level = E.MAPS[id].level, i = LEVELS.indexOf(level);
+    if (i < 0 || i >= LEVELS.length - 1) return null;
+    const here = mapIds(level), there = mapIds(LEVELS[i + 1]);
+    return there[Math.min(Math.max(0, here.indexOf(id)), there.length - 1)] || null;
+  }
+  const listed = names => (names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`);
+
+  // carry: going on to the next level keeps the score; gold, lives and towers start over.
+  function reset(carry = null) {
+    run = carry;
     g = E.create({ map: mapId });
+    if (run) g.score = run.score;
     if (!view) view = GameShell.fitCanvas($('canvas'), { aspect: g.map.cols / g.map.rows, maxHeight: () => (window.innerWidth >= 900 ? Infinity : Math.max(320, window.innerHeight * 0.6)), fitScreen: 'phone' });
     state = 'ready';
     paused = false;
     $('pauseBtn').textContent = '⏸';
     message(null);
     picked = null;
+    armed = null;
     particles = [];
     lastTick = null;
     const m = E.MAPS[mapId];
-    banner = { text: m.label, sub: g.map.paths.length > 1 ? 'Two roads! Build, then the waves come.' : 'Build a tower and the waves will come.', t: 3 };
+    banner = run
+      ? { text: `${m.level}: ${m.label}`, sub: 'Your score carries on. Build, then the waves come.', t: 3.5 }
+      : { text: m.label, sub: g.map.paths.length > 1 ? 'Two roads! Build, then the waves come.' : 'Build a tower and the waves will come.', t: 3 };
     shell.hideOver();
+    nextBtn.classList.add('hidden');
     document.body.dataset.state = 'ready';
     paintOptions();
-    $('options').classList.remove('hidden');
-    btnKey = nextKey = '';
+    btnKey = nextKey = barKey = '';
+    for (const k of Object.keys(couldPay)) delete couldPay[k];
+    syncSetup();
     hud();
     renderInfo(true);
+  }
+
+  // The map and level pickers only show before a game gets going and after it
+  // ends, so the map and the towers get the room while you play.
+  function syncSetup() {
+    const on = state === 'over' || (state === 'ready' && !g.towers.length && !run);
+    if (document.body.dataset.setup === (on ? 'on' : 'off')) return;
+    $('options').classList.toggle('hidden', !on);
+    document.body.dataset.setup = on ? 'on' : 'off';
+    requestAnimationFrame(() => view && view.resize());
   }
 
   // The wave button: call the next wave now, with its clock and bonus.
@@ -137,8 +176,8 @@
   function waveStarted() {
     if (state === 'ready') {
       state = 'playing';
-      $('options').classList.add('hidden');
       document.body.dataset.state = 'playing';
+      syncSetup();
       if (window.ArcadeStats) ArcadeStats.play();
     }
     const list = E.waveList(g.wave);
@@ -162,11 +201,13 @@
   // ---- the info panel under the map ------------------------------------------------------------
   function renderInfo(force) {
     const tower = picked && E.towerAt(g, picked.x, picked.y);
-    const key = JSON.stringify([picked, tower && tower.level, g.gold, state]);
+    const key = JSON.stringify([picked, tower && tower.level, g.gold, state, g.towers.length]);
     if (!force && key === infoKey) return;
     infoKey = key;
     const box = $('info');
     box.innerHTML = '';
+    box.classList.remove('on-map');
+    box.style.top = box.style.left = box.style.width = '';
     if (state === 'over') { box.classList.add('hidden'); return; }
     box.classList.remove('hidden');
     if (tower) {
@@ -195,42 +236,130 @@
       sellBtn.onclick = () => doSell();
       actions.append(upBtn, sellBtn);
       box.append(head, st, actions);
-      return;
-    }
-    if (picked && E.canBuild(g, picked.x, picked.y)) {
-      const grid = document.createElement('div');
-      grid.className = 'build-grid';
-      TYPES.forEach((type, i) => {
-        const def = E.TOWERS[type];
-        const cost = def.levels[0].cost;
-        const b = document.createElement('button');
-        b.innerHTML = '<span class="em"></span><span><b></b><small></small></span><span class="cost"></span>';
-        b.querySelector('.em').textContent = def.emoji;
-        b.querySelector('b').textContent = `${def.label}`;
-        b.querySelector('small').textContent = def.blurb;
-        b.querySelector('.cost').textContent = `${cost} 🪙`;
-        b.disabled = g.gold < cost;
-        b.title = `Build ${def.label} (${i + 1})`;
-        b.onclick = () => doBuild(type);
-        grid.appendChild(b);
-      });
-      box.appendChild(grid);
+      placeCard(tower);
       return;
     }
     const p = document.createElement('p');
     p.className = 'hint';
-    const how = TvPlay.on ? 'Move around the map with the arrows and press OK on an empty square to build a tower there.' : 'Tap an empty square to build a tower.';
-    p.textContent = state === 'ready'
-      ? `${how} Once you build, wave 1 comes in 30 seconds, and after each wave you get a short break to build more.`
-      : `${how} ${TvPlay.on ? 'Press OK on a tower' : 'Tap a tower'} to upgrade or sell it. Monsters walk the road to your castle: don't let them in!`;
+    p.textContent = !g.towers.length
+      ? `Once you build, wave 1 comes in ${E.FIRST_BREAK} seconds, and after each wave you get a short break to build more.`
+      : `${TvPlay.on ? 'Press OK on a tower' : 'Tap a tower'} to upgrade or sell it. Monsters walk the road to your castle: don't let them in!`;
     box.appendChild(p);
   }
 
-  function attempt(fn) {
-    try { fn(); react(); renderInfo(true); hud(); }
-    catch (e) { toast(e.message); Blip.tone(140, 0.08, { type: 'square', volume: 0.04 }); }
+  // On a phone held upright the map gets all the room under it, so a picked
+  // tower's card floats over the map instead: over its bottom edge for a tower
+  // in the top half, over its top edge for one in the bottom half.
+  const upright = () => !TvPlay.on && window.matchMedia('(max-width: 899px) and (orientation: portrait)').matches;
+  function placeCard(tower) {
+    if (!upright()) return;
+    const box = $('info'), stage = $('stage');
+    box.classList.add('on-map');
+    box.style.left = `${stage.offsetLeft + 6}px`;
+    box.style.width = `${stage.offsetWidth - 12}px`;
+    const low = tower.y >= g.map.rows / 2;
+    box.style.top = `${low ? stage.offsetTop + 6 : stage.offsetTop + stage.offsetHeight - box.offsetHeight - 6}px`;
   }
-  function doBuild(type) { if (picked) attempt(() => { Blip.unlock(); E.build(g, type, picked.x, picked.y); }); }
+  window.addEventListener('resize', () => { infoKey = barKey = ''; });
+
+  // ---- the build bar: every tower with its picture, name and price -------------------------------
+  const touchOnly = () => !TvPlay.on && window.matchMedia('(hover: none)').matches;
+  const cost = type => E.TOWERS[type].levels[0].cost;
+  function paintBar() {
+    const row = $('buildRow');
+    row.innerHTML = '';
+    TYPES.forEach((type, i) => {
+      const def = E.TOWERS[type];
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.dataset.type = type;
+      b.innerHTML = '<span class="key"></span><span class="em"></span><span class="nm"></span><span class="cost"></span>';
+      b.querySelector('.key').textContent = String(i + 1);
+      b.querySelector('.em').textContent = def.emoji;
+      b.querySelector('.nm').textContent = def.label;
+      b.querySelector('.cost').textContent = `${cost(type)} 🪙`;
+      b.title = `${def.label}: ${def.blurb} (${i + 1})`;
+      b.setAttribute('aria-pressed', 'false');
+      b.addEventListener('click', () => chooseTower(type));
+      row.appendChild(b);
+    });
+  }
+  // Lit up when you can pay for it, gray when you can't, and a quick flash the
+  // moment one becomes affordable. Checked every frame, redrawn only on a change.
+  function renderBar() {
+    const spot = picked && E.canBuild(g, picked.x, picked.y);
+    const key = [g.gold, armed, spot ? 1 : 0, state, TvPlay.on ? 1 : 0].join('|');
+    if (key === barKey) return;
+    const first = !barKey;
+    barKey = key;
+    for (const b of $('buildRow').children) {
+      const type = b.dataset.type, def = E.TOWERS[type], can = g.gold >= cost(type);
+      b.classList.toggle('can', can);
+      b.classList.toggle('cant', !can);
+      b.setAttribute('aria-disabled', String(!can));
+      b.setAttribute('aria-pressed', String(armed === type));
+      b.setAttribute('aria-label', `${def.label}, ${cost(type)} gold${can ? '' : `, you need ${cost(type) - g.gold} more`}`);
+      if (can && couldPay[type] === false && !first) {
+        b.classList.remove('lit');
+        void b.offsetWidth;   // start the flash over
+        b.classList.add('lit');
+      }
+      couldPay[type] = can;
+    }
+    // On an upright phone the line is kept short enough for one line.
+    const how = $('buildHow'), short = upright();
+    if (armed) {
+      const name = E.TOWERS[armed].label;
+      how.textContent = TvPlay.on ? `Now press OK on a lit square for the ${name}.`
+        : short ? `Tap a lit square, or the ${name} again to cancel.`
+          : touchOnly() ? `Now tap a lit square for the ${name}, or tap the ${name} again to cancel.`
+            : `Now pick a lit square for the ${name}. Esc or a right-click cancels.`;
+    } else if (spot) {
+      how.textContent = short ? 'Now pick a tower, or tap the square again to cancel.'
+        : touchOnly() ? 'Now pick a tower to build on that square, or tap the square again to cancel.'
+          : TvPlay.on ? 'Now pick a tower to build on that square.'
+            : 'Now pick a tower to build on that square. Esc or a right-click cancels.';
+    } else how.textContent = short ? 'Pick a square then a tower, or a tower then a square.' : 'Pick an empty square and then a tower, or pick a tower and then a square.';
+    document.body.classList.toggle('td-armed', !!armed);
+  }
+  $('buildRow').addEventListener('animationend', e => e.target.classList.remove('lit'));
+
+  // A tower from the bar: built on the picked square, or held until a square is picked.
+  function chooseTower(type) {
+    if (state === 'over') return;
+    if (paused) pause(false);
+    if (picked && E.canBuild(g, picked.x, picked.y)) { doBuild(type); return; }
+    const def = E.TOWERS[type];
+    if (g.gold < cost(type)) {
+      toast(`You need ${cost(type) - g.gold} more gold for the ${def.label}.`, 1600);
+      Blip.tone(140, 0.08, { type: 'square', volume: 0.04 });
+      return;
+    }
+    armed = armed === type ? null : type;
+    picked = null;
+    Blip.unlock();
+    Blip.tone(armed ? 640 : 420, 0.03, { type: 'square', volume: 0.025 });
+    if (armed && TvPlay.on) $('stage').focus();
+    renderBar();
+    renderInfo(true);
+  }
+  function cancelPick() {
+    if (!armed && !picked) return false;
+    armed = null;
+    picked = null;
+    renderBar();
+    renderInfo(true);
+    return true;
+  }
+
+  function attempt(fn) {
+    try { fn(); react(); syncSetup(); renderInfo(true); renderBar(); hud(); return true; }
+    catch (e) { toast(e.message); Blip.tone(140, 0.08, { type: 'square', volume: 0.04 }); return false; }
+  }
+  function doBuild(type) {
+    if (!picked) return;
+    if (attempt(() => { Blip.unlock(); E.build(g, type, picked.x, picked.y); }) && TvPlay.on) $('stage').focus();
+  }
   function doUpgrade() { const t = picked && E.towerAt(g, picked.x, picked.y); if (t) attempt(() => E.upgrade(g, t.id)); }
   function doSell() {
     const t = picked && E.towerAt(g, picked.x, picked.y);
@@ -257,19 +386,85 @@
     }
   }
 
+  // After the last wave, the win card offers the next level (Easy, then Medium,
+  // then Hard) beside Play again. The score keeps going; gold, lives and towers
+  // start over with the new map's own.
+  const nextBtn = document.createElement('button');
+  nextBtn.className = 'primary next-btn hidden';
+  nextBtn.type = 'button';
+  document.querySelector('.over-panel .over-top').appendChild(nextBtn);
+  nextBtn.addEventListener('click', nextLevel);
+  function nextLevel() {
+    const to = state === 'over' && g.phase === 'won' && nextMap(mapId);
+    if (!to) return;
+    const done = run ? run.maps : [mapId];
+    const carry = { maps: [...done, to], score: g.score, kills: (run ? run.kills : 0) + g.kills, saved: run ? run.saved : null, saving: run ? run.saving : null };
+    // The game so far goes on the All levels board now, so leaving later never loses it.
+    const saving = saveRun(carry, g.score, listed(done.map(id => E.MAPS[id].label)));
+    if (saving) saving.catch(e => toast(e.message));
+    nextBtn.classList.add('hidden');
+    mapId = to;
+    store('towers.map', to);
+    reset(carry);
+  }
+
+  // A carried-on game saves itself on the All levels board: the first save adds
+  // it, and each one after raises that same row (the server hands back a key for
+  // it). Nothing to save on a TV (its scores go under initials picked on the end
+  // card) or for a guest with no name.
+  function saveRun(r, score, detail) {
+    if (ArcadeKit.onTvDevice() || !ArcadeKit.boardWho()) return null;
+    r.saving = (r.saving || Promise.resolve()).catch(() => {}).then(() =>
+      ArcadeKit.saveScore('towers', { score, board: 'all', detail, ...(r.saved ? { run: r.saved } : {}) })
+    ).then(res => {
+      r.saved = { id: res.id, key: res.runKey || (r.saved && r.saved.key) };
+      return res;
+    });
+    return r.saving;
+  }
+  // The end card of a carried-on game says where it was saved instead of offering Save.
+  function showRunSave(p) {
+    const panel = document.querySelector('.over-panel');
+    const hint = panel.querySelector('.save-hint');
+    panel.querySelector('.save-btn').classList.add('hidden');
+    hint.textContent = 'Saving it on the All levels board…';
+    p.then(r => { hint.textContent = `Saved on the All levels board at #${r.rank}.`; }, e => { hint.textContent = e.message; });
+  }
+
   function end(won) {
     state = 'over';
     picked = null;
+    armed = null;
+    syncSetup();
     renderInfo(true);
+    renderBar();
     hud();
     if (won) Blip.tune([[523, 0.12], [659, 0.12], [784, 0.12], [1047, 0.35]], { type: 'square', volume: 0.06 });
     else { Blip.noise(0.4, 0.12); Blip.tone([260, 60], 0.6, { type: 'sawtooth', volume: 0.07 }); }
     const m = E.MAPS[mapId].label;
-    setTimeout(() => shell.over({
-      score: g.score, board: mapId,
-      title: won ? 'Victory! The castle is safe! 🏰' : undefined,
-      detail: won ? `All ${E.WAVES} waves on ${m} with ${g.lives} lives left` : `Held out to wave ${g.wave} on ${m} · ${g.kills} monsters defeated`
-    }), 700);
+    const kills = (run ? run.kills : 0) + g.kills;
+    const before = run ? run.maps.slice(0, -1).map(id => E.MAPS[id].label) : [];
+    const next = won ? nextMap(mapId) : null;
+    // The lives left are this map's, so a game carried on says which map.
+    const all = listed([...before, m]);
+    const lives = before.length ? `, with ${g.lives} lives left on ${m}` : ` with ${g.lives} lives left`;
+    let detail;
+    if (!won) detail = `${before.length ? `Beat ${listed(before)}, then held` : 'Held'} out to wave ${g.wave} on ${m} · ${kills} monsters defeated`;
+    else if (next) detail = `All ${E.WAVES} waves on ${all}${lives}. Take on ${E.MAPS[next].label} next and your score keeps going.`;
+    else if (before.length >= LEVELS.length - 1) detail = `All ${E.WAVES} waves on ${all}. You beat every level in one game!`;
+    else detail = `All ${E.WAVES} waves on ${all}${lives}`;
+    nextBtn.classList.toggle('hidden', !next);
+    if (next) nextBtn.textContent = `Next level: ${E.MAPS[next].level}`;
+    // A carried-on game belongs on All levels, never on one map's board, and saves itself.
+    const saving = run && saveRun(run, g.score, won ? all : `${listed(before)}, then wave ${g.wave} on ${m}`);
+    setTimeout(() => {
+      shell.over({
+        score: g.score, board: run ? 'all' : mapId,
+        title: won ? 'Victory! The castle is safe! 🏰' : undefined,
+        detail
+      });
+      if (saving) showRunSave(saving);
+    }, 700);
   }
 
   function frame(now) {
@@ -289,6 +484,7 @@
     particles = particles.filter(p => p.life > 0);
     castleHurt = Math.max(0, castleHurt - dt);
     renderInfo(false);
+    renderBar();
     draw(now / 1000, dt);
     requestAnimationFrame(frame);
   }
@@ -562,6 +758,33 @@
     emoji(ctx, '🏰', P(ex + 0.5) + wob, P(ey + 0.45), c * 1.05);
     if (castleHurt) { ctx.fillStyle = `rgba(255,60,60,${castleHurt * 0.6})`; ctx.beginPath(); ctx.arc(P(ex + 0.5), P(ey + 0.5), c * 0.6, 0, Math.PI * 2); ctx.fill(); }
 
+    // A tower picked first: every square it can go on glows, and the one under
+    // the mouse (or the TV's cursor) shows how far the tower would reach.
+    if (armed && state !== 'over') {
+      const glow = 0.16 + 0.1 * Math.sin(t * 5);
+      for (let y = 0; y < g.map.rows; y++) for (let x = 0; x < g.map.cols; x++) {
+        if (!E.canBuild(g, x, y)) continue;
+        ctx.fillStyle = `rgba(0,255,194,${glow})`;
+        rounded(ctx, P(x) + 2, P(y) + 2, c - 4, c - 4, c * 0.15);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(0,255,194,0.55)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+      const at = hover || (TvPlay.on && cursor);
+      if (at && E.canBuild(g, at.x, at.y)) {
+        const reach = E.TOWERS[armed].levels[0].range;
+        ctx.fillStyle = 'rgba(0,255,194,0.1)';
+        ctx.strokeStyle = 'rgba(0,255,194,0.8)';
+        ctx.setLineDash([6, 4]);
+        ctx.beginPath(); ctx.arc(P(at.x + 0.5), P(at.y + 0.5), P(reach), 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.globalAlpha = 0.75;
+        emoji(ctx, E.TOWERS[armed].emoji, P(at.x + 0.5), P(at.y + 0.5), c * 0.7);
+        ctx.globalAlpha = 1;
+      }
+    }
+
     // the picked square / tower range
     if (picked) {
       const tower = E.towerAt(g, picked.x, picked.y);
@@ -743,26 +966,45 @@
   }
 
   // ---- input ----------------------------------------------------------------------------------------
+  const squareAt = e => {
+    const r = $('canvas').getBoundingClientRect();
+    return { x: Math.floor(((e.clientX - r.left) / r.width) * g.map.cols), y: Math.floor(((e.clientY - r.top) / r.height) * g.map.rows) };
+  };
   $('stage').addEventListener('pointerdown', e => {
     if (paused) { pause(false); return; }
     if (state === 'over') return;
-    const r = $('canvas').getBoundingClientRect();
-    const x = Math.floor(((e.clientX - r.left) / r.width) * g.map.cols);
-    const y = Math.floor(((e.clientY - r.top) / r.height) * g.map.rows);
+    // A right-click lets go of whatever was picked.
+    if (e.button === 2) { cancelPick(); return; }
+    if (e.button !== 0) return;
+    const { x, y } = squareAt(e);
     pickSquare(x, y);
   });
+  $('stage').addEventListener('contextmenu', e => e.preventDefault());
+  $('stage').addEventListener('pointermove', e => { hover = e.pointerType === 'mouse' ? squareAt(e) : null; });
+  $('stage').addEventListener('pointerleave', () => { hover = null; });
   function pickSquare(x, y) {
     if (x < 0 || y < 0 || x >= g.map.cols || y >= g.map.rows) return;
     const tile = E.tileAt(g, x, y);
+    // A tower picked first goes on the square picked now.
+    if (armed && E.canBuild(g, x, y)) {
+      const type = armed;
+      armed = null;
+      picked = { x, y };
+      doBuild(type);
+      renderBar();
+      return;
+    }
+    if (armed && E.towerAt(g, x, y)) armed = null;
     if (E.towerAt(g, x, y) || tile === '.') {
       picked = picked && picked.x === x && picked.y === y ? null : { x, y };
       Blip.tone(500, 0.02, { type: 'square', volume: 0.02 });
     } else {
-      picked = null;
+      if (!armed) picked = null;
       const why = { T: 'Trees here.', R: 'A big rock here.', '~': g.map.theme === 'lava' ? 'That\'s lava!' : g.map.theme === 'snow' ? 'That\'s thin ice!' : 'That\'s water!' }[tile];
       toast(why ? `${why} Pick an empty square.` : 'That\'s the road! Build next to it.', 1500);
     }
     renderInfo(true);
+    renderBar();
   }
   $('waveBtn').addEventListener('click', callWave);
   const SPEEDS = [1, 2, 3];
@@ -778,17 +1020,19 @@
   window.addEventListener('keydown', e => {
     if (help.isOpen) return;
     const k = e.key;
-    if (k >= '1' && k <= '4') { doBuild(TYPES[Number(k) - 1]); return; }
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    // 1-4 builds on the picked square, or picks that tower first when no square is.
+    if (k >= '1' && k <= '4') { const type = TYPES[Number(k) - 1]; if (picked) doBuild(type); else chooseTower(type); return; }
     if (k === 'u' || k === 'U') doUpgrade();
     else if (k === 's' || k === 'S') doSell();
     else if (k === ' ') { e.preventDefault(); callWave(); }
     else if (k === '+' || k === '=' || k === 'f' || k === 'F') setSpeed(speed + 1);
     else if (k === '-' || k === '_') setSpeed(speed - 1);
     else if (k === 'p' || k === 'P') pause();
-    else if (k === 'Escape') { picked = null; renderInfo(true); }
+    else if (k === 'Escape') { if (cancelPick()) e.preventDefault(); }
   });
   $('pauseBtn').addEventListener('click', () => pause());
-  $('scoresBtn').addEventListener('click', () => shell.openScores(mapId));
+  $('scoresBtn').addEventListener('click', () => shell.openScores(run ? 'all' : mapId));
   document.addEventListener('visibilitychange', () => { if (document.hidden && state !== 'over') pause(true); });
   Blip.muteButton($('muteBtn'));
   Blip.musicButton($('musicBtn'));
@@ -808,13 +1052,18 @@
           <tr><td>❄️ Frost</td><td>Slows everything nearby. Great next to a bend.</td></tr>
           <tr><td>⚡ Tesla</td><td>Lightning that jumps from monster to monster.</td></tr>
         </table>
-        <p>Tap an empty square, then pick a tower. Tap a tower to <b>upgrade</b> it (twice) or <b>sell</b> it.</p>`
+        <p>Every tower is in the row under the wave button, lit up in gold once you have the gold for it. Pick an empty square and then a tower, or pick a tower first and then one of the squares that light up. Tap a tower on the map to <b>upgrade</b> it (twice) or <b>sell</b> it.</p>`
     },
     {
       emoji: '⏱️', title: 'Waves come on their own',
       html: `<p>Wave 1 comes ${E.FIRST_BREAK} seconds after your first tower. After each wave you get a ${E.BREAK}-second break to build, then the next one starts by itself.</p>
         <p>Ready sooner? <b>Call the next wave now</b> for bonus gold: the earlier, the more. <b>+</b> speeds things up, and you can see what's coming next under the button.</p>
         <div class="tut-tip">Watch out for <b>🛡️ knights</b> (tough armor: big hits work best) and the <b>👹 ogre</b> every 5th wave.</div>`
+    },
+    {
+      emoji: '⭐', title: 'On to the next level',
+      html: `<p>Beat all ${E.WAVES} waves and you can carry on to the next level: from Easy to Medium, then to Hard. Your score keeps going, and you start the new map with its own gold and lives and no towers.</p>
+        <p>A game played on from one level to the next goes on its own <b>All levels</b> board, by itself, so it's kept even if you stop partway.</p>`
     }
   ]);
   $('helpBtn').addEventListener('click', () => help.open());
@@ -832,6 +1081,7 @@
     active: () => state === 'playing' && !paused,
     start: () => (state !== 'over' ? $('stage') : null),
     navButtons: { 2: ' ', 3: 'u', 4: '-', 5: '+', 9: 'p' },
+    goAfter: $('hud'),
     hint: 'Move around the map with the arrows and press OK on a square to build there, or on a tower to upgrade or sell it. Press OK on Start wave when you\'re ready. On a game controller, X calls the next wave, Y upgrades the picked tower, L1 and R1 change the speed, and Start pauses.'
   });
   if (TvPlay.on) {
@@ -853,7 +1103,7 @@
         e.stopImmediatePropagation();
         if (paused) { pause(false); return; }
         pickSquare(cursor.x, cursor.y);
-        const choice = picked && $('info').querySelector('.build-grid button:not(:disabled)');
+        const choice = picked && E.canBuild(g, picked.x, picked.y) && $('buildRow').querySelector('button.can');
         if (choice) choice.focus();
       }
     }, true);
@@ -861,8 +1111,41 @@
 
   // Back: a game with towers built or waves going goes back to picking a map
   // (asking first, while the waves are going), and from there to the arcade.
-  ArcadeBack.setup({ atMenu: () => state === 'ready' && !g.towers.length, back: reset, busy: () => state === 'playing', pause: () => pause(true) });
+  // A game carried on to the next level counts as going, even before its first wave.
+  ArcadeBack.setup({ atMenu: () => state === 'ready' && !g.towers.length && !run, back: () => reset(), busy: () => state === 'playing' || (!!run && state === 'ready'), pause: () => pause(true) });
 
+  // For the browser tests only (a browser driven by Playwright says so in
+  // navigator.webdriver): set the gold, and jump to the last wave and win it.
+  if (navigator.webdriver) {
+    window.TowersTest = {
+      state: () => ({ state, gold: g.gold, score: g.score, wave: g.wave, map: mapId, towers: g.towers.length, armed, picked, run: run && { maps: run.maps, saved: run.saved && run.saved.id } }),
+      // Waits for a carried-on game's save to finish, and says where it went.
+      runSaved: () => (run && run.saving ? run.saving.then(r => r.id, () => null) : null),
+      setGold: n => { g.gold = n; hud(); },
+      // An empty square to build on, nearest the middle of the map, with the map's size.
+      free: () => {
+        let best = null;
+        for (let y = 0; y < g.map.rows; y++) for (let x = 0; x < g.map.cols; x++) {
+          const d = Math.abs(x - g.map.cols / 2) + Math.abs(y - g.map.rows / 2);
+          if (E.canBuild(g, x, y) && (!best || d < best.d)) best = { x, y, d };
+        }
+        return best && { x: best.x, y: best.y, cols: g.map.cols, rows: g.map.rows };
+      },
+      // Clears the road and calls the last wave with nobody in it, so the next frame wins.
+      win: () => {
+        if (state === 'over') return;
+        g.wave = E.WAVES - 1;
+        g.phase = 'build';
+        g.countdown = null;
+        g.enemies = [];
+        g.spawnQueue = [];
+        callWave();
+        g.spawnQueue = [];
+      }
+    };
+  }
+
+  paintBar();
   reset();
   requestAnimationFrame(frame);
   help.autoOpen();
