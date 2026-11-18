@@ -1103,6 +1103,10 @@ async function run({ base, root }) {
   // A guest's game can't be handed to a profile afterwards.
   const prof = await wl('/profiles', 'POST', { name: 'Spin Pat', avatar: 'shiba:1' });
   await asAdmin(`/profiles/admin/${prof.data.id}/approve`, 'POST', {});
+  // A guest can't post scores that look like a family member's: their row says (guest).
+  const lookalike = await wl('/scores/dino', 'POST', { name: 'spin  PAT', score: 1114, board: 'run' });
+  ok('a guest using a profile\'s name goes on the board as "(guest)"',
+    lookalike.status === 201 && (await wl('/scores/dino?board=run&limit=100')).data.find(r => r.id === lookalike.data.id).profileName === 'spin PAT (guest)');
   const patToken = (await wl(`/profiles/${prof.data.id}/use`, 'POST', {})).data.token;
   const asPat = async (p, body) => {
     const res = await fetch(base + '/api/spinsolve' + p, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Profile-Token': patToken }, body: JSON.stringify(body || {}) });

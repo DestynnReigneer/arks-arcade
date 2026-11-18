@@ -21,6 +21,16 @@ const NO_NAME = 'Sign in with ARKS ID to put your score on the board.';
 const cleanName = raw => String(raw || '').replace(/[\u0000-\u001f\u007f]/g, '').trim().replace(/\s+/g, ' ').slice(0, 16);
 const initialsOf = name => (String(name).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 3) || 'P');
 
+// Is this the name of a profile (any but a turned-down one), ignoring case and spacing?
+function profileNamed(name) {
+  const db = require('../db');
+  const want = name.toLowerCase().replace(/\s+/g, '');
+  try {
+    return db.db.prepare("SELECT name FROM arcade_profiles WHERE status != 'rejected'").all()
+      .some(r => String(r.name || '').toLowerCase().replace(/\s+/g, '') === want);
+  } catch { return false; }
+}
+
 function fail(message, status) {
   return Object.assign(new Error(message), { status });
 }
@@ -34,8 +44,11 @@ function boardWho({ profileToken, profile = undefined, name, avatar, initials } 
   if (me) {
     return { profile: me, initials: me.initials || initialsOf(me.name), name: me.name, avatar: me.avatar || null, key: `p:${me.id}` };
   }
-  const guest = cleanName(name);
+  let guest = cleanName(name);
   if (guest) {
+    // A guest using a family member's profile name goes on the board as
+    // "Kim (guest)", so nobody can post scores that look like Kim's.
+    if (profileNamed(guest)) guest = `${guest} (guest)`;
     return {
       profile: null, initials: initialsOf(guest), name: guest,
       avatar: avatar && Avatars.valid(avatar) ? String(avatar) : null,
