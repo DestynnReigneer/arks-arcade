@@ -72,6 +72,24 @@ test('Chess: creating a lobby, finding it, Ready, the chat and starting', async 
   await host.locator('#lobbyChat .lb-quick button', { hasText: 'GG' }).click();
   await expect(joiner.locator('#lobbyChat .lb-line').last()).toHaveText('Sam GG');
 
+  // Holding a message: the host gets Mute and Remove Player for whoever sent it, as on their
+  // seat; everyone gets Copy message.
+  await host.locator('#lobbyChat .lb-line', { hasText: 'Milo' }).last().click({ button: 'right' });
+  const hostMenu = host.locator('.lp-card');
+  await expect(hostMenu).toContainText('Milo: well s***, good luck');
+  for (const name of ['Copy message', 'Mute', 'Remove Player']) await expect(hostMenu.getByRole('menuitem', { name: new RegExp(name) })).toBeVisible();
+  await hostMenu.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await joiner.locator('#lobbyChat .lb-line', { hasText: 'GG' }).last().click({ button: 'right' });
+  const joinMenu = joiner.locator('.lp-card');
+  await expect(joinMenu.getByRole('menuitem', { name: /Copy message/ })).toBeVisible();
+  await expect(joinMenu.getByRole('menuitem', { name: /Mute|Remove/ })).toHaveCount(0);
+  await joinMenu.getByRole('button', { name: 'Cancel', exact: true }).click();
+  // The host can hold Milo's seat for the same two.
+  await host.locator('#lobbySeats .lb-seat', { hasText: 'Milo' }).click({ button: 'right' });
+  await expect(hostMenu.getByRole('menuitem', { name: /Mute/ })).toBeVisible();
+  await expect(hostMenu.getByRole('menuitem', { name: /Remove Player/ })).toBeVisible();
+  await hostMenu.getByRole('button', { name: 'Cancel', exact: true }).click();
+
   // The emoji picker: every standard emoji in groups; tapping one types it.
   await joiner.locator('#lobbyChat .lb-emo-btn').click();
   await expect(joiner.locator('#lobbyChat .lb-emo-grid button').first()).toBeVisible();
