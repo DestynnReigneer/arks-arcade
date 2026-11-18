@@ -7,6 +7,40 @@ to-do list as checkboxes (the rule is in the maintainer's global CLAUDE.md
 and `arks-internal/conventions/sessions.md`): do the checked items in the
 order they were clicked, and keep the rest pinned here.
 
+## Tower Defense: the build bar and carrying on to the next level (2026-11-17)
+
+The maintainer played on a laptop and asked for five things, all in `public/towers.html` and `public/towers.js`.
+
+- **The build bar** (`#buildBar`): every tower with its picture, name and price, all the time, under the wave
+  button. The old tower list that only showed in `#info` after picking a square is gone; `#info` now only holds a
+  picked tower's card or a tip.
+- **Both orders work.** Pick an empty square and then a tower (as before), or pick a tower first (it wears a
+  turquoise ring) and then a square: every free square glows turquoise, and with a mouse the square under it
+  shows the tower and how far it reaches. Esc, a right-click on the map, or picking the same tower again cancels.
+  A line above the bar (`#buildHow`) says what to do next. 1-4 builds on the picked square as before, or picks
+  that tower first when no square is picked.
+- **Afford states:** a tower you can pay for is lit in gold with a glow; one you can't is gray at 45% with its
+  price muted, and a tap says how much more gold it needs. The moment one becomes affordable it pops and flashes
+  (`.lit`). Checked every frame, redrawn only when the gold changes.
+- **The next level.** After the last wave the win card has **Next level: Medium** (or Hard) beside Play again
+  (`.next-btn`, added to GameShell's own `.over-top`; the shared end window and GameShell weren't changed). Easy
+  goes on to Medium and Medium to Hard, keeping the map's place in its level (Meadow, Canyon, Castle; Frozen
+  Lake, Swamp, Volcano). **The score carries on; gold, lives and towers start over** with the new map's own. The
+  score is saved on the board of the map the game ended on, and the detail line names every map played. Hard
+  has no next level. Back from a carried-on game asks first, even before its first wave.
+- **Out of the way while playing:** the map and level pickers hide once the first tower is built or the first
+  wave starts (and for the whole of a carried-on game), and come back when the game ends or on Back to setup
+  (`syncSetup`, `body[data-setup]`). The score row moved into the side column beside the map on a laptop and a
+  sideways phone, so the map is taller there (about 670px instead of 610 at 1280x800, and 300 instead of 250 on
+  a sideways phone). On an upright phone the page title steps aside while playing, the tip under the towers
+  waits until the first tower, and a picked tower's card leaves out its one-line description. On a short phone
+  (640 tall) and on a sideways phone during setup, the next wave's monster list steps aside so the towers fit.
+  `fit.spec.js` now needs the build bar on screen instead of `#info`.
+- **Tests:** `test/browser/towers-build.spec.js` (the bar, afford states, square first, tower first with Esc and
+  a right-click, three levels in a row, the pickers). `window.TowersTest` (set the gold, win the last wave, find
+  a free square) only exists when `navigator.webdriver` is true, so only in a browser Playwright drives.
+  `fit.spec.js` and `tv-games.spec.js` look for the towers in the bar now.
+
 ## Nobody types initials for a board anymore (2026-11-17)
 
 The maintainer found some games still asking for three initials at the end, when the board is supposed to show

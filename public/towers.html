@@ -19,8 +19,9 @@
 <script src="tv.js"></script>
 <script src="tv-play.js"></script>
 <style>
-  :root { --accent: #ffc72c; --on-accent: #1a0f05; }
+  :root { --accent: #ffc72c; --on-accent: #1a0f05; --pick: #00ffc2; }
   .stage { cursor: pointer; }
+  body.td-armed .stage { cursor: crosshair; }
   .wave-bar { display: flex; gap: 8px; margin-top: 10px; align-items: stretch; }
   .wave-bar .primary { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; line-height: 1.15; position: relative; overflow: hidden; }
   .wave-bar .primary small { font-size: 11.5px; font-weight: 600; opacity: 0.85; }
@@ -41,18 +42,51 @@
   .map-grid button small { display: block; font-size: 10.5px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
   .map-grid button[aria-pressed="true"] { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 18%, var(--card)); }
   .lvl-easy { color: #3ddc84; } .lvl-medium { color: #ffc72c; } .lvl-hard { color: #ff5e5e; }
+
+  /* The build bar: every tower, all the time. One you can pay for is lit up in
+     gold; one you can't is gray with its price muted; one picked to build
+     (tower first, then a square) wears a turquoise ring. */
+  .build-bar { margin-top: 10px; }
+  .build-how { margin: 0 0 6px; font-size: 13px; line-height: 1.3; color: var(--muted); text-align: center; }
+  .build-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  .build-row button {
+    position: relative; display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 7px 4px 6px; min-width: 0;
+    border-radius: 12px; cursor: pointer; font: inherit; line-height: 1.15; color: var(--text);
+    background: var(--card); border: 2px solid var(--border);
+    transition: opacity 0.25s, border-color 0.25s, box-shadow 0.25s, background-color 0.25s, transform 0.15s;
+  }
+  .build-row .em { font-size: 26px; line-height: 1.15; transition: filter 0.25s; }
+  .build-row .nm { font-size: 13px; font-weight: 700; white-space: nowrap; }
+  .build-row .cost { font-size: 13px; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; transition: color 0.25s; }
+  .build-row .key { position: absolute; top: 3px; left: 7px; font-size: 10px; font-weight: 800; color: var(--dim); }
+  @media (hover: none) { .build-row .key { display: none; } }
+  .build-row button.can {
+    border-color: var(--accent); background-color: color-mix(in srgb, var(--accent) 16%, var(--card));
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent), 0 0 16px color-mix(in srgb, var(--accent) 45%, transparent);
+  }
+  .build-row button.can .cost { color: var(--accent); }
+  @media (hover: hover) { .build-row button.can:hover { transform: translateY(-2px); } }
+  .build-row button.cant { opacity: 0.45; cursor: not-allowed; }
+  .build-row button.cant .em { filter: grayscale(1) brightness(0.85); }
+  .build-row button.cant .cost { color: var(--dim); font-weight: 700; }
+  .build-row button.lit { animation: td-lit 0.9s ease-out; }
+  @keyframes td-lit {
+    0% { transform: scale(1); }
+    30% { transform: scale(1.1); box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent) 45%, transparent), 0 0 30px var(--accent); }
+    100% { transform: scale(1); }
+  }
+  @media (prefers-reduced-motion: reduce) { .build-row button.lit { animation: none; } }
+  .build-row button[aria-pressed="true"] {
+    border-color: var(--pick); background-color: color-mix(in srgb, var(--pick) 18%, var(--card));
+    box-shadow: 0 0 0 2px var(--pick), 0 0 18px color-mix(in srgb, var(--pick) 55%, transparent);
+  }
+
   .info { margin-top: 10px; min-height: 92px; }
   .info .hint { margin: 0; }
-  .build-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
-  .build-grid button, .tower-actions button {
+  .tower-actions button {
     display: flex; align-items: center; gap: 8px; text-align: left; padding: 9px 10px; border-radius: 10px; cursor: pointer;
     background: var(--bg); color: var(--text); border: 1px solid var(--border); font: inherit; font-size: 13px;
   }
-  .build-grid button:disabled { opacity: 0.45; cursor: default; }
-  .build-grid .em { font-size: 24px; }
-  .build-grid b { display: block; }
-  .build-grid small { color: var(--dim); font-size: 11px; line-height: 1.3; display: block; }
-  .build-grid .cost { margin-left: auto; color: var(--accent); font-weight: 800; white-space: nowrap; }
   .tower-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
   .tower-head .em { font-size: 28px; }
   .tower-head small { color: var(--dim); display: block; font-size: 12px; }
@@ -60,25 +94,52 @@
   .tower-actions { display: flex; gap: 8px; }
   .tower-actions button { flex: 1; justify-content: center; font-weight: 700; }
   .tower-actions button:disabled { opacity: 0.45; cursor: default; }
+  /* On a phone held upright, the page's title steps aside while you play so the map gets the room. */
+  /* Before the first tower the wave button already says when wave 1 comes, so the tip under the towers waits. */
+  @media (max-width: 600px) {
+    html:not(.tv) body[data-setup="off"] > header.top { display: none; }
+    html:not(.tv) body[data-setup="on"] .td-play > .info { display: none; }
+    .build-how { font-size: 12px; margin-bottom: 5px; }
+    .build-row { gap: 6px; }
+    .build-row button {
+      display: grid; grid-template-columns: auto auto; grid-template-areas: "em nm" "em cost";
+      justify-content: center; align-items: center; column-gap: 4px; padding: 6px 2px; min-height: 48px;
+    }
+    .build-row .em { grid-area: em; font-size: 22px; }
+    .build-row .nm { grid-area: nm; font-size: 12px; }
+    .build-row .cost { grid-area: cost; font-size: 12px; }
+    /* A picked tower's card, trimmed to fit the room kept for it under the towers. */
+    html:not(.tv) .td-play > .info { padding: 10px 12px; min-height: 112px; box-sizing: border-box; }
+    html:not(.tv) .tower-head { margin-bottom: 4px; }
+    html:not(.tv) .tower-head .em { font-size: 22px; }
+    html:not(.tv) .tower-head small { display: none; }
+    html:not(.tv) .tower-stats { margin-bottom: 8px; }
+  }
+  /* A short phone (the browser's bars showing) lets the next wave's list go, so the towers and the card fit. */
+  @media (max-width: 600px) and (max-height: 700px) {
+    html:not(.tv) .td-play > .next-up { display: none; }
+  }
   /* On a computer the map sits on the left, as tall as the screen allows, with the
-     map picker, the wave button and the tower panel beside it, so nothing scrolls. */
+     score row, the map picker, the wave button and the towers beside it, so nothing scrolls. */
   @media (min-width: 900px), (orientation: landscape) and (max-height: 600px) and (pointer: coarse) {
     html:not(.tv) body {
       max-width: none; padding-left: 0; padding-right: 0; padding-bottom: 0;
       --bar-w: calc(min(1100px, 100vw) - 32px); --gap: 24px; --side: 360px;
-      --map-h: clamp(420px, min(calc(100dvh - 190px), calc((var(--bar-w) - var(--gap) - var(--side)) * 13 / 10)), 1000px);
+      --map-h: clamp(420px, min(calc(100dvh - 128px), calc((var(--bar-w) - var(--gap) - var(--side)) * 13 / 10)), 1000px);
     }
-    html:not(.tv) body > header.top, html:not(.tv) body > .hud { width: var(--bar-w); margin-left: auto; margin-right: auto; box-sizing: border-box; }
+    html:not(.tv) body > header.top { width: var(--bar-w); margin-left: auto; margin-right: auto; box-sizing: border-box; }
     html:not(.tv) .td-play {
       display: grid; width: var(--bar-w); margin: 0 auto 16px; column-gap: var(--gap);
       grid-template-columns: calc(var(--map-h) * 10 / 13 + 4px) minmax(0, 1fr);
-      grid-template-rows: auto auto auto auto auto minmax(0, 1fr);
-      grid-template-areas: "map opts" "map wave" "map next" "map info" "map keys" "map .";
+      grid-template-rows: auto auto auto auto auto auto auto minmax(0, 1fr);
+      grid-template-areas: "map hud" "map opts" "map wave" "map next" "map build" "map info" "map keys" "map .";
     }
     html:not(.tv) .td-play > .stage { grid-area: map; align-self: start; }
+    html:not(.tv) .td-play > .hud { grid-area: hud; }
     html:not(.tv) .td-play > .options { grid-area: opts; margin: 0 0 10px; }
     html:not(.tv) .td-play > .wave-bar { grid-area: wave; margin-top: 0; }
     html:not(.tv) .td-play > .next-up { grid-area: next; }
+    html:not(.tv) .td-play > .build-bar { grid-area: build; margin-top: 14px; }
     html:not(.tv) .td-play > .info { grid-area: info; }
     html:not(.tv) .td-play > .keys-hint { grid-area: keys; }
     html:not(.tv) .td-play > .over-panel, html:not(.tv) .td-play > #overPanel { grid-column: 1 / -1; }
@@ -86,20 +147,36 @@
   /* A phone turned sideways gets the same map-and-panel layout, sized to the short
      screen, and the page's title row goes (the top bar already says where you are). */
   @media (orientation: landscape) and (max-height: 600px) and (pointer: coarse) {
-    html:not(.tv) body { --side: 300px; --map-h: clamp(200px, calc(var(--app-h, 100dvh) - 76px - 70px), 1000px); }
+    html:not(.tv) body { --side: 300px; --map-h: clamp(200px, calc(var(--app-h, 100dvh) - 84px), 1000px); }
     html:not(.tv) body > header.top { display: none; }
-    html:not(.tv) body > .hud { margin-bottom: 8px; }
     html:not(.tv) .td-play > .keys-hint { display: none; }
-    /* Once a square is picked or a wave is on, the map choices step aside for the
-       towers, which sit in one row of four: the picture, the name and the price. */
-    html:not(.tv) body[data-state="playing"] .td-play > .options,
-    html:not(.tv) .td-play:has(#info .build-grid, #info .tower-actions) > .options { display: none; }
+    html:not(.tv) .td-play > .hud { gap: 6px; margin-bottom: 6px; }
+    html:not(.tv) .hud div { padding: 3px 8px; }
+    html:not(.tv) .hud small { font-size: 9px; }
+    html:not(.tv) .hud b { font-size: 15px; }
+    html:not(.tv) .td-play > .options { margin-bottom: 6px; }
+    html:not(.tv) .map-grid button { padding: 4px; font-size: 12px; }
+    html:not(.tv) .next-up { margin-top: 4px; font-size: 12px; }
+    /* While the map choices are showing, the list of wave 1's monsters makes room for them. */
+    html:not(.tv) body[data-setup="on"] .td-play > .next-up { display: none; }
+    html:not(.tv) .td-play > .build-bar { margin-top: 6px; }
+    html:not(.tv) .build-how { font-size: 12px; margin-bottom: 4px; }
+    html:not(.tv) .build-row { gap: 6px; }
+    html:not(.tv) .build-row button { flex-direction: row; justify-content: center; gap: 4px; padding: 4px; min-height: 44px; flex-wrap: wrap; }
+    html:not(.tv) .build-row .em { font-size: 20px; }
+    html:not(.tv) .build-row .nm { font-size: 11.5px; }
+    html:not(.tv) .build-row .cost { font-size: 12px; }
+    /* The tips under the towers would push the side past the bottom; the wave button already says when wave 1 comes. */
     html:not(.tv) .td-play > .info { margin-top: 6px; min-height: 0; }
-    html:not(.tv) .build-grid { grid-template-columns: repeat(4, 1fr); gap: 6px; }
-    html:not(.tv) .build-grid button { flex-direction: column; gap: 2px; padding: 6px 4px; text-align: center; min-height: 44px; }
-    html:not(.tv) .build-grid small { display: none; }
-    html:not(.tv) .build-grid .cost { margin-left: 0; }
-    html:not(.tv) .tower-actions button { min-height: 44px; }
+    html:not(.tv) .td-play > .info:has(> .hint) { display: none; }
+    html:not(.tv) .td-play > .info { padding: 8px 12px; }
+    html:not(.tv) .tower-head { margin-bottom: 4px; }
+    html:not(.tv) .tower-head .em { font-size: 22px; }
+    html:not(.tv) .tower-head small { display: none; }
+    html:not(.tv) .tower-stats { margin-bottom: 6px; }
+    html:not(.tv) .tower-actions button { min-height: 44px; padding-top: 4px; padding-bottom: 4px; }
+    /* With a tower picked, its card needs the room more than the how-to line does. */
+    html:not(.tv) .td-play:has(#info .tower-actions) .build-how { display: none; }
     html:not(.tv) .speed button { width: 44px; height: 44px; }
     /* The bug-report button would sit on the towers; it's in the top bar's menu meanwhile. */
     html:not(.tv) .fb-corner { display: none; }
@@ -121,20 +198,20 @@
   </div>
 </header>
 
-<div class="hud">
+<div class="td-play">
+<div class="hud" id="hud">
   <div><small>Gold</small><b id="gold">0</b></div>
   <div><small>Lives</small><b id="lives">20</b></div>
   <div><small>Wave</small><b id="wave">0/25</b></div>
   <div><small>Score</small><b id="score">0</b></div>
 </div>
 
-<div class="td-play">
 <div class="options" id="options">
   <div class="map-grid" id="mapSeg" role="group" aria-label="Map"></div>
 </div>
 
 <div class="stage" id="stage">
-  <canvas id="canvas" aria-label="The map. Tap a grass square to build a tower, or a tower to upgrade it."></canvas>
+  <canvas id="canvas" aria-label="The map. Pick an empty square to build a tower there, or a tower to upgrade it."></canvas>
   <div class="stage-msg hidden" id="stageMsg"><b></b><span></span></div>
 </div>
 
@@ -143,8 +220,12 @@
   <div class="speed" role="group" aria-label="Game speed"><small>Speed</small><div><button id="slowerBtn" title="Slower (-)" aria-label="Slower">−</button><b id="speedVal">1×</b><button id="fasterBtn" title="Faster (+)" aria-label="Faster">+</button></div></div>
 </div>
 <div class="next-up" id="nextUp"></div>
+<div class="build-bar" id="buildBar" role="group" aria-label="Towers to build">
+  <p class="build-how" id="buildHow"></p>
+  <div class="build-row" id="buildRow"></div>
+</div>
 <div class="panel info" id="info"></div>
-<p class="hint center keys-hint">Keyboard: <b>1-4</b> build on the picked square · <b>U</b> upgrade · <b>S</b> sell · <b>Space</b> call the next wave now · <b>+</b>/<b>−</b> speed · <b>P</b> pause</p>
+<p class="hint center keys-hint">Keyboard: <b>1-4</b> pick a tower, or build it on the picked square · <b>Esc</b> or right-click cancel · <b>U</b> upgrade · <b>S</b> sell · <b>Space</b> call the next wave now · <b>+</b>/<b>−</b> speed · <b>P</b> pause</p>
 </div>
 
 <script src="feedback.js"></script>

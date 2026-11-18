@@ -40,7 +40,7 @@ const GAMES = [
   { name: 'Snake', path: '/snake.html', start: [], board: '#canvas', need: ['#canvas'], touch: ['#pad'] },
   { name: 'Block Drop', path: '/blocks.html', start: [], board: '#canvas', need: ['#canvas'], touch: ['#pad'] },
   { name: 'Brick Breaker', path: '/bricks.html', start: [], board: '#canvas', need: ['#canvas'] },
-  { name: 'Tower Defense', path: '/towers.html', start: ['#waveBtn'], board: '#stage', need: ['#stage', '#waveBtn', '#info'] },
+  { name: 'Tower Defense', path: '/towers.html', start: ['#waveBtn'], board: '#stage', need: ['#stage', '#waveBtn', '#buildRow'] },
   { name: 'Words with Family', path: '/crisscross.html', start: ['#newLocalBtn', { fill: '#localPlayers input', text: 'Tester' }, '#localGo'], board: '#board', need: ['#board', '#rack', '#playBtn'] },
   { name: 'Spin & Solve', path: '/spinsolve.html', start: ['#goBtn'], board: null, need: ['#puzzleBoard', '#spinBtn', '#vowelBtn', '#solveBtn'] },
   { name: 'Chess', path: '/chess.html', start: ['#goBtn'], board: '#board', need: ['#board', '#statusLine', '#gameBtns'] },
@@ -239,8 +239,8 @@ for (const [label, viewport] of SIZES.filter(s => s[2] && s[1].width > s[1].heig
   });
 }
 
-// Tower Defense turned sideways: picking a square before the first wave shows the
-// towers, and every one of them has to be on the screen to be tapped.
+// Tower Defense turned sideways: the towers are always in the build bar, and after
+// picking a square every one of them has to be on the screen to be tapped.
 for (const [label, viewport] of SIZES.filter(s => s[2] && s[1].width > s[1].height)) {
   test(`Tower Defense sideways on a ${label}: the towers are on the screen after picking a square`, async ({ browser }, info) => {
     test.skip(info.project.name !== 'phone', 'The sizes are set here, so one project runs them all.');
@@ -248,7 +248,9 @@ for (const [label, viewport] of SIZES.filter(s => s[2] && s[1].width > s[1].heig
     const map = await page.locator('#canvas').boundingBox();
     // A square of grass on the first map: column 5, row 5 (counting from 1).
     await page.touchscreen.tap(map.x + map.width * 4.5 / 10, map.y + map.height * 4.5 / 13);
-    const buttons = page.locator('#info .build-grid button');
+    await expect(page.locator('#buildHow')).toContainText('Now pick a tower');
+    const buttons = page.locator('#buildRow button');
+    await expect(buttons).toHaveCount(4);
     await expect(buttons.first()).toBeVisible();
     for (const b of await buttons.all()) {
       const r = await b.boundingBox();
