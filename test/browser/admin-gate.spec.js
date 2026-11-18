@@ -78,3 +78,18 @@ test('the Game settings tab changes a game card line on the home page', async ({
   await expect(page.locator('#gamesSave')).toHaveText('✓ Saved');
   await expect(page.locator('#blurb-snake')).toHaveValue(original);
 });
+
+// Once feedback lives in ARKS ID, the older notes are still listed to read (they used
+// to stop the whole list with an error, because their Delete button was gone).
+test('the older feedback notes still list once ARKS ID has the inbox', async ({ page }) => {
+  expect((await page.request.post('/api/admin/login', { data: { password: 'browser-test-admin' } })).ok()).toBe(true);
+  await page.route('**/api/comm/admin/feedback', route => route.fulfill({ json: {
+    statuses: ['new', 'seen', 'pending', 'fixed', 'wontfix'],
+    inbox: { url: 'https://id.example.test/admin', waiting: 0 },
+    items: [{ id: 1, kind: 'bug', status: 'new', from: 'Sam', message: 'The board froze.', createdAt: '2026-11-10 10:00:00', details: {} }]
+  } }));
+  await openPage(page, '/admin.html');
+  await expect(page.locator('#feedbackList')).toContainText('The board froze.');
+  await expect(page.locator('#feedbackList')).not.toContainText('Cannot set properties');
+  await expect(page.locator('#feedbackList [data-act="delete"]')).toHaveCount(0);
+});

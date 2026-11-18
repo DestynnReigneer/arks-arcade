@@ -89,7 +89,10 @@ function setNotifier(fn) { notifier = fn; }
 function create(game) {
   const toMessage = (row, viewerSeat) => ({
     id: row.id, at: row.at, name: row.name, text: row.text,
-    system: !!row.system, mine: !row.system && !!viewerSeat && row.seat === viewerSeat
+    system: !!row.system, mine: !row.system && !!viewerSeat && row.seat === viewerSeat,
+    // Which seat said it (the same id the room's seats already show), for the host's
+    // Mute and Remove Player on a held message.
+    ...(row.system ? {} : { seat: row.seat })
   });
 
   function list(room, viewerSeat) {
