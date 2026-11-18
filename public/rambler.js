@@ -1995,13 +1995,19 @@ async function pickProfile(value) {
     renderSetup();
     return;
   }
-  $('adultPinField').classList.toggle('hidden', !S.config.adultRequiresPin);
-  // With a PIN the pad goes on at the 6th digit, so the button is only for the no-PIN tap.
-  $('adultConfirmBtn').classList.toggle('hidden', !!S.config.adultRequiresPin);
-  PinPad.clear($('adultPinInput'));
-  PinPad.attach($('adultPinInput'), () => $('adultConfirmBtn').onclick());
-  say($('adultMsg'), '');
-  $('adultOverlay').classList.remove('hidden');
+  // Nothing to type: the arcade asks for this device's adult pass, and a kid's or a
+  // teen's device is told no.
+  try {
+    const pass = await AdultPass.get();
+    if (!(await adultPinOk(pass))) throw new Error('Adult games aren\'t available on this device.');
+    S.adultPin = pass;
+    try { sessionStorage.setItem('rambler.adultPin', pass); sessionStorage.setItem('rambler.adult', 'yes'); } catch { /* unavailable */ }
+    S.profile = 'adult';
+    renderSetup();
+  } catch (e) {
+    renderSetup();
+    say($('setupMsg'), e.message, 'err');
+  }
 }
 
 // ------------------------------------------------------------------- start
@@ -2431,27 +2437,6 @@ function bind() {
   $('leaveRoomBtn').onclick = () => {
     if (S.creds) api(`/rooms/${S.creds.code}/leave`, { method: 'POST', body: S.creds }).catch(() => {});
     backToSetup();
-  };
-
-  $('adultCancelBtn').onclick = () => $('adultOverlay').classList.add('hidden');
-  $('closeAdultBtn').onclick = () => $('adultOverlay').classList.add('hidden');
-  $('adultConfirmBtn').onclick = async () => {
-    if (S.config.adultRequiresPin) {
-      const pin = $('adultPinInput').value.trim();
-      if (!pin) return say($('adultMsg'), 'Enter the PIN.', 'err');
-      let ok;
-      try { ok = await adultPinOk(pin); } catch (e) { PinPad.clear($('adultPinInput')); return say($('adultMsg'), e.message, 'err'); }
-      if (!ok) {
-        PinPad.clear($('adultPinInput'));
-        return say($('adultMsg'), 'Incorrect PIN. Try again.', 'err');
-      }
-      S.adultPin = pin;
-      try { sessionStorage.setItem('rambler.adultPin', pin); } catch { /* unavailable */ }
-    }
-    sessionStorage.setItem('rambler.adult', 'yes');
-    S.profile = 'adult';
-    $('adultOverlay').classList.add('hidden');
-    renderSetup();
   };
 
   bindTracing();

@@ -138,4 +138,18 @@
   }
 
   window.PinPad = { LEN, attach, clear, show };
+
+  // The adult pass, with nothing to type and no screen to show. A game calls
+  // AdultPass.get() when someone picks an adult level and uses what comes back
+  // where the PIN used to go. Everyone gets one but a kid's or a teen's device,
+  // which is told no (the server decides, in arcade/arksid.js).
+  async function adultPass() {
+    const Id = typeof ArcadeProfile !== 'undefined' && ArcadeProfile.arksId ? await ArcadeProfile.arksId().ready : null;
+    if (!Id || !Id.on) throw new Error('Adult games aren’t available on this arcade.');
+    const res = await fetch('/api/arksid/adult-pass', { method: 'POST' });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.pass) throw new Error(data.error || 'That didn’t work. Try again in a moment.');
+    return data.pass;
+  }
+  window.AdultPass = { get: adultPass };
 })();

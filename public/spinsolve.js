@@ -135,28 +135,15 @@
       if (ok) { S.adultOk = true; try { sessionStorage.setItem('spin.adultOk', 'yes'); } catch { /* unavailable */ } }
       return Promise.resolve(ok);
     }
-    return new Promise(resolve => {
-      $('pinInput').value = '';
-      $('pinMsg').textContent = '';
-      $('pinView').classList.remove('hidden');
-      $('pinInput').focus();
-      const done = ok => {
-        $('pinView').classList.add('hidden');
-        $('pinCancel').onclick = null;
-        resolve(ok);
-      };
-      const tryPin = async pin => {
-        try {
-          const r = await api('/api/spinsolve/unlock', { pin });
-          if (!r.ok) { $('pinMsg').textContent = 'Adult games aren\'t available on this device.'; PinPad.clear($('pinInput')); return; }
-          S.pin = pin;
-          try { sessionStorage.setItem('spin.adultPin', pin); } catch { /* unavailable */ }
-          done(true);
-        } catch (e) { $('pinMsg').textContent = e.message; PinPad.clear($('pinInput')); }
-      };
-      PinPad.attach($('pinInput'), tryPin);
-      $('pinCancel').onclick = () => done(false);
-    });
+    // Nothing to type: the arcade asks for this device's adult pass, and a kid's or a
+    // teen's device is told no.
+    return AdultPass.get().then(async pin => {
+      const r = await api('/api/spinsolve/unlock', { pin }).catch(() => ({ ok: false }));
+      if (!r.ok) throw new Error('Adult games aren\'t available on this device.');
+      S.pin = pin;
+      try { sessionStorage.setItem('spin.adultPin', pin); } catch { /* unavailable */ }
+      return true;
+    }).catch(e => { toast(e.message); return false; });
   }
 
   // The scores are a profile's when someone's signed in (never on a TV, which plays as a guest).
