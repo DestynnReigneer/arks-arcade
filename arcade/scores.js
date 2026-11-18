@@ -4,6 +4,7 @@
 // Dino Dash, Know-It-All, Snake, Brick Breaker, Block Drop, Tower Defense). Wordless and Rambler keep their own: their scores carry more
 // detail than "initials and a number".
 
+const crypto = require('node:crypto');
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const db = require('../db');
@@ -34,7 +35,14 @@ const GAMES = {
   // ARKS Racer keeps finishing times in thousandths of a second, fastest first, one board per track. Three laps take
   // at least about 38 seconds even on speed pads the whole way, and the clock never gives more than 80.
   racer: { label: 'ARKS Racer', boards: { sunset: 'Sunset Strip', neon: 'Neon Night', ocean: 'Ocean Drive', midnight: 'Midnight Run', golden: 'Golden Coast', teal: 'Crystal Cove', star: 'Star Road', forest: 'Laser Forest' }, lowerIsBetter: true, min: 30000, max: 85000 },
-  towers: { label: 'Tower Defense', boards: { meadow: 'Meadow', lake: 'Frozen Lake', canyon: 'Canyon', swamp: 'Swamp', castle: 'Castle', volcano: 'Volcano' }, max: 9999999 }
+  // Tower Defense: one board per map, and All levels for a game carried on from one level to the next (Easy, Medium,
+  // Hard), which is saved by itself as it goes. The most one map can give is about 82,400 (every monster of all 25
+  // waves, every wave's clear bonus, the win and 20 lives), so a map's board takes up to 100,000 and All levels,
+  // three maps at most, up to 300,000. A run's score is kept up to date in place (runBoards, below).
+  towers: {
+    label: 'Tower Defense', boards: { meadow: 'Meadow', lake: 'Frozen Lake', canyon: 'Canyon', swamp: 'Swamp', castle: 'Castle', volcano: 'Volcano', all: 'All levels' },
+    max: 100000, boardMax: { all: 300000 }, runBoards: ['all']
+  }
 };
 
 const { boardWho } = require('./board-who');
@@ -54,7 +62,9 @@ db.db.exec(`
   CREATE INDEX IF NOT EXISTS arcade_scores_board ON arcade_scores (game, board, score DESC);
 `);
 // Scores credited to an arcade profile show its name and avatar.
-for (const col of ['profile_id TEXT', 'profile_name TEXT', 'profile_avatar TEXT']) {
+// run_key: on a board that keeps a run up to date (runBoards), a fingerprint of the key handed to the page that
+// saved it, so only that page can raise the run's score later.
+for (const col of ['profile_id TEXT', 'profile_name TEXT', 'profile_avatar TEXT', 'run_key TEXT']) {
   try { db.db.exec(`ALTER TABLE arcade_scores ADD COLUMN ${col}`); } catch { /* already there */ }
 }
 // Bucket Drop's scores from when it had one Points board move to the board for the settings
@@ -91,35 +101,64 @@ function list(game, board, limit = 25) {
   });
 }
 
-function save(game, { initials, name, avatar, score, board, detail, profileToken, fromServer }) {
+const fingerprint = text => crypto.createHash('sha256').update(String(text)).digest('hex');
+const rankOf = (g, game, key, points) => db.db.prepare(`
+  SELECT COUNT(*) AS c FROM arcade_scores WHERE game = ? AND board = ? AND score ${g.lowerIsBetter ? '<' : '>'} ?
+`).get(game, key, points).c + 1;
+
+// A run on a runBoards board (Tower Defense's All levels) is saved as it goes: the first save hands back a runKey,
+// and a later save sending run: { id, key } raises that same row instead of adding another. Only the page holding
+// the key can, the score can only go up, and the row keeps whoever it was saved under.
+function raiseRun(g, game, key, points, detail, run) {
+  const id = Number(run && run.id);
+  const given = typeof (run && run.key) === 'string' ? run.key : '';
+  const row = Number.isInteger(id) && given ? db.db.prepare('SELECT * FROM arcade_scores WHERE id = ? AND game = ? AND board = ?').get(id, game, key) : null;
+  const same = row && row.run_key && crypto.timingSafeEqual(Buffer.from(row.run_key), Buffer.from(fingerprint(given)));
+  if (!same) throw fail('That game isn\'t on the board anymore.', 404);
+  if (points < row.score) throw fail('That score does not look right.', 400);
+  const wasFirst = rankOf(g, game, key, row.score) === 1;
+  db.db.prepare('UPDATE arcade_scores SET score = ?, detail = ? WHERE id = ?').run(points, String(detail || '').slice(0, 80), id);
+  const rank = rankOf(g, game, key, points);
+  if (rank === 1 && !wasFirst) announce(g, game, key, points, row.profile_id ? { id: row.profile_id } : null, row.profile_name, row.initials);
+  return { id, score: points, rank, board: key, runKey: given };
+}
+
+function save(game, { initials, name, avatar, score, board, detail, profileToken, fromServer, run }) {
   const { g, key } = boardOf(game, board);
   if (g.serverOnly && !fromServer) throw fail(`${g.label} saves its scores from the game itself.`, 403);
+  const points = Math.round(Number(score));
+  const max = (g.boardMax && Object.hasOwn(g.boardMax, key) && g.boardMax[key]) || g.max;
+  if (!Number.isFinite(points) || points < (g.min || 1) || points > max) throw fail('That score does not look right.', 400);
+  // a game with its own check (a jackpot that must really have been won here)
+  if (g.check && !g.check(points)) throw fail('That score does not look right.', 400);
+  const runBoard = (g.runBoards || []).includes(key);
+  if (run && !runBoard) throw fail('Each game on this board is its own score.', 400);
+  if (run) return raiseRun(g, game, key, points, detail, run);
   // Signed in, the score is the profile's; a guest's goes under their name, and a TV's under
   // the initials picked with the remote (arcade/board-who.js).
   const as = boardWho({ profileToken, name, avatar, initials });
   const { profile } = as;
   const who = as.initials;
-  const points = Math.round(Number(score));
-  if (!Number.isFinite(points) || points < (g.min || 1) || points > g.max) throw fail('That score does not look right.', 400);
-  // a game with its own check (a jackpot that must really have been won here)
-  if (g.check && !g.check(points)) throw fail('That score does not look right.', 400);
+  const runKey = runBoard ? crypto.randomBytes(18).toString('hex') : null;
   const info = db.db.prepare(`
-    INSERT INTO arcade_scores (game, board, initials, score, detail, profile_id, profile_name, profile_avatar) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(game, key, who, points, String(detail || '').slice(0, 80), profile ? profile.id : null, as.name, as.avatar);
-  const rank = db.db.prepare(`
-    SELECT COUNT(*) AS c FROM arcade_scores WHERE game = ? AND board = ? AND score ${g.lowerIsBetter ? '<' : '>'} ?
-  `).get(game, key, points).c + 1;
-  if (rank === 1 && !(g.adultBoards || []).includes(key)) {
-    const where = Object.keys(g.boards).length > 1 ? ` (${g.boards[key]})` : '';
-    const shout = profile ? require('./profiles').boardName(profile.id).label : as.name || who;
-    comm.safePost({
-      trophy: { game: g.label, profileId: profile ? profile.id : null, name: shout, score: shown(g, points) + (g.lowerIsBetter ? '' : ' points'), board: Object.keys(g.boards).length > 1 ? g.boards[key] : '', url: `/${game}.html` },
-      kind: 'highscore', emoji: '🏆', game,
-      title: `${shout} took #1 on ${g.label}${where}`,
-      body: `${shout} just set the top score on ${g.label}${where} with ${shown(g, points)}. Think you can beat it?`
-    });
-  }
-  return { id: Number(info.lastInsertRowid), score: points, rank, board: key };
+    INSERT INTO arcade_scores (game, board, initials, score, detail, profile_id, profile_name, profile_avatar, run_key) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(game, key, who, points, String(detail || '').slice(0, 80), profile ? profile.id : null, as.name, as.avatar, runKey && fingerprint(runKey));
+  const rank = rankOf(g, game, key, points);
+  if (rank === 1) announce(g, game, key, points, profile, as.name, who);
+  return { id: Number(info.lastInsertRowid), score: points, rank, board: key, ...(runKey ? { runKey } : {}) };
+}
+
+// A new #1 goes to the Comm Center (never on an adult board).
+function announce(g, game, key, points, profile, name, who) {
+  if ((g.adultBoards || []).includes(key)) return;
+  const where = Object.keys(g.boards).length > 1 ? ` (${g.boards[key]})` : '';
+  const shout = profile ? require('./profiles').boardName(profile.id).label : name || who;
+  comm.safePost({
+    trophy: { game: g.label, profileId: profile ? profile.id : null, name: shout, score: shown(g, points) + (g.lowerIsBetter ? '' : ' points'), board: Object.keys(g.boards).length > 1 ? g.boards[key] : '', url: `/${game}.html` },
+    kind: 'highscore', emoji: '🏆', game,
+    title: `${shout} took #1 on ${g.label}${where}`,
+    body: `${shout} just set the top score on ${g.label}${where} with ${shown(g, points)}. Think you can beat it?`
+  });
 }
 
 const router = express.Router();

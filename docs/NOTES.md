@@ -37,6 +37,57 @@ for hundreds of games, solo or with up to 12 players, without repeats.
 - **Tests:** `test/unit.test.js` (sizes, 20 per genre, no repeats in a level, true or false answers, pictures,
   `pick()` and `remember()`), `test/api.test.js` (12 players, the next night gets new questions, pictures come
   through) and `test/browser/trivia-adult.spec.js` (an emoji riddle on screen, 12 names on a shared device).
+## Tower Defense: the build bar and carrying on to the next level (2026-11-17)
+
+The maintainer played on a laptop and asked for five things, mostly in `public/towers.html` and `public/towers.js`.
+
+- **The build bar** (`#buildBar`): every tower with its picture, name and price, all the time, under the wave
+  button. The old tower list that only showed in `#info` after picking a square is gone; `#info` now only holds a
+  picked tower's card or a tip.
+- **Both orders work.** Pick an empty square and then a tower (as before), or pick a tower first (it wears a
+  turquoise ring) and then a square: every free square glows turquoise, and with a mouse the square under it
+  shows the tower and how far it reaches. Esc, a right-click on the map, or picking the same tower again cancels.
+  A line above the bar (`#buildHow`) says what to do next. 1-4 builds on the picked square as before, or picks
+  that tower first when no square is picked.
+- **Afford states:** a tower you can pay for is lit in gold with a glow; one you can't is gray at 45% with its
+  price muted, and a tap says how much more gold it needs. The moment one becomes affordable it pops and flashes
+  (`.lit`). Checked every frame, redrawn only when the gold changes.
+- **The next level.** After the last wave the win card has **Next level: Medium** (or Hard) beside Play again
+  (`.next-btn`, added to GameShell's own `.over-top`; the shared end window and GameShell weren't changed). Easy
+  goes on to Medium and Medium to Hard, keeping the map's place in its level (Meadow, Canyon, Castle; Frozen
+  Lake, Swamp, Volcano). **The score carries on; gold, lives and towers start over** with the new map's own. Hard
+  has no next level. Back from a carried-on game asks first, even before its first wave, and **Play again** after
+  one starts over from the map it began on.
+- **The All levels board (the maintainer's call):** a carried-on game goes on its own board, `all` ("All
+  levels"), never on a map's board, so each map's board stays one map only. It saves itself, the way every game
+  should: when Next level is taken (so Back never loses it) and when the game ends, and the end card says
+  "Saved on the All levels board at #N." instead of offering Save. It's one row per game: the first save hands
+  the page a `runKey`, and later saves send `run: { id, key }` to raise that same row (`raiseRun` in
+  `arcade/scores.js`; only a fingerprint of the key is kept, in `arcade_scores.run_key`, and the score can only
+  go up). A TV, or a guest with no name, gets the end card's usual save instead. **Limits:** one map can give at
+  most about 82,400, so a map's board takes up to 100,000 (it was 9,999,999) and All levels up to 300,000
+  (`boardMax`). The high scores list has an All levels tab.
+- **Out of the way while playing:** the map and level pickers hide once the first tower is built or the first
+  wave starts (and for the whole of a carried-on game), and come back when the game ends or on Back to setup
+  (`syncSetup`, `body[data-setup]`). The score row moved into the side column beside the map on a laptop and a
+  sideways phone. On a sideways phone the map runs from just under the top bar (`.ah-spacer` is 64px there) to
+  the bottom, a picked tower's card is two short rows (name with Upgrade and Sell, then its numbers), and the
+  tower buttons all have the same shape.
+- **Upright phones and tablets** (`(max-width: 899px) and (orientation: portrait)`): the page title steps aside
+  while playing, the tips go, the how-to line is one short line ("Pick a square then a tower, or a tower then a
+  square."), a picked tower's card floats over the half of the map the tower isn't in (`placeCard`, `.on-map`),
+  the bug-report button waits in the top bar's menu, and the page keeps no empty strip at the bottom. On a short
+  phone (640 tall) and on a sideways phone during setup, the next wave's monster list steps aside.
+- **Map sizes during a wave** (main, then this change): 390x844 327x426 to 354x460; 412x640 171x222 to 272x354;
+  412x860 with Chrome's tab row 235x306 to 314x408; 844x390 186x242 to 243x316; 740x360 165x215 to 220x286 (22px
+  squares); tablet 768x1024 454x591 to 473x614; laptop 1366x768 445x579 to 492x640.
+- **Tests:** `test/browser/towers-build.spec.js` (the bar, afford states, square first, tower first with Esc and
+  a right-click, the tip after the first tower, three levels in a row with the All levels row raised in place,
+  Play again, the pickers). `fit.spec.js` checks Tower Defense's `#canvas` with 22px squares at least on every
+  touch size, the build bar whole on screen before the first wave, a picked tower's Upgrade and Sell on screen at
+  every size, and the bug-report button on neither. `test/boards.test.js` covers the board limits and raising a
+  run (a wrong key, no key, a lower score and a map's board are all refused). `window.TowersTest` (set the gold,
+  win the last wave, find a free square, wait for a run's save) only exists when `navigator.webdriver` is true.
 
 ## Nobody types initials for a board anymore (2026-11-17)
 
