@@ -806,10 +806,10 @@
     $('landed').classList.add('hidden');
     if (!count) {
       apply(res.state);
-      buzz(`✕ NO ${ch}`);
+      buzz(`No ${ch}'s!`);
       Host.pose('oops', 1500);
-      Host.talk(`${Host.line('miss')} No ${ch}.`);
-      return endTurn(`No ${ch}. ${solo() ? 'Strike!' : 'Next player.'}`, res);
+      Host.talk(`${Host.line('miss')} No ${ch}'s.`);
+      return endTurn(`No ${ch}'s. ${solo() ? 'Strike!' : 'Next player.'}`, res);
     }
     // Vee walks the wall lighting each one; the buttons wait until she's done.
     S.busy = true;
@@ -1078,7 +1078,7 @@
     try { res = await runApi('/solve', { guess }); } catch (e) { toast(e.message); return; }
     apply(res.state);
     if (res.correct) return solved(res.won);
-    buzz('✕ NOT QUITE');
+    buzz('Not quite!');
     Host.pose('oops', 1500);
     Host.talk(Host.line('wrong'));
     endTurn('Not quite!', res);
