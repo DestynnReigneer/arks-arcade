@@ -1,11 +1,30 @@
 # Status and to-dos
 
-Last updated 2026-11-19. Update this file whenever a piece of work lands or
+Last updated 2026-11-20. Update this file whenever a piece of work lands or
 a plan changes, so the next session can pick up from here. When the
 maintainer says "I'm back", start from "Last session" below, then show the
 to-do list as checkboxes (the rule is in the maintainer's global CLAUDE.md
 and `arks-internal/conventions/sessions.md`): do the checked items in the
 order they were clicked, and keep the rest pinned here.
+
+## No scrolling on the setup screens, Rambler while playing, and Big Swing (2026-11-20)
+
+- **Setup screens** (`.fit-setup` in `arcade-ui.css`, on Chess, Know-It-All, Spin & Solve, Dare Devil and Uh-Oh:
+  Part Deux): on any screen up to 900px tall the spacing tightens (a little more under 700px) and the players'
+  names sit two to a row, so Chess, Dare Devil and Uh-Oh fit every upright phone size with their Start button on
+  screen. On a phone the bug-report button waits in the top bar's menu while the setup or the game is showing.
+  `.two-col` puts Know-It-All's and Spin & Solve's panels side by side from 760px wide, and Rambler's setup has two
+  columns there too (`.setup-col` in `rambler.html`), so all six fit a tablet and a laptop.
+- **Still too long for a phone:** Know-It-All, Spin & Solve and Rambler have more choices than an upright phone
+  can show at once, even tightened (Let's play or Slide to victory ends up 130 to 730px below the screen). That
+  needs a design call from the maintainer (fewer choices on the first screen, choices in steps, or shorter
+  descriptions), so they're in `KNOWN` in `fit.spec.js`.
+- **Rambler while playing:** Words with Family's fit. The page is `--app-h` tall, the board shrinks, Hint and I'm
+  done sit under the typing row, and the words found fill the rest and scroll inside it.
+- **Big Swing (and the other cabinet games) on a phone:** the stage's height uses `--app-h`, so Chrome's row of
+  tabs doesn't cover the big button.
+- **Tests:** `fit.spec.js` has a `setup` list per game, checked at the upright sizes before anything is tapped, and
+  Big Swing in `GAMES` (marked slow; its sideways sizes are skipped until the sideways layouts).
 
 ## One end window for every game (2026-11-19)
 

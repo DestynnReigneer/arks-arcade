@@ -42,6 +42,8 @@
 
 <!-- ============ SETUP ============ -->
 <section id="setupScreen" class="screen">
+  <!-- Two columns on a tablet or a computer (rambler.css), one on a phone. -->
+  <div class="setup-col">
   <div class="theme-banner hidden" id="themeBanner">
     <span class="tb-emoji" id="tbEmoji"></span>
     <span class="tb-text">
@@ -117,7 +119,9 @@
       </button>
     </div>
   </div>
+  </div>
 
+  <div class="setup-col">
   <div class="field" id="playersField">
     <label>Players</label>
     <div class="players-edit" id="playersEdit"></div>
@@ -161,6 +165,7 @@
 
   <div class="msg" id="setupMsg"></div>
   <button id="startBtn" class="primary-btn">Slide to victory</button>
+  </div>
 </section>
 
 <!-- ============ WHO IS PLAYING ============ -->

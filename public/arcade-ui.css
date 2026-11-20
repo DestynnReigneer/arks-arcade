@@ -145,3 +145,63 @@ button:disabled { opacity: 0.4; cursor: default; }
 .over-top { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 8px; margin-bottom: 6px; }
 .over-top button { width: auto; flex: 0 0 auto; margin: 0; }
 
+/* ---- Setup screens with nothing to scroll (2026-11-20) ----
+   A setup screen marked .fit-setup tightens its spacing on any screen up to 900px tall
+   (every phone held upright, and a laptop), so its choices and its Start button are on
+   the screen together. It applies to the whole range, not only to short screens,
+   because Chrome's row of tabs covers the bottom of a tall phone's page without making
+   it shorter, and a media query can't see that. The players' names sit two to a row.
+   On a phone the bug-report button would sit on Start (and, once the game starts, on
+   the buttons along the bottom), so it waits in the top bar's menu meanwhile, as it
+   does while you play the games that fit the screen. */
+@media (max-height: 900px) {
+  html:not(.tv) .fit-setup .panel { padding: 12px; margin-bottom: 10px; }
+  html:not(.tv) .fit-setup .panel h2 { margin-bottom: 8px; }
+  html:not(.tv) .fit-setup .hint { margin: 2px 0 6px; line-height: 1.4; }
+  html:not(.tv) .fit-setup .msg:empty { min-height: 0; margin: 0; }
+  html:not(.tv) .fit-setup button.big { margin-top: 4px; padding: 12px; }
+  html:not(.tv) .fit-setup .seg { margin-bottom: 6px; }
+  html:not(.tv) .fit-setup .seg button { padding: 8px 6px; }
+  html:not(.tv) .fit-setup .mode-list { gap: 6px; margin: 4px 0 2px; }
+  html:not(.tv) .fit-setup .mode-card { padding: 7px 12px; }
+  html:not(.tv) .fit-setup .mode-card .mi { width: 32px; height: 32px; }
+  html:not(.tv) .fit-setup .mode-card .mi svg { width: 30px; height: 30px; }
+  html:not(.tv) .fit-setup .mode-card b { font-size: 16px; }
+  html:not(.tv) .fit-setup .mode-card small { font-size: 13px; line-height: 1.25; margin-top: 1px; }
+  html:not(.tv) .fit-setup .mode-label { margin-top: 4px; }
+  html:not(.tv) .fit-setup .lb-section-label { margin: 8px 0 4px; }
+  html:not(.tv) .fit-setup .levels { gap: 6px; }
+  html:not(.tv) .fit-setup .level { padding: 7px 9px; }
+  html:not(.tv) .fit-setup .level .l-blurb { margin-top: 2px; }
+  html:not(.tv) .fit-setup .level .l-lock { margin-top: 3px; }
+  html:not(.tv) .fit-setup #nameList { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); column-gap: 6px; }
+  html:not(.tv) .fit-setup .name-row input { padding: 8px 10px; }
+  html:not(.tv) .fit-setup #addPlayerBtn { padding: 8px 16px; }
+}
+/* A short screen (a phone with the browser's bars showing) tightens a little more. */
+@media (max-height: 700px) {
+  html:not(.tv) .fit-setup .panel { padding: 10px 12px; margin-bottom: 8px; }
+  html:not(.tv) .fit-setup .panel h2 { margin-bottom: 6px; font-size: 15px; }
+  html:not(.tv) .fit-setup .panel:not(:last-child) { margin-bottom: 6px; }
+  html:not(.tv) .fit-setup .level { padding: 6px 8px; }
+  html:not(.tv) .fit-setup .level .l-blurb { line-height: 1.25; }
+  html:not(.tv) .fit-setup .seg button { padding: 6px; }
+  html:not(.tv) .fit-setup .name-row { margin-bottom: 4px; }
+  html:not(.tv) .fit-setup .name-row input { padding: 7px 10px; }
+  html:not(.tv) .fit-setup #addPlayerBtn { padding: 6px 14px; }
+  html:not(.tv) .fit-setup button.big { padding: 11px; }
+}
+/* A long setup (.two-col) on a tablet or a computer: its panels side by side, so it
+   fits the height of the screen. Know-It-All puts its long middle panel on the right. */
+@media (min-width: 760px) {
+  html:not(.tv) body:has(.fit-setup.two-col:not(.hidden)) { max-width: 1100px; }
+  html:not(.tv) .fit-setup.two-col:not(.hidden) { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 14px; align-items: start; }
+  html:not(.tv) .fit-setup.two-col > .panel:nth-child(3) { grid-column: 1; }
+  html:not(.tv) .fit-setup.two-col:has(> .panel:nth-child(3)) > .panel:nth-child(2) { grid-column: 2; grid-row: 1 / span 3; }
+  html:not(.tv) .fit-setup.two-col > :not(.panel) { grid-column: 1 / -1; }
+}
+@media (max-width: 899px) {
+  html:not(.tv) body:has(.fit-setup:not(.hidden)) .fb-corner,
+  html:not(.tv) body:has(.fit-setup):has(#game:not(.hidden)) .fb-corner { display: none; }
+}
+
