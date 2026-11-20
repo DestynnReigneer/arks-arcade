@@ -1515,6 +1515,26 @@ async function run({ base, root }) {
   await withCookie(cookie, '/api/admin/logout', 'POST');
   ok('signing out ends the session', (await withCookie(cookie, '/api/stats/admin/summary')).status === 401);
 
+  console.log('\n-- changes only from the arcade\'s own pages --');
+  const here = new URL(API).host;
+  const score = { score: 1, name: 'Origin Test' };
+  ok('a score sent from another site is refused',
+    (await api('/scores/snake', 'POST', score, { Origin: 'https://evil.example' })).status === 403);
+  ok('…and so is one from a sandboxed page (Origin "null")',
+    (await api('/scores/snake', 'POST', score, { Origin: 'null' })).status === 403);
+  ok('one sent from the arcade itself goes through',
+    (await api('/scores/snake', 'POST', score, { Origin: `http://${here}` })).status !== 403);
+  const form = await fetch(API + '/scores/snake', {
+    method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'score=1&name=x'
+  });
+  ok('a plain form post is refused (changes have to be JSON)', form.status === 415);
+  const textPost = await fetch(API + '/scores/snake', {
+    method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(score)
+  });
+  ok('…and so is JSON labeled as plain text', textPost.status === 415);
+  ok('a change with no body still goes through (signing out sends none)',
+    (await fetch(API + '/admin/logout', { method: 'POST' })).status !== 415);
+
   console.log(`\n  ${pass} passed, ${fail} failed`);
   return { pass, fail };
 }

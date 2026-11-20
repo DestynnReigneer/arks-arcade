@@ -28,6 +28,7 @@ const security = require('./arcade/security');
 app.set('trust proxy', security.trustProxySetting());
 app.disable('x-powered-by');
 app.use(security.headers);
+app.use(security.writesFromHere);
 // Feedback can carry a screenshot, so its route reads its own body with a
 // bigger limit (arcade/comm.js). Everything else stays small.
 const smallJson = express.json({ limit: '200kb' });

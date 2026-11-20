@@ -43,4 +43,21 @@ function trustProxySetting() {
   return /^\d+$/.test(v) ? Number(v) : v;   // a hop count, or a subnet like "172.16.0.0/12"
 }
 
-module.exports = { sameSecret: kit.sameSecret, headers, CSP, trustProxySetting };
+// Every change (anything but GET and HEAD) has to come from the arcade's own
+// pages, and one that carries a body has to send it as JSON. A browser always
+// says which site a cross-site write came from (Origin), so another site can't
+// act through a visitor's browser; and a plain HTML form can't send JSON, so a
+// form posted from elsewhere is refused even by a browser that leaves Origin off.
+// Requests with no Origin at all (ARKS ID's server, scripts, the tests) pass.
+function writesFromHere(req, res, next) {
+  if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') return next();
+  kit.sameOrigin(req, res, () => {
+    const hasBody = Number(req.get('Content-Length') || 0) > 0 || req.get('Transfer-Encoding');
+    if (hasBody && !req.is('application/json')) {
+      return res.status(415).json({ error: 'Changes have to be sent as JSON.' });
+    }
+    next();
+  });
+}
+
+module.exports = { sameSecret: kit.sameSecret, headers, CSP, trustProxySetting, writesFromHere };
