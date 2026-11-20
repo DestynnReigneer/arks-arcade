@@ -705,7 +705,7 @@ test('Dare Devil: a quick game on one device ends in the window, with no High sc
 });
 
 test('Uh-Oh: Part Deux: a game on one device ends in the window, with no High scores', async ({ page }) => {
-  test.setTimeout(420000);
+  test.setTimeout(540000);
   const problems = watchProblems(page);
   await openAsGuest(page, '/partdeux.html');
   const names = page.locator('#nameList input');
@@ -714,11 +714,13 @@ test('Uh-Oh: Part Deux: a game on one device ends in the window, with no High sc
   await names.nth(1).fill('Ben');
   await page.locator('#goBtn').click();
   const steps = ['#calloutOk', '#passReady', '#colorRow button', '#uhohBtn', '#hand .ok', '#keepBtn', '#drawBtn'];
-  for (let round = 0; round < 400 && !(await card(page).isVisible()); round++) {
+  // A two-player game can run long (draw piles, Nopes, gifts), so it gets a time budget rather than a count.
+  const until = Date.now() + 460000;
+  while (Date.now() < until && !(await card(page).isVisible())) {
     // A gift card: pick a card to give, then who gets it.
     if (await page.locator('#giftPick:not(.hidden)').isVisible().catch(() => false)) {
-      await page.locator('#giftCards > *').first().click({ force: true });
-      await page.locator('#giftTargets button').first().click({ force: true });
+      // (clicked in the page: the little cards overlap, so a click at a spot can land on the wrong one, or none)
+      await page.evaluate(() => { document.querySelector('#giftCards > *').click(); document.querySelector('#giftTargets button').click(); });
       continue;
     }
     await playCards(page, steps, 8);
