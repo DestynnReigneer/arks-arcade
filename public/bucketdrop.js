@@ -19,7 +19,7 @@
     onStart: () => shell.hideOver(),
     onOver: g => {
       const f = g.final();
-      setTimeout(() => shell.over({ score: f.score, board: f.board, detail: f.detail, title: g.caught === 50 ? 'JACKPOT! All 50! 🏆' : `${g.caught} of 50 caught` }), 1600);
+      shell.over({ score: f.score, board: f.board, detail: f.detail, title: g.caught === 50 ? 'JACKPOT! All 50! 🏆' : `${g.caught} of 50 caught`, delay: 1600 });
     }
   });
 

@@ -43,15 +43,14 @@ test('playing ARKS Train Station and saving the points', async ({ page, isMobile
     return { n, score: g.score, over: g.over };
   });
   expect(played.over).toBe(true);
-  await expect(page.locator('.over-panel')).toBeVisible({ timeout: 5000 });
-  const points = Number((await page.locator('.over-panel .final-score').textContent()).replace(/,/g, ''));
+  await expect(page.locator('.ew-card')).toBeVisible({ timeout: 5000 });
+  const points = Number((await page.locator('.ew-card .ew-score').textContent()).replace(/,/g, ''));
   expect(points).toBe(played.score);
 
-  // Nobody types initials: the guest's score goes on the board under the guest's name.
-  await expect(page.locator('.over-panel .initials')).toBeHidden();
+  // Nobody types initials or presses Save: the guest's score goes on the board under the guest's name by itself.
+  await expect(page.locator('input.ini')).toHaveCount(0);
   const guest = await page.evaluate(() => ArcadeProfile.name());
-  await expect(page.locator('.over-panel .save-hint')).toHaveText(`Saving as ${guest}.`);
-  await page.locator('.over-panel .save-btn').click();
+  await expect(page.locator('.ew-card .ew-saved')).toHaveText(new RegExp(`Saved as ${guest} · #\\d+`), { timeout: 10000 });
   await expect.poll(async () => {
     const list = await (await page.request.get('/api/scores/train?board=points')).json();
     return list.some(r => r.profileName === guest && r.score === points);

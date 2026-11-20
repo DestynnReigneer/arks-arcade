@@ -14,7 +14,8 @@
 (() => {
   const { $, toast, api } = ArcadeKit;
   const TV = !!(window.ArcadeTV && ArcadeTV.on);
-  const ask = text => (TV ? ArcadeTV.confirm(text) : Promise.resolve(confirm(text)));
+  // The arcade's own question card (the TV's on a TV), never the browser's confirm box.
+  const ask = (text, opts) => ArcadeBack.ask(text, opts);
   const store = (k, v) => { try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch { /* private mode */ } };
   const recall = (k, d = null) => { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch { return d; } };
   const token = () => (typeof ArcadeProfile !== 'undefined' ? ArcadeProfile.token() : null);
@@ -130,6 +131,7 @@
 
   async function home() {
     stopPoll();
+    ArcadeEnd.clear();
     S.view = null; S.key = null;
     setUrl({});
     show('home');
@@ -396,7 +398,7 @@
 
   function showGame(g) {
     const changedGame = !S.view || S.view.id !== g.id;
-    if (changedGame) { S.pending.clear(); S.rack = []; S.rackSeat = null; S.selected = null; S.swapping = false; }
+    if (changedGame) { S.pending.clear(); S.rack = []; S.rackSeat = null; S.selected = null; S.swapping = false; ArcadeEnd.clear(); }
     S.view = g;
     setUrl({ game: g.id });
     adultMode(g.dictionary === 'adult');
@@ -604,53 +606,46 @@
     }
   }
 
+  // The end of a game: the shared end window (end-window.js), once per game. The arcade keeps every
+  // finished game's results for the boards by itself (crisscross/results.js), so nothing needs saving here.
   let celebrated = null;
   function paintOver() {
     const g = S.view;
-    $('overPanel').classList.toggle('hidden', !g.over);
-    if (!g.over) return;
+    if (!g.over || celebrated === g.id) return;
+    celebrated = g.id;
     const o = g.over;
+    // You left this game yourself: no results and no party for whoever is left. Back to your games.
+    if (o.why === 'resigned' && S.leaving === g.id) { S.leaving = null; home(); return; }
     const winners = o.winners.map(s => g.players[s]);
     const youWon = winners.some(p => p.you);
-    $('overTitle').textContent = winners.length > 1 ? `It's a tie: ${names(winners.map(p => p.name))}! 🎉`
-      : youWon ? 'You won! 🏆' : `${winners[0].name} wins! 🏆`;
-    const list = $('finalList');
-    list.replaceChildren();
     const order = g.players.map((p, s) => s).sort((a, b) => g.players[b].score - g.players[a].score);
-    for (const s of order) {
+    const standings = order.map(s => {
       const p = g.players[s];
-      const li = document.createElement('li');
-      if (o.winners.includes(s)) li.classList.add('win');
-      const left = document.createElement('span');
-      const b = document.createElement('b');
-      b.textContent = p.you ? 'You' : p.name;
-      left.appendChild(b);
-      const adj = o.adjust[s];
-      if (adj) {
-        const sm = document.createElement('small');
-        sm.textContent = adj > 0 ? `  +${adj} from everyone's leftover tiles` : `  ${adj} for tiles left (${(p.rack || []).join(' ').replace(/\?/g, 'blank')})`;
-        left.appendChild(sm);
-      } else if (p.resigned) {
-        const sm = document.createElement('small');
-        sm.textContent = '  left the game';
-        left.appendChild(sm);
-      }
-      const right = document.createElement('b');
-      right.textContent = p.score.toLocaleString('en-US');
-      li.append(left, right);
-      list.appendChild(li);
-    }
-    $('overNote').textContent = o.why === 'out'
-      ? `${g.players[o.outSeat].name} used their last tile with the bag empty, so the game ended. Everyone else's leftover tiles were taken off their score and given to ${g.players[o.outSeat].name}.`
-      : o.why === 'stalled' ? `Nobody scored for ${S.config.scorelessEnd} turns in a row, so the game ended. Everyone's leftover tiles were taken off their score.`
-        : 'Everyone else left the game.';
-    $('againBtn').onclick = () => (g.kind === 'local' ? newLocal() : newOnline());
-    if (celebrated !== g.id) {
-      celebrated = g.id;
-      if (youWon || g.kind === 'local') {
-        if (window.Fx) { Fx.burst({ count: 200, coins: 30 }); Fx.banner(youWon ? 'You won!' : `${winners[0].name} wins!`, `${winners[0].score.toLocaleString('en-US')} points`); }
-        Blip.tune([[523, 0.1], [659, 0.1], [784, 0.1], [1047, 0.3]], { type: 'triangle', volume: 0.06 });
-      }
+      return `${p.you && g.kind !== 'local' ? 'You' : p.name} ${p.score.toLocaleString('en-US')}${p.resigned ? ' (left)' : ''}`;
+    }).join(' · ');
+    const mine = g.kind !== 'local' ? g.players.find(p => p.you) : null;
+    const me = typeof ArcadeProfile !== 'undefined' ? ArcadeProfile.get() : null;
+    ArcadeEnd.show({
+      title: winners.length > 1 ? `It's a tie: ${names(winners.map(p => p.name))}! 🎉` : youWon ? 'You won! 🏆' : `${winners[0].name} wins! 🏆`,
+      score: (mine || winners[0]).score,
+      detail: standings,
+      // An online game is on the boards under each player's profile.
+      saved: mine && me ? { name: me.name, avatar: me.avatar } : null,
+      scores: {
+        tabs: [{ id: 'won', label: 'Games won' }, { id: 'best', label: 'Best game' }, { id: 'word', label: 'Best word' }], tab: 'won',
+        load: async id => {
+          const data = await api('/api/trophies', undefined, token() ? { 'X-Profile-Token': token() } : {});
+          const game = (data.games || []).find(x => x.id === 'crisscross');
+          const board = game && game.boards.find(b => b.id === id);
+          return (board ? board.rows : []).map(r => ({ name: r.name, avatar: r.avatar, score: Number(r.value).toLocaleString('en-US') }));
+        }
+      },
+      again: () => (g.kind === 'local' ? newLocal() : newOnline()),
+      setup: home
+    });
+    if (youWon || g.kind === 'local') {
+      if (window.Fx) { Fx.burst({ count: 200, coins: 30 }); Fx.banner(youWon ? 'You won!' : `${winners[0].name} wins!`, `${winners[0].score.toLocaleString('en-US')} points`); }
+      Blip.tune([[523, 0.1], [659, 0.1], [784, 0.1], [1047, 0.3]], { type: 'triangle', volume: 0.06 });
     }
   }
 
@@ -962,11 +957,10 @@
     try { showGame((await call(`/games/${S.view.id}/start`, {})).game); } catch (e) { toast(e.message); }
   };
   $('waitLeave').onclick = async () => {
-    if (!(await ask(S.view.host ? 'Call this game off? Everyone who joined will lose it.' : 'Leave this game?'))) return;
+    if (!(await ask(S.view.host ? 'Call this game off? Everyone who joined will lose it.' : 'Leave this game?', { yes: S.view.host ? 'Call it off' : 'Leave' }))) return;
     await act('resign');
   };
   $('backBtn').onclick = home;
-  $('overBackBtn').onclick = home;
   $('shuffleBtn').onclick = () => {
     for (let i = S.rack.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [S.rack[i], S.rack[j]] = [S.rack[j], S.rack[i]]; }
     paintRack();
@@ -988,13 +982,16 @@
   $('passBtn').onclick = async () => {
     const g = S.view;
     if (!g.yourTurn) { toast('You can pass on your turn.'); return; }
-    if (await ask('Skip your turn without playing?')) act('pass');
+    if (await ask('Skip your turn without playing?', { yes: 'Skip my turn', no: 'Keep playing' })) act('pass');
   };
   $('playBtn').onclick = playWord;
   $('resignBtn').onclick = async () => {
     const g = S.view;
     const who = g.kind === 'local' ? g.players[g.turn].name : 'you';
-    if (await ask(g.kind === 'local' ? `Should ${who} leave this game? Their score stays, but they can't win.` : 'Leave this game? Your score stays, but you can\'t win, and the others carry on without you.')) act('resign');
+    if (!(await ask(g.kind === 'local' ? `Should ${who} leave this game? Their score stays, but they can't win.` : 'Leave this game? Your score stays, but you can\'t win, and the others carry on without you.'))) return;
+    S.leaving = g.id;
+    await act('resign');
+    if (S.leaving === g.id && !(S.view && S.view.over)) S.leaving = null;
   };
   // The top bar's menu on a phone: zoom, the words played, and the two ways out,
   // which sit under the board on a bigger screen.
@@ -1022,7 +1019,7 @@
     }
   };
   window.addEventListener('keydown', e => {
-    if ((e.target.closest && e.target.closest('input, textarea, select')) || help.isOpen || !S.view || $('game').classList.contains('hidden')) return;
+    if ((e.target.closest && e.target.closest('input, textarea, select')) || help.isOpen || !S.view || S.view.over || $('game').classList.contains('hidden')) return;
     // On a TV, OK (Enter) presses whatever the highlight is on: a tile, a square, Play.
     if (TV && e.target.closest && e.target.closest('button, a')) return;
     if (e.key === 'Enter') { e.preventDefault(); playWord(); }

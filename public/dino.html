@@ -12,6 +12,7 @@
 <link rel="stylesheet" href="tutorial.css">
 <link rel="stylesheet" href="look.css">
 <link rel="stylesheet" href="topbar.css">
+<link rel="stylesheet" href="end-window.css">
 <link rel="stylesheet" href="tv.css">
 <link rel="stylesheet" href="tv-play.css">
 <!-- On a TV: the TV layout, the remote and a game controller (tv.js, tv-play.js). -->
@@ -21,6 +22,7 @@
 </head>
 <body>
 <script src="topbar.js"></script>
+<script src="end-window.js"></script>
 
 <header class="top">
   <a href="/" class="icon-btn" title="Back to the arcade">←</a>
@@ -33,19 +35,6 @@
   </div>
 </header>
 
-<div class="panel center hidden" id="overPanel">
-  <div class="over-top"><button class="primary" id="againBtn">Run again</button></div>
-  <h2 id="overTitle">Game over</h2>
-  <div class="final-score" id="overScore"></div>
-  <div id="savePart">
-    <p class="hint" id="saveHint">Get on the board and see where you stack up.</p>
-    <div class="initials hidden">
-      <input maxlength="1" class="ini" autocomplete="off"><input maxlength="1" class="ini" autocomplete="off"><input maxlength="1" class="ini" autocomplete="off">
-    </div>
-    <button class="primary big" id="saveScoreBtn">Save score</button>
-    <div class="msg" id="scoreMsg"></div>
-  </div>
-</div>
 
 <div class="stage dino-stage">
   <canvas id="canvas" aria-label="Dino Dash game. Tap or press space to jump, down arrow to duck."></canvas>

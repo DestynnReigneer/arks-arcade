@@ -41,6 +41,8 @@ for (const end of ['', '-journal', '-wal', '-shm']) {
       // Clueless turns away a finish faster than 0.3 seconds a square; the
       // browser test types quicker than a person.
       CLUELESS_MIN_MS_PER_SQUARE: '20',
+      // The same for Sudoku (the end window's test fills a puzzle in).
+      SUDOKU_MIN_MS_PER_SQUARE: '20',
       // Every Words with Family game is dealt the same tiles (only honored with
       // NODE_ENV=test), so the browser test always has a word to play.
       CRISSCROSS_DEAL_SEED: '1'

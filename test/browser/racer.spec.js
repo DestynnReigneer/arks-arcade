@@ -50,19 +50,19 @@ test('driving ARKS Racer and saving a time', async ({ page, isMobile }) => {
     g.lap = 3; g.total = 55.123; g.best = 18.2; g.result = 'Finished in 55.12s.'; g.over = true;
     CabTest.tick(0); // no time passes, so the race stays at 55.123
   });
-  await expect(page.locator('.over-panel')).toBeVisible({ timeout: 5000 });
-  await expect(page.locator('.over-panel .final-score')).toHaveText('0:55.12');
+  await expect(page.locator('.ew-card')).toBeVisible({ timeout: 5000 });
+  await expect(page.locator('.ew-card .ew-score')).toHaveText('0:55.12');
 
-  // Nobody types initials: the guest's score goes on the board under the guest's name.
-  await expect(page.locator('.over-panel .initials')).toBeHidden();
+  // Nobody types initials or presses Save: the guest's score goes on the board under the guest's name by itself.
+  await expect(page.locator('input.ini')).toHaveCount(0);
   const guest = await page.evaluate(() => ArcadeProfile.name());
-  await expect(page.locator('.over-panel .save-hint')).toHaveText(`Saving as ${guest}.`);
-  await page.locator('.over-panel .save-btn').click();
+  await expect(page.locator('.ew-card .ew-saved')).toHaveText(new RegExp(`Saved as ${guest} · #\\d+`), { timeout: 10000 });
   await expect.poll(async () => {
     const list = await (await page.request.get('/api/scores/racer?board=sunset')).json();
     return list.some(r => r.profileName === guest && r.score === 55123);
   }).toBe(true);
-  // The board shows times, not raw numbers.
-  await expect(page.locator('.overlay:not(.hidden) .scores .pts').first()).toHaveText(/^\d+:\d\d\.\d\d$/);
+  // The board, inside the end window, shows times, not raw numbers.
+  await page.locator('.ew-card').getByRole('button', { name: '🏆 High scores' }).click();
+  await expect(page.locator('.ew-list .ew-p').first()).toHaveText(/^\d+:\d\d\.\d\d$/);
   expect(problems).toEqual([]);
 });

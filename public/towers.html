@@ -12,6 +12,7 @@
 <link rel="stylesheet" href="tutorial.css">
 <link rel="stylesheet" href="look.css">
 <link rel="stylesheet" href="topbar.css">
+<link rel="stylesheet" href="end-window.css">
 <link rel="stylesheet" href="tv.css">
 <link rel="stylesheet" href="tv-play.css">
 <!-- On a TV: the TV layout, the remote and a game controller (tv.js, tv-play.js). -->
@@ -151,7 +152,6 @@
     html:not(.tv) .td-play > .build-bar { grid-area: build; margin-top: 14px; }
     html:not(.tv) .td-play > .info { grid-area: info; }
     html:not(.tv) .td-play > .keys-hint { grid-area: keys; }
-    html:not(.tv) .td-play > .over-panel, html:not(.tv) .td-play > #overPanel { grid-column: 1 / -1; }
   }
   /* A phone turned sideways gets the same map-and-panel layout, sized to the short
      screen, and the page's title row goes (the top bar already says where you are). */
@@ -204,6 +204,7 @@
 </head>
 <body>
 <script src="topbar.js"></script>
+<script src="end-window.js"></script>
 
 <header class="top">
   <a href="/" class="icon-btn" title="Back to the arcade">←</a>

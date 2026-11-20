@@ -45,9 +45,9 @@ test('solving the family mini in Clueless', async ({ page, isMobile }) => {
     else await page.keyboard.press(letters[i].toLowerCase());
   }
 
-  await expect(page.locator('#over')).toBeVisible();
-  await expect(page.locator('#overTitle')).toContainText('solved');
-  await expect(page.locator('#overTime')).toHaveText(/^\d+:\d{2}$/);
+  await expect(page.locator('.ew-card')).toBeVisible();
+  await expect(page.locator('.ew-card .ew-title')).toContainText('solved');
+  await expect(page.locator('.ew-card .ew-score')).toHaveText(/^\d+:\d{2}$/);
   expect(problems, problems.join('\n')).toEqual([]);
   const sizes = await page.evaluate(() => ({ page: document.documentElement.scrollWidth, screen: window.innerWidth }));
   expect(sizes.page).toBeLessThanOrEqual(sizes.screen);

@@ -17,7 +17,7 @@
     onOver: g => {
       const f = g.final();
       // the game's own THREE OUTS banner shows first, then the panel
-      setTimeout(() => shell.over({ score: f.score, board: f.board, detail: f.detail, title: g.big ? 'The Big Win! 🏆' : 'Three outs!' }), 1600);
+      shell.over({ score: f.score, board: f.board, detail: f.detail, title: g.big ? 'The Big Win! 🏆' : 'Three outs!', delay: 1600 });
     }
   });
 

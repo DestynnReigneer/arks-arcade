@@ -13,8 +13,8 @@
 //     play, the game-over panel) and the game: while a run is being played
 //     the arrows and OK go to the game, and the highlight steps aside;
 //   - adds a big Play button where the game's own "tap to start" would be;
-//   - lets the remote pick initials like an arcade cabinet: up and down
-//     change the letter, left and right move between the three, OK saves;
+//   - leaves the end of a run to the shared end window (end-window.js), which
+//     asks "Who played?" with the family's pictures, so nobody picks initials;
 //   - tells ARKS ID a game is being played (ArcadeTV.played) while it is,
 //     so adults' night doesn't end in the middle of a game.
 //
@@ -57,57 +57,6 @@ const TvPlay = (() => {
     const target = a && a !== document.body && !root.classList.contains('tv-steering') ? a : document.body;
     target.dispatchEvent(new KeyboardEvent(type, { key, code: codeOf(key), bubbles: true, cancelable: true, ...extra }));
   }
-
-  // ---- initials, picked with the arrows like an arcade cabinet ------------------------------
-  // The three boxes still take typing on a keyboard. On a TV the on-screen
-  // keyboard stays away (inputmode none), and the arrows pick the letters.
-  const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  function iniBoxes(box) {
-    const row = box.closest('.initials');
-    return row ? [...row.querySelectorAll('input.ini')] : [box];
-  }
-  function spin(box, step) {
-    const at = LETTERS.indexOf((box.value || '').toUpperCase());
-    const next = at < 0 ? (step > 0 ? 0 : LETTERS.length - 1) : (at + step + LETTERS.length) % LETTERS.length;
-    box.value = LETTERS[next];
-    try { box.setSelectionRange(1, 1); } catch { /* not a text box */ }
-  }
-  // Window capture runs before tv.js and the game, so on a letter box the
-  // arrows only ever change letters.
-  window.addEventListener('keydown', e => {
-    const box = e.target;
-    if (!tvOn() || !box || !box.matches || !box.matches('.initials input.ini') || e.altKey || e.ctrlKey || e.metaKey) return;
-    if (!ARROWS[e.key]) return;
-    e.preventDefault();
-    e.stopImmediatePropagation();
-    const boxes = iniBoxes(box), i = boxes.indexOf(box);
-    if (e.key === 'ArrowUp') spin(box, 1);
-    else if (e.key === 'ArrowDown') spin(box, -1);
-    else if (e.key === 'ArrowLeft') { if (boxes[i - 1]) boxes[i - 1].focus(); }
-    else if (e.key === 'ArrowRight') {
-      // Past the last letter is the Save button (the next button after the row).
-      if (boxes[i + 1]) boxes[i + 1].focus();
-      else {
-        const all = [...document.querySelectorAll('button, [tabindex]:not([tabindex="-1"])')].filter(shown);
-        const after = all.find(b => box.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
-        if (after) after.focus();
-      }
-    }
-  }, true);
-  document.addEventListener('focusin', e => {
-    const box = e.target;
-    if (!tvOn() || !box.matches || !box.matches('.initials input.ini')) return;
-    box.setAttribute('inputmode', 'none');
-    const row = box.closest('.initials');
-    // A first visit: start on A so there's a letter to change.
-    if (!box.value && row && ![...row.querySelectorAll('input.ini')].some(b => b.value)) box.value = 'A';
-    if (row && !row.nextElementSibling?.classList.contains('tv-ini-hint')) {
-      const hint = document.createElement('p');
-      hint.className = 'hint tv-ini-hint';
-      hint.textContent = 'Press up and down to change a letter, left and right to move between them, and OK to save.';
-      row.after(hint);
-    }
-  });
 
   // ---- a game on the TV -------------------------------------------------------------------------
   let opts = null;
@@ -171,15 +120,12 @@ const TvPlay = (() => {
   const played = () => { if (window.ArcadeTV && ArcadeTV.played) ArcadeTV.played(); };
   let activeWas = false;
 
-  // Where the highlight starts when a screen changes: the letters on the
-  // game-over panel, then the Play button, then Play again.
+  // Where the highlight starts when a screen changes: the Play button, or
+  // what the game says. (The end window looks after its own highlight.)
   function startPoint() {
     if (opts.start) { const s = opts.start(); if (s) return s; }
-    const ini = [...document.querySelectorAll('.initials input.ini')].find(shown);
-    if (ini) return ini;
     if (goBtn && shown(goBtn)) return goBtn;
-    const again = [...document.querySelectorAll('.over-top .primary, .over-panel .primary')].find(shown);
-    return again || null;
+    return null;
   }
 
   function tick() {

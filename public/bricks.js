@@ -18,7 +18,7 @@
   let last = performance.now(), particles = [], flash = 0, shake = 0;
   const trails = new WeakMap();
 
-  const shell = GameShell.create({ game: 'bricks', boards: { classic: 'Classic' }, mount: $('stage'), onAgain: () => newGame() });
+  const shell = GameShell.create({ game: 'bricks', boards: { classic: 'Classic' }, mount: $('stage'), onAgain: () => newGame(), onSetup: () => newGame() });
   const view = GameShell.fitCanvas($('canvas'), { aspect: E.W / E.H, maxHeight: () => Math.max(320, window.innerHeight * 0.68) });
   const scale = () => view.size.w / E.W;
 
@@ -27,6 +27,7 @@
     state = 'ready';
     counted = false;
     particles = []; flash = 0;
+    shell.hideOver();
     document.body.dataset.state = 'ready';
     message(`Level 1: ${E.levelName(0)}`, TAP_LAUNCH);
     hud();
@@ -103,7 +104,7 @@
       } else if (ev === 'over') {
         state = 'over';
         Blip.noise(0.3, 0.15);
-        setTimeout(() => shell.over({ score: g.score, board: 'classic', detail: `Reached level ${g.level + 1} (${E.levelName(g.level)}) · ${g.cleared} cleared` }), 600);
+        shell.over({ score: g.score, board: 'classic', detail: `Reached level ${g.level + 1} (${E.levelName(g.level)}) · ${g.cleared} cleared`, delay: 600 });
       } else if (ev === 'cleared') {
         state = 'cleared';
         Blip.tune([[523, 0.1], [659, 0.1], [784, 0.1], [1047, 0.25]], { type: 'square', volume: 0.06 });

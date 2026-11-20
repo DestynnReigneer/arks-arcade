@@ -1,23 +1,21 @@
 'use strict';
 
-// The parts every single-player arcade game shares: the game-over panel with
-// "save your score", the high-score list (with a tab per board), a personal
-// best kept on the device, and an on-screen pause. Snake, Brick Breaker,
-// Block Drop and Tower Defense use it; each game only draws and plays.
+// The parts every single-player arcade game shares: the end of a run (the
+// shared end window, end-window.js, which saves the score by itself), the
+// high-score list (with a tab per board), a personal best kept on the device,
+// and an on-screen pause. Snake, Brick Breaker, Block Drop, Tower Defense and
+// the 3D cabinet games use it; each game only draws and plays.
 //
 //   const shell = GameShell.create({
 //     game: 'snake', boards: { classic: 'Classic', wrap: 'Wrap' },
-//     mount: $('stage'),              // the over panel goes right above this
 //     onAgain: reset,
-//     onSetup: toSetup,               // optional: a Back to setup button beside Play again
+//     onSetup: toSetup,               // Back to setup (left out when a game has nothing to set up)
 //   });
-//   shell.over({ score, board: 'classic', detail: '42 apples', title: 'Game over' });
-//   shell.openScores('classic');
+//   shell.over({ score, board: 'classic', detail: '42 apples', title: 'Game over', delay: 600 });
+//   shell.openScores('classic');      // the header's 🏆
 //   shell.best('classic')            // this device's best on that board
 
 const GameShell = (() => {
-  const { toast } = ArcadeKit;
-
   function el(html) {
     const t = document.createElement('template');
     t.innerHTML = html.trim();
@@ -25,84 +23,43 @@ const GameShell = (() => {
   }
 
   // format: how a score reads (a time, say); lowerIsBetter: the best score is the smallest (a race time).
-  function create({ game, boards, mount, onAgain, onSetup, againLabel = 'Play again', format, lowerIsBetter = false }) {
+  function create({ game, boards, onAgain, onSetup, againLabel, format, lowerIsBetter = false }) {
     const fmt = format || (n => n.toLocaleString('en-US'));
     const boardIds = Object.keys(boards);
     const bestKey = board => `${game}.best.${board}`;
     const best = board => { try { return Number(localStorage.getItem(bestKey(board))) || 0; } catch { return 0; } };
 
-    // ---- game over ---------------------------------------------------------------------
-    const over = el(`
-      <div class="panel center hidden over-panel" role="dialog" aria-live="polite">
-        <div class="over-top"><button class="ghost setup-btn hidden">Back to setup</button><button class="primary again-btn"></button></div>
-        <h2 class="over-title">Game over</h2>
-        <div class="final-score"></div>
-        <div class="over-detail hint"></div>
-        <div class="save-part">
-          <p class="hint save-hint">Get on the board and see where you stack up.</p>
-          <div class="initials hidden">
-            <input maxlength="1" class="ini" autocomplete="off" aria-label="First initial"><input maxlength="1" class="ini" autocomplete="off" aria-label="Second initial"><input maxlength="1" class="ini" autocomplete="off" aria-label="Third initial">
-          </div>
-          <button class="primary big save-btn">Save score</button>
-          <div class="msg"></div>
-        </div>
-        <div class="stack">
-          <button class="ghost scores-btn">🏆 High scores</button>
-        </div>
-      </div>`);
-    mount.before(over);
-    const q = sel => over.querySelector(sel);
-    q('.again-btn').textContent = againLabel;
-    // Signed in, the score goes under the profile; a guest's under their name.
-    // Nobody types initials, except on a TV: the arcade is signed in as the TV
-    // there, not as whoever has the remote, so scores go under the initials
-    // picked with the remote (tv-play.js).
-    const onTv = () => typeof TvPlay !== 'undefined' && TvPlay.on;
-    const initials = ArcadeKit.wireInitials([...over.querySelectorAll('.ini')], () => save(), { tv: onTv });
-    let pending = null;
-
-    async function save() {
-      if (!pending) return;
-      let who;
-      try { who = ArcadeKit.saveFields(initials); } catch (e) { q('.msg').textContent = e.message; return; }
-      q('.save-btn').disabled = true;
-      try {
-        const r = await ArcadeKit.saveScore(game, { ...who, score: pending.score, board: pending.board, detail: pending.detail || '' });
-        if (who.initials) initials.remember(who.initials);
-        q('.save-part').classList.add('hidden');
-        toast(r.rank === 1 ? '🏆 New #1!' : `Saved: #${r.rank}`);
-        openScores(pending.board, r.id);
-        pending = null;
-      } catch (e) {
-        q('.msg').textContent = e.message;
-        q('.save-btn').disabled = false;
-      }
-    }
-    q('.save-btn').addEventListener('click', save);
-    q('.again-btn').addEventListener('click', () => { hideOver(); onAgain(); });
-    if (onSetup) { q('.setup-btn').classList.remove('hidden'); q('.setup-btn').addEventListener('click', () => { hideOver(); onSetup(); }); }
-    q('.scores-btn').addEventListener('click', () => openScores(pending ? pending.board : boardIds[0]));
-
-    function showOver({ score, board = boardIds[0], detail = '', title }) {
+    // ---- the end of a run ---------------------------------------------------------------------
+    // extra: one more button (Tower Defense's Next level). saving: a save the game already
+    // started itself (Tower Defense's All levels board), shown instead of saving again.
+    function showOver({ score, board = boardIds[0], detail = '', title, delay = 0, extra, saving }) {
+      // Only in the browser tests (navigator.webdriver): a run that ends with this score instead.
+      if (navigator.webdriver && window.ShellTest && Number.isFinite(window.ShellTest.score)) score = window.ShellTest.score;
       score = Math.max(0, Math.round(score));
       const was = best(board), isBest = lowerIsBetter ? score > 0 && (!was || score < was) : score > was;
       if (isBest) { try { localStorage.setItem(bestKey(board), String(score)); } catch { /* private mode */ } }
-      q('.over-title').textContent = title || (isBest && score > 0 ? 'New personal best! 🎉' : 'Game over');
-      q('.final-score').textContent = fmt(score);
-      q('.over-detail').textContent = detail;
-      pending = score > 0 ? { score, board, detail } : null;
-      q('.save-part').classList.toggle('hidden', !pending);
-      ArcadeKit.readySave(initials, q('.save-hint'), q('.save-btn'));
-      q('.save-btn').disabled = false;
-      q('.msg').textContent = '';
-      over.classList.remove('hidden');
+      const where = board === 'all' && boards.all ? 'on the All levels board' : boardIds.length > 1 ? `on ${boards[board]}` : 'on the board';
+      const save = saving ? () => saving.then(r => ({ rank: r.rank, id: r.id, where }))
+        : score > 0 ? async who => {
+          const r = await ArcadeKit.saveScore(game, { ...who, score, board, detail: detail || '' });
+          return { rank: r.rank, id: r.id, where };
+        } : null;
+      ArcadeEnd.show({
+        title: title || (isBest && score > 0 ? 'New personal best! 🎉' : 'Game over'),
+        score: fmt(score), detail, delay, save,
+        noSave: 'Score some points to get on the board.',
+        scores: ArcadeEnd.sharedBoard(game, boards, board, format),
+        again: () => onAgain(), againLabel,
+        setup: onSetup ? () => onSetup() : null,
+        extra
+      });
       document.body.dataset.state = 'over';
-      // It pops up over the page (topbar.js), except on a TV, where it sits in the page.
-      if (!over.classList.contains('end-pop')) setTimeout(() => over.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
     }
-    function hideOver() { over.classList.add('hidden'); }
+    function hideOver() { ArcadeEnd.clear(); }
+    // Only in the browser tests: end the run now, as the game would.
+    if (navigator.webdriver) window.ShellTest = Object.assign(window.ShellTest || {}, { over: o => showOver(o) });
 
-    // ---- high scores ----------------------------------------------------------------------
+    // ---- high scores, from the header's 🏆 -------------------------------------------------------
     const scores = el(`
       <div class="overlay hidden" role="dialog" aria-label="High scores">
         <div class="card-panel">
@@ -133,7 +90,7 @@ const GameShell = (() => {
     scores.querySelector('.close-btn').addEventListener('click', () => scores.classList.add('hidden'));
     scores.addEventListener('click', e => { if (e.target === scores) scores.classList.add('hidden'); });
 
-    return { over: showOver, hideOver, openScores, best, get isOver() { return !over.classList.contains('hidden'); } };
+    return { over: showOver, hideOver, openScores, best, get isOver() { return ArcadeEnd.has; } };
   }
 
   // Swipes on an element: calls onSwipe('up' | 'down' | 'left' | 'right') and

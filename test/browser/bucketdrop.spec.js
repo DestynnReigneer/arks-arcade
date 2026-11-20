@@ -37,17 +37,16 @@ test('playing Bucket Drop and saving the points', async ({ page, isMobile }) => 
     return g.caught;
   });
   expect(caught).toBeGreaterThan(0);
-  await expect(page.locator('.over-panel')).toBeVisible({ timeout: 5000 });
-  const points = Number((await page.locator('.over-panel .final-score').textContent()).replace(/,/g, ''));
+  await expect(page.locator('.ew-card')).toBeVisible({ timeout: 5000 });
+  const points = Number((await page.locator('.ew-card .ew-score').textContent()).replace(/,/g, ''));
   expect(points).toBeGreaterThanOrEqual(caught * 10);
   // at least 10 more (the phone and laptop runs can play at the same time, each adding 10)
   await expect.poll(async () => (await (await page.request.get('/api/cab-jackpot/bucketdrop')).json()).amount).toBeGreaterThanOrEqual(before + 10);
 
-  // Nobody types initials: the guest's score goes on the board under the guest's name.
-  await expect(page.locator('.over-panel .initials')).toBeHidden();
+  // Nobody types initials or presses Save: the guest's score goes on the board under the guest's name by itself.
+  await expect(page.locator('input.ini')).toHaveCount(0);
   const guest = await page.evaluate(() => ArcadeProfile.name());
-  await expect(page.locator('.over-panel .save-hint')).toHaveText(`Saving as ${guest}.`);
-  await page.locator('.over-panel .save-btn').click();
+  await expect(page.locator('.ew-card .ew-saved')).toHaveText(new RegExp(`Saved as ${guest} · #\\d+`), { timeout: 10000 });
   await expect.poll(async () => {
     const list = await (await page.request.get('/api/scores/bucketdrop?board=big-fast')).json();
     return list.some(r => r.profileName === guest && r.score === points);

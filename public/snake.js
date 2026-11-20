@@ -20,7 +20,8 @@
 
   const shell = GameShell.create({
     game: 'snake', boards: E.MODES, mount: $('stage'),
-    onAgain: () => { reset(); start(); }
+    onAgain: () => { reset(); start(); },
+    onSetup: () => reset()
   });
   const view = GameShell.fitCanvas($('canvas'), { aspect: 1, maxHeight: () => Math.max(280, window.innerHeight * 0.66) });
 
@@ -74,10 +75,8 @@
     Blip.noise(0.25, 0.16);
     Blip.tone([320, 70], 0.45, { type: 'sawtooth', volume: 0.07 });
     const detail = `${g.apples} apple${g.apples === 1 ? '' : 's'}${g.golds ? ` + ${g.golds} golden` : ''} · ${E.MODES[mode]} · ${E.SPEEDS[speed].label}`;
-    setTimeout(() => {
-      shell.over({ score: g.score, board: mode, detail, title: g.won ? 'You filled the whole board! 🏆' : undefined });
-      hud();
-    }, 650);
+    shell.over({ score: g.score, board: mode, detail, title: g.won ? 'You filled the whole board! 🏆' : undefined, delay: 650 });
+    hud();
   }
   function message(title, text) {
     $('stageMsg').classList.toggle('hidden', !title);

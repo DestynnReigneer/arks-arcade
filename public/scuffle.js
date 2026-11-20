@@ -346,66 +346,49 @@
     $('nextBtn').classList.toggle('hidden', over);
     $('nextBtn').textContent = st.index + 2 === st.totalRounds ? 'Last round' : 'Next round';
     $('waitNext').classList.add('hidden');
-    $('againBtn').classList.toggle('hidden', !over || st.mode === 'daily');
-    $('overPanel').classList.toggle('hidden', !over);
-    if (over) showSoloOver(st);
     show('reveal');
+    if (over) showSoloOver(st);
     window.scrollTo({ top: 0 });
   }
 
+  // The end of a game: the shared end window (end-window.js). The daily set saves by itself, under the
+  // profile or the guest's name (on a TV, whoever is picked under "Who played?").
   function showSoloOver(st) {
-    $('overTitle').textContent = `Game over: ${st.total.toLocaleString('en-US')} points`;
-    const rounds = st.past.map((p, i) => [p.word, `${p.found} of ${p.words} words`, p.score, i]);
-    roundList(rounds);
     const daily = st.mode === 'daily';
-    $('savePart').classList.toggle('hidden', !daily || st.saved);
-    // The score goes under the profile or the guest's name, with nothing to type.
-    if (daily && !st.saved) ArcadeKit.readySave(initials, $('saveHint'), $('saveBtn'));
-    $('saveMsg').textContent = '';
-    $('saveBtn').disabled = false;
-    $('rankLine').textContent = daily ? (st.saved ? 'Your score is on today\'s board.' : '')
-      : 'Free play scores don\'t go on the board. Try the daily letters for that.';
+    const id = st.gameId;
+    ArcadeEnd.show({
+      title: `Game over: ${st.total.toLocaleString('en-US')} points`,
+      score: st.total,
+      detail: st.past.map(p => `${p.word} ${p.score.toLocaleString('en-US')}`).join(' · '),
+      save: daily && !st.saved ? async who => {
+        const r = await api(`/api/scuffle/solo/${id}/save`, who);
+        st.saved = true;
+        // Celebrations are real: the banner only says #1 when the board says so.
+        if (r.dayRank === 1 && window.Fx) { Fx.banner(r.allRank === 1 ? 'BEST EVER!' : 'TOP OF TODAY!', 'You\'re #1', { ms: 2200 }); Fx.burst({ count: 200, coins: 30 }); }
+        return { rank: r.dayRank, where: 'for today', id: r.id };
+      } : null,
+      noSave: daily ? 'Your score is on today\'s board.' : 'Free play scores don\'t go on the board. Try the daily letters for that.',
+      scores: dailyBoard(st.dictionary),
+      // The daily letters are once a day, so only free play goes again.
+      again: daily ? null : () => { S.mode = 'free'; go(); },
+      setup: backToMenu
+    });
     Blip.tune([[523, 0.12], [659, 0.12], [784, 0.12], [1047, 0.3]], { type: 'triangle', volume: 0.06 });
     if (window.Fx && st.total > 0) Fx.burst({ count: 120, coins: 12 });
   }
 
-  function roundList(rows) {
-    const ol = $('roundList');
-    ol.innerHTML = '';
-    for (const [word, detail, score] of rows) {
-      const li = document.createElement('li');
-      li.innerHTML = '<span></span><small></small><b></b>';
-      li.firstChild.textContent = word;
-      li.children[1].textContent = ` · ${detail}`;
-      li.lastChild.textContent = score.toLocaleString('en-US');
-      ol.appendChild(li);
-    }
+  // Today's and every day's daily board for one word list, for the end window.
+  function dailyBoard(dict) {
+    const list = dict === 'adult' ? 'adult' : 'kids';
+    return {
+      tabs: [{ id: 'day', label: 'Today' }, { id: 'all', label: 'Overall' }], tab: 'day',
+      load: async scope => ArcadeEnd.boardRows((await api(`/api/scuffle/board?scope=${scope}&dictionary=${list}&limit=20`)).map(r => ({
+        ...r, detail: [`${r.words} words`, r.bestWord || '', scope === 'all' ? niceDay(r.day) : ''].filter(Boolean).join(' · ')
+      })))
+    };
   }
 
   // ---- the daily board -------------------------------------------------------------------
-  // Never shown: nothing to type here, and a TV's scores stay off the board.
-  const initials = ArcadeKit.wireInitials([...document.querySelectorAll('#iniRow .ini')], () => saveScore());
-  async function saveScore() {
-    const st = S.solo;
-    if (!st || st.mode !== 'daily' || st.saved) return;
-    let who;
-    try { who = ArcadeKit.saveFields(initials); } catch (e) { $('saveMsg').textContent = e.message; return; }
-    $('saveBtn').disabled = true;
-    try {
-      const r = await api(`/api/scuffle/solo/${st.gameId}/save`, who);
-      st.saved = true;
-      $('savePart').classList.add('hidden');
-      $('rankLine').textContent = r.allRank === 1 ? 'That\'s the best daily score ever! 🏆'
-        : `You're #${r.dayRank} for today, and #${r.allRank} overall!`;
-      // Celebrations are real: the banner only says #1 when the board says so.
-      if (r.dayRank === 1 && window.Fx) { Fx.banner(r.allRank === 1 ? 'BEST EVER!' : 'TOP OF TODAY!', 'You\'re #1', { ms: 2200 }); Fx.burst({ count: 200, coins: 30 }); }
-      openScores('day', r.id, st.dictionary);
-    } catch (e) {
-      $('saveMsg').textContent = e.message;
-      $('saveBtn').disabled = false;
-    }
-  }
-
   let scoreScope = 'day', scoreDict = null;
   async function openScores(scope = scoreScope, highlightId, dict = scoreDict || S.dict) {
     scoreScope = scope;
@@ -576,24 +559,29 @@
       li.lastChild.textContent = p.score.toLocaleString('en-US');
       ol.appendChild(li);
     }
-    $('overPanel').classList.toggle('hidden', !over);
-    if (over) {
-      const top = snap.players.slice().sort((a, b) => b.score - a.score)[0];
-      $('overTitle').textContent = top ? `${top.name} wins the scuffle! 🏆` : 'Game over';
-      $('roundList').innerHTML = '';
-      $('savePart').classList.add('hidden');
-      $('rankLine').textContent = '';
-    }
     $('nextBtn').classList.toggle('hidden', over || !snap.host);
     $('nextBtn').textContent = snap.index + 2 === snap.totalRounds ? 'Last round' : 'Next round';
     $('waitNext').classList.toggle('hidden', over || snap.host);
-    $('againBtn').classList.toggle('hidden', !over || !snap.host);
     if (S.shownReveal !== key) {
       S.shownReveal = key;
       Blip.musicPlaying(false);
       if (over && top1(snap) === snap.you && window.Fx) { Fx.banner('YOU WIN!', 'Top of the room', { ms: 2200 }); Fx.burst({ count: 200, coins: 30 }); }
       show('reveal');
       window.scrollTo({ top: 0 });
+      if (over) {
+        const order = snap.players.slice().sort((a, b) => b.score - a.score);
+        const top = order[0];
+        const me = snap.players.find(x => x.id === snap.you);
+        ArcadeEnd.show({
+          title: top ? `${top.name} wins the scuffle! 🏆` : 'Game over',
+          score: me ? me.score : top ? top.score : null,
+          detail: order.map(x => `${x.id === snap.you ? 'You' : x.name} ${x.score.toLocaleString('en-US')}`).join(' · '),
+          scores: dailyBoard(snap.settings ? snap.settings.dictionary : S.dict),
+          // Only the host starts the next game; everyone else waits for it.
+          again: snap.host ? async () => { try { await roomPost('start'); } catch (e) { toast(e.message); } } : null,
+          setup: backToMenu
+        });
+      }
     }
   }
   const top1 = snap => { const t = snap.players.slice().sort((a, b) => b.score - a.score); return t.length > 1 && t[0].score > t[1].score ? t[0].id : null; };
@@ -601,6 +589,8 @@
   // ---- a round: the tiles ------------------------------------------------------------------
   function startRound(key, letters) {
     if (S.roundKey === key) return;
+    // A new round: the last game's results go.
+    ArcadeEnd.clear();
     S.roundKey = key;
     S.letters = letters;
     S.order = [...letters].map((_, i) => i);
@@ -822,6 +812,7 @@
   }
 
   function backToMenu() {
+    ArcadeEnd.clear();
     if (S.room) { roomPost('leave').catch(() => {}); leaveRoom(); }
     S.solo = null;
     S.roundKey = null;
@@ -836,7 +827,7 @@
   ArcadeBack.setup({
     atMenu: () => !$('setup').classList.contains('hidden'),
     back: backToMenu,
-    busy: () => !$('play').classList.contains('hidden') || (!$('reveal').classList.contains('hidden') && $('overPanel').classList.contains('hidden'))
+    busy: () => !$('play').classList.contains('hidden') || (!$('reveal').classList.contains('hidden') && !ArcadeEnd.has)
   });
 
   // ---- how to play --------------------------------------------------------------------------
@@ -919,12 +910,6 @@
   $('nextBtn').onclick = async () => {
     if (S.room) { try { await roomPost('next'); } catch (e) { toast(e.message); } } else soloNext();
   };
-  $('againBtn').onclick = async () => {
-    if (S.room) { try { await roomPost('start'); } catch (e) { toast(e.message); } return; }
-    S.mode = S.solo ? S.solo.mode : 'free';
-    go();
-  };
-  $('saveBtn').onclick = saveScore;
   $('scoresBtn').onclick = () => openScores('day', undefined, S.solo ? S.solo.dictionary : S.dict);
   $('scoresClose').onclick = () => $('scores').classList.add('hidden');
   $('scores').addEventListener('click', e => { if (e.target === $('scores')) $('scores').classList.add('hidden'); });

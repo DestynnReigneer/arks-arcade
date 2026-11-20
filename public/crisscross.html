@@ -13,6 +13,7 @@
 <link rel="stylesheet" href="adult-mode.css">
 <link rel="stylesheet" href="look.css">
 <link rel="stylesheet" href="topbar.css">
+<link rel="stylesheet" href="end-window.css">
 <link rel="stylesheet" href="tv.css">
 <!-- On a TV: the TV layout, the remote's arrows, and setting the TV up (tv.js). -->
 <script src="tv-core.js"></script>
@@ -20,6 +21,7 @@
 </head>
 <body>
 <script src="topbar.js"></script>
+<script src="end-window.js"></script>
 
 <header class="top">
   <a href="/" class="icon-btn" title="Back to the arcade">←</a>
@@ -142,15 +144,6 @@
 
 <!-- ============ the game ============ -->
 <section id="game" class="hidden">
-  <div class="panel center hidden over-panel" id="overPanel">
-    <div class="over-top">
-      <button class="ghost" id="overBackBtn">Back to my games</button>
-      <button class="primary" id="againBtn">Play again</button>
-    </div>
-    <h2 id="overTitle">Game over</h2>
-    <ol class="cc-final" id="finalList"></ol>
-    <p class="hint" id="overNote"></p>
-  </div>
   <ul class="cc-scores" id="scoreStrip" aria-label="Scores"></ul>
   <div class="cc-status" id="status" aria-live="polite"></div>
   <div class="cc-board-box" id="boardBox">

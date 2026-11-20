@@ -45,15 +45,14 @@ test('playing Big Swing and saving the runs', async ({ page, isMobile }) => {
     for (let i = 0; i < 3; i++) g.out('OUT!');
     CabTest.tick(0.2);
   });
-  await expect(page.locator('.over-panel')).toBeVisible({ timeout: 5000 });
-  const runs = Number(await page.locator('.over-panel .final-score').textContent());
+  await expect(page.locator('.ew-card')).toBeVisible({ timeout: 5000 });
+  const runs = Number(await page.locator('.ew-card .ew-score').textContent());
   expect(runs).toBeGreaterThanOrEqual(3);
 
-  // Nobody types initials: the guest's score goes on the board under the guest's name.
-  await expect(page.locator('.over-panel .initials')).toBeHidden();
+  // Nobody types initials or presses Save: the guest's score goes on the board under the guest's name by itself.
+  await expect(page.locator('input.ini')).toHaveCount(0);
   const guest = await page.evaluate(() => ArcadeProfile.name());
-  await expect(page.locator('.over-panel .save-hint')).toHaveText(`Saving as ${guest}.`);
-  await page.locator('.over-panel .save-btn').click();
+  await expect(page.locator('.ew-card .ew-saved')).toHaveText(new RegExp(`Saved as ${guest} · #\\d+`), { timeout: 10000 });
   await expect.poll(async () => {
     const list = await (await page.request.get('/api/scores/bigswing?board=runs')).json();
     return list.some(r => r.profileName === guest && r.score === runs);

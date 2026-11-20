@@ -234,7 +234,7 @@
     level = lv;
     store('sudoku.level', lv);
     paintLevels();
-    $('over').classList.add('hidden');
+    ArcadeEnd.clear();
     document.body.dataset.state = 'ready';
     run = null;
     givens = new Array(81).fill(0); grid = givens.slice(); notes = new Array(81).fill(0); marks = {}; sel = -1;
@@ -402,9 +402,6 @@
   setInterval(tick, 500);
 
   // ---- solved ----------------------------------------------------------------------------------
-  const iniBoxes = [...document.querySelectorAll('#iniRow .ini')];
-  // On a TV, initials picked with the remote; everywhere else nothing to type.
-  const initials = ArcadeKit.wireInitials(iniBoxes, () => saveTime(), { tv: () => TvPlay.on });
   function helpLine(r) {
     const bits = [];
     if (r.hints) bits.push(`${r.hints} hint${r.hints === 1 ? '' : 's'}`);
@@ -412,51 +409,41 @@
     if (r.mistakes) bits.push(`${r.mistakes} mistake${r.mistakes === 1 ? '' : 's'} shown`);
     return bits.length ? bits.join(', ') : '';
   }
+  // The shared end window (end-window.js): the time saves by itself, under the profile or the
+  // guest's name (on a TV, whoever is picked under "Who played?").
   function showOver() {
     document.body.dataset.state = 'over';
-    $('overTitle').textContent = `${LABEL[run.level]} puzzle solved! 🎉`;
-    $('overTime').textContent = clock(run.timeMs);
     const help = helpLine(run);
-    $('overDetail').textContent = help
-      ? `${clock(run.timeMs - run.penaltyMs)} solving, plus ${clock(run.penaltyMs)} for help (${help}).`
-      : 'No help used. That\'s a clean solve!';
-    $('savePart').classList.toggle('hidden', run.saved || run.unscored);
-    // The time goes under the profile or the guest's name, with nothing to type.
-    ArcadeKit.readySave(initials, $('saveHint'), $('saveBtn'), 'Pick your initials with the arrows to put your time on today\'s board.');
-    $('saveMsg').textContent = '';
-    $('saveBtn').disabled = false;
-    $('rankLine').textContent = run.saved ? 'Your time is on the board.' : run.unscored ? "Just for fun, this try won't be scored" : '';
-    $('over').classList.remove('hidden');
-    // It pops up over the page (topbar.js), except on a TV, where it sits in the page.
-    if (!$('over').classList.contains('end-pop')) setTimeout(() => $('over').scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+    const id = run.runId, lv = run.level;
+    ArcadeEnd.show({
+      title: `${LABEL[lv]} puzzle solved! 🎉`,
+      score: clock(run.timeMs),
+      detail: help ? `${clock(run.timeMs - run.penaltyMs)} solving, plus ${clock(run.penaltyMs)} for help (${help}).` : 'No help used. That\'s a clean solve!',
+      save: run.saved || run.unscored ? null : async who => {
+        const r = await api(`/api/sudoku/run/${id}/save`, who);
+        if (run && run.runId === id) run.saved = true;
+        return { rank: r.dayRank, where: `in ${LABEL[lv]} for today`, id: r.id };
+      },
+      noSave: run.saved ? 'Your time is on the board.' : "Just for fun, this try won't be scored",
+      scores: timesBoard(lv),
+      // One puzzle a level each day, so there's no Play again: the next level is the way on.
+      extra: { label: 'Try another level', run: () => {
+        const next = LEVELS[(LEVELS.findIndex(([x]) => x === level) + 1) % LEVELS.length][0];
+        openLevel(next);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } }
+    });
   }
-  async function saveTime() {
-    if (!run || !run.finished || run.saved) return;
-    // A profile sends its name too, in case its sign-in has run out on the
-    // server; then the time goes on the board under that name.
-    let who;
-    try { who = ArcadeKit.saveFields(initials); } catch (e) { $('saveMsg').textContent = e.message; return; }
-    $('saveBtn').disabled = true;
-    try {
-      const r = await api(`/api/sudoku/run/${run.runId}/save`, who);
-      if (who.initials) initials.remember(who.initials);
-      run.saved = true;
-      $('savePart').classList.add('hidden');
-      $('rankLine').textContent = r.allRank === 1 ? `That's the fastest ${LABEL[run.level]} time ever! 🏆`
-        : `You're #${r.dayRank} in ${LABEL[run.level]} for today, and #${r.allRank} overall!`;
-      toast(r.dayRank === 1 ? '🏆 Fastest today!' : `Saved: #${r.dayRank} today`);
-      openScores(run.level, 'day', r.id);
-    } catch (e) {
-      $('saveMsg').textContent = e.message;
-      $('saveBtn').disabled = false;
-    }
+  // Today's and every day's fastest times on one level, for the end window.
+  function timesBoard(lv) {
+    return {
+      tabs: [{ id: 'day', label: 'Today' }, { id: 'all', label: 'Overall' }], tab: 'day',
+      load: async scope => (await api(`/api/sudoku/board?level=${lv}&scope=${scope}&limit=20`)).map(r => ({
+        id: r.id, name: r.profileName || r.initials, avatar: r.profileAvatar, score: clock(r.timeMs),
+        detail: scope === 'all' ? niceDay(r.day) : helpLine(r) || 'no help'
+      }))
+    };
   }
-  $('saveBtn').addEventListener('click', saveTime);
-  $('otherLevelBtn').addEventListener('click', () => {
-    const next = LEVELS[(LEVELS.findIndex(([id]) => id === level) + 1) % LEVELS.length][0];
-    openLevel(next);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  });
 
   // ---- fastest times -------------------------------------------------------------------------
   let boardLevel = level, boardScope = 'day';
@@ -493,7 +480,6 @@
   }
   const niceDay = d => new Date(`${d}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   $('scoresBtn').addEventListener('click', () => openScores(level, 'day'));
-  $('overScoresBtn').addEventListener('click', () => openScores(level, 'day'));
   $('scoresClose').addEventListener('click', () => $('scores').classList.add('hidden'));
   $('scores').addEventListener('click', e => { if (e.target === $('scores')) $('scores').classList.add('hidden'); });
 

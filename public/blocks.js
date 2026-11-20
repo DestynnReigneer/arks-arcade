@@ -23,7 +23,7 @@
   let down = null;                        // { src, t, dropped } while down is held
   let flashes = [], popups = [], sparks = [], shake = 0;
 
-  const shell = GameShell.create({ game: 'blocks', boards: E.MODES, mount: $('stage'), onAgain: () => { reset(); start(); } });
+  const shell = GameShell.create({ game: 'blocks', boards: E.MODES, mount: $('stage'), onAgain: () => { reset(); start(); }, onSetup: () => reset() });
   // 4 cells for hold, 10 for the well, 4 for next, plus a little air.
   const W_CELLS = 18.6;
   const view = GameShell.fitCanvas($('canvas'), { aspect: W_CELLS / (VISIBLE + 0.6), maxHeight: () => Math.max(320, window.innerHeight * 0.6) });
@@ -149,7 +149,7 @@
     if (g.timeUp) Blip.tune([[784, 0.1], [659, 0.1], [523, 0.25]], { type: 'square', volume: 0.05 });
     else { Blip.noise(0.3, 0.14); Blip.tone([300, 60], 0.5, { type: 'sawtooth', volume: 0.07 }); }
     const detail = `${g.lines} line${g.lines === 1 ? '' : 's'} · level ${g.level}${g.tetrises ? ` · ${g.tetrises}× four lines` : ''}`;
-    setTimeout(() => shell.over({ score: g.score, board: mode, detail, title: g.timeUp ? 'Time\'s up!' : undefined }), 500);
+    shell.over({ score: g.score, board: mode, detail, title: g.timeUp ? 'Time\'s up!' : undefined, delay: 500 });
   }
 
   // ---- loop -------------------------------------------------------------------------------------

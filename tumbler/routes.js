@@ -124,14 +124,14 @@ function finish(id, taps, now = Date.now()) {
 // ---- the boards --------------------------------------------------------------------
 const rankIn = (sql, ...args) => db.db.prepare(sql).get(...args).c + 1;
 
-function save(id, { initials, name, avatar, profileToken } = {}) {
+function save(id, { initials, name, avatar, profileToken, playedBy } = {}) {
   const run = needRun(id);
   if (!run.finished_at) throw fail('Finish the run first.', 409);
   if (run.saved) throw fail('This score is already on the board.', 409);
   if (run.rules !== RULES_VERSION) throw fail('That run was played under the old rules, so it can\'t go on the new board.', 409);
-  if (!run.score) throw fail('Pop at least one pin to get a score on the board.');
-  // Signed in, the profile; a guest, their name; a TV, the initials picked with the remote.
-  const as = boardWho({ profileToken, name, avatar, initials });
+  if (!run.score) throw fail('Pop at least one lock to get a score on the board.');
+  // Signed in, the profile; a guest, their name; a TV, the person picked on its end card.
+  const as = boardWho({ profileToken, name, avatar, initials, playedBy });
   const { profile } = as;
   const ini = as.initials;
   const info = db.db.prepare(`INSERT INTO tumbler_scores (run_id, day, initials, profile_id, profile_name, profile_avatar, score, level, pins, best_streak, rules)

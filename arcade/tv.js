@@ -132,6 +132,14 @@ function createTv({ arks, now = Date.now }) {
       });
     });
 
+    // Who can be picked on the end card's "Who played?": the family's approved
+    // profiles, never a TV. Only a TV that's set up asks (arcade/board-who.js).
+    router.get('/api/tv/players', async (req, res) => {
+      const me = await tvOf(req);
+      if (!me) return res.status(403).json({ error: 'Only a TV that\'s set up can pick who played.' });
+      res.json({ players: require('./board-who').tvPlayers() });
+    });
+
     // Adults' night: a code and QR code for an adult's phone.
     router.post('/api/tv/unlock', async (req, res) => {
       const me = await tvOf(req);

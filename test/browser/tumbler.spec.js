@@ -1,7 +1,7 @@
 'use strict';
 
 // Tumbler Rumble in a real browser: start a run, watch the 3, 2, 1
-// countdown with the POP button dimmed, pop three pins through the page (a
+// countdown with the POP button dimmed, pop three locks through the page (a
 // tap on the POP button on a phone, Space on a laptop), let the run end, and
 // save the score the server worked out. When
 // to tap comes from a helper the page only has under the test suites (the
@@ -63,21 +63,19 @@ test('a countdown, then three pops in Tumbler Rumble', async ({ page, isMobile }
   }
   await expect(page.locator('#hudPops')).toHaveText('3');
 
-  // Nobody taps the fourth pin, so the marker slips past it and the run ends.
-  await expect(page.locator('#over')).toBeVisible({ timeout: 10000 });
-  await expect(page.locator('#overTitle')).toContainText('slipped past');
-  await expect(page.locator('#overDetail')).toContainText('popped 3 locks in a row and made it to wave 1');
-  await expect(page.locator('#overScore')).toHaveText('3');
+  // Nobody taps the fourth lock, so the light slides past it and the run ends.
+  const card = page.locator('.ew-card');
+  await expect(card).toBeVisible({ timeout: 10000 });
+  await expect(card.locator('.ew-detail')).toContainText('popped 3 locks in a row and made it to wave 1');
+  await expect(card.locator('.ew-score')).toHaveText('3');
   await expect(pop).toBeDisabled();
 
-  // Nobody types initials: the guest's score goes on the board under the guest's name.
-  await expect(page.locator('#iniRow')).toBeHidden();
+  // Nobody types initials or presses Save: the guest's score goes on the board under the guest's name by itself.
+  await expect(page.locator('input.ini')).toHaveCount(0);
   const guest = await page.evaluate(() => ArcadeProfile.name());
-  await expect(page.locator('#saveHint')).toHaveText(`Saving as ${guest}.`);
-  await page.locator('#saveBtn').click();
-  await expect(page.locator('#rankLine')).toContainText(/#\d+|best Tumbler Rumble score ever/);
-  await expect(page.locator('#scores')).toBeVisible();
-  await expect(page.locator('#scoreList li.me')).toContainText(guest);
+  await expect(card.locator('.ew-saved')).toContainText(`Saved as ${guest} · #`);
+  await card.getByRole('button', { name: '🏆 High scores' }).click();
+  await expect(card.locator('.ew-list li.me')).toContainText(guest);
 
   expect(problems, problems.join('\n')).toEqual([]);
   const sizes = await page.evaluate(() => ({ page: document.documentElement.scrollWidth, screen: window.innerWidth }));

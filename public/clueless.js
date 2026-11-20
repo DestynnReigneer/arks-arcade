@@ -354,7 +354,7 @@
     store('clueless.level', lv);
     store('clueless.mode', md);
     paintLevels();
-    $('over').classList.add('hidden');
+    ArcadeEnd.clear();
     document.body.dataset.state = 'ready';
     run = null; P = null; letters = []; marks = {}; solved = new Set(); sel = -1;
     build();
@@ -547,71 +547,57 @@
   setInterval(tick, 500);
 
   // ---- solved ----------------------------------------------------------------------------------
-  const iniBoxes = [...document.querySelectorAll('#iniRow .ini')];
-  // Never shown: nothing to type here, and a TV's times stay off the board.
-  const initials = ArcadeKit.wireInitials(iniBoxes, () => saveTime());
   function helpLine(r) {
     const bits = [];
     if (r.checks) bits.push(`${r.checks} check${r.checks === 1 ? '' : 's'}`);
     if (r.reveals) bits.push(`${r.reveals} letter${r.reveals === 1 ? '' : 's'} revealed`);
     return bits.join(', ');
   }
+  // The shared end window (end-window.js): the time saves by itself, under the profile or the
+  // guest's name (on a TV, whoever is picked under "Who played?").
   function showOver() {
     document.body.dataset.state = 'over';
     sel = -1;
     marks = Object.fromEntries(Object.entries(marks).filter(([, m]) => m === 'revealed'));
     paint();
-    $('overTitle').textContent = `${run.free ? 'Free play ' : ''}${LABEL[run.level]} solved! 🎉`;
-    $('otherLevelBtn').textContent = run.free ? '🔀 Another free one' : 'Try the other one';
-    $('overTime').textContent = clock(run.timeMs);
     const help = helpLine(run);
-    $('overDetail').textContent = help
-      ? `${clock(run.timeMs - run.penaltyMs)} solving, plus ${clock(run.penaltyMs)} for help (${help}).`
-      : 'No help used. That\'s a clean solve!';
-    $('savePart').classList.toggle('hidden', run.saved || run.free || run.unscored);
-    // The time goes under the profile or the guest's name, with nothing to type. Times solved on
-    // the TV don't go on the board (the TV is signed in as itself), and the line says so.
-    ArcadeKit.readySave(initials, $('saveHint'), $('saveBtn'));
-    if (TV) $('saveHint').textContent = 'Times solved on the TV don\'t go on the board. Solve it on your own device to get on it.';
-    $('saveMsg').textContent = '';
-    $('saveBtn').disabled = false;
-    $('rankLine').textContent = run.saved ? 'Your time is on the board.'
-      : run.free ? 'Free play times don\'t go on the board, because everyone gets a different crossword. Today\'s puzzle is the one to race on.'
-      : run.unscored ? "Just for fun, this try won't be scored" : '';
-    $('over').classList.remove('hidden');
-    // It pops up over the page (topbar.js), except on a TV, where it sits in the page.
-    if (!$('over').classList.contains('end-pop')) setTimeout(() => $('over').scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
-  }
-  async function saveTime() {
-    if (!run || !run.finished || run.saved) return;
-    let who;
-    try { who = ArcadeKit.saveFields(initials); } catch (e) { $('saveMsg').textContent = e.message; return; }
-    $('saveBtn').disabled = true;
-    try {
-      const r = await api(`/api/clueless/run/${run.runId}/save`, who);
-      run.saved = true;
-      $('savePart').classList.add('hidden');
-      $('rankLine').textContent = r.allRank === 1 ? `That's the fastest ${LABEL[run.level]} time ever! 🏆`
-        : `You're #${r.dayRank} in ${LABEL[run.level]} for today, and #${r.allRank} overall!`;
-      toast(r.dayRank === 1 ? '🏆 Fastest today!' : `Saved: #${r.dayRank} today`);
-      openScores(run.level, 'day', r.id);
-    } catch (e) {
-      $('saveMsg').textContent = e.message;
-      $('saveBtn').disabled = false;
-    }
-  }
-  $('saveBtn').addEventListener('click', saveTime);
-  $('otherLevelBtn').addEventListener('click', async () => {
-    if (run && run.free) {
-      store(freeKey(level), null);
-      await openLevel(level, 'free');
-      begin();
+    const id = run.runId, lv = run.level, free = !!run.free;
+    const other = async () => {
+      if (free) {
+        store(freeKey(level), null);
+        await openLevel(level, 'free');
+        begin();
+      } else openLevel(level === 'mini' ? 'big' : 'mini');
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
-    }
-    openLevel(level === 'mini' ? 'big' : 'mini');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  });
+    };
+    ArcadeEnd.show({
+      title: `${free ? 'Free play ' : ''}${LABEL[lv]} solved! 🎉`,
+      score: clock(run.timeMs),
+      detail: help ? `${clock(run.timeMs - run.penaltyMs)} solving, plus ${clock(run.penaltyMs)} for help (${help}).` : 'No help used. That\'s a clean solve!',
+      save: run.saved || free || run.unscored ? null : async who => {
+        const r = await api(`/api/clueless/run/${id}/save`, who);
+        if (run && run.runId === id) run.saved = true;
+        return { rank: r.dayRank, where: `in ${LABEL[lv]} for today`, id: r.id };
+      },
+      noSave: run.saved ? 'Your time is on the board.'
+        : free ? 'Free play times don\'t go on the board, because everyone gets a different crossword. Today\'s puzzle is the one to race on.'
+        : "Just for fun, this try won't be scored",
+      scores: timesBoard(lv),
+      // Free play goes again with a new crossword; the daily one is once a day, so the other level is the way on.
+      again: free ? other : null,
+      extra: free ? null : { label: 'Try the other one', run: other }
+    });
+  }
+  // Today's and every day's fastest times on one crossword, for the end window.
+  function timesBoard(lv) {
+    return {
+      tabs: [{ id: 'day', label: 'Today' }, { id: 'all', label: 'Overall' }], tab: 'day',
+      load: async scope => (await api(`/api/clueless/board?level=${lv}&scope=${scope}&limit=20`)).map(r => ({
+        id: r.id, name: r.profileName || r.initials, avatar: r.profileAvatar, score: clock(r.timeMs),
+        detail: scope === 'all' ? niceDay(r.day) : helpLine(r) || 'no help'
+      }))
+    };
+  }
 
   // ---- fastest times -------------------------------------------------------------------------
   let boardLevel = level, boardScope = 'day';
@@ -653,7 +639,6 @@
   }
   const niceDay = d => new Date(`${d}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   $('scoresBtn').addEventListener('click', () => openScores(level, 'day'));
-  $('overScoresBtn').addEventListener('click', () => openScores(level, 'day'));
   $('scoresClose').addEventListener('click', () => $('scores').classList.add('hidden'));
   $('scores').addEventListener('click', e => { if (e.target === $('scores')) $('scores').classList.add('hidden'); });
 

@@ -154,6 +154,9 @@
 
   function items() {
     const list = [];
+    // After a game ends and its results are put away (end-window.js), they come back from here.
+    const end = window.ArcadeEnd;
+    if (end && end.has && !end.isOpen) list.push({ icon: '🏁', label: 'Last game\'s results', first: true, run: () => end.reopen() });
     const btns = gameButtons();
     const mute = btns.find(b => b.id === 'muteBtn'), music = btns.find(b => b.id === 'musicBtn');
     // Sound and music are one item: each press moves to the next setting.
@@ -208,7 +211,7 @@
     const title = (document.querySelector('body > header.top h1, header h1') || {}).textContent || document.title;
     const list = items();
     menu.innerHTML = '<div class="grab"></div><h3>' + esc(title.replace(/\s+/g, ' ').trim()) + '</h3><div class="grid">' +
-      list.map((it, i) => `<button type="button" data-i="${i}"><span class="ic">${it.icon}</span><span>${it.label}${it.note ? `<small>${it.note}</small>` : ''}</span></button>`).join('') +
+      list.map((it, i) => `<button type="button" data-i="${i}"${it.first ? ' class="ah-first"' : ''}><span class="ic">${it.icon}</span><span>${it.label}${it.note ? `<small>${it.note}</small>` : ''}</span></button>`).join('') +
       '</div>';
     menu.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
       const it = list[+b.dataset.i];
@@ -345,6 +348,8 @@ window.ArcadeBack = (() => {
       try { ok = await ask(q || 'Leave this game? It ends here and won\'t be saved.'); } finally { asking = false; }
       if (!ok) { label(); return; }
     }
+    // The last game's results go with the screen they belonged to (end-window.js).
+    if (window.ArcadeEnd) window.ArcadeEnd.clear();
     try { cfg.back(); } catch (e) { console.error(e); }
     // The screen may change a moment later (a fade, a server reply).
     sync();
@@ -407,53 +412,6 @@ window.ArcadeBack = (() => {
   }
 
   return { setup, sync, back, ask, get inside() { return !!cfg && !atMenu(); } };
-})();
-
-// The end of a game pops up over the page instead of opening above the board
-// and pushing everything down (the maintainer's call, 2026-11-07). Any game's
-// end panel (.over-panel, or #overPanel) is lifted out of the page while it
-// shows, with the page dimmed behind it. "Look at the game" puts it away so the
-// final screen can be looked at, and a Results button brings it back. Nothing
-// changes for the games themselves: they show and hide their panel as before.
-// On a TV the panel keeps its place in the TV layout.
-window.ArcadeEnd = (() => {
-  if (document.documentElement.classList.contains('tv')) return null;
-  const dim = document.createElement('div');
-  dim.className = 'end-dim'; dim.hidden = true;
-  const pill = document.createElement('button');
-  pill.type = 'button'; pill.className = 'end-pill'; pill.textContent = '🏁 Results'; pill.hidden = true;
-  document.body.append(dim, pill);
-  let peeking = null;
-
-  const panels = () => [...document.querySelectorAll('.over-panel, #overPanel')];
-  const open = p => !p.classList.contains('hidden') && !p.hidden;
-  function sync() {
-    if (document.documentElement.classList.contains('tv')) return;
-    let shown = null;
-    // Only touch a class when it changes: this runs on every class change on the page.
-    const set = (e, c, on) => { if (e.classList.contains(c) !== on) e.classList.toggle(c, on); };
-    panels().forEach(p => {
-      set(p, 'end-pop', true);
-      if (!p.querySelector('.end-peek')) {
-        const b = document.createElement('button');
-        b.type = 'button'; b.className = 'ghost end-peek'; b.textContent = 'Look at the game';
-        b.addEventListener('click', () => { peeking = p; sync(); });
-        p.append(b);
-      }
-      if (open(p)) shown = p;
-    });
-    if (!shown) peeking = null;
-    const up = shown && peeking !== shown;
-    panels().forEach(p => set(p, 'end-away', p === peeking));
-    if (dim.hidden !== !up) dim.hidden = !up;
-    const pillOff = !(shown && peeking === shown);
-    if (pill.hidden !== pillOff) pill.hidden = pillOff;
-  }
-  pill.addEventListener('click', () => { peeking = null; sync(); });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !dim.hidden) { const p = panels().find(open); if (p) { peeking = p; sync(); } } });
-  new MutationObserver(sync).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class', 'hidden'] });
-  sync();
-  return { sync };
 })();
 
 // The home page's quick menu (press and hold a game card) opens a game at one spot:

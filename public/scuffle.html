@@ -14,6 +14,7 @@
 <link rel="stylesheet" href="adult-mode.css">
 <link rel="stylesheet" href="look.css">
 <link rel="stylesheet" href="topbar.css">
+<link rel="stylesheet" href="end-window.css">
 <link rel="stylesheet" href="tv.css">
 <!-- On a TV: the TV layout, the remote's arrows, and setting the TV up (tv.js). -->
 <script src="tv-core.js"></script>
@@ -21,6 +22,7 @@
 </head>
 <body>
 <script src="topbar.js"></script>
+<script src="end-window.js"></script>
 
 <header class="top">
   <a href="/" class="icon-btn" title="Back to the arcade">←</a>
@@ -131,7 +133,6 @@
     <div class="over-top">
       <button class="ghost" id="menuBtn">Back to the menu</button>
       <button class="primary hidden" id="nextBtn">Next round</button>
-      <button class="primary hidden" id="againBtn">Play again</button>
     </div>
     <p class="hint center hidden" id="waitNext">Waiting for the host to start the next round…</p>
     <div class="hint" id="revealRound"></div>
@@ -139,19 +140,6 @@
     <div class="sc-full" id="revealFull"></div>
     <p class="hint" id="revealFirst"></p>
     <div class="final-line" id="revealScore"></div>
-  </div>
-  <div class="panel center hidden" id="overPanel">
-    <h2 id="overTitle">Game over</h2>
-    <ol class="sc-rounds" id="roundList"></ol>
-    <div id="savePart" class="hidden">
-      <p class="hint" id="saveHint">Your score goes on today's board under your name.</p>
-      <div class="initials hidden" id="iniRow">
-        <input maxlength="1" class="ini" autocomplete="off" aria-label="First initial"><input maxlength="1" class="ini" autocomplete="off" aria-label="Second initial"><input maxlength="1" class="ini" autocomplete="off" aria-label="Third initial">
-      </div>
-      <button class="primary big" id="saveBtn">Save my score</button>
-      <div class="msg" id="saveMsg"></div>
-    </div>
-    <p class="hint" id="rankLine"></p>
   </div>
   <div class="panel hidden" id="standingsPanel">
     <h2 id="standingsTitle">Scores</h2>

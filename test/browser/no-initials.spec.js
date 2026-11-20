@@ -11,7 +11,7 @@ const PORT = Number(process.env.BROWSER_TEST_PORT || 3101);
 const FAKE = `http://localhost:${PORT + 1}`;   // the pretend ARKS ID (serve.js)
 const fake = (p, body) => fetch(FAKE + p, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then(r => r.json());
 
-// Runs Dino Dash until the dino trips, and waits for the game-over panel.
+// Runs Dino Dash until the dino trips, and waits for the end window.
 async function runDino(page) {
   const close = page.locator('.tut-x');
   if (await close.isVisible().catch(() => false)) await close.click();
@@ -19,8 +19,7 @@ async function runDino(page) {
     await page.keyboard.press('Space');
     await expect.poll(() => page.evaluate(() => document.body.dataset.state), { timeout: 1500 }).toBe('running');
   }).toPass({ timeout: 10000 });
-  await expect(page.locator('#overPanel')).toBeVisible({ timeout: 30000 });
-  await expect(page.locator('#savePart')).toBeVisible();
+  await expect(page.locator('.ew-card')).toBeVisible({ timeout: 30000 });
 }
 
 // No initials box shows anywhere on the page.
@@ -41,10 +40,10 @@ test('signed in: the score goes on the board under the profile\'s name, with not
   await runDino(page);
 
   expect(await shownBoxes(page)).toBe(0);
-  await expect(page.locator('#saveHint')).toHaveText('Saving as Kim.');
-  await page.locator('#saveScoreBtn').click();
-  await expect(page.locator('#scoresView')).toBeVisible();
-  await expect(page.locator('#scoreList li.me')).toContainText('Kim');
+  // Saved by itself, with nothing to press.
+  await expect(page.locator('.ew-card .ew-saved')).toContainText('Saved as Kim · #');
+  await page.locator('.ew-card').getByRole('button', { name: '🏆 High scores' }).click();
+  await expect(page.locator('.ew-list li.me')).toContainText('Kim');
   const board = await (await page.request.get('/api/scores/dino?board=run&limit=100')).json();
   expect(board.some(r => r.profileName === 'Kim')).toBe(true);
   expect(problems, problems.join('\n')).toEqual([]);
@@ -62,9 +61,9 @@ test('a guest: the score goes on the board under the guest\'s name, with nothing
   await runDino(page);
 
   expect(await shownBoxes(page)).toBe(0);
-  await expect(page.locator('#saveHint')).toHaveText(`Saving as ${guest}.`);
-  await page.locator('#saveScoreBtn').click();
-  await expect(page.locator('#scoreList li.me')).toContainText(guest);
+  await expect(page.locator('.ew-card .ew-saved')).toContainText(`Saved as ${guest} · #`);
+  await page.locator('.ew-card').getByRole('button', { name: '🏆 High scores' }).click();
+  await expect(page.locator('.ew-list li.me')).toContainText(guest);
   // A signed-in player's ARKS ID photo on the same board isn't served to a guest (the board shows their icon
   // instead), so that answer doesn't count here.
   const photo = problems.some(p => /\/api\/arksid\/photo\//.test(p));
@@ -120,6 +119,5 @@ test('a guest with no name is told to sign in, and isn\'t asked for initials', a
   await runDino(page);
 
   expect(await shownBoxes(page)).toBe(0);
-  await expect(page.locator('#saveHint')).toHaveText('Sign in with ARKS ID to put your score on the board.');
-  await expect(page.locator('#saveScoreBtn')).toBeHidden();
+  await expect(page.locator('.ew-card .ew-saved')).toHaveText('Sign in with ARKS ID to put your score on the board.');
 });
