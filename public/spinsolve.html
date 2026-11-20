@@ -16,6 +16,7 @@
 <link rel="stylesheet" href="adult-mode.css">
 <link rel="stylesheet" href="look.css">
 <link rel="stylesheet" href="topbar.css">
+<link rel="stylesheet" href="end-window.css">
 <link rel="stylesheet" href="tv.css">
 <!-- On a TV: the TV layout, the remote's arrows, and setting the TV up (tv.js). -->
 <script src="tv-core.js"></script>
@@ -23,6 +24,7 @@
 </head>
 <body>
 <script src="topbar.js"></script>
+<script src="end-window.js"></script>
 
 <header class="top">
   <a href="/" class="icon-btn" title="Back to the arcade">←</a>
@@ -152,25 +154,6 @@
   </div>
 </div>
 
-<div class="overlay hidden" id="overView">
-  <div class="card-panel center">
-    <div class="over-top">
-      <button class="ghost" id="menuBtn">Back to setup</button>
-      <button class="primary" id="againBtn">Play again</button>
-    </div>
-    <div class="big-emoji">🏆</div>
-    <h2 id="overTitle"></h2>
-    <ul class="final" id="finalList"></ul>
-    <div id="overScore" class="hidden">
-      <p class="hint" id="saveHint">Get on the board and see where you stack up.</p>
-      <div class="initials hidden">
-        <input maxlength="1" class="ini" autocomplete="off"><input maxlength="1" class="ini" autocomplete="off"><input maxlength="1" class="ini" autocomplete="off">
-      </div>
-      <button class="primary big" id="saveScoreBtn">Save score</button>
-      <div class="msg" id="scoreMsg"></div>
-    </div>
-  </div>
-</div>
 
 
 <div class="overlay hidden" id="requestView">

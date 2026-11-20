@@ -13,6 +13,7 @@
 <link rel="stylesheet" href="tutorial.css">
 <link rel="stylesheet" href="look.css">
 <link rel="stylesheet" href="topbar.css">
+<link rel="stylesheet" href="end-window.css">
 <link rel="stylesheet" href="tv.css">
 <link rel="stylesheet" href="tv-play.css">
 <!-- On a TV: the TV layout, the remote and a game controller (tv.js, tv-play.js). -->
@@ -22,6 +23,7 @@
 </head>
 <body>
 <script src="topbar.js"></script>
+<script src="end-window.js"></script>
 
 <header class="top">
   <a href="/" class="icon-btn" title="Back to the arcade">←</a>
@@ -210,30 +212,6 @@
     <div class="stack">
       <button class="primary" id="drawAccept">Accept the draw</button>
       <button class="ghost" id="drawDecline">No, keep playing</button>
-    </div>
-  </div>
-</div>
-
-<div class="overlay hidden" id="overView">
-  <div class="card-panel center">
-    <div class="over-top">
-      <button class="ghost" id="menuBtn">Back to setup</button>
-      <button class="primary" id="againBtn">Play again</button>
-    </div>
-    <div class="big-emoji" id="overEmoji">🏆</div>
-    <h2 id="overTitle"></h2>
-    <p class="hint" id="overHint"></p>
-    <div id="overScore" class="hidden">
-      <div class="final-score" id="overPoints"></div>
-      <p class="hint" id="saveHint">Get on the board and see where you stack up.</p>
-      <div class="initials hidden">
-        <input maxlength="1" class="ini" autocomplete="off"><input maxlength="1" class="ini" autocomplete="off"><input maxlength="1" class="ini" autocomplete="off">
-      </div>
-      <button class="primary big" id="saveScoreBtn">Save score</button>
-      <div class="msg" id="scoreMsg"></div>
-    </div>
-    <div class="stack">
-      <button class="ghost" id="reviewBtn">Look at the board</button>
     </div>
   </div>
 </div>

@@ -195,7 +195,7 @@
     S.me = S.mode === 'ai' ? color : 'w';
     clearPick();
     show('game');
-    $('overView').classList.add('hidden');
+    ArcadeEnd.clear();
     render();
     if (S.mode === 'ai' && S.state.turn !== S.me) computerMove();
   }
@@ -401,7 +401,7 @@
     $('gameChat').classList.remove('hidden');
     S.gameChat.render(snap.chat, { muted: snap.muted });
     // A new game after a rematch: clear the results.
-    if (!snap.ended && fresh) { S.overShown = null; $('overView').classList.add('hidden'); }
+    if (!snap.ended && fresh) { S.overShown = null; ArcadeEnd.clear(); }
     $('drawOfferView').classList.toggle('hidden', !(snap.drawOffer && snap.drawOffer !== snap.you && !snap.ended));
     clearPick();
     render();
@@ -735,63 +735,46 @@
     return Math.max(10, base + Math.max(0, 80 - myMoves) * mult * 2 - S.suggestions * 25 * mult);
   }
 
-  let initials = null;
+  // The end of a game: the shared end window (end-window.js). A win against the computer saves its
+  // points by itself, under the profile or the guest's name (on a TV, whoever is picked under "Who played?").
   function showOver() {
     const key = `${S.moves.length}:${S.ended && S.ended.reason}`;
     if (S.overShown === key) return;
     S.overShown = key;
     const e = S.ended;
     const won = e.winner && (S.mode === 'local' || e.winner === S.me);
-    $('overEmoji').textContent = !e.winner ? '🤝' : won ? '🏆' : '😵';
-    $('overTitle').textContent = resultLine(e);
-    $('overHint').textContent = `${Math.ceil(S.moves.length / 2)} moves.` +
-      (e.reason === 'stalemate' ? ' Stalemate: no legal moves, but not in check, so nobody wins.' : '');
     const scoring = S.mode === 'ai' && e.winner === S.me;
-    $('overScore').classList.toggle('hidden', !scoring);
-    $('saveScoreBtn').disabled = false;
-    $('scoreMsg').textContent = '';
-    if (scoring) {
-      $('overPoints').textContent = winPoints().toLocaleString('en-US');
-      // The score goes under the profile or the guest's name (on a TV, initials picked with the remote).
-      ArcadeKit.readySave(initials, $('saveHint'), $('saveScoreBtn'));
-    }
-    $('againBtn').textContent = S.mode === 'room' ? 'Rematch (swap colors)' : 'Play again';
-    $('overView').classList.remove('hidden');
+    const points = scoring ? winPoints() : null;
+    const level = S.level;
+    const myMoves = Math.ceil(S.moves.length / 2);
+    const detail = `Won as ${COLOR_NAME[S.me]} in ${myMoves} moves${S.suggestions ? ` · ${S.suggestions} 💡` : ''}`;
+    ArcadeEnd.show({
+      title: resultLine(e),
+      score: points,
+      detail: `${myMoves} moves.` + (e.reason === 'stalemate' ? ' Stalemate: no legal moves, but not in check, so nobody wins.' : ''),
+      save: scoring ? async who => {
+        const r = await ArcadeKit.saveScore('chess', { ...who, score: points, board: level, detail });
+        return { rank: r.rank, id: r.id, where: `on vs ${LEVEL_NAME[level] || level}` };
+      } : null,
+      scores: ArcadeEnd.sharedBoard('chess', { easy: 'vs Easy', medium: 'vs Medium', hard: 'vs Hard' }, level),
+      // Two devices play again with a rematch, colors swapped (both have to agree).
+      again: S.mode === 'room' ? null : playAgain,
+      extra: S.mode === 'room' ? { label: 'Rematch (swap colors)', run: playAgain } : null,
+      setup: backToSetup
+    });
     if (e.winner) {
       if (won) Blip.tune([[523, 0.12], [659, 0.12], [784, 0.12], [1047, 0.3]], { type: 'triangle' });
       else Blip.tune([[392, 0.18], [330, 0.18], [262, 0.35]], { type: 'triangle' });
     }
   }
 
-  async function saveScore() {
-    let who;
-    try { who = ArcadeKit.saveFields(initials); } catch (e) { $('scoreMsg').textContent = e.message; return; }
-    $('saveScoreBtn').disabled = true;
-    try {
-      const myMoves = Math.ceil(S.moves.length / 2);
-      // On a TV it's the initials' score, not the TV's (see tv-play.js).
-      const r = await ArcadeKit.saveScore('chess', {
-        ...who, score: winPoints(), board: S.level,
-        detail: `Won as ${COLOR_NAME[S.me]} in ${myMoves} moves${S.suggestions ? ` · ${S.suggestions} 💡` : ''}`
-      });
-      if (who.initials) initials.remember(who.initials);
-      $('overScore').classList.add('hidden');
-      openScores(S.level, r.id);
-      toast(r.rank === 1 ? '🏆 New #1!' : `Saved: #${r.rank}`);
-    } catch (e) {
-      $('scoreMsg').textContent = e.message;
-      $('saveScoreBtn').disabled = false;
-    }
-  }
-
   function playAgain() {
-    $('overView').classList.add('hidden');
     if (S.mode === 'room') { roomAct('rematch'); toast('Waiting for your opponent to agree…'); return; }
     newLocalGame(S.colorPref === 'random' ? (Math.random() < 0.5 ? 'w' : 'b') : S.colorPref);
   }
 
   function backToSetup() {
-    $('overView').classList.add('hidden');
+    ArcadeEnd.clear();
     // Leaving a lobby gives up the seat (or closes it, for the host). A game
     // that started is saved, so it's only left, not ended.
     if (S.room && S.snap && S.snap.phase === 'lobby') roomCall('leave').catch(() => {});
@@ -934,27 +917,23 @@
   });
   $('drawAccept').addEventListener('click', () => { $('drawOfferView').classList.add('hidden'); roomAct('accept-draw'); });
   $('drawDecline').addEventListener('click', () => { $('drawOfferView').classList.add('hidden'); roomAct('decline-draw'); });
-  $('statusLine').addEventListener('click', () => { if (S.ended) { S.overShown = null; showOver(); } });
-  $('againBtn').addEventListener('click', playAgain);
-  $('reviewBtn').addEventListener('click', () => $('overView').classList.add('hidden'));
-  $('menuBtn').addEventListener('click', backToSetup);
+  // Tapping the result line under the board brings the results back.
+  $('statusLine').addEventListener('click', () => { if (S.ended && ArcadeEnd.has) ArcadeEnd.reopen(); });
   $('quitBtn').addEventListener('click', async () => {
     if (S.mode !== 'room' && S.state && !S.ended && S.moves.length && !(await ArcadeBack.ask('Leave this game? It ends here and won\'t be saved.'))) return;
     backToSetup();
   });
-  $('saveScoreBtn').addEventListener('click', saveScore);
   $('scoresBtn').addEventListener('click', () => openScores(S.level));
   $('scoresClose').addEventListener('click', () => $('scoresView').classList.add('hidden'));
   $('helpBtn').addEventListener('click', () => help.open());
   Blip.muteButton($('muteBtn'));
-  initials = ArcadeKit.wireInitials([...document.querySelectorAll('#overScore .ini')], saveScore, { tv: () => TvPlay.on });
 
   // Back: from a game (or its results, or the two-phone lobby) to the setup
   // screen, asking first if moves have been played, and from there to the arcade.
   ArcadeBack.setup({
     atMenu: () => !$('setup').classList.contains('hidden'),
     back: () => {
-      $('overView').classList.add('hidden');
+      ArcadeEnd.clear();
       closeDetails();
       if (!$('create').classList.contains('hidden') || !$('find').classList.contains('hidden')) return show('setup');
       backToSetup();

@@ -415,7 +415,8 @@
     // The chat goes on under the game (not on the TV's own screen).
     $('gameChat').classList.toggle('hidden', !!snap.isScreen);
     if (!snap.isScreen) S.gameChat.render(snap.chat || [], { muted: snap.muted });
-    $('overView').classList.add('hidden');
+    // A new game in the room (the host started it): the last one's results go, for everyone.
+    if (S.shownFinale) { S.shownFinale = false; S.shownReveal = null; ArcadeEnd.clear(); }
     const turns = snap.settings.style === 'turns';
     const turn = snap.turn;
     $('turnBanner').classList.toggle('hidden', !turn);
@@ -692,42 +693,32 @@
     });
   }
 
-  let initials = null;
+  // The end of a game: the shared end window (end-window.js). A solo game saves by itself, under the
+  // profile or the guest's name (on a TV, whoever is picked under "Who played?").
   function showFinal(standings, title, canSave, isHost = true) {
-    $('overTitle').textContent = title;
-    const ol = $('finalList');
-    ol.innerHTML = '';
-    for (const p of standings) {
-      const li = document.createElement('li');
-      li.innerHTML = '<span></span><b></b>';
-      li.firstChild.textContent = p.name;
-      li.lastChild.textContent = p.score.toLocaleString('en-US');
-      ol.appendChild(li);
-    }
-    $('overScore').classList.toggle('hidden', !canSave);
-    $('saveScoreBtn').disabled = false;
-    $('scoreMsg').textContent = '';
-    $('againBtn').classList.toggle('hidden', !isHost);
-    $('overView').classList.remove('hidden');
+    const top = standings[0];
+    const g = S.game;
+    const board = isAdult() ? 'adult' : 'solo';
+    const solo = !S.room && g && g.players.length === 1;
+    const score = top ? top.score : 0;
+    const detail = g ? `${g.questions.length} Qs · ${levelInfo(S.level).label}${g.settings.difficulty !== 'mixed' ? ' · ' + g.settings.difficulty : ''}` : '';
+    ArcadeEnd.show({
+      title,
+      score: top ? score : null,
+      detail: solo ? detail : standings.map(p => `${p.name} ${p.score.toLocaleString('en-US')}`).join(' · '),
+      save: canSave ? async who => {
+        const r = await ArcadeKit.saveScore('trivia', { ...who, score, board, detail });
+        return { rank: r.rank, id: r.id, where: board === 'adult' ? 'on the Adult board' : 'on the board' };
+      } : null,
+      noSave: solo ? 'Get one right to get on the board.' : '',
+      scores: ArcadeEnd.sharedBoard('trivia', { solo: 'Family', adult: 'Adult' }, board),
+      // In a room only the host starts the next game.
+      again: isHost ? () => {
+        if (S.room) { S.shownFinale = false; S.shownReveal = null; roomPost('start'); } else startLocal().catch(e => toast(e.message));
+      } : null,
+      setup: backToSetup
+    });
     Blip.tune([[523, 0.12], [659, 0.12], [784, 0.12], [1047, 0.3]], { type: 'triangle' });
-    // The score goes under the profile or the guest's name, with nothing to type.
-    if (canSave) ArcadeKit.readySave(initials, $('saveHint'), $('saveScoreBtn'));
-  }
-
-  async function saveScore() {
-    let who;
-    try { who = ArcadeKit.saveFields(initials); } catch (e) { $('scoreMsg').textContent = e.message; return; }
-    $('saveScoreBtn').disabled = true;
-    try {
-      const g = S.game;
-      const r = await ArcadeKit.saveScore('trivia', {
-        ...who, score: g.players[0].score, board: isAdult() ? 'adult' : 'solo',
-        detail: `${g.questions.length} Qs · ${levelInfo(S.level).label}${g.settings.difficulty !== 'mixed' ? ' · ' + g.settings.difficulty : ''}`
-      });
-      $('overScore').classList.add('hidden');
-      openScores(r.id);
-      toast(r.rank === 1 ? '🏆 New #1!' : `Saved: #${r.rank}`);
-    } catch (e) { $('scoreMsg').textContent = e.message; $('saveScoreBtn').disabled = false; }
   }
 
   function openScores(highlightId, board = isAdult() ? 'adult' : 'solo') {
@@ -740,7 +731,7 @@
 
   function backToSetup() {
     stopTimer();
-    $('overView').classList.add('hidden');
+    ArcadeEnd.clear();
     if (S.room) { roomPost('leave'); leaveRoom(); }
     S.game = null;
     show('setup');
@@ -810,7 +801,7 @@
       S.pin = '';
       if (S.room && S.snap && levelInfo(S.snap.settings.level).adult) {
         roomPost('leave'); leaveRoom(); stopTimer();
-        $('overView').classList.add('hidden');
+        ArcadeEnd.clear();
         show('setup');
         toast('Back to family mode.');
       }
@@ -818,12 +809,6 @@
       loadConfig();
     });
   }
-  $('againBtn').onclick = () => {
-    $('overView').classList.add('hidden');
-    if (S.room) { S.shownFinale = false; S.shownReveal = null; roomPost('start'); } else startLocal().catch(e => toast(e.message));
-  };
-  $('menuBtn').onclick = backToSetup;
-  $('saveScoreBtn').onclick = saveScore;
   $('scoresBtn').onclick = () => openScores();
   $('scoresClose').onclick = () => $('scoresView').classList.add('hidden');
   for (const b of $('scoreBoardSeg').children) b.onclick = () => openScores(null, b.dataset.board);
@@ -848,14 +833,13 @@
   };
   Blip.muteButton($('muteBtn'));
   Blip.tuneButton($('tuneBtn'));
-  initials = ArcadeKit.wireInitials([...document.querySelectorAll('#overScore .ini')], saveScore);
 
   // Back: from a game, its results or a room's lobby to the setup screen
   // (asking first while questions are left), and from there to the arcade.
   ArcadeBack.setup({
     atMenu: () => !$('setup').classList.contains('hidden'),
     back: backToSetup,
-    busy: () => !$('play').classList.contains('hidden') && $('overView').classList.contains('hidden'),
+    busy: () => !$('play').classList.contains('hidden') && !ArcadeEnd.has,
     question: 'Quit this game? It ends here and won\'t be saved.'
   });
 

@@ -47,6 +47,19 @@ game's own end screen.
   Clueless Crosswords let a TV's run (started as a guest or as the TV) go under the person picked.
 - **GameShell** (`game-shell.js`) now hands its end to the window; Snake, Block Drop, Brick Breaker and Tower Defense
   gained Back to setup. Big Swing and Bucket Drop have no settings, so no Back to setup.
+- **The games that had end screens of their own** moved too (the second PR):
+  - Chess: a win against the computer saves its points; on two devices Rematch (swap colors) takes Play again's
+    place, and tapping the result line under the board brings the card back.
+  - Know-It-All and Spin & Solve: a solo game saves by itself, with both boards inside the card; the trophy over a
+    zero is gone.
+  - Rambler: the card sits over the round's results, which stay on the page; a score that made the board goes on by
+    itself after the banner, and the marathon gets the same card.
+  - Wordless: a solved word saves by itself, a lost one has nothing to save, and Back to setup opens the difficulty
+    picker (Wordless has no setup screen).
+  - Uh-Oh: Part Deux and Dare Devil: no board, so no score line and no High scores; in a room only the host deals
+    again, and everyone's card goes when the next game starts.
+  - In a room, everyone's card now goes when the next game starts (before, only the host's did).
+  - `ArcadeKit.wireInitials`, `readySave` and `saveFields` are gone; nothing used them anymore.
 - **Fixes from the audit:** Words with Family and Shuffle Scuffle no longer leave a dead dim after Play again, Back to
   my games or the browser's Back; the hidden scores list doesn't come back after Play again; Words with Family's card
   isn't under its own dim on a laptop, and leaving a game asks on the arcade's own card (`ArcadeBack.ask`) and goes
@@ -954,7 +967,7 @@ bottom, in every game.
   (`#overBackBtn`); Shuffle Scuffle's Back to the menu and Next round moved up next to
   Play again, with the save-your-score panel right under them; Rambler's "Put your
   initials up" and the marathon's Done (now "Back to setup") moved up beside Play again
-  and Run again. Chess keeps "Look at the board" under the results.
+  and Run again. Chess keeps "Look at the board" under the results (since 2026-11-19, ✕ Close on the end window).
 - **The TV:** Criss Cross's panel sits at the top of the right-hand column there
   (`grid-row: 3` in `crisscross.css`); the cabinet games' stages are on the right on a
   TV anyway.

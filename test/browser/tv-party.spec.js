@@ -305,8 +305,10 @@ test('Rambler: the board goes up on the TV and a phone plays the round', async (
   await phone.locator('#doneBtn').click();
   await expect(page.locator('#resultsScreen')).toBeVisible({ timeout: 10000 });
   await expect(page.locator('#standings')).toContainText('Pat');
-  await expect(page.locator('#saveScoreBtn')).toBeHidden();
-  await expect(page.locator('#againBtn')).toHaveText('New round');
+  // The end window over the results: the TV didn't play, so nothing is saved, and as the host it starts the next round.
+  await expect(page.locator('.ew-card')).toBeVisible({ timeout: 10000 });
+  await expect(page.locator('.ew-card .ew-saved')).toHaveCount(0);
+  await expect(page.locator('.ew-card').getByRole('button', { name: '▶ Play again' })).toBeVisible();
   expect(problems, problems.join('\n')).toEqual([]);
   expect(phoneProblems, phoneProblems.join('\n')).toEqual([]);
   await ctx.close();

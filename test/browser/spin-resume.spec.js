@@ -114,7 +114,7 @@ async function reload(page) {
   await settle(page);
 }
 
-test('a finished round and a score that isn\'t saved yet are still there after a reload', async ({ page }) => {
+test('a finished round is still there after a reload, and the score saves itself at the end', async ({ page }) => {
   test.setTimeout(120000);
   await quietFonts(page);
   const problems = watchProblems(page);
@@ -149,21 +149,13 @@ test('a finished round and a score that isn\'t saved yet are still there after a
   await solveRound();
   await expect(page.locator('#nextRoundBtn')).toHaveText('See the results');
   await page.locator('#nextRoundBtn').click();
-  await expect(page.locator('#overView')).toBeVisible();
-  await expect(page.locator('#overScore')).toBeVisible();
-  const banked = await page.locator('#overTitle').textContent();
-
-  // A reload before the score is saved: the results are back, and the score can still be saved.
-  await reload(page);
-  await expect(page.locator('#overView')).toBeVisible();
-  await expect(page.locator('#overTitle')).toHaveText(banked);
-  await expect(page.locator('#overScore')).toBeVisible();
-  // Nobody types initials: the score goes on the board under the guest's name.
-  await expect(page.locator('#overScore .initials')).toBeHidden();
+  // The end window saves the score by itself: nobody types initials or presses Save.
+  const card = page.locator('.ew-card');
+  await expect(card).toBeVisible();
   const guest = await page.evaluate(() => ArcadeProfile.name());
-  await page.locator('#saveScoreBtn').click();
-  await expect(page.locator('#scoresView')).toBeVisible();
-  await expect(page.locator('#scoreList')).toContainText(guest);
+  await expect(card.locator('.ew-saved')).toContainText(`Saved as ${guest} · #`);
+  await card.getByRole('button', { name: '🏆 High scores' }).click();
+  await expect(card.locator('.ew-list')).toContainText(guest);
 
   // Saved: there's nothing left to come back to.
   expect(await remembered(page)).toBeNull();

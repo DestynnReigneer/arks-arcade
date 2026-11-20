@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="tutorial.css">
 <link rel="stylesheet" href="adult-mode.css">
 <link rel="stylesheet" href="topbar.css">
+<link rel="stylesheet" href="end-window.css">
 <link rel="stylesheet" href="tv.css">
 <!-- On a TV: the TV layout, the remote's arrows, and setting the TV up (tv.js). -->
 <script src="tv-core.js"></script>
@@ -18,6 +19,7 @@
 </head>
 <body>
 <script src="topbar.js"></script>
+<script src="end-window.js"></script>
 
 <header>
   <div id="headerTop">
@@ -55,22 +57,6 @@
 
 <div id="board"></div>
 <div id="keyboard"></div>
-
-<!-- The score card at the end of a game: the score goes on the board under
-     the player's profile or guest name, with nothing to type. -->
-<div id="initialsOverlay" class="overlay hidden">
-  <div class="overlay-card">
-    <div class="over-top"><button id="playAgainBtn" class="primary-btn">Play again</button></div>
-    <div id="finalScoreLabel">SCORE</div>
-    <div id="finalScoreValue">0</div>
-    <div id="finalScoreDetail"></div>
-    <div id="initialsHint"></div>
-    <div class="overlay-actions">
-      <button id="skipScoreBtn" class="ghost-btn">Skip</button>
-      <button id="saveScoreBtn">Save Score</button>
-    </div>
-  </div>
-</div>
 
 <!-- Difficulty: asked before the first game, changeable from the theme bar -->
 <div id="difficultyOverlay" class="overlay hidden">

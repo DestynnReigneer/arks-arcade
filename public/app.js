@@ -80,11 +80,6 @@
   const hintListEl = document.getElementById('hintList');
   const leaderboardBtn = document.getElementById('leaderboardBtn');
 
-  const initialsOverlay = document.getElementById('initialsOverlay');
-  const finalScoreValue = document.getElementById('finalScoreValue');
-  const finalScoreDetail = document.getElementById('finalScoreDetail');
-  const saveScoreBtn = document.getElementById('saveScoreBtn');
-  const skipScoreBtn = document.getElementById('skipScoreBtn');
 
   const leaderboardOverlay = document.getElementById('leaderboardOverlay');
   const leaderboardThemeFilter = document.getElementById('leaderboardThemeFilter');
@@ -353,7 +348,7 @@
     startTime = Date.now();
     messageEl.textContent = "";
     newGameBtn.style.display = "none";
-    initialsOverlay.classList.add('hidden');
+    ArcadeEnd.clear();
     buildBoard();
     buildKeyboard();
     fitBoard();
@@ -563,7 +558,7 @@
     // On a TV, OK (Enter) presses whatever the highlight is on: a key on the
     // screen, or a button. The arrows belong to the highlight.
     if (TV && (e.key === 'Enter' || e.key.startsWith('Arrow')) && e.target.closest && e.target.closest('button, a, select')) return;
-    if (!initialsOverlay.classList.contains('hidden')) return;
+    if (ArcadeEnd.isOpen) return;
     if (!leaderboardOverlay.classList.contains('hidden')) return;
     if (!themeRequestOverlay.classList.contains('hidden')) return;
     if (!difficultyOverlay.classList.contains('hidden')) return;
@@ -578,82 +573,52 @@
   document.getElementById('adultBtn').addEventListener('click', openAdult);
   themeSelect.addEventListener('change', (e) => { setTheme(e.target.value); newGame(); });
 
-  // ---- End of game / scoring / initials ----
+  // ---- End of game: the shared end window (end-window.js) ----
+  // A solved word saves by itself, under the profile or the guest's name (on a TV, whoever is
+  // picked under "Who played?"). The server works the score out again from what's sent.
   function endGame(won) {
     gameOver = true;
     const elapsedMs = Date.now() - startTime;
     const guessesUsed = guesses.length;
     const score = computeScoreClient({ won, guesses: guessesUsed, hintsUsed, elapsedMs });
     lastResult = { won, guesses: guessesUsed, hintsUsed, elapsedMs, score, word: answer, themeId: currentTheme.id, difficulty };
-
-    if (won) {
-      showMessage("🎉 You got it! " + answer.toUpperCase(), true);
-    } else {
-      showMessage("😔 Out of tries — it was " + answer.toUpperCase(), true);
-    }
+    const line = won ? "🎉 You got it! " + answer.toUpperCase() : "😔 Out of tries — it was " + answer.toUpperCase();
+    showMessage(line, true);
     newGameBtn.style.display = "inline-block";
     updateHintUI();
-    setTimeout(openInitialsOverlay, 650);
+    const r = lastResult;
+    const secs = Math.round(r.elapsedMs / 1000);
+    ArcadeEnd.show({
+      title: line,
+      score: r.score,
+      detail: `${DIFFICULTIES[r.difficulty].label} · ` + (r.won
+        ? `${r.guesses} guess${r.guesses === 1 ? '' : 'es'} · ${r.hintsUsed} hint${r.hintsUsed === 1 ? '' : 's'} · ${secs}s`
+        : `Not solved — word was ${r.word.toUpperCase()}`),
+      save: r.won && r.score > 0 ? async who => {
+        const out = await apiPost('/api/leaderboard', {
+          ...who, themeId: r.themeId, won: r.won, guesses: r.guesses, hintsUsed: r.hintsUsed,
+          word: r.word, elapsedMs: r.elapsedMs, difficulty: r.difficulty
+        });
+        return { rank: out.rank, id: out.id, where: `on ${DIFFICULTIES[r.difficulty].label}` };
+      } : null,
+      noSave: 'Solve the word to get on the board.',
+      scores: {
+        tabs: [{ id: 'theme', label: `${currentTheme.emoji} ${currentTheme.label}` }, { id: 'all', label: 'All themes' }], tab: 'theme',
+        load: async tab => {
+          const theme = tab === 'theme' ? r.themeId : 'all';
+          const rows = await apiGet(`/api/leaderboard?theme=${encodeURIComponent(theme)}&difficulty=${encodeURIComponent(r.difficulty)}&limit=20` + adultQuery('&'), adultHeaders());
+          return rows.map(row => ({
+            id: row.id, name: row.profileName || row.initials, avatar: row.profileAvatar, score: String(row.score),
+            detail: row.won ? `${row.themeEmoji} ${row.guesses}g · ${row.hintsUsed}h` : `${row.themeEmoji} DNF`
+          }));
+        }
+      },
+      again: newGame,
+      // Wordless has no setup screen; the difficulty is what you set up.
+      setup: openDifficulty,
+      delay: 650
+    });
   }
-
-  function openInitialsOverlay() {
-    finalScoreValue.textContent = lastResult.score;
-    const secs = Math.round(lastResult.elapsedMs / 1000);
-    finalScoreDetail.textContent = `${DIFFICULTIES[lastResult.difficulty].label} · ` + (lastResult.won
-      ? `${lastResult.guesses} guess${lastResult.guesses === 1 ? '' : 'es'} · ${lastResult.hintsUsed} hint${lastResult.hintsUsed === 1 ? '' : 's'} · ${secs}s`
-      : `Not solved — word was ${lastResult.word.toUpperCase()}`);
-    // Nothing to type: the score goes under the profile, or a guest's name.
-    // A TV is signed in as itself, so scores from the TV stay off the board.
-    const who = scoreWho();
-    document.getElementById('initialsHint').textContent = TV
-      ? 'Scores from the TV don\'t go on the board. Play on your own device to get on it.'
-      : who ? `Saving as ${who.name}.` : 'Sign in with ARKS ID to put your score on the board.';
-    saveScoreBtn.classList.toggle('hidden', !who);
-    initialsOverlay.classList.remove('hidden');
-    if (TV) document.getElementById('playAgainBtn').focus();
-  }
-
-  // Who the score goes on the board as: the signed-in profile (the server
-  // checks its token), or the name a guest plays under. Null on a TV, or for
-  // someone with no name at all.
-  function scoreWho() {
-    if (TV || typeof ArcadeProfile === 'undefined') return null;
-    const token = ArcadeProfile.token() || null;
-    const name = ArcadeProfile.name() || '';
-    if (!token && !name) return null;
-    return { profileToken: token, name, avatar: (ArcadeProfile.get() || {}).avatar || undefined };
-  }
-
-  skipScoreBtn.addEventListener('click', () => {
-    initialsOverlay.classList.add('hidden');
-  });
-
-  // Play again on the score card: skip saving and start the next word.
-  document.getElementById('playAgainBtn').addEventListener('click', () => {
-    initialsOverlay.classList.add('hidden');
-    newGame();
-  });
-
-  saveScoreBtn.addEventListener('click', async () => {
-    const who = scoreWho();
-    if (!who) return;
-    try {
-      const { id } = await apiPost('/api/leaderboard', {
-        ...who,
-        themeId: lastResult.themeId,
-        won: lastResult.won,
-        guesses: lastResult.guesses,
-        hintsUsed: lastResult.hintsUsed,
-        word: lastResult.word,
-        elapsedMs: lastResult.elapsedMs,
-        difficulty: lastResult.difficulty
-      });
-      initialsOverlay.classList.add('hidden');
-      await openLeaderboard(lastResult.themeId, id, lastResult.difficulty);
-    } catch (e) {
-      showMessage(e.message, true);
-    }
-  });
 
   // ---- Leaderboard ----
   function populateLeaderboardFilter(selectedId) {

@@ -114,7 +114,7 @@ test('Know-It-All played to the end with the TV remote', async ({ page }) => {
   await press(page, '#startBtn');
   // Each turn: ready, answer, next. Only Enter and the arrows.
   let answered = 0;
-  for (let step = 0; step < 40 && !(await page.locator('#overView').isVisible()); step++) {
+  for (let step = 0; step < 40 && !(await page.locator('.ew-card').isVisible()); step++) {
     if (await page.locator('#readyBtn').isVisible()) {
       await expect(page.locator('#readyTitle')).toHaveText('Player 1\'s turn');
       await press(page, '#readyBtn');
@@ -125,17 +125,18 @@ test('Know-It-All played to the end with the TV remote', async ({ page }) => {
       await expect(page.locator('#qStatus')).toHaveText(/Right|Not quite|Out of time/);
     } else if (await page.locator('#nextBtn').isVisible()) {
       await press(page, '#nextBtn');
-      await expect(page.locator('#readyBtn:visible, #overView:visible')).toHaveCount(1);
+      await expect(page.locator('#readyBtn:visible, .ew-card:visible')).toHaveCount(1);
     } else await page.waitForTimeout(200);
   }
-  await expect(page.locator('#overView')).toBeVisible();
+  // The end window (end-window.js), over the TV's screen.
+  const card = page.locator('.ew-card');
+  await expect(card).toBeVisible();
   expect(answered).toBe(5);
-  await expect(page.locator('#finalList li')).toHaveCount(1);
-  await expect(page.locator('#overTitle')).toContainText('Player 1');
+  await expect(card.locator('.ew-title')).toContainText('Player 1');
   // The scores came from the server, not the page.
-  const score = Number((await page.locator('#finalList li b').textContent()).replace(/,/g, ''));
+  const score = Number((await card.locator('.ew-score').textContent()).replace(/,/g, ''));
   expect(score % 1).toBe(0);
-  await expect(page.locator('#againBtn')).toBeVisible();
+  await expect(card.getByRole('button', { name: '▶ Play again' })).toBeVisible();
   expect(problems, problems.join('\n')).toEqual([]);
 });
 

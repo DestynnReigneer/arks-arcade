@@ -256,7 +256,7 @@
     document.documentElement.classList.toggle('adult-mode', isAdult());
     $('setup').classList.add('hidden');
     $('game').classList.remove('hidden');
-    $('overView').classList.add('hidden');
+    ArcadeEnd.clear();
     if (st.phase === 'over') gameOver();
     else resumeRound();
     toast('Welcome back, your game is right where you left off.', 4000);
@@ -320,7 +320,7 @@
     } catch (e) { toast(e.message); return; }
     $('setup').classList.add('hidden');
     $('game').classList.remove('hidden');
-    $('overView').classList.add('hidden');
+    ArcadeEnd.clear();
     beginRound();
   }
 
@@ -882,7 +882,7 @@
   const overlayOpen = id => !$(id).classList.contains('hidden');
   function clockPaused() {
     return document.hidden || $('game').classList.contains('hidden') || S.busy || help.isOpen ||
-      overlayOpen('roundView') || overlayOpen('overView') || overlayOpen('scoresView') || overlayOpen('totalsView');
+      overlayOpen('roundView') || ArcadeEnd.isOpen || overlayOpen('scoresView') || overlayOpen('totalsView');
   }
 
   const CLOCK_FOR = { letter: 'to call a letter', vowel: 'to pick a vowel', solve: 'to solve' };
@@ -1116,45 +1116,34 @@
 
   // ---- the end -----------------------------------------------------------------------------
 
-  let initials = null;
+  // The end of a game: the shared end window (end-window.js). A solo game saves by itself, under the
+  // profile or the guest's name (on a TV, whoever is picked under "Who played?"); the server saves the
+  // total it worked out, and the page only says who.
   function gameOver() {
     const ranked = S.players.slice().sort((a, b) => b.total - a.total);
-    $('overTitle').textContent = solo() ? `You banked ${money(ranked[0].total)}!` : `${ranked[0].name} wins!`;
-    $('finalList').innerHTML = '';
-    for (const p of ranked) {
-      const li = document.createElement('li');
-      li.innerHTML = '<span></span><span></span>';
-      li.firstChild.textContent = p.name;
-      li.lastChild.textContent = money(p.total);
-      $('finalList').appendChild(li);
-    }
     const canSave = !!S.state.canSave;
     // Nothing left to come back for, unless there's a score still to save.
     if (!canSave) forgetRun();
-    $('overScore').classList.toggle('hidden', !canSave);
-    $('saveScoreBtn').disabled = false;
-    $('scoreMsg').textContent = '';
-    $('overView').classList.remove('hidden');
-    // The score goes under the profile or the guest's name, with nothing to type.
-    if (canSave) ArcadeKit.readySave(initials, $('saveHint'), $('saveScoreBtn'));
-  }
-
-  async function saveScore() {
-    let who;
-    try { who = ArcadeKit.saveFields(initials); } catch (e) { $('scoreMsg').textContent = e.message; return; }
-    $('saveScoreBtn').disabled = true;
-    try {
-      // The server saves the total it worked out; the page only says who (the
-      // profile rides in its header, a guest's name in the body).
-      const r = await api(`/api/spinsolve/run/${S.run}/save`, { name: who.name, avatar: who.avatar }, { ...pinHeaders(), ...profileHeaders() });
-      forgetRun();
-      $('overScore').classList.add('hidden');
-      openScores(r.id);
-      toast(r.rank === 1 ? '🏆 New #1!' : `Saved: #${r.rank}`);
-    } catch (e) {
-      $('scoreMsg').textContent = e.message;
-      $('saveScoreBtn').disabled = false;
-    }
+    const run = S.run;
+    const board = isAdult() ? 'adult' : 'solo';
+    ArcadeEnd.show({
+      title: solo() ? `You banked ${money(ranked[0].total)}!` : `${ranked[0].name} wins!`,
+      score: money(ranked[0].total),
+      detail: solo() ? '' : ranked.map(p => `${p.name} ${money(p.total)}`).join(' · '),
+      save: canSave ? async who => {
+        const headers = { ...pinHeaders(), ...(who.profileToken ? { 'X-Profile-Token': who.profileToken } : {}) };
+        const r = await api(`/api/spinsolve/run/${run}/save`, { name: who.name, avatar: who.avatar, playedBy: who.playedBy }, headers);
+        forgetRun();
+        return { rank: r.rank, id: r.id, where: board === 'adult' ? 'on the Adult board' : 'on the board' };
+      } : null,
+      noSave: solo() ? 'Bank some money to get on the board.' : '',
+      scores: {
+        tabs: [{ id: 'solo', label: '🧒 Kids' }, { id: 'adult', label: '🔞 Adult' }], tab: board,
+        load: async id => ArcadeEnd.boardRows(await api(`/api/scores/spinsolve?board=${id}&limit=20`, undefined, pinHeaders()), n => money(n))
+      },
+      again: startGame,
+      setup: backToSetup
+    });
   }
 
   // On a phone each player's total isn't on their card, so it's here, from the top bar's menu.
@@ -1206,7 +1195,7 @@
     forgetRun();
     S.puzzle = null;
     S.run = null;
-    $('overView').classList.add('hidden');
+    ArcadeEnd.clear();
     $('roundView').classList.add('hidden');
     $('game').classList.add('hidden');
     $('setup').classList.remove('hidden');
@@ -1217,7 +1206,7 @@
   ArcadeBack.setup({
     atMenu: () => !$('setup').classList.contains('hidden'),
     back: backToSetup,
-    busy: () => !$('game').classList.contains('hidden') && $('overView').classList.contains('hidden')
+    busy: () => !$('game').classList.contains('hidden') && !ArcadeEnd.has
   });
 
   // ---- how to play ----------------------------------------------------------------------
@@ -1287,8 +1276,6 @@
   $('solveInput').addEventListener('keydown', e => { if (e.key === 'Enter') trySolve(); });
   $('solveCancel').addEventListener('click', () => { $('solveView').classList.add('hidden'); stopClock(); });
   $('nextRoundBtn').addEventListener('click', nextRound);
-  $('againBtn').addEventListener('click', startGame);
-  $('menuBtn').addEventListener('click', backToSetup);
   $('quitBtn').addEventListener('click', async () => { if (await ArcadeBack.ask('Leave this game?')) backToSetup(); });
   $('setupMenuBtn').addEventListener('click', () => $('quitBtn').click());
   $('totalsBtn').addEventListener('click', openTotals);
@@ -1321,13 +1308,11 @@
       loadConfig();
     });
   }
-  $('saveScoreBtn').addEventListener('click', saveScore);
   $('scoresBtn').addEventListener('click', () => openScores());
   $('scoresClose').addEventListener('click', () => $('scoresView').classList.add('hidden'));
   $('helpBtn').addEventListener('click', () => help.open());
   Blip.muteButton($('muteBtn'));
   Blip.tuneButton($('tuneBtn'));
-  initials = ArcadeKit.wireInitials([...document.querySelectorAll('#overScore .ini')], saveScore);
 
   buildWheel();
   fitWheel();

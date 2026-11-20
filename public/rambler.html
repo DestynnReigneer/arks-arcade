@@ -15,6 +15,7 @@
 <link rel="stylesheet" href="adult-mode.css">
 <link rel="stylesheet" href="look.css">
 <link rel="stylesheet" href="topbar.css">
+<link rel="stylesheet" href="end-window.css">
 <link rel="stylesheet" href="tv.css">
 <!-- On a TV: the TV layout, the remote's arrows, and setting the TV up (tv.js). -->
 <script src="tv-core.js"></script>
@@ -22,6 +23,7 @@
 </head>
 <body>
 <script src="topbar.js"></script>
+<script src="end-window.js"></script>
 
 <header>
   <a href="/" class="icon-btn" title="Back to the arcade">←</a>
@@ -360,10 +362,6 @@
 
 <!-- ============ MARATHON RESULTS ============ -->
 <section id="maraResultsScreen" class="screen hidden vice">
-  <div class="over-top">
-    <button id="maraDoneBtn" class="ghost-btn">Back to setup</button>
-    <button id="maraAgainBtn" class="primary-btn">Run again</button>
-  </div>
   <div class="mara-final">
     <div class="cap">Run over</div>
     <div class="final-score" id="maraFinalScore">0</div>
@@ -383,10 +381,6 @@
 
 <!-- ============ RESULTS ============ -->
 <section id="resultsScreen" class="screen hidden">
-  <div class="over-top">
-    <button id="saveScoreBtn" class="ghost-btn">Put my score on the board</button>
-    <button id="againBtn" class="primary-btn">Play again</button>
-  </div>
   <div class="result-head">
     <div class="t" id="resultTitle">Final score</div>
     <div class="v" id="resultScore">0</div>
@@ -450,16 +444,6 @@
   </div>
 </div>
 
-<div id="initialsOverlay" class="overlay hidden">
-  <div class="overlay-card">
-    <div class="overlay-head">
-      <h2>On the board</h2>
-      <button id="closeInitialsBtn" class="icon-btn">✕</button>
-    </div>
-    <div class="note" id="initialsWho"></div>
-    <div class="msg" id="initialsMsg"></div>
-  </div>
-</div>
 
 <div id="newProfileOverlay" class="overlay hidden">
   <div class="overlay-card">
