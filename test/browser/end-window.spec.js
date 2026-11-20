@@ -264,7 +264,11 @@ test('Dino Dash: High scores inside the window, and a tap or up arrow doesn\'t s
   await card(page).getByRole('button', { name: '▶ Play again' }).click();
   await expectClean(page);
   expect(await page.evaluate(() => document.body.dataset.state)).toBe('running');
-  expect(problems, problems.join('\n')).toEqual([]);
+  // A signed-in player's ARKS ID photo on the same board isn't served to a guest (the board shows their icon
+  // instead), so that answer doesn't count here (the same as no-initials.spec.js).
+  const photo = problems.some(p => /\/api\/arksid\/photo\//.test(p));
+  const real = problems.filter(p => !/\/api\/arksid\/photo\//.test(p) && !(photo && /Failed to load resource.*404/.test(p)));
+  expect(real, real.join('\n')).toEqual([]);
 });
 
 const TOO_SLOW = ['Too slow, you spun right past your number!', 'You missed your number!', 'Hesitate and the lock wins.', 'The dial got away from you.',
