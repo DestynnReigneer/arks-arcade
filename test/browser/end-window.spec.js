@@ -669,14 +669,17 @@ test('Rambler solo: the round\'s results stay on the page under the window', asy
 
 // The card games on one device, played to the end by tapping whatever the turn needs. They have no board,
 // so no score to save and no High scores.
-async function playCards(page, steps, max = 400) {
+// inPage: click each button in the page itself, for games whose cards overlap (a click at a spot can land on
+// the card next to the one meant).
+async function playCards(page, steps, max = 400, inPage = false) {
   for (let i = 0; i < max && !(await card(page).isVisible()); i++) {
     let did = false;
     for (const sel of steps) {
       const b = page.locator(sel).first();
       if (await b.isVisible().catch(() => false) && await b.isEnabled().catch(() => false)) {
         // (force: the deck and the cards wobble, so they're never still enough for a normal click)
-        await b.click({ timeout: 2000, force: true }).catch(() => {});
+        if (inPage) await b.evaluate(el => el.click()).catch(() => {});
+        else await b.click({ timeout: 2000, force: true }).catch(() => {});
         did = true;
         break;
       }
@@ -723,7 +726,7 @@ test('Uh-Oh: Part Deux: a game on one device ends in the window, with no High sc
       await page.evaluate(() => { document.querySelector('#giftCards > *').click(); document.querySelector('#giftTargets button').click(); });
       continue;
     }
-    await playCards(page, steps, 8);
+    await playCards(page, steps, 8, true);
   }
   await checkCard(page, { scores: false });
   await expect(card(page).locator('.ew-title')).toContainText('wins!');
