@@ -104,7 +104,7 @@
       } else if (ev === 'over') {
         state = 'over';
         Blip.noise(0.3, 0.15);
-        shell.over({ score: g.score, board: 'classic', detail: `Reached level ${g.level + 1} (${E.levelName(g.level)}) · ${g.cleared} cleared`, delay: 600 });
+        shell.over({ score: g.score, board: 'classic', detail: `Reached level ${g.level + 1} (${E.levelName(g.level)}) · ${g.cleared} cleared`, lost: 'That ball flew past you!', delay: 600 });
       } else if (ev === 'cleared') {
         state = 'cleared';
         Blip.tune([[523, 0.1], [659, 0.1], [784, 0.1], [1047, 0.25]], { type: 'square', volume: 0.06 });

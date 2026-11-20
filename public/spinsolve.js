@@ -1127,7 +1127,7 @@
     const run = S.run;
     const board = isAdult() ? 'adult' : 'solo';
     ArcadeEnd.show({
-      title: solo() ? `You banked ${money(ranked[0].total)}!` : `${ranked[0].name} wins!`,
+      title: solo() ? (ranked[0].total > 0 ? `You banked ${money(ranked[0].total)}!` : 'No money, Mo problems. Spin again, seriously!') : `${ranked[0].name} wins!`,
       score: money(ranked[0].total),
       detail: solo() ? '' : ranked.map(p => `${p.name} ${money(p.total)}`).join(' · '),
       save: canSave ? async who => {
@@ -1136,7 +1136,7 @@
         forgetRun();
         return { rank: r.rank, id: r.id, where: board === 'adult' ? 'on the Adult board' : 'on the board' };
       } : null,
-      noSave: solo() ? 'Bank some money to get on the board.' : '',
+      noSave: solo() ? 'Guess the... what\'s that say?? Huh.. So yeah, Guess the puzzle and get on the board.' : '',
       scores: {
         tabs: [{ id: 'solo', label: '🧒 Kids' }, { id: 'adult', label: '🔞 Adult' }], tab: board,
         load: async id => ArcadeEnd.boardRows(await api(`/api/scores/spinsolve?board=${id}&limit=20`, undefined, pinHeaders()), n => money(n))

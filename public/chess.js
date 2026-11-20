@@ -667,15 +667,24 @@
     }
   }
 
+  // Why a game was drawn, in plain words (the reasons come from chess-engine.js and the Draw button).
+  const DRAWS = {
+    stalemate: 'It\'s a draw! Nobody can move without "check."',
+    'fifty-move rule': 'It\'s a draw! Fifty moves went by with no capture or pawn move.',
+    'threefold repetition': 'It\'s a draw! The same position came up three times.',
+    'not enough pieces to checkmate': 'It\'s a draw! Neither side has enough pieces left to checkmate.',
+    agreement: 'It\'s a draw! You both agreed to call it.'
+  };
   function resultLine(ended) {
     if (!ended) return '';
     if (ended.winner) {
       const how = ended.reason === 'checkmate' ? 'Checkmate' : ended.reason === 'resignation' ? 'Resigned' : ended.reason;
+      if (S.mode === 'ai' && ended.reason === 'resignation' && ended.winner !== S.me) return 'You resigned. The computer wins, and would have won easily, but continuing would have been entertaining...';
       if (S.mode === 'ai') return ended.winner === S.me ? `${how}! You win 🎉` : `${how}. The computer wins.`;
       if (S.mode === 'room') return ended.winner === S.me ? `${how}! You win 🎉` : `${how}. ${stripTags(seatName(ended.winner))} wins.`;
       return `${how}! ${COLOR_NAME[ended.winner]} wins 🎉`;
     }
-    return `Draw: ${ended.reason}.`;
+    return DRAWS[ended.reason] || `It's a draw! (${ended.reason})`;
   }
   // Back to plain text (names were escaped for HTML in seatName).
   const stripTags = s => { const d = document.createElement('div'); d.innerHTML = s; return d.textContent; };
@@ -751,7 +760,7 @@
     ArcadeEnd.show({
       title: resultLine(e),
       score: points,
-      detail: `${myMoves} moves.` + (e.reason === 'stalemate' ? ' Stalemate: no legal moves, but not in check, so nobody wins.' : ''),
+      detail: `Over in ${myMoves} moves.` + (e.reason === 'stalemate' ? ' Stalemate: no legal moves, but not in check, so nobody wins.' : ''),
       save: scoring ? async who => {
         const r = await ArcadeKit.saveScore('chess', { ...who, score: points, board: level, detail });
         return { rank: r.rank, id: r.id, where: `on vs ${LEVEL_NAME[level] || level}` };

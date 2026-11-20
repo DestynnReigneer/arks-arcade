@@ -338,13 +338,13 @@
     // The shared end window (end-window.js) saves it by itself, under the profile or the guest's name
     // (on a TV, whoever is picked under "Who played?").
     ArcadeEnd.show({
-      title: best && s > 0 ? 'New personal best! 🎉' : 'Game over',
+      title: best && s > 0 ? 'New personal best! 🎉' : 'Fail! Your dino tripped.',
       score: s,
       save: s >= 1 ? async who => {
         const r = await ArcadeKit.saveScore('dino', { ...who, score: s, board: 'run', detail: '' });
         return { rank: r.rank, id: r.id };
       } : null,
-      noSave: 'Run a little farther to get on the board.',
+      noSave: 'Run farther and sprint to the board.',
       scores: ArcadeEnd.sharedBoard('dino', { run: 'Farthest runs' }, 'run'),
       again: reset,
       setup: toReady

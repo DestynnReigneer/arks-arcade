@@ -301,8 +301,6 @@ test('Dino Dash: High scores inside the window, and a tap or up arrow doesn\'t s
   expect(real, real.join('\n')).toEqual([]);
 });
 
-const TOO_SLOW = ['Too slow, you spun right past your number!', 'You missed your number!', 'Hesitate and the lock wins.', 'The dial got away from you.',
-  'Your number came and went.', 'Blink and you miss it. You blinked.', 'Still thinking? The lock didn\'t wait.', 'Forgot the combo halfway through?'];
 
 test('Tumbler Rumble: a lock\'s words, the plain line for no pops, and today\'s board inside the window', async ({ page }) => {
   test.setTimeout(60000);
@@ -314,7 +312,7 @@ test('Tumbler Rumble: a lock\'s words, the plain line for no pops, and today\'s 
     await expect.poll(() => page.evaluate(() => !!window.TumblerTest), { timeout: 1500 }).toBe(true);
   }).toPass({ timeout: 10000 });
   await expect(card(page)).toBeVisible({ timeout: 20000 });
-  expect(TOO_SLOW).toContain((await card(page).locator('.ew-title').textContent()).trim());
+  await expect(card(page).locator('.ew-title')).toHaveText('Locked out before you even started!');
   await expect(card(page).locator('.ew-saved')).toHaveText('Pop one lock to get on the board.');
   await expect(page.locator('body')).not.toContainText(/\bpins?\b/i);
   // Play again (Enter, once the card has been up a moment), then pop one lock and let the next one slip:
@@ -544,7 +542,7 @@ test('Chess: resigning ends in the window, and the result line under the board b
   await page.locator('#resignBtn').click();
   await page.locator('.ab-confirm [data-leave]').click();
   await expect(card(page)).toBeVisible({ timeout: 10000 });
-  await expect(card(page).locator('.ew-title')).toHaveText('Resigned. The computer wins.');
+  await expect(card(page).locator('.ew-title')).toHaveText('You resigned. The computer wins, and would have won easily, but continuing would have been entertaining...');
   // A loss has nothing to save, and says nothing about it.
   await expect(card(page).locator('.ew-saved')).toHaveCount(0);
   await checkCard(page, { saved: null });
@@ -587,7 +585,7 @@ test('Know-It-All solo: a right answer saves by itself, and a game of none says 
   };
   await play(false);
   await expect(card(page)).toBeVisible({ timeout: 20000 });
-  await expect(card(page).locator('.ew-saved')).toHaveText('Get one right to get on the board.');
+  await expect(card(page).locator('.ew-saved')).toHaveText('Show some brain power and get on the board.');
   await expect(page.locator('.big-emoji:visible')).toHaveCount(0);
   await card(page).getByRole('button', { name: '⚙️ Back to setup' }).click();
   await expectClean(page);
@@ -644,7 +642,7 @@ test('Wordless: a loss has nothing to save and no SCORE heading, and Play again 
   }
   await expect(card(page)).toBeVisible({ timeout: 15000 });
   await expect(page.getByText('SCORE', { exact: true })).toHaveCount(0);
-  await checkCard(page, { plain: 'Solve the word to get on the board.' });
+  await checkCard(page, { plain: 'Solve the word, like the wheel of... anyways, get on the board.' });
   await page.keyboard.press('Enter');
   await expectClean(page);
   await expect(page.locator('#board .tile.filled')).toHaveCount(0);

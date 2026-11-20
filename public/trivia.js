@@ -362,7 +362,7 @@
     const g = S.game;
     const standings = g.players.slice().sort((a, b) => b.score - a.score);
     for (const c of TriviaRules.afterGame(standings, { ...g.settings, drinks: g.drinks, dares: g.dares })) await showCallout(c);
-    showFinal(standings, g.players.length === 1 ? `You scored ${standings[0].score.toLocaleString('en-US')}!` : `${standings[0].name} knows it all! 🏆`, g.players.length === 1 && standings[0].score > 0);
+    showFinal(standings, g.players.length === 1 ? (standings[0].score > 0 ? `You scored ${standings[0].score.toLocaleString('en-US')}!` : 'Zero this time, Questions won this round, you didn\'t know?') : `${standings[0].name} knows it all! 🏆`, g.players.length === 1 && standings[0].score > 0);
   }
 
   // ---- rooms ------------------------------------------------------------------------------
@@ -705,12 +705,12 @@
     ArcadeEnd.show({
       title,
       score: top ? score : null,
-      detail: solo ? detail : standings.map(p => `${p.name} ${p.score.toLocaleString('en-US')}`).join(' · '),
+      detail: solo && g ? `${g.questions.length} questions on ${levelInfo(S.level).label} level${g.settings.difficulty !== 'mixed' ? ', ' + g.settings.difficulty : ''}` : solo ? detail : standings.map(p => `${p.name} ${p.score.toLocaleString('en-US')}`).join(' · '),
       save: canSave ? async who => {
         const r = await ArcadeKit.saveScore('trivia', { ...who, score, board, detail });
         return { rank: r.rank, id: r.id, where: board === 'adult' ? 'on the Adult board' : 'on the board' };
       } : null,
-      noSave: solo ? 'Get one right to get on the board.' : '',
+      noSave: solo ? 'Show some brain power and get on the board.' : '',
       scores: ArcadeEnd.sharedBoard('trivia', { solo: 'Family', adult: 'Adult' }, board),
       // In a room only the host starts the next game.
       again: isHost ? () => {
