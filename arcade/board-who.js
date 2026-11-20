@@ -7,8 +7,11 @@
 //     the profile's name (or the initials it chose in its settings) and avatar.
 //   - A guest: the name they're playing under (ArcadeProfile.name() on the
 //     page), with their avatar if it's one of the arcade's own.
-//   - A TV: the initials picked with the remote. The TV is signed in as itself,
-//     so its scores don't go under the TV's name. Nobody else types initials.
+//   - A TV: the person picked on the end card's "Who played?" (playedBy, a
+//     profile id). The TV is signed in as itself, so its scores don't go under
+//     the TV's name. Only a TV's own token can name someone else, and only an
+//     approved profile that isn't a TV. Nobody types initials. (Initials sent by
+//     a page loaded before the picker still work.)
 //
 // With none of those the score can't go on a board, and the player is told to
 // sign in. The `initials` column every board keeps is still filled in (from the
@@ -35,12 +38,44 @@ function fail(message, status) {
   return Object.assign(new Error(message), { status });
 }
 
+// Does this profile belong to a TV's own account (ARKS ID contract v14)?
+// The accounts table is only there with ARKS ID on; without it there are no TVs.
+function isTv(profileId) {
+  const db = require('../db');
+  try {
+    const r = db.db.prepare(`SELECT a.kind FROM arcade_profiles p JOIN arcade_id_accounts a ON a.user_id = p.arksid_user
+      WHERE p.id = ? AND p.status = 'approved'`).get(String(profileId || ''));
+    return !!r && r.kind === 'tv';
+  } catch { return false; }
+}
+
+// The people a TV can save a score under: every approved profile that isn't a TV.
+function tvPlayers() {
+  const db = require('../db');
+  const { pub } = require('./profiles');
+  return db.db.prepare("SELECT * FROM arcade_profiles WHERE status = 'approved' ORDER BY name COLLATE NOCASE").all()
+    .filter(r => !isTv(r.id)).map(r => { const p = pub(r); return { id: p.id, name: p.name, avatar: p.avatar }; });
+}
+
+// A TV saving a score under the person who played (the end card's "Who played?").
+// by: the profile the request is signed in as, which has to be a TV's.
+function playedOn(by, playedBy) {
+  if (!by || !isTv(by.id)) throw fail('Only a TV can put a score under someone else.', 403);
+  const db = require('../db');
+  const { pub } = require('./profiles');
+  const r = db.db.prepare("SELECT * FROM arcade_profiles WHERE id = ? AND status = 'approved'").get(String(playedBy).slice(0, 40));
+  if (!r || isTv(r.id)) throw fail('That person isn\'t on this arcade.', 400);
+  return pub(r);
+}
+
 // -> { profile, initials, name, avatar, key }
-//   profile: the verified profile, or null for a guest or a TV
+//   profile: the verified profile (on a TV, the person picked), or null for a guest
 //   name/avatar: what the board shows (null for a TV's initials)
 //   key: one person's key, for boards that keep one score per person per day
-function boardWho({ profileToken, profile = undefined, name, avatar, initials } = {}) {
-  const me = profile !== undefined ? profile : profileToken ? require('./profiles').verify(profileToken) : null;
+// playedBy: on a TV, the profile id of who played (see playedOn).
+function boardWho({ profileToken, profile = undefined, name, avatar, initials, playedBy } = {}) {
+  let me = profile !== undefined ? profile : profileToken ? require('./profiles').verify(profileToken) : null;
+  if (playedBy !== undefined && playedBy !== null && playedBy !== '') me = playedOn(me, playedBy);
   if (me) {
     return { profile: me, initials: me.initials || initialsOf(me.name), name: me.name, avatar: me.avatar || null, key: `p:${me.id}` };
   }
@@ -60,4 +95,4 @@ function boardWho({ profileToken, profile = undefined, name, avatar, initials } 
   throw fail(NO_NAME, 400);
 }
 
-module.exports = { boardWho, initialsOf, cleanName, NO_NAME };
+module.exports = { boardWho, initialsOf, cleanName, NO_NAME, isTv, tvPlayers };

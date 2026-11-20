@@ -33,7 +33,7 @@ const PENALTY = { checkSquare: 5000, checkWord: 10000, checkPuzzle: 20000, revea
 const MIN_MS_PER_SQUARE = process.env.NODE_ENV === 'test' && process.env.CLUELESS_MIN_MS_PER_SQUARE
   ? Number(process.env.CLUELESS_MIN_MS_PER_SQUARE) : 300;
 const KEEP_RUNS_MS = 3 * 24 * 60 * 60 * 1000;
-const { boardWho } = require('../arcade/board-who');
+const { boardWho, isTv } = require('../arcade/board-who');
 const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 db.db.exec(`
@@ -343,7 +343,7 @@ function clock(ms) {
   return h ? `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}` : `${m}:${String(sec).padStart(2, '0')}`;
 }
 
-function save(id, { initials, name, avatar, profileToken }) {
+function save(id, { initials, name, avatar, profileToken, playedBy }) {
   const run = needRun(id);
   if (!run.finished_at) throw fail('Finish the puzzle first.', 409);
   if (run.puzzle_key) throw fail('Free play crosswords don\'t go on the board, because everyone gets a different one. Today\'s puzzle is the one to race on.', 409);
@@ -353,9 +353,12 @@ function save(id, { initials, name, avatar, profileToken }) {
   // profile, and a guest's run only under the guest's name. Otherwise a profile could
   // play as a guest with a fresh clock and save it as themselves.
   let profile = profileToken ? profiles().verify(profileToken) : null;
-  if (profile && run.profile_id && profile.id !== run.profile_id) throw fail('This puzzle belongs to a different profile.', 403);
-  if (profile && !run.profile_id) throw fail('This puzzle was played as a guest, so it goes on the board under the guest\'s name.', 403);
-  const as = boardWho({ profile, name, avatar, initials });
+  // A TV names who played (arcade/board-who.js checks it's a TV): its run was started as a guest or as the TV.
+  const onTv = !!playedBy && !!profile && isTv(profile.id);
+  if (onTv && run.profile_id && profile.id !== run.profile_id) throw fail('This puzzle belongs to a different profile.', 403);
+  if (!onTv && profile && run.profile_id && profile.id !== run.profile_id) throw fail('This puzzle belongs to a different profile.', 403);
+  if (!onTv && profile && !run.profile_id) throw fail('This puzzle was played as a guest, so it goes on the board under the guest\'s name.', 403);
+  const as = boardWho({ profile, name, avatar, initials, playedBy });
   const ini = as.initials;
   const who = as.key;
   const label = maker.LEVELS[run.level].label;

@@ -18,7 +18,7 @@
     onSetup: () => shell.hideOver(),
     onOver: g => {
       const f = g.final();
-      setTimeout(() => shell.over({ score: f.score, board: f.board, detail: f.detail, title: `Out of balls on level ${g.level || 1}` }), 1600);
+      shell.over({ score: f.score, board: f.board, detail: f.detail, title: `Out of balls on level ${g.level || 1}`, delay: 1600 });
     }
   });
 

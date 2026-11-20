@@ -25,7 +25,7 @@
     onOver: g => {
       const f = g.final();
       // a race that ran out of time shows no score and isn't saved
-      setTimeout(() => shell.over({ score: f.score, board: f.board, detail: f.detail, title: f.score ? 'Finished!' : `Time's up on lap ${Math.min(3, (g.lap || 0) + 1)}` }), 1600);
+      shell.over({ score: f.score, board: f.board, detail: f.detail, title: f.score ? 'Finished!' : `Time's up on lap ${Math.min(3, (g.lap || 0) + 1)}`, delay: 1600 });
     }
   });
 

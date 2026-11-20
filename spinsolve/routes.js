@@ -194,8 +194,9 @@ module.exports = function spinRoutes({ requireAdmin, notify }) {
       const label = (P.LEVELS[g.level] || P.LEVELS.kids).label;
       const out = scores.save('spinsolve', {
         name: (req.body || {}).name, avatar: (req.body || {}).avatar, initials: (req.body || {}).initials, score: g.players[0].total, board: g.adult ? 'adult' : 'solo',
+        playedBy: (req.body || {}).playedBy,
         detail: `${g.rounds} rounds · ${label}${g.packLabel ? ` · ${g.packLabel}` : ''}`,
-        profileToken: g.profileId ? token : null, fromServer: true
+        profileToken: g.profileId || (req.body || {}).playedBy ? token : null, fromServer: true
       });
       g.saved = true;
       game.drop(g.id);

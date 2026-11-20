@@ -134,9 +134,9 @@ test('after the last wave the game carries on to the next level with the score',
   await page.locator('#waveBtn').click();
   await expect(page.locator('#options')).toBeHidden();
   await page.evaluate(() => window.TowersTest.win());
-  const panel = page.locator('.over-panel');
+  const panel = page.locator('.ew-card');
   await expect(panel).toBeVisible({ timeout: 10000 });
-  await expect(panel.locator('.over-title')).toContainText('Victory');
+  await expect(panel.locator('.ew-title')).toContainText('Victory');
   const next = panel.getByRole('button', { name: 'Next level: Medium' });
   await expect(next).toBeVisible();
   const won = await state(page);
@@ -163,28 +163,27 @@ test('after the last wave the game carries on to the next level with the score',
   await page.evaluate(() => window.TowersTest.win());
   await expect(panel.getByRole('button', { name: 'Next level: Hard' })).toBeVisible({ timeout: 10000 });
   // The lives left are this map's, and the card says which map.
-  await expect(panel.locator('.over-detail')).toContainText('on Meadow and Canyon, with 20 lives left on Canyon.');
-  await expect(panel.locator('.save-hint')).toContainText('Saved on the All levels board at #');
-  await expect(panel.locator('.save-btn')).toBeHidden();
+  await expect(panel.locator('.ew-detail')).toContainText('on Meadow and Canyon, with 20 lives left on Canyon.');
+  await expect(panel.locator('.ew-saved')).toContainText('on the All levels board');
   await panel.getByRole('button', { name: 'Next level: Hard' }).click();
   expect((await state(page)).map).toBe('castle');
   await page.locator('#waveBtn').click();
   await page.evaluate(() => window.TowersTest.win());
   await expect(panel).toBeVisible({ timeout: 10000 });
-  await expect(panel.locator('.over-detail')).toHaveText('All 25 waves on Meadow, Canyon and Castle. You beat every level in one game!');
-  await expect(panel.locator('.next-btn')).toBeHidden();
-  await expect(panel.locator('.save-hint')).toContainText('Saved on the All levels board at #');
+  await expect(panel.locator('.ew-detail')).toHaveText('All 25 waves on Meadow, Canyon and Castle. You beat every level in one game!');
+  await expect(panel.getByRole('button', { name: /Next level/ })).toHaveCount(0);
+  await expect(panel.locator('.ew-saved')).toContainText(/Saved as .* · #\d+ on the All levels board/);
   const final = await state(page);
   // Still one row for the whole game, raised to the final score; no map's board has it.
   expect((await onAll()).map(r => [r.score, r.detail])).toEqual([[final.score, 'Meadow, Canyon and Castle']]);
   const castle = await (await page.request.get('/api/scores/towers?board=castle&limit=100')).json();
   expect(castle.some(r => r.score === final.score)).toBe(false);
-  // The high scores have the All levels board.
-  await panel.locator('.scores-btn').click();
-  await expect(page.locator('.board-tabs button', { hasText: 'All levels' })).toHaveAttribute('aria-pressed', 'true');
-  await page.locator('.overlay:not(.hidden) .close-btn').evaluate(b => b.click());
+  // The high scores, inside the end window, open on the All levels board.
+  await panel.getByRole('button', { name: '🏆 High scores' }).click();
+  await expect(panel.locator('.ew-tabs button', { hasText: 'All levels' })).toHaveAttribute('aria-pressed', 'true');
+  await panel.getByRole('button', { name: '‹ Back to my score' }).click();
   // Play again starts over from the map the game began on.
-  await panel.locator('.again-btn').click();
+  await panel.getByRole('button', { name: '▶ Play again' }).click();
   const again = await state(page);
   expect([again.map, again.score, again.run]).toEqual(['meadow', 0, null]);
   await expect(page.locator('#options')).toBeVisible();
@@ -199,10 +198,10 @@ test('the map and level pickers hide while you play and come back at the end', a
   await expect(page.locator('#options')).toBeHidden();
   await expect(page.locator('#canvas')).toBeVisible();
   await page.evaluate(() => window.TowersTest.win());
-  await expect(page.locator('.over-panel')).toBeVisible({ timeout: 10000 });
+  await expect(page.locator('.ew-card')).toBeVisible({ timeout: 10000 });
   await expect(page.locator('#options')).not.toHaveClass(/hidden/);
   // Play again starts the same map from its setup.
-  await page.locator('.over-panel .again-btn').click();
+  await page.locator('.ew-card').getByRole('button', { name: '▶ Play again' }).click();
   await expect(page.locator('#options')).toBeVisible();
   expect((await state(page)).score).toBe(0);
   expect(problems, problems.join('\n')).toEqual([]);

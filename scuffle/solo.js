@@ -301,14 +301,14 @@ function stop(id, now = Date.now()) {
 // ---- the daily board ----------------------------------------------------------------
 
 
-function save(id, { initials, name, avatar, profileToken }) {
+function save(id, { initials, name, avatar, profileToken, playedBy }) {
   const g = need(id);
   settle(g);
   if (g.mode !== 'daily') throw fail('Only the daily set goes on the board.', 400);
   if (!g.finished) throw fail('Finish every round first.', 409);
   if (g.saved) throw fail('This score is already on the board.', 409);
-  // Signed in, the profile; a guest, their name; a TV, the initials picked with the remote.
-  const as = boardWho({ profileToken, name, avatar, initials });
+  // Signed in, the profile; a guest, their name; a TV, the person picked on its end card.
+  const as = boardWho({ profileToken, name, avatar, initials, playedBy });
   const { profile } = as;
   const ini = as.initials;
   const who = as.key;

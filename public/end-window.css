@@ -1,0 +1,102 @@
+/* The end of a game (public/end-window.js): one card, the same in every game. It keeps
+   its own colors (the top bar's), so it looks the same on every page, Wordless and
+   Rambler included. The dim starts under the top bar (--ew-top), so Back, 🏆 and ☰
+   still work, and it ends where the screen really ends (--app-h, topbar.js), so a
+   browser bar covering the bottom of the page never hides a button. */
+.ew-layer {
+  --ew-bg: #22103f; --ew-bg-2: #2c1350; --ew-text: #f5eaff; --ew-muted: #c9a8dd; --ew-pink: #ff2ec4; --ew-teal: #00ffc2;
+  --ew-gold: #ffd23f; --ew-line: rgba(245, 234, 255, 0.16);
+  position: fixed; left: 0; right: 0; top: var(--ew-top, 0px); z-index: 58;
+  height: calc(var(--app-h, 100dvh) - var(--ew-top, 0px));
+  display: flex; align-items: center; justify-content: center; box-sizing: border-box;
+  padding: 12px max(16px, env(safe-area-inset-right, 0px)) 12px max(16px, env(safe-area-inset-left, 0px));
+  background: rgba(5, 4, 10, 0.62);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: var(--ew-text);
+}
+.ew-layer[hidden], .ew-tvhint[hidden] { display: none !important; }
+.ew-card {
+  position: relative; box-sizing: border-box; width: 100%; max-width: 420px; max-height: 100%; overflow-y: auto;
+  scrollbar-width: none; padding: 16px; border-radius: 18px; text-align: center;
+  background: linear-gradient(160deg, var(--ew-bg-2), var(--ew-bg)); border: 2px solid color-mix(in srgb, var(--ew-pink) 70%, transparent);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), 0 0 30px rgba(255, 46, 196, 0.25);
+  animation: ew-in 0.22s ease-out;
+}
+.ew-card::-webkit-scrollbar { display: none; }
+@keyframes ew-in { from { opacity: 0; transform: translateY(10px) scale(0.97); } }
+@media (prefers-reduced-motion: reduce) { .ew-card { animation: none; } }
+
+.ew-card button { font: inherit; cursor: pointer; margin: 0; }
+.ew-x {
+  position: absolute; top: 10px; right: 10px; width: 36px; height: 36px; padding: 0; border-radius: 10px;
+  border: 1px solid var(--ew-line); background: rgba(0, 0, 0, 0.22); color: var(--ew-text); font-size: 15px; line-height: 1;
+}
+.ew-title { font-weight: 800; font-size: 17px; line-height: 1.3; margin: 4px 40px 2px; overflow-wrap: anywhere; }
+.ew-score { font-weight: 900; font-size: 46px; line-height: 1.1; color: var(--ew-teal); font-variant-numeric: tabular-nums; }
+.ew-detail { font-size: 14px; color: var(--ew-muted); margin: 2px 0; line-height: 1.4; }
+.ew-saved {
+  display: inline-flex; align-items: center; gap: 6px; max-width: 100%; box-sizing: border-box; margin: 8px 0 4px;
+  padding: 4px 12px; border-radius: 999px; background: rgba(0, 0, 0, 0.25); color: var(--ew-teal); font-size: 13px; font-weight: 700;
+}
+.ew-saved span:last-child { overflow-wrap: anywhere; }
+.ew-saved.ew-wait { color: var(--ew-muted); }
+.ew-saved.ew-plain { display: block; border-radius: 12px; color: var(--ew-muted); font-weight: 600; line-height: 1.4; }
+.ew-av { display: inline-block; flex: 0 0 auto; border-radius: 50%; background: var(--ew-muted); }
+.ew-guest { display: inline-flex; align-items: center; justify-content: center; background: var(--ew-bg); font-size: 26px; }
+
+.ew-right { margin-top: 10px; }
+.ew-btn {
+  display: block; width: 100%; box-sizing: border-box; padding: 11px 10px; margin-top: 8px !important; border-radius: 12px;
+  border: 1px solid var(--ew-line); background: rgba(0, 0, 0, 0.25); color: var(--ew-text); font-weight: 800; font-size: 15px;
+}
+.ew-btn.ew-play { background: var(--ew-teal); color: #14082b; border-color: transparent; font-size: 16px; }
+.ew-btn.ew-extra { border-color: var(--ew-gold); color: var(--ew-gold); }
+.ew-row { display: flex; gap: 8px; }
+.ew-row .ew-btn { flex: 1; font-size: 14px; font-weight: 700; }
+.ew-card button:focus-visible, html.tv .ew-card button:focus { outline: 3px solid var(--ew-gold); outline-offset: 2px; }
+
+/* High scores, inside the card */
+.ew-back { display: block; background: none; border: 0; color: var(--ew-muted); font-size: 14px; padding: 4px 0; margin: 0 44px 4px 0 !important; text-align: left; }
+.ew-hs-title { margin: 0 40px 2px; }
+.ew-tabs { display: flex; gap: 6px; margin-top: 8px; }
+.ew-tabs button { flex: 1; padding: 6px; border-radius: 10px; border: 1px solid var(--ew-line); background: none; color: var(--ew-text); font-size: 13px; font-weight: 700; }
+.ew-tabs button.on { border-color: var(--ew-teal); color: var(--ew-teal); }
+.ew-list { list-style: none; margin: 8px 0 0; padding: 0; text-align: left; }
+.ew-list li { display: flex; align-items: center; gap: 8px; padding: 7px 6px; border-bottom: 1px solid var(--ew-line); font-size: 14px; }
+.ew-list li b { width: 30px; flex: 0 0 auto; color: var(--ew-teal); }
+.ew-list li.me { background: rgba(0, 255, 194, 0.14); border-radius: 8px; }
+.ew-list .ew-n { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 40%; }
+.ew-list .ew-d { flex: 1; min-width: 0; color: var(--ew-muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ew-list .ew-p { font-weight: 800; color: var(--ew-teal); font-variant-numeric: tabular-nums; }
+.ew-list .ew-empty { justify-content: center; color: var(--ew-muted); }
+
+/* The TV's "Who played?" */
+.ew-who { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 6px 0 2px; }
+.ew-person {
+  display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 8px; min-width: 64px;
+  border-radius: 12px; border: 2px solid transparent; background: none; color: var(--ew-text); font-size: 13px; font-weight: 700;
+}
+.ew-person:focus { border-color: var(--ew-gold); background: rgba(255, 210, 63, 0.14); outline: none !important; }
+.ew-small { font-size: 12px; color: var(--ew-muted); }
+.ew-tvhint {
+  position: fixed; left: 50%; bottom: 40px; transform: translateX(-50%); z-index: 58; padding: 8px 18px; border-radius: 10px;
+  background: rgba(0, 0, 0, 0.7); color: #f5eaff; font: 700 18px/1.3 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+html.tv .ew-card { max-width: 520px; }
+
+/* A phone turned sideways: the score on the left, the buttons on the right, no scrolling. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .ew-card:not(.ew-scores-view) { max-width: 640px; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: center; padding: 12px 14px; }
+  .ew-card:not(.ew-scores-view) .ew-right { margin-top: 0; padding-top: 30px; }
+  .ew-card:not(.ew-scores-view) .ew-row { flex-direction: column; gap: 0; }
+  .ew-card:not(.ew-scores-view) .ew-score { font-size: 38px; }
+  .ew-card:not(.ew-scores-view) .ew-title { margin: 2px 0 2px; }
+  .ew-btn { padding: 9px 10px; }
+}
+
+/* ☰ has something in it: the last game's results. */
+.ah-waffle.ew-dot { position: relative; }
+.ah-waffle.ew-dot::after {
+  content: ""; position: absolute; top: 0; right: 0; width: 9px; height: 9px; border-radius: 50%;
+  background: #00ffc2; box-shadow: 0 0 0 2px #1e0e39;
+}
+.ah-menu .ah-first { color: #00ffc2; }

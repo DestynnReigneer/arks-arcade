@@ -154,6 +154,40 @@ async function run({ base, fake }) {
     await tv.post('/api/tv/lock');
   }
 
+  console.log('\n-- "Who played?": a TV saves a score under the person picked --');
+  {
+    const tvMe = (await tv.call('/api/arksid/me')).data;
+    const kidMe = (await kidPhone.call('/api/arksid/me')).data;
+    const players = await tv.call('/api/tv/players');
+    const list = (players.data && players.data.players) || [];
+    ok('the TV gets the family\'s approved profiles to pick from', players.status === 200 && list.some(p => p.name === 'Milo'), JSON.stringify(players.data));
+    ok('…with no TV among them', !list.some(p => p.id === tvMe.profile.id) && !list.some(p => /TV$/.test(p.name)));
+    ok('a person\'s device doesn\'t get the list', (await kidPhone.call('/api/tv/players')).status === 403);
+    ok('nor does a device that isn\'t signed in', (await browser().call('/api/tv/players')).status === 403);
+    const milo = list.find(p => p.name === 'Milo');
+    const saved = await tv.post('/api/scores/snake', { score: 37, board: 'classic', detail: 'tv', profileToken: tvMe.token, playedBy: milo.id });
+    const board = (await tv.call('/api/scores/snake?board=classic&limit=100')).data;
+    ok('the TV saves a score under the person it names', saved.status === 201 && board.some(r => r.id === saved.data.id && (r.profileName === 'MIL' || r.profileName === 'Milo')), JSON.stringify(saved.data));
+    const asKid = await kidPhone.post('/api/scores/snake', { score: 38, board: 'classic', profileToken: kidMe.token, playedBy: tvMe.profile.id });
+    ok('a person\'s device can\'t save a score under someone else', asKid.status === 403, JSON.stringify(asKid.data));
+    const noToken = await browser().post('/api/scores/snake', { score: 39, board: 'classic', name: 'Sneaky', playedBy: milo.id });
+    ok('…and neither can a guest', noToken.status === 403);
+    const asTv = await tv.post('/api/scores/snake', { score: 40, board: 'classic', profileToken: tvMe.token, playedBy: tvMe.profile.id });
+    ok('a TV can\'t name a TV', asTv.status === 400);
+    // A profile that isn't approved (written straight into the test database).
+    const { DatabaseSync } = require('node:sqlite');
+    const file = require('node:path').join(__dirname, '..', 'data', 'test-arksid.db');
+    const raw = new DatabaseSync(file);
+    raw.prepare("INSERT OR REPLACE INTO arcade_profiles (id, name, avatar, status) VALUES ('pend0000000000ab', 'Pending Pat', 'cat', 'pending')").run();
+    const pending = await tv.post('/api/scores/snake', { score: 41, board: 'classic', profileToken: tvMe.token, playedBy: 'pend0000000000ab' });
+    ok('a TV can\'t name a profile that isn\'t approved', pending.status === 400, JSON.stringify(pending.data));
+    ok('…or one that isn\'t there', (await tv.post('/api/scores/snake', { score: 42, board: 'classic', profileToken: tvMe.token, playedBy: 'nobody' })).status === 400);
+    ok('…and the waiting profile isn\'t on the TV\'s list', !((await tv.call('/api/tv/players')).data.players || []).some(p => p.id === 'pend0000000000ab'));
+    raw.prepare("DELETE FROM arcade_profiles WHERE id = 'pend0000000000ab'").run();
+    raw.close();
+    ok('the server still decides the score: a score past the board\'s limit is refused', (await tv.post('/api/scores/snake', { score: 99999999, board: 'classic', profileToken: tvMe.token, playedBy: milo.id })).status === 400);
+  }
+
   console.log('\n-- only TVs --');
   ok('a person\'s phone can\'t ask for adults\' night', (await kidPhone.post('/api/tv/unlock')).status === 403);
   ok('Back to family from a person\'s phone does nothing', (await kidPhone.post('/api/tv/lock')).data.adultMode === null);

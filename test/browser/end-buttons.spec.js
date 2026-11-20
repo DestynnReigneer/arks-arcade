@@ -1,9 +1,7 @@
 'use strict';
 
-// When a game ends, its panel pops up over the page (topbar.js, ArcadeEnd)
-// with Play again (and Back to setup, where a game has one) on the screen,
-// and the board doesn't move. Look at the game puts the panel away and the
-// Results button brings it back. On a phone (390 by 844) and on a laptop.
+// Chess's results, with Back to setup and Play again on the screen. The games on
+// the shared end window (end-window.js) are checked in end-window.spec.js.
 
 const { test, expect } = require('@playwright/test');
 const { quietFonts, watchProblems, openPage } = require('./helpers');
@@ -51,37 +49,6 @@ async function expectOnTop(page, { panel, board, buttons, boardWas }) {
     await expect(page.locator(panel)).toBeVisible();
   }
 }
-
-test('Snake: Play again pops up over the board when a run ends', async ({ page }) => {
-  const problems = await openGame(page, '/snake.html');
-  await startWith(page, 'ArrowUp', 'playing');
-  const boardWas = await boardTop(page, '#stage');
-  await expect(page.locator('.over-panel')).toBeVisible({ timeout: 20000 });
-  await expectOnTop(page, { panel: '.over-panel', board: '#stage', buttons: ['.over-panel .again-btn'], boardWas });
-  expect(problems, problems.join('\n')).toEqual([]);
-});
-
-test('Dino Dash: Run again pops up over the desert when a run ends', async ({ page }) => {
-  const problems = await openGame(page, '/dino.html');
-  const boardWas = await boardTop(page, '.dino-stage');
-  await startWith(page, 'Space', 'running');
-  await expect(page.locator('#overPanel')).toBeVisible({ timeout: 30000 });
-  await expectOnTop(page, { panel: '#overPanel', board: '.dino-stage', buttons: ['#againBtn'], boardWas });
-  expect(problems, problems.join('\n')).toEqual([]);
-});
-
-test('Tumbler Rumble: Play again pops up over the lock when a run ends', async ({ page }) => {
-  const problems = await openGame(page, '/tumbler.html');
-  const boardWas = await boardTop(page, '#zone');
-  await expect(async () => {
-    await page.locator('#stage').click();
-    await expect.poll(() => page.evaluate(() => document.body.dataset.state), { timeout: 1500 }).toBe('playing');
-  }).toPass({ timeout: 10000 });
-  // Nobody taps, so the marker slips past the first pin and the run ends.
-  await expect(page.locator('#over')).toBeVisible({ timeout: 20000 });
-  await expectOnTop(page, { panel: '#over', board: '#zone', buttons: ['#againBtn'], boardWas });
-  expect(problems, problems.join('\n')).toEqual([]);
-});
 
 test('Chess: Back to setup and Play again are at the top of the results', async ({ page }) => {
   const problems = await openGame(page, '/chess.html');

@@ -1,11 +1,64 @@
 # Status and to-dos
 
-Last updated 2026-11-14. Update this file whenever a piece of work lands or
+Last updated 2026-11-19. Update this file whenever a piece of work lands or
 a plan changes, so the next session can pick up from here. When the
 maintainer says "I'm back", start from "Last session" below, then show the
 to-do list as checkboxes (the rule is in the maintainer's global CLAUDE.md
 and `arks-internal/conventions/sessions.md`): do the checked items in the
 order they were clicked, and keep the rest pinned here.
+
+## One end window for every game (2026-11-19)
+
+The maintainer approved a playable preview of a new end of game, the same in every game. It replaces the pop-up
+from 2026-11-08 (ArcadeEnd lifting each game's own panel, with Look at the game and a 🏁 Results button), and every
+game's own end screen.
+
+- **`public/end-window.js` and `end-window.css`**, loaded right after `topbar.js` on every game page. A game calls
+  `ArcadeEnd.show({ title, score, detail, save, saved, noSave, scores, again, setup, extra, delay })` when a run ends,
+  and `ArcadeEnd.clear()` when a new game starts or it goes back to setup. The comment at the top of the file says
+  what each part is.
+- **The card:** the game's own end line, the big score, one detail line, and the save line ("Saved as Kim · #3 for
+  today", with the avatar), over a dim layer that starts under the top bar, so Back, 🏆 and ☰ keep working. The dim
+  ends at `--app-h`, so Chrome's tab row on a phone never covers a button. About 420px wide on a laptop; on a phone
+  turned sideways the score is on the left and the buttons on the right, with nothing to scroll.
+- **The score saves by itself, always.** No Save button and no initials anywhere. The window asks the game's
+  `save(who)` with the profile's token, or the guest's name (`ArcadeEnd.boardWho()`), the moment it opens. Nothing
+  to save (a score of 0) gets a plain line instead, such as "Pop one lock to get on the board."
+- **The buttons, the same everywhere:** ▶ Play again, 🏆 High scores and ⚙️ Back to setup, plus at most one extra a
+  game adds (Tower Defense's Next level). A game with no Play again (Sudoku's and Clueless Crosswords' daily puzzles)
+  has its extra button first. **High scores open inside the card**, with Today and Overall tabs where a game has
+  both, and ‹ Back to my score.
+- **✕ Close** puts the card away and nothing floats over the game. The top bar's ☰ gets a small dot and a first item,
+  **🏁 Last game's results**, which brings the same card back. It goes when a new game starts or on Back to setup.
+  Opening ☰ (or How to play) while the card is up puts the card away first.
+- **The game behind is frozen:** while the card is up, no key or tap reaches it (keys are caught on `window` before
+  any game's own handlers, taps by the dim). Enter is Play again unless another button has the focus, and a key held
+  from playing (or pressed the moment a game opened the card) does nothing. Escape closes one layer: the scores, then
+  the card. `delay` waits before opening (the cabinet games' 1.6 seconds), and a new game in the meantime cancels it,
+  so a late card can't come up over a new game with old numbers.
+- **The TV** (`html.tv`): no ☰. The card asks **Who played?** with the family's pictures and Guest; the arrows move and
+  OK saves under that person. After Close, the bottom of the screen says "Press OK to see your results", and OK brings
+  it back. The old letter picker in `tv-play.js` is gone.
+- **Server, who played on a TV:** `GET /api/tv/players` (only for a TV that's set up) lists the approved profiles that
+  aren't TVs. A save can send `playedBy` (a profile id) with the TV's own profile token; `boardWho` in
+  `arcade/board-who.js` accepts it only when that token belongs to a TV's account, and only for an approved profile
+  that isn't a TV (403 and 400 otherwise). The server still decides every score as before. The shared board,
+  Wordless, Sudoku, Clueless Crosswords, Tumbler Rumble, Shuffle Scuffle and Spin & Solve pass it on. Sudoku and
+  Clueless Crosswords let a TV's run (started as a guest or as the TV) go under the person picked.
+- **GameShell** (`game-shell.js`) now hands its end to the window; Snake, Block Drop, Brick Breaker and Tower Defense
+  gained Back to setup. Big Swing and Bucket Drop have no settings, so no Back to setup.
+- **Fixes from the audit:** Words with Family and Shuffle Scuffle no longer leave a dead dim after Play again, Back to
+  my games or the browser's Back; the hidden scores list doesn't come back after Play again; Words with Family's card
+  isn't under its own dim on a laptop, and leaving a game asks on the arcade's own card (`ArcadeBack.ask`) and goes
+  back to your games with no "Computer wins!" or confetti; Shuffle Scuffle's buttons are in the window and its
+  results go when the next round starts; Dino Dash has High scores, and a tap or ↑ no longer starts a run behind the
+  card; Tumbler Rumble says lock and number, never pin, and its losing lines are the maintainer's (one picked at
+  random each run, `WRONG` and `SLOW` in `tumbler.js`), with WRONG # or TOO SLOW in the middle of the dial.
+- **Tests:** `test/browser/end-window.spec.js` ends a run in each game and checks the card, the save line, Close and ☰,
+  High scores inside the card, Escape and Enter, that Space and taps don't reach the game, Play again leaving nothing
+  behind, and the sizes (phone, sideways phone 844x390, laptop). `tv-games.spec.js` picks who played with the remote,
+  and `test/tv-arksid.test.js` covers the server (a TV naming a profile; refused for a person's device, a guest, a TV
+  and a profile that isn't approved). In the browser tests only, `window.ShellTest` can end a GameShell run.
 
 ## Know-It-All's adult levels grew into a real party game (2026-11-17)
 
@@ -640,7 +693,8 @@ Built from the mockup the maintainer approved, with their answers to its three q
 
 The maintainer asked for both after playing.
 
-- **The end of a game pops up over the page** instead of opening above the board and pushing it down. It's done in
+- **(Replaced on 2026-11-19 by the end window at the top of this file: no Look at the game or 🏁 Results
+  button anymore.)** **The end of a game pops up over the page** instead of opening above the board and pushing it down. It's done in
   one place for every game: `ArcadeEnd` at the bottom of `public/topbar.js` lifts any `.over-panel` or `#overPanel`
   out of the page while it shows (`.end-pop` in `arcade-ui.css`), dims the page behind it, and adds **Look at the
   game**, which puts it away so the final board can be seen, with a **🏁 Results** button to bring it back (Escape

@@ -43,7 +43,7 @@
   // A board per map, and All levels for a game carried on from one level to the next.
   const BOARDS = { ...Object.fromEntries(Object.entries(E.MAPS).map(([id, m]) => [id, m.label])), all: 'All levels' };
   // Play again after a carried-on game starts over from the map it began on.
-  const shell = GameShell.create({ game: 'towers', boards: BOARDS, mount: $('stage'), onAgain: () => { if (run) { mapId = run.maps[0]; store('towers.map', mapId); } reset(); } });
+  const shell = GameShell.create({ game: 'towers', boards: BOARDS, mount: $('stage'), onAgain: () => { if (run) { mapId = run.maps[0]; store('towers.map', mapId); } reset(); }, onSetup: () => { if (run) { mapId = run.maps[0]; store('towers.map', mapId); } reset(); } });
   let view = null;
 
   function paintOptions() {
@@ -94,7 +94,6 @@
       ? { text: `${m.level}: ${m.label}`, sub: 'Your score carries on. Build, then the waves come.', t: 3.5 }
       : { text: m.label, sub: g.map.paths.length > 1 ? 'Two roads! Build, then the waves come.' : 'Build a tower and the waves will come.', t: 3 };
     shell.hideOver();
-    nextBtn.classList.add('hidden');
     document.body.dataset.state = 'ready';
     paintOptions();
     btnKey = nextKey = barKey = '';
@@ -386,14 +385,9 @@
     }
   }
 
-  // After the last wave, the win card offers the next level (Easy, then Medium,
-  // then Hard) beside Play again. The score keeps going; gold, lives and towers
+  // After the last wave, the end window offers the next level (Easy, then Medium,
+  // then Hard) under Play again. The score keeps going; gold, lives and towers
   // start over with the new map's own.
-  const nextBtn = document.createElement('button');
-  nextBtn.className = 'primary next-btn hidden';
-  nextBtn.type = 'button';
-  document.querySelector('.over-panel .over-top').appendChild(nextBtn);
-  nextBtn.addEventListener('click', nextLevel);
   function nextLevel() {
     const to = state === 'over' && g.phase === 'won' && nextMap(mapId);
     if (!to) return;
@@ -402,7 +396,6 @@
     // The game so far goes on the All levels board now, so leaving later never loses it.
     const saving = saveRun(carry, g.score, listed(done.map(id => E.MAPS[id].label)));
     if (saving) saving.catch(e => toast(e.message));
-    nextBtn.classList.add('hidden');
     mapId = to;
     store('towers.map', to);
     reset(carry);
@@ -422,15 +415,6 @@
     });
     return r.saving;
   }
-  // The end card of a carried-on game says where it was saved instead of offering Save.
-  function showRunSave(p) {
-    const panel = document.querySelector('.over-panel');
-    const hint = panel.querySelector('.save-hint');
-    panel.querySelector('.save-btn').classList.add('hidden');
-    hint.textContent = 'Saving it on the All levels board…';
-    p.then(r => { hint.textContent = `Saved on the All levels board at #${r.rank}.`; }, e => { hint.textContent = e.message; });
-  }
-
   function end(won) {
     state = 'over';
     picked = null;
@@ -453,18 +437,15 @@
     else if (next) detail = `All ${E.WAVES} waves on ${all}${lives}. Take on ${E.MAPS[next].label} next and your score keeps going.`;
     else if (before.length >= LEVELS.length - 1) detail = `All ${E.WAVES} waves on ${all}. You beat every level in one game!`;
     else detail = `All ${E.WAVES} waves on ${all}${lives}`;
-    nextBtn.classList.toggle('hidden', !next);
-    if (next) nextBtn.textContent = `Next level: ${E.MAPS[next].level}`;
     // A carried-on game belongs on All levels, never on one map's board, and saves itself.
     const saving = run && saveRun(run, g.score, won ? all : `${listed(before)}, then wave ${g.wave} on ${m}`);
-    setTimeout(() => {
-      shell.over({
-        score: g.score, board: run ? 'all' : mapId,
-        title: won ? 'Victory! The castle is safe! 🏰' : undefined,
-        detail
-      });
-      if (saving) showRunSave(saving);
-    }, 700);
+    // A carried-on game's end window says where it was saved (it saved itself).
+    shell.over({
+      score: g.score, board: run ? 'all' : mapId,
+      title: won ? 'Victory! The castle is safe! 🏰' : undefined,
+      detail, delay: 700, saving: saving || undefined,
+      extra: next ? { label: `Next level: ${E.MAPS[next].level}`, run: nextLevel } : undefined
+    });
   }
 
   function frame(now) {

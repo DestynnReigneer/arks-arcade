@@ -12,7 +12,7 @@
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   // On a TV the arcade is signed in as the TV, not as whoever has the
   // remote, so a run there is a guest's and goes on the board under the
-  // initials picked on the screen.
+  // person picked on the end window ("Who played?").
   const token = () => (typeof ArcadeProfile !== 'undefined' && !TvPlay.on ? ArcadeProfile.token() : null);
   const css = (name, fallback) => getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
 
@@ -178,7 +178,7 @@
     let big = '', small = '';
     const count = sim ? countAt(t) : 0;
     if (!sim) { big = '🔒'; small = 'TAP TO PLAY'; }
-    else if (over) { big = '✕'; small = sim.endedBy === 'slip' ? 'SLIPPED PAST' : 'MISSED'; }
+    else if (over) { big = '✕'; small = sim.endedBy === 'slip' ? 'TOO SLOW' : 'WRONG #'; }
     else if (count > 0) { big = String(count); small = 'GET READY'; }
     else if (t < E.RULES.LEAD_MS + 700) { big = 'GO!'; small = 'POP THE LOCK'; }
     else { big = String(sim.pops); small = sim.pops === 1 ? 'POP' : 'POPS'; }
@@ -337,7 +337,7 @@
     shown = {};
     mode = 'playing';
     msg(null);
-    $('over').classList.add('hidden');
+    ArcadeEnd.clear();
     document.body.dataset.state = 'playing';
     if (window.ArcadeStats) ArcadeStats.play();
     // Only the test suites get this (the server says so): when the next pin
@@ -407,7 +407,7 @@
     mode = 'finishing';
     document.body.dataset.state = 'over';
     const angle = E.markerAt(sim, sim.endedAt);
-    effects.push({ angle, born: now(), ms: 900, ring: true, color: COLORS.miss, text: sim.endedBy === 'slip' ? 'TOO LATE' : 'MISS', size: 16 });
+    effects.push({ angle, born: now(), ms: 900, ring: true, color: COLORS.miss, text: sim.endedBy === 'slip' ? 'TOO SLOW' : 'WRONG #', size: 16 });
     Blip.noise(0.18, 0.12);
     Blip.womp();
     flash('miss');
@@ -428,91 +428,67 @@
   }
 
   const plural = (n, word) => `${n.toLocaleString('en-US')} ${word}${n === 1 ? '' : 's'}`;
-  async function showOver(error) {
+  // The losing lines (the maintainer's, 2026-11-19): one picked at random each run.
+  // Tapping when the light wasn't on the lock is the wrong number; letting it slide past is too slow.
+  const WRONG = [
+    'Oops, that\'s the wrong combination!',
+    'Your lock picking skills are novice.',
+    'Don\'t you remember your combination?',
+    'Click... nope, wrong number.',
+    'That\'s not the combo. Try again!',
+    'Wrong number, the lock isn\'t budging.',
+    'Close doesn\'t count with locks.',
+    'Did you write the combo on your hand?',
+    'Bold move. Wrong number, but bold.',
+    'The lock laughed at you a little.'
+  ];
+  const SLOW = [
+    'Too slow, you spun right past your number!',
+    'You missed your number!',
+    'Hesitate and the lock wins.',
+    'The dial got away from you.',
+    'Your number came and went.',
+    'Blink and you miss it. You blinked.',
+    'Still thinking? The lock didn\'t wait.',
+    'Forgot the combo halfway through?'
+  ];
+  const anyOf = list => list[Math.floor(Math.random() * list.length)];
+  function showOver(error) {
     mode = 'over';
     overSince = now();
+    msg(null);
     const local = E.summary(sim);
     const r = result || local;
-    $('overTitle').textContent = local.endedBy === 'slip' ? 'The light slipped past the lock!' : 'Missed! The light wasn\'t on the lock.';
-    $('overScore').textContent = '0';
-    if (window.Fx) Fx.countUp($('overScore'), 0, r.score, 900); else $('overScore').textContent = r.score.toLocaleString('en-US');
-    $('overDetail').textContent = !r.score ? 'You didn\'t pop any locks this time.' : `You popped ${plural(r.score, 'lock')} in a row and made it to wave ${r.wave}, with ${plural(r.bullseyes, 'perfect pop')}` +
-      (r.bestStreak > 1 ? ` and a best streak of ${r.bestStreak} perfect pops in a row.` : '.');
-    $('chaseLine').textContent = '';
-    $('rankLine').textContent = '';
-    $('saveMsg').textContent = '';
-    $('saveBtn').disabled = false;
-    if (error || !result) {
-      $('savePart').classList.add('hidden');
-      $('rankLine').textContent = `The arcade couldn't check this run, so it can't go on the board. (${error || 'No answer.'})`;
-    } else if (!result.score) {
-      $('savePart').classList.add('hidden');
-      $('rankLine').textContent = 'Pop at least one pin to get a score on the board. Wait until the light is on the gold pin, then tap, and give it another go!';
-    } else {
-      $('savePart').classList.remove('hidden');
-      // The score goes under the profile or the guest's name, with nothing to type (on a TV,
-      // initials picked with the remote).
-      ArcadeKit.readySave(initials, $('saveHint'), $('saveBtn'), 'Pick your initials with the arrows to put your score on today\'s board and the all-time board.');
-      chase(result.score);
-    }
-    $('over').classList.remove('hidden');
-    msg(null);
+    const saveable = !error && result && result.score > 0 && !result.saved;
+    const runId = result && result.runId;
+    ArcadeEnd.show({
+      title: anyOf(local.endedBy === 'slip' ? SLOW : WRONG),
+      score: r.score,
+      detail: !r.score ? 'You didn\'t pop any locks this time.' : `You popped ${plural(r.score, 'lock')} in a row and made it to wave ${r.wave}, with ${plural(r.bullseyes, 'perfect pop')}` +
+        (r.bestStreak > 1 ? ` and a best streak of ${r.bestStreak} perfect pops in a row.` : '.'),
+      save: saveable ? async who => {
+        const out = await api(`/api/tumbler/run/${runId}/save`, who);
+        result.saved = true;
+        if (window.Fx && (out.dayRank === 1 || out.allRank === 1)) {
+          Fx.banner(out.allRank === 1 ? 'BEST SCORE EVER' : 'TOP OF TODAY', plural(out.score, 'pop'), { ms: 2400 });
+          Fx.burst({ count: 200, coins: 40 });
+          Blip.tune([[523, 0.1], [659, 0.1], [784, 0.1], [1047, 0.1], [1319, 0.3]], { type: 'square', volume: 0.06 });
+        }
+        return { rank: out.dayRank, where: 'for today', id: out.id };
+      } : null,
+      noSave: error || !result ? `The arcade couldn't check this run, so it can't go on the board. (${error || 'No answer.'})`
+        : 'Pop one lock to get on the board.',
+      scores: {
+        tabs: [{ id: 'day', label: 'Today' }, { id: 'all', label: 'Overall' }], tab: 'day',
+        load: async which => ArcadeEnd.boardRows((await api(`/api/tumbler/board?scope=${which}&limit=20`)).map(x => ({ ...x, detail: `wave ${x.wave}` })))
+      },
+      again: () => { Blip.unlock(); begin(); },
+      setup: toIdle
+    });
     // The run's celebration, saved for the end: more coins for every wave reached.
     if (window.Fx && r.score > 0) Fx.burst({ count: Math.min(200, 40 + 4 * r.score), coins: Math.min(40, 4 + 3 * r.wave) });
-    // It pops up over the page (topbar.js), except on a TV, where it sits in the page.
-    if (!$('over').classList.contains('end-pop')) setTimeout(() => $('over').scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' }), 60);
     say(`Game over. You popped ${plural(r.score, 'lock')} and reached wave ${r.wave}.`);
   }
-
-  // How far this score is from the next one up on today's board. Every number
-  // here is a real score on the real board, never a made-up near miss.
-  async function chase(score) {
-    try {
-      const rows = await api('/api/tumbler/board?scope=day&limit=100');
-      if (mode !== 'over' || !result || result.score !== score) return;
-      const above = rows.filter(r => r.score >= score);
-      let text;
-      if (!rows.length) text = 'Nobody has a score on today\'s board yet, so saving this one puts you at #1.';
-      else if (!above.length) text = 'That beats every score on today\'s board. Save it to take #1!';
-      else {
-        const next = above[above.length - 1];
-        const gap = next.score - score + 1;
-        const who = next.profileName || next.initials;
-        text = `${gap <= Math.max(3, score * 0.25) ? 'Just ' : ''}${plural(gap, 'more lock')} would have passed ${who} for #${above.length} today.`;
-      }
-      $('chaseLine').textContent = text;
-    } catch { /* the line is a bonus */ }
-  }
-
-  const initials = ArcadeKit.wireInitials([...document.querySelectorAll('#iniRow .ini')], () => saveScore(), { tv: () => TvPlay.on });
-  async function saveScore() {
-    if (!result || !result.finished || result.saved) return;
-    // A profile sends its name too, in case its sign-in has run out on the
-    // server; then the score goes on the board under that name.
-    let who;
-    try { who = ArcadeKit.saveFields(initials); } catch (e) { $('saveMsg').textContent = e.message; return; }
-    $('saveBtn').disabled = true;
-    try {
-      const r = await api(`/api/tumbler/run/${result.runId}/save`, who);
-      if (who.initials) initials.remember(who.initials);
-      result.saved = true;
-      $('savePart').classList.add('hidden');
-      $('chaseLine').textContent = '';
-      $('rankLine').textContent = r.allRank === 1 ? 'That\'s the best Tumbler Rumble score ever! 🏆'
-        : `You're #${r.dayRank} for today, and #${r.allRank} overall!`;
-      if (window.Fx && (r.dayRank === 1 || r.allRank === 1)) {
-        Fx.banner(r.allRank === 1 ? 'BEST SCORE EVER' : 'TOP OF TODAY', plural(r.score, 'pop'), { ms: 2400 });
-        Fx.burst({ count: 200, coins: 40 });
-        Blip.tune([[523, 0.1], [659, 0.1], [784, 0.1], [1047, 0.1], [1319, 0.3]], { type: 'square', volume: 0.06 });
-      } else toast(`Saved: #${r.dayRank} today`);
-      openScores('day', r.id);
-    } catch (e) {
-      $('saveMsg').textContent = e.message;
-      $('saveBtn').disabled = false;
-    }
-  }
-  $('saveBtn').addEventListener('click', saveScore);
-  $('againBtn').addEventListener('click', () => { Blip.unlock(); begin(); window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' }); });
 
   // ---- high scores -------------------------------------------------------------------------
   let scope = 'day';
@@ -544,7 +520,6 @@
   }
   const closeScores = () => $('scores').classList.add('hidden');
   $('scoresBtn').addEventListener('click', () => { pause(); openScores('day'); });
-  $('overScoresBtn').addEventListener('click', () => openScores('day'));
   $('scoresClose').addEventListener('click', closeScores);
   $('scores').addEventListener('click', e => { if (e.target === $('scores')) closeScores(); });
 
@@ -583,10 +558,12 @@
     }
   }
   function padPress(button) {
+    // The end window is up: the controller waits, like the keys and taps.
+    if (ArcadeEnd.isOpen) return;
     if (busyElsewhere()) { if (!$('scores').classList.contains('hidden')) closeScores(); return; }
     if (mode === 'over') {
       // A short wait, so the tap that ended the run doesn't start the next one.
-      if (now() - overSince > 1200) begin();
+      if (now() - overSince > 1200) { ArcadeEnd.clear(); begin(); }
       return;
     }
     if (button === 'start' && mode === 'playing') { pause(); return; }
@@ -650,18 +627,21 @@
     help.open();
   });
 
+  // The start, waiting for a tap.
+  function toIdle() {
+    mode = 'idle';
+    sim = null; run = null; result = null;
+    effects.length = 0;
+    ArcadeEnd.clear();
+    document.body.dataset.state = 'ready';
+    msg(TvPlay.on ? 'Ready?' : 'Tap to play', TvPlay.on ? 'Press OK on Play to start.' : 'Tap anywhere on the lock, or press Space, to start.');
+  }
+
   // Back: a run (or its results) goes back to the start, asking first while
   // the lock is turning, and from there to the arcade.
   ArcadeBack.setup({
     atMenu: () => mode === 'idle' || mode === 'starting',
-    back: () => {
-      mode = 'idle';
-      sim = null; run = null; result = null;
-      effects.length = 0;
-      $('over').classList.add('hidden');
-      document.body.dataset.state = 'ready';
-      msg(TvPlay.on ? 'Ready?' : 'Tap to play', TvPlay.on ? 'Press OK on Play to start.' : 'Tap anywhere on the lock, or press Space, to start.');
-    },
+    back: toIdle,
     busy: () => ['playing', 'paused', 'resuming', 'finishing'].includes(mode),
     pause: () => pause()
   });
@@ -676,7 +656,7 @@
     begin: () => tap('key'),
     ready: () => mode === 'idle',
     buttons: { 2: ' ', 5: ' ', 7: ' ' },
-    hint: 'Press OK the moment the light is on the gold pin. On a game controller, A, X, R1 or the right trigger pops it too, and Start pauses.'
+    hint: 'Press OK the moment the light is on the gold lock. On a game controller, A, X, R1 or the right trigger pops it too, and Start pauses.'
   });
   if (TvPlay.on) { $('msgTitle').textContent = 'Ready?'; $('msgText').textContent = 'Press OK on Play to start.'; }
 

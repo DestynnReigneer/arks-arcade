@@ -123,7 +123,7 @@ function raiseRun(g, game, key, points, detail, run) {
   return { id, score: points, rank, board: key, runKey: given };
 }
 
-function save(game, { initials, name, avatar, score, board, detail, profileToken, fromServer, run }) {
+function save(game, { initials, name, avatar, score, board, detail, profileToken, fromServer, run, playedBy }) {
   const { g, key } = boardOf(game, board);
   if (g.serverOnly && !fromServer) throw fail(`${g.label} saves its scores from the game itself.`, 403);
   const points = Math.round(Number(score));
@@ -135,8 +135,8 @@ function save(game, { initials, name, avatar, score, board, detail, profileToken
   if (run && !runBoard) throw fail('Each game on this board is its own score.', 400);
   if (run) return raiseRun(g, game, key, points, detail, run);
   // Signed in, the score is the profile's; a guest's goes under their name, and a TV's under
-  // the initials picked with the remote (arcade/board-who.js).
-  const as = boardWho({ profileToken, name, avatar, initials });
+  // the person picked on its end card (arcade/board-who.js).
+  const as = boardWho({ profileToken, name, avatar, initials, playedBy });
   const { profile } = as;
   const who = as.initials;
   const runKey = runBoard ? crypto.randomBytes(18).toString('hex') : null;

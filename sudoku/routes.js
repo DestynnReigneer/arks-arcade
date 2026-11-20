@@ -31,7 +31,7 @@ const MIN_MS_PER_SQUARE = process.env.NODE_ENV === 'test' && process.env.SUDOKU_
   ? Number(process.env.SUDOKU_MIN_MS_PER_SQUARE) : 400;
 // Unfinished runs are forgotten after this long.
 const KEEP_RUNS_MS = 3 * 24 * 60 * 60 * 1000;
-const { boardWho } = require('../arcade/board-who');
+const { boardWho, isTv } = require('../arcade/board-who');
 const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 db.db.exec(`
@@ -271,7 +271,7 @@ function finish(id, grid, now = Date.now()) {
 
 // ---- the boards --------------------------------------------------------------------
 
-function save(id, { initials, name, avatar, profileToken }) {
+function save(id, { initials, name, avatar, profileToken, playedBy }) {
   const run = needRun(id);
   if (!run.finished_at) throw fail('Finish the puzzle first.', 409);
   if (run.saved) throw fail('This time is already on the board.', 409);
@@ -281,9 +281,12 @@ function save(id, { initials, name, avatar, profileToken }) {
   // picked with the remote). Otherwise a profile could play as a guest with a fresh
   // clock and save it as themselves.
   let profile = profileToken ? profiles().verify(profileToken) : null;
-  if (profile && run.profile_id && profile.id !== run.profile_id) throw fail('This puzzle belongs to a different profile.', 403);
-  if (profile && !run.profile_id) throw fail('This puzzle was played as a guest, so it goes on the board under the guest\'s name.', 403);
-  const as = boardWho({ profile, name, avatar, initials });
+  // A TV names who played (arcade/board-who.js checks it's a TV): its run was started as a guest or as the TV.
+  const onTv = !!playedBy && !!profile && isTv(profile.id);
+  if (onTv && run.profile_id && profile.id !== run.profile_id) throw fail('This puzzle belongs to a different profile.', 403);
+  if (!onTv && profile && run.profile_id && profile.id !== run.profile_id) throw fail('This puzzle belongs to a different profile.', 403);
+  if (!onTv && profile && !run.profile_id) throw fail('This puzzle was played as a guest, so it goes on the board under the guest\'s name.', 403);
+  const as = boardWho({ profile, name, avatar, initials, playedBy });
   const ini = as.initials;
   const who = as.key;
   const label = gen.LEVELS[run.level].label;

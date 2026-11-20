@@ -484,7 +484,7 @@ app.post('/api/leaderboard', leaderboardLimiter, (req, res) => {
   // under (arcade/board-who.js). Nobody types initials.
   let as;
   try {
-    as = require('./arcade/board-who').boardWho({ profileToken: body.profileToken, name: body.name, avatar: body.avatar, initials: body.initials });
+    as = require('./arcade/board-who').boardWho({ profileToken: body.profileToken, name: body.name, avatar: body.avatar, initials: body.initials, playedBy: body.playedBy });
   } catch (e) {
     return res.status(e.status || 400).json({ error: e.message });
   }

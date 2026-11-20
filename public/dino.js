@@ -172,7 +172,7 @@
     paintPause();
     S.clouds = [{ x: 420, y: 40 }, { x: 160, y: 66 }];
     S.stars = Array.from({ length: 14 }, () => ({ x: Math.random() * W, y: 10 + Math.random() * 80 }));
-    $('overPanel').classList.add('hidden');
+    ArcadeEnd.clear();
     document.body.dataset.state = 'running';
   }
 
@@ -335,14 +335,20 @@
     if (best) { S.hi = s; try { localStorage.setItem('dino.hi', String(s)); } catch { /* unavailable */ } }
     document.body.dataset.state = 'over';
     document.body.dataset.score = String(s);
-    $('overTitle').textContent = best && s > 0 ? 'New personal best! 🎉' : 'Game over';
-    $('overScore').textContent = s.toLocaleString('en-US');
-    $('savePart').classList.toggle('hidden', s < 1);
-    $('saveScoreBtn').disabled = false;
-    $('scoreMsg').textContent = '';
-    // The score goes under the profile or the guest's name, with nothing to type (on a TV, initials picked with the remote).
-    if (s >= 1 && initials) ArcadeKit.readySave(initials, $('saveHint'), $('saveScoreBtn'));
-    $('overPanel').classList.remove('hidden');
+    // The shared end window (end-window.js) saves it by itself, under the profile or the guest's name
+    // (on a TV, whoever is picked under "Who played?").
+    ArcadeEnd.show({
+      title: best && s > 0 ? 'New personal best! 🎉' : 'Game over',
+      score: s,
+      save: s >= 1 ? async who => {
+        const r = await ArcadeKit.saveScore('dino', { ...who, score: s, board: 'run', detail: '' });
+        return { rank: r.rank, id: r.id };
+      } : null,
+      noSave: 'Run a little farther to get on the board.',
+      scores: ArcadeEnd.sharedBoard('dino', { run: 'Farthest runs' }, 'run'),
+      again: reset,
+      setup: toReady
+    });
   }
 
   // ---- drawing -----------------------------------------------------------------------------
@@ -447,23 +453,6 @@
   $('pauseBtn').addEventListener('click', () => setPaused(!S.paused));
 
   // ---- scores -----------------------------------------------------------------------------
-  let initials = null;
-  async function saveScore() {
-    let who;
-    try { who = ArcadeKit.saveFields(initials); } catch (e) { $('scoreMsg').textContent = e.message; return; }
-    $('saveScoreBtn').disabled = true;
-    try {
-      // On a TV it's the initials' score, not the TV's (see tv-play.js).
-      const r = await ArcadeKit.saveScore('dino', { ...who, score: score(), board: 'run', detail: '' });
-      if (who.initials) initials.remember(who.initials);
-      $('savePart').classList.add('hidden');
-      openScores(r.id);
-      toast(r.rank === 1 ? '🏆 New #1!' : `Saved: #${r.rank}`);
-    } catch (e) {
-      $('scoreMsg').textContent = e.message;
-      $('saveScoreBtn').disabled = false;
-    }
-  }
   function openScores(highlightId) {
     ArcadeKit.loadScores('dino', 'run', $('scoreList'), highlightId);
     $('scoresView').classList.remove('hidden');
@@ -491,13 +480,10 @@
     }
   ]);
 
-  $('againBtn').addEventListener('click', reset);
-  $('saveScoreBtn').addEventListener('click', saveScore);
   $('scoresBtn').addEventListener('click', () => openScores());
   $('scoresClose').addEventListener('click', () => $('scoresView').classList.add('hidden'));
   $('helpBtn').addEventListener('click', () => help.open());
   Blip.muteButton($('muteBtn'));
-  initials = ArcadeKit.wireInitials([...document.querySelectorAll('#overPanel .ini')], saveScore, { tv: () => TvPlay.on });
 
   // ---- on the TV ----------------------------------------------------------------------------
   // The desert on the right, wide. OK or up jumps (hold for a big jump),
@@ -515,13 +501,15 @@
 
   // Back: a run (or its game-over panel) goes back to the start, asking
   // first while the dino's still running, and from there to the arcade.
+  // Back to the start, waiting for the first jump.
+  function toReady() {
+    Object.assign(S, { mode: 'ready', y: 0, vy: 0, ducking: false, dist: 0, speed: START_SPEED, obstacles: [], nextGap: 380, groundShift: 0, time: 0, night: 0, flash: 0, lastMilestone: 0 });
+    ArcadeEnd.clear();
+    document.body.dataset.state = 'ready';
+  }
   ArcadeBack.setup({
     atMenu: () => S.mode === 'ready',
-    back: () => {
-      Object.assign(S, { mode: 'ready', y: 0, vy: 0, ducking: false, dist: 0, speed: START_SPEED, obstacles: [], nextGap: 380, groundShift: 0, time: 0, night: 0, flash: 0, lastMilestone: 0 });
-      $('overPanel').classList.add('hidden');
-      document.body.dataset.state = 'ready';
-    },
+    back: toReady,
     busy: () => S.mode === 'running',
     pause: () => setPaused(true)
   });

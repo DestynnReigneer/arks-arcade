@@ -6,8 +6,9 @@
 // played a little with only the remote's arrows and OK (arrow keys and
 // Enter), and a pretend game controller (navigator.getGamepads, the way the
 // TV app's controller reaches the page) presses the buttons that aren't the
-// remote's. Where a run ends quickly, the initials go on the board picked with
-// the arrows, like an arcade cabinet.
+// remote's. Where a run ends quickly, the end window asks "Who played?" with
+// the family's pictures and Guest, and the score goes on the board under the
+// person picked with the arrows and OK.
 
 const { test, expect } = require('@playwright/test');
 const { quietFonts, watchProblems } = require('./helpers');
@@ -37,6 +38,18 @@ async function pairTv(page) {
   await expect(page.locator('#tvBar')).toContainText('Playroom TV', { timeout: 20000 });
   await expect(page.locator('.tv-pair')).toHaveCount(0);
 }
+// Kim signs in once on a phone of her own, so the arcade has her profile for "Who played?". This comes
+// before the TV is set up: the pretend ARKS ID keeps one sign-in per browser, and a later one would replace the TV's.
+test.beforeAll(async ({ browser }, info) => {
+  if (info.project.name !== 'laptop') return;
+  expect((await fake('/test/next-once', { as: 'kim' })).ok).toBe(true);
+  const context = await browser.newContext({ baseURL: `http://localhost:${PORT}` });
+  const page = await context.newPage();
+  await quietFonts(page);
+  await page.goto('/auth/signin?return=/');
+  await page.waitForURL(u => new URL(u).pathname === '/');
+  await context.close();
+});
 test.beforeAll(async ({ browser }, info) => {
   if (info.project.name !== 'laptop') return;
   const context = await browser.newContext({ userAgent: TV_UA, viewport: { width: 1920, height: 1080 }, baseURL: `http://localhost:${PORT}` });
@@ -114,18 +127,24 @@ async function arrowTo(page, selector, max = 60) {
 }
 const press = async (page, selector) => { await arrowTo(page, selector); await page.keyboard.press('Enter'); };
 
-// The letters on a game-over panel, picked like an arcade cabinet: up and
-// down change a letter, right moves to the next one, and OK saves.
-async function pickInitials(page, row, word) {
-  const boxes = page.locator(`${row} input.ini`);
-  await expect(boxes.first()).toBeFocused({ timeout: 5000 });
-  for (let i = 0; i < word.length; i++) {
-    if (i) await page.keyboard.press('ArrowRight');
-    await expect(boxes.nth(i)).toBeFocused();
-    for (let n = 0; n < 40 && (await boxes.nth(i).inputValue()) !== word[i]; n++) await page.keyboard.press('ArrowUp');
-    await expect(boxes.nth(i)).toHaveValue(word[i]);
+// "Who played?" on the end window (end-window.js): the first person has the
+// highlight, right moves along the row, and OK saves under the one picked.
+async function pickWho(page, name) {
+  const card = page.locator('.ew-card');
+  await expect(card.getByText('Who played?')).toBeVisible({ timeout: 10000 });
+  await expect(card.locator('.ew-person').first()).toBeFocused({ timeout: 5000 });
+  // (OK only counts once the card has been up a moment.)
+  await page.waitForTimeout(450);
+  for (let n = 0; n < 20; n++) {
+    const at = await page.evaluate(() => (document.activeElement && document.activeElement.textContent) || '');
+    if (at.includes(name)) break;
+    await page.keyboard.press('ArrowRight');
   }
+  await expect(page.locator('.ew-person:focus')).toContainText(name);
   await page.keyboard.press('Enter');
+  await expect(card.locator('.ew-saved')).toContainText(`Saved as ${name}`, { timeout: 10000 });
+  // Saved: Play again has the highlight.
+  await expect(card.getByRole('button', { name: '▶ Play again' })).toBeFocused();
 }
 
 // A pretend game controller, the way the page sees one through the Gamepad
@@ -199,14 +218,14 @@ test('Tumbler Rumble with the remote and a controller', async ({ page }) => {
   await plugInPad(page);
   await padPress(page, 2);
   expect(await keysSeen(page)).toContain(' ');
-  await expect(page.locator('#over')).toBeVisible({ timeout: 10000 });
-  await pickInitials(page, '#iniRow', 'ACE');
-  await expect(page.locator('#scores')).toBeVisible();
-  await expect(page.locator('#scoreList li.me')).toContainText('ACE');
-
-  // Close the scores, and Play again is where the highlight lands.
-  await press(page, '#scoresClose');
-  await expect(page.locator('#againBtn')).toBeFocused();
+  await expect(page.locator('.ew-card')).toBeVisible({ timeout: 10000 });
+  await pickWho(page, 'Kim');
+  // The high scores open inside the window, with Kim's run on today's board.
+  await press(page, '.ew-card .ew-hs');
+  await expect(page.locator('.ew-list li.me')).toContainText('Kim');
+  await page.keyboard.press('Escape');
+  // Back on the score, OK is Play again.
+  await expect(page.locator('.ew-card .ew-play')).toBeFocused();
   await page.keyboard.press('Enter');
   await expect.poll(() => page.evaluate(() => window.TumblerTest.state().mode)).toBe('playing');
   expect(problems, problems.join('\n')).toEqual([]);
@@ -231,9 +250,12 @@ test('Snake with the remote and a controller', async ({ page }) => {
   // The left stick steers: up, into the top wall.
   await stick(page, 0, -1);
   expect(await keysSeen(page)).toEqual(expect.arrayContaining(['p', 'ArrowUp', 'up:ArrowUp']));
-  await expect(page.locator('.over-panel')).toBeVisible({ timeout: 20000 });
-  // No apples means no score to save, so Play again has the highlight.
-  await expect(page.locator('.over-panel .again-btn')).toBeFocused();
+  await expect(page.locator('.ew-card')).toBeVisible({ timeout: 20000 });
+  // No apples means no score to save, so nobody is asked who played and Play again has the highlight.
+  await expect(page.locator('.ew-card').getByText('Who played?')).toHaveCount(0);
+  await expect(page.locator('.ew-card .ew-play')).toBeFocused();
+  // (OK only counts once the card has been up a moment, so the press that ended the game can't start the next.)
+  await page.waitForTimeout(450);
   await page.keyboard.press('Enter');
   await expect(page.locator('body')).toHaveAttribute('data-state', 'playing');
   // The arrows steer while it's being played.
@@ -253,10 +275,15 @@ test('Dino Dash with the remote and a controller', async ({ page }) => {
   await page.keyboard.press('Enter');
   expect(await keysSeen(page)).toEqual(expect.arrayContaining([' ', 'up: ']));
   // Sooner or later a cactus wins.
-  await expect(page.locator('#overPanel')).toBeVisible({ timeout: 30000 });
-  await pickInitials(page, '#overPanel', 'REX');
-  await expect(page.locator('#scoresView')).toBeVisible();
-  await expect(page.locator('#scoreList')).toContainText('REX');
+  await expect(page.locator('.ew-card')).toBeVisible({ timeout: 30000 });
+  await pickWho(page, 'Guest');
+  // Closed, the bottom of the screen says how to get it back, and OK does.
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.ew-layer')).toBeHidden();
+  await expect(page.locator('.ew-tvhint')).toHaveText('Press OK to see your results');
+  await page.keyboard.press('Enter');
+  await expect(page.locator('.ew-card')).toBeVisible();
+  await expect(page.locator('.ew-card .ew-saved')).toContainText('Saved as Guest');
   expect(problems, problems.join('\n')).toEqual([]);
 });
 
@@ -275,14 +302,12 @@ test('Block Drop with the remote and a controller', async ({ page }) => {
   await stick(page, 1, 0);           // the stick moves it right
   expect(await keysSeen(page)).toEqual(expect.arrayContaining(['x', 'c', 'ArrowRight']));
   // OK drops each piece the rest of the way, until the well is full.
-  for (let i = 0; i < 80 && !(await page.locator('.over-panel').isVisible()); i++) {
+  for (let i = 0; i < 80 && !(await page.locator('.ew-card').isVisible()); i++) {
     await page.keyboard.press('Enter');
     await page.waitForTimeout(60);
   }
-  await expect(page.locator('.over-panel')).toBeVisible({ timeout: 10000 });
-  await pickInitials(page, '.over-panel', 'BLK');
-  await expect(page.locator('.overlay[aria-label="High scores"]')).toBeVisible();
-  await expect(page.locator('.overlay[aria-label="High scores"] .scores')).toContainText('BLK');
+  await expect(page.locator('.ew-card')).toBeVisible({ timeout: 10000 });
+  await pickWho(page, 'Kim');
   expect(problems, problems.join('\n')).toEqual([]);
 });
 

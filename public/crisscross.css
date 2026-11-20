@@ -157,7 +157,6 @@ html.tv #game > * { grid-column: 2; }
 html.tv #game > #scoreStrip, html.tv #game > #status { grid-column: 1 / -1; }
 html.tv #game > #boardBox { grid-column: 1; grid-row: 3 / span 9; max-width: none; }
 /* The game-over panel (first in the page, so it sits above the board on a phone) goes at the top of the right-hand column. */
-html.tv #game > #overPanel { grid-row: 3; }
 html.tv .cc-cell:focus { z-index: 3; }
 
 /* The Words with Family logo: wooden tiles spelling the name, over the game lists and on an invite. */
@@ -201,7 +200,6 @@ html:not(.tv) body:has(#game:not(.hidden)) .cc-board-box.zoomed .cc-board { widt
   html:not(.tv) #game:not(.hidden) { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column;
     padding-bottom: max(10px, env(safe-area-inset-bottom)); }
   html:not(.tv) #game:not(.hidden) > * { flex: none; }
-  html:not(.tv) #game > #overPanel { order: 0; }
   html:not(.tv) #game > #scoreStrip { order: 1; margin: 4px 0; }
   html:not(.tv) #game > #status { order: 2; margin: 0; }
   html:not(.tv) #game > .cc-board-tools { order: 3; justify-content: center; margin: 0 0 6px; min-height: 0; }
@@ -249,7 +247,6 @@ html:not(.tv) body:has(#game:not(.hidden)) .cc-board-box.zoomed .cc-board { widt
     grid-template-areas: "board scores" "board status" "board tools" "board rack" "board preview" "board actions" "board moves" "board stack";
   }
   html:not(.tv) #game > #boardBox { grid-area: board; height: var(--board); }
-  html:not(.tv) #game > #overPanel { grid-area: board; z-index: 2; align-self: center; margin: 0 24px; }
   html:not(.tv) #game > #scoreStrip { grid-area: scores; margin: 0; }
   html:not(.tv) #game > #status { grid-area: status; margin: 14px 0 0; }
   html:not(.tv) #game > .cc-board-tools { grid-area: tools; justify-content: center; margin: 0; }
