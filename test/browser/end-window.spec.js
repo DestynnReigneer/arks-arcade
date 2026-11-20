@@ -309,7 +309,7 @@ test('Tumbler Rumble: a lock\'s words, the plain line for no pops, and today\'s 
   await card(page).getByRole('button', { name: '‹ Back to my score' }).click();
   await card(page).getByRole('button', { name: '⚙️ Back to setup' }).click();
   await expectClean(page);
-  await expect.poll(() => page.evaluate(() => window.TumblerTest.state().mode)).toBe('idle');
+  await expect.poll(() => page.evaluate(() => document.body.dataset.state)).toBe('ready');
   expect(problems, problems.join('\n')).toEqual([]);
 });
 
