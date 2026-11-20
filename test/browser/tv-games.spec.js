@@ -38,6 +38,18 @@ async function pairTv(page) {
   await expect(page.locator('#tvBar')).toContainText('Playroom TV', { timeout: 20000 });
   await expect(page.locator('.tv-pair')).toHaveCount(0);
 }
+// Kim signs in once on a phone of her own, so the arcade has her profile for "Who played?". This comes
+// before the TV is set up: the pretend ARKS ID keeps one sign-in per browser, and a later one would replace the TV's.
+test.beforeAll(async ({ browser }, info) => {
+  if (info.project.name !== 'laptop') return;
+  expect((await fake('/test/next-once', { as: 'kim' })).ok).toBe(true);
+  const context = await browser.newContext({ baseURL: `http://localhost:${PORT}` });
+  const page = await context.newPage();
+  await quietFonts(page);
+  await page.goto('/auth/signin?return=/');
+  await page.waitForURL(u => new URL(u).pathname === '/');
+  await context.close();
+});
 test.beforeAll(async ({ browser }, info) => {
   if (info.project.name !== 'laptop') return;
   const context = await browser.newContext({ userAgent: TV_UA, viewport: { width: 1920, height: 1080 }, baseURL: `http://localhost:${PORT}` });
@@ -49,18 +61,6 @@ test.beforeAll(async ({ browser }, info) => {
   await context.close();
 });
 test.use({ storageState: async ({}, use) => use(signedInTv || undefined) });
-
-// Kim signs in once on a phone of her own, so the arcade has her profile for "Who played?".
-test.beforeAll(async ({ browser }, info) => {
-  if (info.project.name !== 'laptop') return;
-  expect((await fake('/test/next-once', { as: 'kim' })).ok).toBe(true);
-  const context = await browser.newContext({ baseURL: `http://localhost:${PORT}` });
-  const page = await context.newPage();
-  await quietFonts(page);
-  await page.goto('/auth/signin?return=/');
-  await page.waitForURL(u => new URL(u).pathname === '/');
-  await context.close();
-});
 
 // Opens a game on the TV. How to play opens by itself the first time; it's
 // closed with the arrows and OK.
@@ -133,6 +133,8 @@ async function pickWho(page, name) {
   const card = page.locator('.ew-card');
   await expect(card.getByText('Who played?')).toBeVisible({ timeout: 10000 });
   await expect(card.locator('.ew-person').first()).toBeFocused({ timeout: 5000 });
+  // (OK only counts once the card has been up a moment.)
+  await page.waitForTimeout(450);
   for (let n = 0; n < 20; n++) {
     const at = await page.evaluate(() => (document.activeElement && document.activeElement.textContent) || '');
     if (at.includes(name)) break;
@@ -252,6 +254,8 @@ test('Snake with the remote and a controller', async ({ page }) => {
   // No apples means no score to save, so nobody is asked who played and Play again has the highlight.
   await expect(page.locator('.ew-card').getByText('Who played?')).toHaveCount(0);
   await expect(page.locator('.ew-card .ew-play')).toBeFocused();
+  // (OK only counts once the card has been up a moment, so the press that ended the game can't start the next.)
+  await page.waitForTimeout(450);
   await page.keyboard.press('Enter');
   await expect(page.locator('body')).toHaveAttribute('data-state', 'playing');
   // The arrows steer while it's being played.

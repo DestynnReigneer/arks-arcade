@@ -81,17 +81,22 @@ window.ArcadeEnd = (() => {
     return { profileToken: token, name, avatar: me.avatar || undefined };
   }
   // The TV is signed in as itself: it names who played, from the family's approved profiles.
+  // Asked when a game ends, and only once the TV is signed in (it has its own profile token);
+  // a TV that isn't set up, or an arcade without ARKS ID, offers Guest only.
   async function tvPlayers() {
     if (players) return players;
     let list = [];
-    try {
-      const r = await fetch('/api/tv/players', { cache: 'no-store' });
-      if (r.ok) list = ((await r.json()).players || []).slice(0, 12);
-    } catch { /* Guest is always there */ }
-    players = [...list.map(p => ({ id: p.id, name: p.name, avatar: p.avatar })), { id: null, name: 'Guest' }];
-    return players;
+    const signedIn = !!(P() && P().token());
+    if (signedIn) {
+      try {
+        const r = await fetch('/api/tv/players', { cache: 'no-store' });
+        if (r.ok) list = ((await r.json()).players || []).slice(0, 12);
+      } catch { /* Guest is always there */ }
+    }
+    const got = [...list.map(p => ({ id: p.id, name: p.name, avatar: p.avatar })), { id: null, name: 'Guest' }];
+    if (signedIn) players = got;
+    return got;
   }
-  if (tv()) tvPlayers();
 
   function avatar(av, size) {
     const p = P();
@@ -198,7 +203,18 @@ window.ArcadeEnd = (() => {
   }
 
   // ---- drawing the card -------------------------------------------------------------------
+  // Drawn again when the save line changes; the focus (the TV's highlight) stays on the same button,
+  // or goes back to where it starts if that button is gone.
   function render() {
+    const a = document.activeElement;
+    const had = a && a !== document.body && card.contains(a);
+    const key = had ? `${a.className}|${a.dataset.i || ''}|${a.textContent}` : null;
+    draw();
+    if (!had && a && a !== document.body) return;
+    const same = key && [...card.querySelectorAll('button')].find(b => `${b.className}|${b.dataset.i || ''}|${b.textContent}` === key);
+    if (same) same.focus({ preventScroll: true }); else focusStart();
+  }
+  function draw() {
     card.replaceChildren();
     card.classList.toggle('ew-scores-view', view === 'scores');
     const x = el('button', 'ew-x', '✕');
@@ -383,7 +399,8 @@ window.ArcadeEnd = (() => {
     }
     if (elsewhere(e.target)) return;
     e.stopImmediatePropagation();
-    if (e.type !== 'keydown') { if (e.key === ' ' || e.key === 'Enter') e.preventDefault(); return; }
+    // (Space never presses a button here; Enter does, through its keypress, so that one is left alone.)
+    if (e.type !== 'keydown') { if (e.key === ' ') e.preventDefault(); return; }
     if (e.key === 'Escape') { e.preventDefault(); closeTop(); return; }
     if (e.key === ' ') { e.preventDefault(); return; }
     if (e.key === 'Enter') {
