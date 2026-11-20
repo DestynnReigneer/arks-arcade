@@ -391,11 +391,17 @@ window.ArcadeEnd = (() => {
   // Window capture runs before every game's own keys, so nothing reaches the game behind.
   function onKey(e) {
     if (!view) {
-      // The TV: OK brings the results back, and does nothing else once the game is over.
-      if (cfg && tv() && e.key === 'Enter' && !dialogUp()) {
-        e.preventDefault(); e.stopImmediatePropagation();
-        if (e.type === 'keydown' && !e.repeat) open('main');
-      }
+      // Closed, with the results waiting in ☰ (or along the bottom on a TV): the game is over, so its
+      // keys don't start a new one. Enter or Space (OK on a TV) brings the results back instead.
+      if (!cfg || dialogUp() || e.ctrlKey || e.metaKey || e.altKey) return;
+      const a = document.activeElement;
+      const onPage = a && a !== document.body && !card.contains(a) && a.closest && a.closest('button, a, input, textarea, select, [contenteditable]');
+      if (onPage) return;
+      const reopen = e.key === 'Enter' || (e.key === ' ' && !tv());
+      const steer = !tv() && (DIRS[e.key] || e.key === 'w' || e.key === 'W');
+      if (!reopen && !steer) return;
+      e.preventDefault(); e.stopImmediatePropagation();
+      if (reopen && e.type === 'keydown' && !e.repeat) open('main');
       return;
     }
     if (elsewhere(e.target)) return;
@@ -428,10 +434,19 @@ window.ArcadeEnd = (() => {
 
   // Taps and clicks: the card's own reach its buttons and stop there; the dim takes the rest.
   // The top bar (Back, 🏆, ☰, ?) keeps working.
+  // Where a tap plays the game: the boards, stages and thumb pads.
+  const STAGE = 'canvas, #stage, .stage, .dino-stage, .cab-stage, .cab-pad, #zone, #popBtn, .pad, .tv-stage';
   const POINTER = ['pointerdown', 'pointerup', 'mousedown', 'mouseup', 'click', 'dblclick', 'touchstart', 'touchend', 'contextmenu'];
   for (const type of POINTER) {
     window.addEventListener(type, e => {
-      if (!view) return;
+      // Closed, with the results waiting: a tap on the finished game does nothing (it would start a new one).
+      if (!view) {
+        if (cfg && e.target && e.target.closest && e.target.closest(STAGE)) {
+          e.stopImmediatePropagation();
+          if (e.cancelable && type !== 'touchstart') e.preventDefault();
+        }
+        return;
+      }
       const t = e.target;
       if (t && t.closest && (card.contains(t) || t.closest('.ah, .ah-menu, .ah-menu-back, .ab-confirm, .tv-overlay, .tut-overlay, #toast, .fb-root'))) return;
       e.stopImmediatePropagation();

@@ -27,10 +27,10 @@
 
 .ew-card button { font: inherit; cursor: pointer; margin: 0; }
 .ew-x {
-  position: absolute; top: 10px; right: 10px; width: 36px; height: 36px; padding: 0; border-radius: 10px;
+  position: absolute; top: 10px; right: 10px; width: 40px; height: 40px; padding: 0; border-radius: 10px;
   border: 1px solid var(--ew-line); background: rgba(0, 0, 0, 0.22); color: var(--ew-text); font-size: 15px; line-height: 1;
 }
-.ew-title { font-weight: 800; font-size: 17px; line-height: 1.3; margin: 4px 40px 2px; overflow-wrap: anywhere; }
+.ew-title { font-weight: 800; font-size: 17px; line-height: 1.3; margin: 4px 48px 2px; overflow-wrap: anywhere; }
 .ew-score { font-weight: 900; font-size: 46px; line-height: 1.1; color: var(--ew-teal); font-variant-numeric: tabular-nums; }
 .ew-detail { font-size: 14px; color: var(--ew-muted); margin: 2px 0; line-height: 1.4; }
 .ew-saved {
@@ -55,10 +55,10 @@
 .ew-card button:focus-visible, html.tv .ew-card button:focus { outline: 3px solid var(--ew-gold); outline-offset: 2px; }
 
 /* High scores, inside the card */
-.ew-back { display: block; background: none; border: 0; color: var(--ew-muted); font-size: 14px; padding: 4px 0; margin: 0 44px 4px 0 !important; text-align: left; }
-.ew-hs-title { margin: 0 40px 2px; }
-.ew-tabs { display: flex; gap: 6px; margin-top: 8px; }
-.ew-tabs button { flex: 1; padding: 6px; border-radius: 10px; border: 1px solid var(--ew-line); background: none; color: var(--ew-text); font-size: 13px; font-weight: 700; }
+.ew-back { display: block; min-height: 40px; background: none; border: 0; color: var(--ew-muted); font-size: 14px; padding: 4px 0; margin: 0 48px 4px 0 !important; text-align: left; }
+.ew-hs-title { margin: 0 48px 2px; }
+.ew-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.ew-tabs button { flex: 1 1 auto; min-width: 72px; min-height: 40px; padding: 6px 8px; border-radius: 10px; border: 1px solid var(--ew-line); background: none; color: var(--ew-text); font-size: 13px; font-weight: 700; }
 .ew-tabs button.on { border-color: var(--ew-teal); color: var(--ew-teal); }
 .ew-list { list-style: none; margin: 8px 0 0; padding: 0; text-align: left; }
 .ew-list li { display: flex; align-items: center; gap: 8px; padding: 7px 6px; border-bottom: 1px solid var(--ew-line); font-size: 14px; }
@@ -100,3 +100,6 @@ html.tv .ew-card { max-width: 520px; }
   background: #00ffc2; box-shadow: 0 0 0 2px #1e0e39;
 }
 .ah-menu .ah-first { color: #00ffc2; }
+
+/* The celebrations (fx.js: confetti, coins, banners) stay under the card and the top bar. */
+#fxCanvas, .fx-banner, .fx-flash, .fx-fly { z-index: 39 !important; }

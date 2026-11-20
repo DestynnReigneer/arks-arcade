@@ -1322,7 +1322,7 @@ function showMarathonResults(done) {
     $('maraStats').appendChild(el);
   }
 
-  say($('maraSaveMsg'), done.arcade ? arcadeVerdictText(done.arcade) : '',
+  say($('maraSaveMsg'), done.arcade ? arcadeVerdictText(done.arcade, done.finalScore) : '',
     done.arcade && done.arcade.makesBoard ? 'ok' : '');
   buildLadder(done);
   ArcadeEnd.show({
@@ -1330,7 +1330,7 @@ function showMarathonResults(done) {
     score: done.finalScore,
     detail: $('maraFinalSub').textContent,
     // Marathon runs go on the board from the server, not from the page.
-    noSave: done.arcade ? arcadeVerdictText(done.arcade) : '',
+    noSave: done.arcade ? arcadeVerdictText(done.arcade, done.finalScore) : '',
     scores: arcadeScores('marathon'),
     again: () => { screen('setup'); startMarathon(); },
     setup: backToSetup,
@@ -1675,7 +1675,7 @@ function showResults(results) {
     score: $('resultScore').textContent,
     detail: $('resultSub').textContent,
     save: !onScreen && canSaveScore() ? () => saveToBoard(results) : null,
-    noSave: onScreen ? '' : results.arcade ? arcadeVerdictText(results.arcade) : '',
+    noSave: onScreen ? '' : results.arcade ? arcadeVerdictText(results.arcade, scoreTarget() ? scoreTarget().score : 0) : '',
     scores: arcadeScores(boardKey),
     again: S.mode === 'daily' || (S.mode === 'room' && !(S.room && S.room.youAreHost)) ? null : playAgain,
     // The daily board is once a day, so it goes back to today's board instead.
@@ -1871,8 +1871,10 @@ function renderArcadeRows(host, entries, slots, { highlightScore = null } = {}) 
   }
 }
 
-function arcadeVerdictText(a) {
+function arcadeVerdictText(a, score) {
   if (!a) return '';
+  // Nothing found: no talk of points short of a board you can't get on with zero.
+  if (!a.makesBoard && score === 0) return 'Find a word to get on the board.';
   if (a.makesBoard) {
     // The count is what is left *after* this score takes its slot.
     const freeAfter = Math.max(0, a.slots - a.filled - 1);
@@ -1889,7 +1891,7 @@ function showArcadePanel(a, score) {
   if (!a) { panel.classList.add('hidden'); return; }
   panel.classList.remove('hidden');
   $('arcadeHeading').textContent = a.makesBoard ? 'You made the board' : 'Arcade board';
-  $('arcadeVerdict').textContent = arcadeVerdictText(a);
+  $('arcadeVerdict').textContent = arcadeVerdictText(a, score);
   renderArcadeRows($('arcadeBoardList'), a.entries || [], a.slots || 10, { highlightScore: null });
   if (a.makesBoard) {
     Sound.kaching();

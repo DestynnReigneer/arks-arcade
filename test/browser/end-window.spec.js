@@ -154,6 +154,21 @@ test('Snake: the end window, saved by itself', async ({ page }) => {
   await startWith(page, 'ArrowUp', 'playing');
   await checkCard(page, { saved: new RegExp(`Saved as ${guest} · #\\d+ on Classic`), behind: () => page.evaluate(() => document.body.dataset.state) });
   await checkSizes(page);
+  // Closed, the finished game doesn't start again from its own keys or a tap: Enter or Space brings the card back.
+  await card(page).getByRole('button', { name: 'Close' }).click();
+  await expect(layer(page)).toBeHidden();
+  await page.locator('#stage').click();
+  await page.keyboard.press('ArrowUp');
+  await page.waitForTimeout(300);
+  expect(await page.evaluate(() => document.body.dataset.state)).toBe('over');
+  await expect(layer(page)).toBeHidden();
+  await page.keyboard.press('Enter');
+  await expect(card(page)).toBeVisible();
+  expect(await page.evaluate(() => document.body.dataset.state)).toBe('over');
+  await card(page).getByRole('button', { name: 'Close' }).click();
+  await page.keyboard.press(' ');
+  await expect(card(page)).toBeVisible();
+  expect(await page.evaluate(() => document.body.dataset.state)).toBe('over');
   await page.keyboard.press('Enter');
   await expectClean(page);
   await expect.poll(() => page.evaluate(() => document.body.dataset.state)).toBe('playing');
@@ -202,6 +217,21 @@ test('Tower Defense: Next level is the one extra button, and Back to setup bring
   await page.evaluate(() => window.TowersTest.win());
   await expect(card(page).getByRole('button', { name: 'Next level: Medium' })).toBeVisible({ timeout: 10000 });
   await checkCard(page, { saved: new RegExp(`Saved as ${guest} · #\\d+`) });
+  // Seven boards: the tabs wrap onto more rows and stay inside the card, and they and the back link are 40px tall.
+  await card(page).getByRole('button', { name: '🏆 High scores' }).click();
+  const tabs = card(page).locator('.ew-tabs');
+  await expect(tabs.locator('button')).toHaveCount(7);
+  expect(await tabs.evaluate(t => t.scrollWidth <= t.clientWidth + 1), 'the tabs fit across the card').toBe(true);
+  const box = await card(page).boundingBox();
+  for (const b of await tabs.locator('button').all()) {
+    const r = await b.boundingBox();
+    expect(r.x).toBeGreaterThanOrEqual(box.x - 1);
+    expect(r.x + r.width).toBeLessThanOrEqual(box.x + box.width + 1);
+    expect(r.height, 'a tab is big enough to tap').toBeGreaterThanOrEqual(40);
+  }
+  expect((await card(page).getByRole('button', { name: '‹ Back to my score' }).boundingBox()).height).toBeGreaterThanOrEqual(40);
+  expect((await card(page).getByRole('button', { name: 'Close' }).boundingBox()).height).toBeGreaterThanOrEqual(40);
+  await card(page).getByRole('button', { name: '‹ Back to my score' }).click();
   await card(page).getByRole('button', { name: '⚙️ Back to setup' }).click();
   await expectClean(page);
   await expect(page.locator('#options')).toBeVisible();
@@ -386,6 +416,19 @@ test('Clueless Crosswords: solved and saved for today', async ({ page }) => {
   }
   await checkCard(page, { saved: new RegExp(`Saved as ${guest} · #\\d+ in .* for today`), again: false, setup: false });
   await expect(card(page).getByRole('button', { name: 'Try the other one' })).toBeVisible();
+  // The solve's confetti and coins (fx.js) are under the card and the top bar, never over them.
+  await card(page).getByRole('button', { name: 'Close' }).click();
+  await page.locator('.ah-waffle').click();
+  await page.locator('.ah-menu button', { hasText: 'Last game\'s results' }).click();
+  await page.evaluate(() => window.Fx && Fx.burst({ count: 40, coins: 10 }));
+  const z = await page.evaluate(() => {
+    const layer = Number(getComputedStyle(document.querySelector('.ew-layer')).zIndex);
+    const bar = Number(getComputedStyle(document.querySelector('.ah')).zIndex);
+    const fx = [...document.querySelectorAll('#fxCanvas, .fx-banner, .fx-flash, .fx-fly')].map(e => Number(getComputedStyle(e).zIndex));
+    return { layer, bar, fx };
+  });
+  expect(z.fx.length, 'the confetti is drawn').toBeGreaterThan(0);
+  for (const f of z.fx) { expect(f).toBeLessThan(z.layer); expect(f).toBeLessThan(z.bar); }
   await card(page).getByRole('button', { name: 'Close' }).click();
   expect(problems, problems.join('\n')).toEqual([]);
 });
@@ -472,8 +515,20 @@ test('Words with Family: a game that stalls ends in the window, and leaving asks
   }
   await checkCard(page, { saved: null });
   await expect(card(page).locator('.ew-detail')).toContainText('Ana');
+  // Nobody played a word, so nothing is celebrated.
+  await expect(page.locator('.fx-banner')).toHaveCount(0);
+  // Play again: the same two people, straight into a new game (no setup form to fill in again).
+  await card(page).getByRole('button', { name: '▶ Play again' }).click();
+  // (The new game starts with its pass-the-device cover for the first player.)
+  await expect(layer(page)).toBeHidden();
+  await expect(page.locator('.ah-waffle')).not.toHaveClass(/ew-dot/);
+  await expect(page.locator('#game')).toBeVisible({ timeout: 10000 });
+  await expect(page.locator('#newLocal')).toBeHidden();
+  if (await handoff.isVisible()) await handoff.click();
+  await expect(page.locator('#scoreStrip')).toContainText('Ana');
+  await expect(page.locator('#scoreStrip')).toContainText('Ben');
+  await expect(page.locator('#scoreStrip')).not.toContainText('Computer');
   await page.goBack();
-  await expectClean(page);
   await expect(page.locator('#home')).toBeVisible();
   expect(browserBox, 'nothing used the browser\'s own confirm box').toBe(false);
   expect(problems, problems.join('\n')).toEqual([]);
@@ -605,7 +660,7 @@ test('Rambler solo: the round\'s results stay on the page under the window', asy
   await page.locator('#doneBtn').click();
   await expect(card(page)).toBeVisible({ timeout: 15000 });
   await expect(page.locator('#resultsScreen')).toBeVisible();
-  await checkCard(page, { saved: null });
+  await checkCard(page, { plain: 'Find a word to get on the board.' });
   await card(page).getByRole('button', { name: 'Close' }).click();
   await expect(page.locator('#standings')).toBeVisible();
   await page.goBack();
