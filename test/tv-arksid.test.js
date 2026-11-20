@@ -181,6 +181,9 @@ async function run({ base, fake }) {
     raw.prepare("INSERT OR REPLACE INTO arcade_profiles (id, name, avatar, status) VALUES ('pend0000000000ab', 'Pending Pat', 'cat', 'pending')").run();
     const pending = await tv.post('/api/scores/snake', { score: 41, board: 'classic', profileToken: tvMe.token, playedBy: 'pend0000000000ab' });
     ok('a TV can\'t name a profile that isn\'t approved', pending.status === 400, JSON.stringify(pending.data));
+    raw.prepare("INSERT OR REPLACE INTO arcade_profiles (id, name, avatar, status) VALUES ('rejc0000000000ab', 'Rejected Ray', 'cat', 'rejected')").run();
+    ok('…or one that was turned down', (await tv.post('/api/scores/snake', { score: 41, board: 'classic', profileToken: tvMe.token, playedBy: 'rejc0000000000ab' })).status === 400);
+    raw.prepare("DELETE FROM arcade_profiles WHERE id = 'rejc0000000000ab'").run();
     ok('…or one that isn\'t there', (await tv.post('/api/scores/snake', { score: 42, board: 'classic', profileToken: tvMe.token, playedBy: 'nobody' })).status === 400);
     ok('…and the waiting profile isn\'t on the TV\'s list', !((await tv.call('/api/tv/players')).data.players || []).some(p => p.id === 'pend0000000000ab'));
     raw.prepare("DELETE FROM arcade_profiles WHERE id = 'pend0000000000ab'").run();

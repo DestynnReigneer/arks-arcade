@@ -81,17 +81,18 @@ window.ArcadeEnd = (() => {
     return { profileToken: token, name, avatar: me.avatar || undefined };
   }
   // The TV is signed in as itself: it names who played, from the family's approved profiles.
-  // Asked when a game ends, and only once the TV is signed in (it has its own profile token);
-  // a TV that isn't set up, or an arcade without ARKS ID, offers Guest only.
+  // Asked every time a game ends (so someone approved since shows up), and only once the TV is
+  // signed in (it has its own profile token); a TV that isn't set up, or an arcade without ARKS ID,
+  // offers Guest only. If the arcade doesn't answer, the last list it gave is used.
   async function tvPlayers() {
-    if (players) return players;
     let list = [];
     const signedIn = !!(P() && P().token());
     if (signedIn) {
       try {
         const r = await fetch('/api/tv/players', { cache: 'no-store' });
-        if (r.ok) list = ((await r.json()).players || []).slice(0, 12);
-      } catch { /* Guest is always there */ }
+        if (r.ok) list = (await r.json()).players || [];
+        else if (players) return players;
+      } catch { if (players) return players; /* otherwise Guest is always there */ }
     }
     const got = [...list.map(p => ({ id: p.id, name: p.name, avatar: p.avatar })), { id: null, name: 'Guest' }];
     if (signedIn) players = got;
