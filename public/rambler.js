@@ -111,6 +111,7 @@ function mmss(ms) {
 }
 
 function screen(name) {
+  if (name !== 'results' && name !== 'maraResults' && window.ArcadeEnd) ArcadeEnd.clear();
   for (const id of ['setupScreen', 'profileScreen', 'dailyScreen', 'lobbyScreen', 'gateScreen',
                     'playScreen', 'entryScreen', 'resultsScreen', 'marathonScreen',
                     'maraResultsScreen']) {
@@ -1321,9 +1322,20 @@ function showMarathonResults(done) {
     $('maraStats').appendChild(el);
   }
 
-  say($('maraSaveMsg'), done.arcade ? arcadeVerdictText(done.arcade) : '',
+  say($('maraSaveMsg'), done.arcade ? arcadeVerdictText(done.arcade, done.finalScore) : '',
     done.arcade && done.arcade.makesBoard ? 'ok' : '');
   buildLadder(done);
+  ArcadeEnd.show({
+    title: 'Run over',
+    score: done.finalScore,
+    detail: $('maraFinalSub').textContent,
+    // Marathon runs go on the board from the server, not from the page.
+    noSave: done.arcade ? arcadeVerdictText(done.arcade, done.finalScore) : '',
+    scores: arcadeScores('marathon'),
+    again: () => { screen('setup'); startMarathon(); },
+    setup: backToSetup,
+    delay: 900
+  });
 }
 
 // The escalation ladder. Every rung is a score that is really on the board,
@@ -1498,10 +1510,7 @@ function applyRoomState(snap) {
   // would be put on the board again.
   if (snap.state === 'results' && snap.results) {
     const roundKey = `${snap.boardId}:${snap.startedAt}`;
-    if (S.shownRoundKey === roundKey) {
-      $('againBtn').textContent = snap.youAreHost ? 'New round' : 'Back to lobby';
-      return;
-    }
+    if (S.shownRoundKey === roundKey) return;
     S.shownRoundKey = roundKey;
     stopClock();
     showResults(snap.results);
@@ -1656,17 +1665,56 @@ function showResults(results) {
   }
   showArcadePanel(results.arcade, scoreTarget() ? scoreTarget().score : 0);
   refreshSeason();
-  $('saveScoreBtn').classList.toggle('hidden', onScreen || !canSaveScore());
-  // A score that made the board goes on it straight after the banner, under
-  // the player's name, with nothing to type. The button is there if that
-  // didn't work (no signal, say).
-  if (!onScreen && canSaveScore()) setTimeout(() => { if (S.results === results) saveToBoard(); }, 2100);
-  $('againBtn').textContent = S.mode === 'room'
-    ? (S.room && S.room.youAreHost ? 'New round' : 'Back to lobby')
-    : S.mode === 'daily' ? 'Back to today\u2019s board'
-      : 'Play again';
-
   screen('results');
+  // The shared end window (end-window.js), over the results. A score that made the board goes on it by
+  // itself, under the player's name, after the banner (that's the delay). The results stay on the page
+  // under it, for ✕ Close.
+  const boardKey = results.arcade && results.arcade.boardKey ? String(results.arcade.boardKey) : String(S.size);
+  ArcadeEnd.show({
+    title: $('resultTitle').textContent,
+    score: $('resultScore').textContent,
+    detail: $('resultSub').textContent,
+    save: !onScreen && canSaveScore() ? () => saveToBoard(results) : null,
+    noSave: onScreen ? '' : results.arcade ? arcadeVerdictText(results.arcade, scoreTarget() ? scoreTarget().score : 0) : '',
+    scores: arcadeScores(boardKey),
+    again: S.mode === 'daily' || (S.mode === 'room' && !(S.room && S.room.youAreHost)) ? null : playAgain,
+    // The daily board is once a day, so it goes back to today's board instead.
+    extra: S.mode === 'daily' ? { label: 'Back to today\u2019s board', run: playAgain } : null,
+    setup: leaveToSetup,
+    delay: canSaveScore() ? 2100 : 0
+  });
+}
+
+// The arcade boards (4x4, 5x5, Marathon), for the end window.
+function arcadeScores(key) {
+  return {
+    tabs: [{ id: '4', label: '4×4' }, { id: '5', label: '5×5' }, { id: 'marathon', label: 'Marathon' }], tab: key,
+    load: async board => (await api(`/arcade?board=${board}`)).entries.map(e => ({ name: e.name || e.initials, avatar: e.avatar, score: String(e.score) }))
+  };
+}
+
+// Play again: the next round (a room's host), today's board (the daily), or a new game with the same setup.
+function playAgain() {
+  if (S.mode === 'daily') {
+    S.mode = 'solo';
+    S.results = null;
+    S.found = [];
+    return openDaily();
+  }
+  if (S.mode === 'room') {
+    if (S.room && S.room.youAreHost) {
+      api(`/rooms/${S.creds.code}/next`, { method: 'POST', body: S.creds }).catch(e => alert(e.message));
+    }
+    $('doneBtn').disabled = false;
+    return;
+  }
+  backToSetup();
+  startPressed();
+}
+// Back to setup, leaving a room on the way.
+function leaveToSetup() {
+  if (S.creds) api(`/rooms/${S.creds.code}/leave`, { method: 'POST', body: S.creds }).catch(() => {});
+  backToSetup();
 }
 
 // Every word on the results screen that has a path, found or missed.
@@ -1823,8 +1871,10 @@ function renderArcadeRows(host, entries, slots, { highlightScore = null } = {}) 
   }
 }
 
-function arcadeVerdictText(a) {
+function arcadeVerdictText(a, score) {
   if (!a) return '';
+  // Nothing found: no talk of points short of a board you can't get on with zero.
+  if (!a.makesBoard && score === 0) return 'Find a word to get on the board.';
   if (a.makesBoard) {
     // The count is what is left *after* this score takes its slot.
     const freeAfter = Math.max(0, a.slots - a.filled - 1);
@@ -1841,7 +1891,7 @@ function showArcadePanel(a, score) {
   if (!a) { panel.classList.add('hidden'); return; }
   panel.classList.remove('hidden');
   $('arcadeHeading').textContent = a.makesBoard ? 'You made the board' : 'Arcade board';
-  $('arcadeVerdict').textContent = arcadeVerdictText(a);
+  $('arcadeVerdict').textContent = arcadeVerdictText(a, score);
   renderArcadeRows($('arcadeBoardList'), a.entries || [], a.slots || 10, { highlightScore: null });
   if (a.makesBoard) {
     Sound.kaching();
@@ -2233,49 +2283,31 @@ function boardIdentity() {
 // anything: a profile's score shows the profile's name (or the initials it
 // chose in its settings), a guest's shows the guest's name, and in a room or a
 // pass-around game the round already knows each player's name.
-async function saveToBoard() {
-  const results = S.results;
+async function saveToBoard(results) {
   const target = scoreTarget();
-  if (!target || !results || results.boardSaved || S.savingScore) return;
+  if (!target || !results || results.boardSaved) throw new Error('This score is already on the board.');
   // In a pass-around game the winner may not be whoever owns this device, so
   // the score goes under the name they played under in the round.
   const shared = S.mode === 'turns' || S.mode === 'tabletop';
   const me = boardIdentity();
   const who = shared ? {} : me;
-  $('initialsWho').textContent = `${target.score} points — good enough for the board.`;
-  $('initialsOverlay').classList.remove('hidden');
-  if (!shared && S.mode !== 'room' && !me.profileId && !me.name) {
-    say($('initialsMsg'), NO_BOARD_NAME, 'err');
-    return;
-  }
+  if (!shared && S.mode !== 'room' && !me.profileId && !me.name) throw new Error(NO_BOARD_NAME);
   // profileId is who banks the badge; playerId is which player of the round
   // the score belongs to. They are only the same thing by coincidence.
   const body = S.mode === 'room'
     ? { ...S.creds, ...who }
     : { boardId: S.boardId, playerId: target.playerId, mode: S.mode, durationSec: S.duration, ...who };
-
-  S.savingScore = true;
-  say($('initialsMsg'), 'Saving…');
-  try {
-    const saved = await api('/leaderboard', { method: 'POST', body });
-    results.boardSaved = true;
-    $('saveScoreBtn').classList.add('hidden');
-    if (!saved.made) {
-      say($('initialsMsg'), `Somebody beat you to it — ${saved.shortBy} short now.`, 'err');
-      return;
-    }
-    const bumped = (saved.evicted || [])[0];
-    say($('initialsMsg'),
-      bumped ? `Number ${saved.rank}. You knocked ${bumped.name || bumped.initials} off.` : `Number ${saved.rank}.`,
-      'ok');
-    Sound.fanfare();
-    Fx.burst({ count: 120, coins: 18 });
-    setTimeout(() => $('initialsOverlay').classList.add('hidden'), 1800);
-  } catch (e) {
-    say($('initialsMsg'), e.message, 'err');
-  } finally {
-    S.savingScore = false;
-  }
+  const saved = await api('/leaderboard', { method: 'POST', body });
+  results.boardSaved = true;
+  if (!saved.made) throw new Error(`Somebody beat you to it — ${saved.shortBy} short now.`);
+  Sound.fanfare();
+  Fx.burst({ count: 120, coins: 18 });
+  const bumped = (saved.evicted || [])[0];
+  const name = shared || S.mode === 'room' ? target.name : me.name || target.name;
+  return {
+    name, avatar: shared ? null : me.avatar, rank: saved.rank,
+    text: `Saved as ${name} · #${saved.rank}${bumped ? `. You knocked ${bumped.name || bumped.initials} off.` : ''}`
+  };
 }
 
 // -------------------------------------------------------------------- wiring
@@ -2341,26 +2373,6 @@ function bind() {
 
   $('entryNextBtn').onclick = takeEntry;
 
-  $('againBtn').onclick = () => {
-    if (S.mode === 'daily') {
-      S.mode = 'solo';
-      S.results = null;
-      S.found = [];
-      return openDaily();
-    }
-    if (S.mode === 'room') {
-      if (S.room && S.room.youAreHost) {
-        api(`/rooms/${S.creds.code}/next`, { method: 'POST', body: S.creds }).catch(e => alert(e.message));
-      }
-      $('doneBtn').disabled = false;
-      return;
-    }
-    backToSetup();
-    startPressed();
-  };
-
-  $('saveScoreBtn').onclick = saveToBoard;
-  $('closeInitialsBtn').onclick = () => $('initialsOverlay').classList.add('hidden');
   $('resultsScreen').addEventListener('click', e => {
     const el = e.target.closest('[data-word]');
     if (el) pickResultWord(el.dataset.word);
@@ -2399,8 +2411,6 @@ function bind() {
   $('maraInput').addEventListener('keydown', e => { if (e.key === 'Enter') maraSubmit(); });
   $('maraHintBtn').onclick = marathonHint;
   $('maraEndBtn').onclick = () => { if (!M.over) { M.over = true; endMarathon(); } };
-  $('maraAgainBtn').onclick = () => { screen('setup'); startMarathon(); };
-  $('maraDoneBtn').onclick = backToSetup;
 
   // ---- sound ----
   const paintSound = () => {
@@ -2488,10 +2498,7 @@ async function boot() {
 // a round or a marathon is going, and from setup Back goes to the arcade.
 ArcadeBack.setup({
   atMenu: () => !$('setupScreen').classList.contains('hidden'),
-  back: () => {
-    if (S.creds) api(`/rooms/${S.creds.code}/leave`, { method: 'POST', body: S.creds }).catch(() => {});
-    backToSetup();
-  },
+  back: leaveToSetup,
   busy: () => ['playScreen', 'gateScreen', 'entryScreen'].some(id => !$(id).classList.contains('hidden')) ||
     (!$('marathonScreen').classList.contains('hidden') && !M.over)
 });

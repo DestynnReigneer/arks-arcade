@@ -101,8 +101,7 @@ test('Rambler: a score good enough for the board goes up under the guest\'s name
   await page.locator('#modeList .mode[data-mode="solo"]').click();
   await page.locator('#startBtn').click();
   await page.locator('#doneBtn').click();
-  await expect(page.locator('#initialsOverlay')).toBeVisible({ timeout: 10000 });
-  await expect(page.locator('#initialsMsg')).toHaveText('Number 3. You knocked Robin off.');
+  await expect(page.locator('.ew-card .ew-saved')).toContainText(`Saved as ${guest} · #3. You knocked Robin off.`, { timeout: 15000 });
   expect(await shownBoxes(page)).toBe(0);
   expect(sent.name).toBe(guest);
   expect('initials' in sent).toBe(false);

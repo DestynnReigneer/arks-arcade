@@ -81,17 +81,18 @@ window.ArcadeEnd = (() => {
     return { profileToken: token, name, avatar: me.avatar || undefined };
   }
   // The TV is signed in as itself: it names who played, from the family's approved profiles.
-  // Asked when a game ends, and only once the TV is signed in (it has its own profile token);
-  // a TV that isn't set up, or an arcade without ARKS ID, offers Guest only.
+  // Asked every time a game ends (so someone approved since shows up), and only once the TV is
+  // signed in (it has its own profile token); a TV that isn't set up, or an arcade without ARKS ID,
+  // offers Guest only. If the arcade doesn't answer, the last list it gave is used.
   async function tvPlayers() {
-    if (players) return players;
     let list = [];
     const signedIn = !!(P() && P().token());
     if (signedIn) {
       try {
         const r = await fetch('/api/tv/players', { cache: 'no-store' });
-        if (r.ok) list = ((await r.json()).players || []).slice(0, 12);
-      } catch { /* Guest is always there */ }
+        if (r.ok) list = (await r.json()).players || [];
+        else if (players) return players;
+      } catch { if (players) return players; /* otherwise Guest is always there */ }
     }
     const got = [...list.map(p => ({ id: p.id, name: p.name, avatar: p.avatar })), { id: null, name: 'Guest' }];
     if (signedIn) players = got;
@@ -390,11 +391,17 @@ window.ArcadeEnd = (() => {
   // Window capture runs before every game's own keys, so nothing reaches the game behind.
   function onKey(e) {
     if (!view) {
-      // The TV: OK brings the results back, and does nothing else once the game is over.
-      if (cfg && tv() && e.key === 'Enter' && !dialogUp()) {
-        e.preventDefault(); e.stopImmediatePropagation();
-        if (e.type === 'keydown' && !e.repeat) open('main');
-      }
+      // Closed, with the results waiting in ☰ (or along the bottom on a TV): the game is over, so its
+      // keys don't start a new one. Enter or Space (OK on a TV) brings the results back instead.
+      if (!cfg || dialogUp() || e.ctrlKey || e.metaKey || e.altKey) return;
+      const a = document.activeElement;
+      const onPage = a && a !== document.body && !card.contains(a) && a.closest && a.closest('button, a, input, textarea, select, [contenteditable]');
+      if (onPage) return;
+      const reopen = e.key === 'Enter' || (e.key === ' ' && !tv());
+      const steer = !tv() && (DIRS[e.key] || e.key === 'w' || e.key === 'W');
+      if (!reopen && !steer) return;
+      e.preventDefault(); e.stopImmediatePropagation();
+      if (reopen && e.type === 'keydown' && !e.repeat) open('main');
       return;
     }
     if (elsewhere(e.target)) return;
@@ -427,10 +434,19 @@ window.ArcadeEnd = (() => {
 
   // Taps and clicks: the card's own reach its buttons and stop there; the dim takes the rest.
   // The top bar (Back, 🏆, ☰, ?) keeps working.
+  // Where a tap plays the game: the boards, stages and thumb pads.
+  const STAGE = 'canvas, #stage, .stage, .dino-stage, .cab-stage, .cab-pad, #zone, #popBtn, .pad, .tv-stage';
   const POINTER = ['pointerdown', 'pointerup', 'mousedown', 'mouseup', 'click', 'dblclick', 'touchstart', 'touchend', 'contextmenu'];
   for (const type of POINTER) {
     window.addEventListener(type, e => {
-      if (!view) return;
+      // Closed, with the results waiting: a tap on the finished game does nothing (it would start a new one).
+      if (!view) {
+        if (cfg && e.target && e.target.closest && e.target.closest(STAGE)) {
+          e.stopImmediatePropagation();
+          if (e.cancelable && type !== 'touchstart') e.preventDefault();
+        }
+        return;
+      }
       const t = e.target;
       if (t && t.closest && (card.contains(t) || t.closest('.ah, .ah-menu, .ah-menu-back, .ab-confirm, .tv-overlay, .tut-overlay, #toast, .fb-root'))) return;
       e.stopImmediatePropagation();

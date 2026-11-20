@@ -307,6 +307,16 @@
     paintLocalPlayers();
     paintLocalDict();
   }
+  // A new game on one device with the last one's players, in the same seats, and the same words.
+  function sameLocal(g) {
+    show('newLocal');
+    $('localMsg').textContent = '';
+    S.localPlayers = g.players.map(pl => (pl.bot ? { bot: true } : { name: pl.name }));
+    S.localDict = g.dictionary;
+    paintLocalPlayers();
+    paintLocalDict();
+    startLocal();
+  }
   function paintLocalPlayers() {
     const box = $('localPlayers');
     box.innerHTML = '';
@@ -640,10 +650,13 @@
           return (board ? board.rows : []).map(r => ({ name: r.name, avatar: r.avatar, score: Number(r.value).toLocaleString('en-US') }));
         }
       },
-      again: () => (g.kind === 'local' ? newLocal() : newOnline()),
+      // On one device, the same players again (the computer only if it played); online, a new lobby.
+      again: () => (g.kind === 'local' ? sameLocal(g) : newOnline()),
       setup: home
     });
-    if (youWon || g.kind === 'local') {
+    // Celebrations are real: none for a game where nobody played a word, or a winner with no points.
+    const real = g.moves.some(m => m.kind === 'play') && winners[0].score > 0;
+    if (real && (youWon || g.kind === 'local')) {
       if (window.Fx) { Fx.burst({ count: 200, coins: 30 }); Fx.banner(youWon ? 'You won!' : `${winners[0].name} wins!`, `${winners[0].score.toLocaleString('en-US')} points`); }
       Blip.tune([[523, 0.1], [659, 0.1], [784, 0.1], [1047, 0.3]], { type: 'triangle', volume: 0.06 });
     }

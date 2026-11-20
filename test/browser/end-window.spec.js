@@ -154,6 +154,21 @@ test('Snake: the end window, saved by itself', async ({ page }) => {
   await startWith(page, 'ArrowUp', 'playing');
   await checkCard(page, { saved: new RegExp(`Saved as ${guest} · #\\d+ on Classic`), behind: () => page.evaluate(() => document.body.dataset.state) });
   await checkSizes(page);
+  // Closed, the finished game doesn't start again from its own keys or a tap: Enter or Space brings the card back.
+  await card(page).getByRole('button', { name: 'Close' }).click();
+  await expect(layer(page)).toBeHidden();
+  await page.locator('#stage').click();
+  await page.keyboard.press('ArrowUp');
+  await page.waitForTimeout(300);
+  expect(await page.evaluate(() => document.body.dataset.state)).toBe('over');
+  await expect(layer(page)).toBeHidden();
+  await page.keyboard.press('Enter');
+  await expect(card(page)).toBeVisible();
+  expect(await page.evaluate(() => document.body.dataset.state)).toBe('over');
+  await card(page).getByRole('button', { name: 'Close' }).click();
+  await page.keyboard.press(' ');
+  await expect(card(page)).toBeVisible();
+  expect(await page.evaluate(() => document.body.dataset.state)).toBe('over');
   await page.keyboard.press('Enter');
   await expectClean(page);
   await expect.poll(() => page.evaluate(() => document.body.dataset.state)).toBe('playing');
@@ -202,6 +217,21 @@ test('Tower Defense: Next level is the one extra button, and Back to setup bring
   await page.evaluate(() => window.TowersTest.win());
   await expect(card(page).getByRole('button', { name: 'Next level: Medium' })).toBeVisible({ timeout: 10000 });
   await checkCard(page, { saved: new RegExp(`Saved as ${guest} · #\\d+`) });
+  // Seven boards: the tabs wrap onto more rows and stay inside the card, and they and the back link are 40px tall.
+  await card(page).getByRole('button', { name: '🏆 High scores' }).click();
+  const tabs = card(page).locator('.ew-tabs');
+  await expect(tabs.locator('button')).toHaveCount(7);
+  expect(await tabs.evaluate(t => t.scrollWidth <= t.clientWidth + 1), 'the tabs fit across the card').toBe(true);
+  const box = await card(page).boundingBox();
+  for (const b of await tabs.locator('button').all()) {
+    const r = await b.boundingBox();
+    expect(r.x).toBeGreaterThanOrEqual(box.x - 1);
+    expect(r.x + r.width).toBeLessThanOrEqual(box.x + box.width + 1);
+    expect(r.height, 'a tab is big enough to tap').toBeGreaterThanOrEqual(40);
+  }
+  expect((await card(page).getByRole('button', { name: '‹ Back to my score' }).boundingBox()).height).toBeGreaterThanOrEqual(40);
+  expect((await card(page).getByRole('button', { name: 'Close' }).boundingBox()).height).toBeGreaterThanOrEqual(40);
+  await card(page).getByRole('button', { name: '‹ Back to my score' }).click();
   await card(page).getByRole('button', { name: '⚙️ Back to setup' }).click();
   await expectClean(page);
   await expect(page.locator('#options')).toBeVisible();
@@ -386,6 +416,19 @@ test('Clueless Crosswords: solved and saved for today', async ({ page }) => {
   }
   await checkCard(page, { saved: new RegExp(`Saved as ${guest} · #\\d+ in .* for today`), again: false, setup: false });
   await expect(card(page).getByRole('button', { name: 'Try the other one' })).toBeVisible();
+  // The solve's confetti and coins (fx.js) are under the card and the top bar, never over them.
+  await card(page).getByRole('button', { name: 'Close' }).click();
+  await page.locator('.ah-waffle').click();
+  await page.locator('.ah-menu button', { hasText: 'Last game\'s results' }).click();
+  await page.evaluate(() => window.Fx && Fx.burst({ count: 40, coins: 10 }));
+  const z = await page.evaluate(() => {
+    const layer = Number(getComputedStyle(document.querySelector('.ew-layer')).zIndex);
+    const bar = Number(getComputedStyle(document.querySelector('.ah')).zIndex);
+    const fx = [...document.querySelectorAll('#fxCanvas, .fx-banner, .fx-flash, .fx-fly')].map(e => Number(getComputedStyle(e).zIndex));
+    return { layer, bar, fx };
+  });
+  expect(z.fx.length, 'the confetti is drawn').toBeGreaterThan(0);
+  for (const f of z.fx) { expect(f).toBeLessThan(z.layer); expect(f).toBeLessThan(z.bar); }
   await card(page).getByRole('button', { name: 'Close' }).click();
   expect(problems, problems.join('\n')).toEqual([]);
 });
@@ -472,9 +515,220 @@ test('Words with Family: a game that stalls ends in the window, and leaving asks
   }
   await checkCard(page, { saved: null });
   await expect(card(page).locator('.ew-detail')).toContainText('Ana');
+  // Nobody played a word, so nothing is celebrated.
+  await expect(page.locator('.fx-banner')).toHaveCount(0);
+  // Play again: the same two people, straight into a new game (no setup form to fill in again).
+  await card(page).getByRole('button', { name: '▶ Play again' }).click();
+  // (The new game starts with its pass-the-device cover for the first player.)
+  await expect(layer(page)).toBeHidden();
+  await expect(page.locator('.ah-waffle')).not.toHaveClass(/ew-dot/);
+  await expect(page.locator('#game')).toBeVisible({ timeout: 10000 });
+  await expect(page.locator('#newLocal')).toBeHidden();
+  if (await handoff.isVisible()) await handoff.click();
+  await expect(page.locator('#scoreStrip')).toContainText('Ana');
+  await expect(page.locator('#scoreStrip')).toContainText('Ben');
+  await expect(page.locator('#scoreStrip')).not.toContainText('Computer');
   await page.goBack();
-  await expectClean(page);
   await expect(page.locator('#home')).toBeVisible();
   expect(browserBox, 'nothing used the browser\'s own confirm box').toBe(false);
+  expect(problems, problems.join('\n')).toEqual([]);
+});
+
+// ---- the games that had end screens of their own (moved on 2026-11-19, second part) ---------------------
+
+test('Chess: resigning ends in the window, and the result line under the board brings it back', async ({ page }) => {
+  const problems = watchProblems(page);
+  await openAsGuest(page, '/chess.html');
+  await page.locator('#goBtn').click();
+  await expect(page.locator('#game')).toBeVisible();
+  await page.locator('#resignBtn').click();
+  await page.locator('.ab-confirm [data-leave]').click();
+  await expect(card(page)).toBeVisible({ timeout: 10000 });
+  await expect(card(page).locator('.ew-title')).toHaveText('Resigned. The computer wins.');
+  // A loss has nothing to save, and says nothing about it.
+  await expect(card(page).locator('.ew-saved')).toHaveCount(0);
+  await checkCard(page, { saved: null });
+  await card(page).getByRole('button', { name: 'Close' }).click();
+  await page.locator('#statusLine').click();
+  await expect(card(page)).toBeVisible();
+  await card(page).getByRole('button', { name: '▶ Play again' }).click();
+  await expectClean(page);
+  await expect(page.locator('#game')).toBeVisible();
+  await expect(page.locator('#statusLine')).not.toContainText('Tap for results');
+  expect(problems, problems.join('\n')).toEqual([]);
+});
+
+test('Know-It-All solo: a right answer saves by itself, and a game of none says so with no trophy', async ({ page }) => {
+  test.setTimeout(90000);
+  const problems = watchProblems(page);
+  const correct = [];
+  await page.route('**/api/trivia/questions?*', async route => {
+    const res = await route.fetch();
+    const data = await res.json();
+    correct.length = 0;
+    for (const q of data.questions) correct.push(q.correctIndex);
+    await route.fulfill({ response: res, json: data });
+  });
+  const guest = await openAsGuest(page, '/trivia.html');
+  const play = async right => {
+    await page.locator('#countSeg button').first().click();
+    await page.locator('#goBtn').click();
+    const answers = page.locator('#answers button:not([disabled])');
+    const next = page.locator('#nextBtn');
+    for (let i = 0; i < 40 && !(await card(page).isVisible()); i++) {
+      // Each question: wait for its answers, pick one, then Next (or the end of the game).
+      await expect.poll(async () => (await answers.first().isVisible().catch(() => false)) || (await card(page).isVisible()), { timeout: 15000 }).toBe(true);
+      if (await card(page).isVisible()) break;
+      const n = await answers.count();
+      await answers.nth(right ? correct[i] : (correct[i] + 1) % n).click();
+      await expect.poll(async () => (await next.isVisible()) || (await card(page).isVisible()), { timeout: 15000 }).toBe(true);
+      if (await next.isVisible()) await next.click();
+    }
+  };
+  await play(false);
+  await expect(card(page)).toBeVisible({ timeout: 20000 });
+  await expect(card(page).locator('.ew-saved')).toHaveText('Get one right to get on the board.');
+  await expect(page.locator('.big-emoji:visible')).toHaveCount(0);
+  await card(page).getByRole('button', { name: '⚙️ Back to setup' }).click();
+  await expectClean(page);
+  await play(true);
+  await checkCard(page, { saved: new RegExp(`Saved as ${guest} · #\\d+`) });
+  await card(page).getByRole('button', { name: '🏆 High scores' }).click();
+  await expect(card(page).locator('.ew-list li.me')).toContainText(guest);
+  expect(problems, problems.join('\n')).toEqual([]);
+});
+
+test('Spin & Solve: a solo game saves by itself, with High scores inside the window', async ({ page }) => {
+  test.setTimeout(120000);
+  const problems = watchProblems(page);
+  const guest = await openAsGuest(page, '/spinsolve.html');
+  while (await page.locator('#nameList .name-row').count() > 1) await page.locator('#nameList .name-row:last-child button').click();
+  await page.locator('#goBtn').click();
+  await expect(page.locator('#game')).toBeVisible();
+  const run = () => page.evaluate(() => {
+    const key = Object.keys(localStorage).find(k => k.startsWith('spin.run.'));
+    return key ? JSON.parse(localStorage.getItem(key)).id : null;
+  });
+  // Three rounds (the setup's default), each solved outright.
+  for (let round = 0; round < 3; round++) {
+    const { answer } = await (await page.request.get(`/api/spinsolve/test/answer/${await run()}`)).json();
+    await page.locator('#solveBtn').click();
+    await page.locator('#solveInput').fill(answer);
+    await page.locator('#solveOk').click();
+    await expect(page.locator('#roundView')).toBeVisible({ timeout: 20000 });
+    await page.locator('#nextRoundBtn').click();
+    if (round < 2) await expect(page.locator('#roundLabel')).toContainText(`Round ${round + 2} of 3`);
+  }
+  await checkCard(page, { saved: new RegExp(`Saved as ${guest} · #\\d+`) });
+  await card(page).getByRole('button', { name: '🏆 High scores' }).click();
+  await expect(card(page).locator('.ew-list li.me')).toContainText(guest);
+  await card(page).getByRole('button', { name: '‹ Back to my score' }).click();
+  await card(page).getByRole('button', { name: '⚙️ Back to setup' }).click();
+  await expectClean(page);
+  await expect(page.locator('#setup')).toBeVisible();
+  expect(problems, problems.join('\n')).toEqual([]);
+});
+
+test('Wordless: a loss has nothing to save and no SCORE heading, and Play again starts a new word', async ({ page }) => {
+  const problems = watchProblems(page);
+  await openAsGuest(page, '/wordless.html');
+  const pick = page.locator('#difficultyChoices button').first();
+  if (await pick.isVisible().catch(() => false)) await pick.click();
+  // Six guesses that can't be the answer.
+  await expect(page.locator('[id^="tile-0-"]').first()).toBeVisible();
+  const tiles = await page.locator('[id^="tile-0-"]').count();
+  for (let g = 0; g < 6 && !(await card(page).isVisible()); g++) {
+    await page.keyboard.type('z'.repeat(tiles));
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(900);
+  }
+  await expect(card(page)).toBeVisible({ timeout: 15000 });
+  await expect(page.getByText('SCORE', { exact: true })).toHaveCount(0);
+  await checkCard(page, { plain: 'Solve the word to get on the board.' });
+  await page.keyboard.press('Enter');
+  await expectClean(page);
+  await expect(page.locator('#board .tile.filled')).toHaveCount(0);
+  expect(problems, problems.join('\n')).toEqual([]);
+});
+
+test('Rambler solo: the round\'s results stay on the page under the window', async ({ page }) => {
+  test.setTimeout(60000);
+  const problems = watchProblems(page);
+  await openAsGuest(page, '/rambler.html');
+  await page.locator('#modeList .mode[data-mode="solo"]').click();
+  await page.locator('#startBtn').click();
+  await page.locator('#doneBtn').click();
+  await expect(card(page)).toBeVisible({ timeout: 15000 });
+  await expect(page.locator('#resultsScreen')).toBeVisible();
+  await checkCard(page, { plain: 'Find a word to get on the board.' });
+  await card(page).getByRole('button', { name: 'Close' }).click();
+  await expect(page.locator('#standings')).toBeVisible();
+  await page.goBack();
+  await expectClean(page);
+  await expect(page.locator('#setupScreen')).toBeVisible();
+  expect(problems, problems.join('\n')).toEqual([]);
+});
+
+// The card games on one device, played to the end by tapping whatever the turn needs. They have no board,
+// so no score to save and no High scores.
+async function playCards(page, steps, max = 400) {
+  for (let i = 0; i < max && !(await card(page).isVisible()); i++) {
+    let did = false;
+    for (const sel of steps) {
+      const b = page.locator(sel).first();
+      if (await b.isVisible().catch(() => false) && await b.isEnabled().catch(() => false)) {
+        // (force: the deck and the cards wobble, so they're never still enough for a normal click)
+        await b.click({ timeout: 2000, force: true }).catch(() => {});
+        did = true;
+        break;
+      }
+    }
+    if (!did) await page.waitForTimeout(150);
+  }
+}
+
+test('Dare Devil: a quick game on one device ends in the window, with no High scores', async ({ page }) => {
+  test.setTimeout(180000);
+  const problems = watchProblems(page);
+  await openAsGuest(page, '/daredevil.html');
+  await page.locator('#lengthSeg [data-v="quick"]').click();
+  const names = page.locator('#nameList input');
+  if (await names.count() < 2) await page.locator('#addPlayerBtn').click();
+  await names.nth(0).fill('Ana');
+  await names.nth(1).fill('Ben');
+  await page.locator('#goBtn').click();
+  await playCards(page, ['#calloutOk', '.ab-confirm [data-leave]', '#dctGo', '#doneBtn', '#deckBtn']);
+  await checkCard(page, { scores: false });
+  await expect(card(page).locator('.ew-title')).toContainText('is the Dare Devil!');
+  await card(page).getByRole('button', { name: '▶ Play again' }).click();
+  await expectClean(page);
+  await expect(page.locator('#game')).toBeVisible();
+  expect(problems, problems.join('\n')).toEqual([]);
+});
+
+test('Uh-Oh: Part Deux: a game on one device ends in the window, with no High scores', async ({ page }) => {
+  test.setTimeout(420000);
+  const problems = watchProblems(page);
+  await openAsGuest(page, '/partdeux.html');
+  const names = page.locator('#nameList input');
+  if (await names.count() < 2) await page.locator('#addPlayerBtn').click();
+  await names.nth(0).fill('Ana');
+  await names.nth(1).fill('Ben');
+  await page.locator('#goBtn').click();
+  const steps = ['#calloutOk', '#passReady', '#colorRow button', '#uhohBtn', '#hand .ok', '#keepBtn', '#drawBtn'];
+  for (let round = 0; round < 400 && !(await card(page).isVisible()); round++) {
+    // A gift card: pick a card to give, then who gets it.
+    if (await page.locator('#giftPick:not(.hidden)').isVisible().catch(() => false)) {
+      await page.locator('#giftCards > *').first().click({ force: true });
+      await page.locator('#giftTargets button').first().click({ force: true });
+      continue;
+    }
+    await playCards(page, steps, 8);
+  }
+  await checkCard(page, { scores: false });
+  await expect(card(page).locator('.ew-title')).toContainText('wins!');
+  await card(page).getByRole('button', { name: '⚙️ Back to setup' }).click();
+  await expectClean(page);
+  await expect(page.locator('#setup')).toBeVisible();
   expect(problems, problems.join('\n')).toEqual([]);
 });

@@ -209,6 +209,27 @@ test('a pop-up message clears Chrome\'s tab row', async ({ browser }, info) => {
   await ctx.close();
 });
 
+// The ☰ sheet sits above Chrome's tab row, so its first item (the last game's results) can be tapped.
+test('the menu clears Chrome\'s tab row, last game\'s results included', async ({ browser }, info) => {
+  test.skip(info.project.name !== 'phone', 'The size is set here.');
+  const { ctx, page } = await openAt(browser, '/snake.html', { width: 412, height: 860 }, 136);
+  await expect(async () => {
+    await page.keyboard.press('ArrowUp');
+    await expect.poll(() => page.evaluate(() => document.body.dataset.state), { timeout: 1500 }).toBe('playing');
+  }).toPass({ timeout: 10000 });
+  await expect(page.locator('.ew-card')).toBeVisible({ timeout: 20000 });
+  await page.locator('.ew-card').getByRole('button', { name: 'Close' }).click();
+  await page.locator('.ah-waffle').click();
+  const item = page.locator('.ah-menu button', { hasText: 'Last game\'s results' });
+  await expect(item).toBeVisible();
+  await page.waitForTimeout(400);
+  const box = await item.boundingBox();
+  expect(box.y + box.height).toBeLessThanOrEqual(860 - 136);
+  const sheet = await page.locator('.ah-menu').boundingBox();
+  expect(sheet.y + sheet.height).toBeLessThanOrEqual(860 - 136);
+  await ctx.close();
+});
+
 // Turned sideways, the menu holds what moved off the screen, so all of it has to be
 // reachable, and what moved has to work there.
 for (const [label, viewport] of SIZES.filter(s => s[2] && s[1].width > s[1].height)) {

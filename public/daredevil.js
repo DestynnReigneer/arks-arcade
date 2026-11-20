@@ -12,7 +12,8 @@
   const { $, toast } = ArcadeKit;
   const API = '/api/daredevil';
   const TV = !!(window.ArcadeTV && ArcadeTV.on);
-  const ask = text => (TV ? ArcadeTV.confirm(text) : Promise.resolve(confirm(text)));
+  // The arcade's own question card (the TV's on a TV), never the browser's confirm box.
+  const ask = text => ArcadeBack.ask(text);
   const S = {
     config: null, level: 'kids', length: 'standard', mode: TV ? 'tvphones' : 'local', names: [typeof ArcadeProfile !== 'undefined' && !TV ? ArcadeProfile.name() : '', ''],
     pin: TV ? '' : (() => { try { return sessionStorage.getItem('dd.pin') || ''; } catch { return ''; } })(),
@@ -211,6 +212,7 @@
     if (snap.kind === 'room' && !snap.game) { renderLobby(snap); return lobby().render(snap); }
     // A card drawn on the TV counts as a game being played (adults' night keeps going).
     if (TV && snap.game && `${snap.game.turn}|${snap.game.left}|${snap.game.phase}` !== before) ArcadeTV.played();
+    if (snap.game && snap.game.phase !== 'over' && S.overShown) { S.overShown = false; S.seenCallout = 0; ArcadeEnd.clear(); }
     show('game');
     lobby().game(snap);
     renderGame();
@@ -400,23 +402,20 @@
     if (S.overShown) return;
     S.overShown = true;
     const ranked = g.players.slice().sort((a, b) => b.score - a.score);
-    $('overTitle').textContent = `${nameOf(g.winner)} is the Dare Devil!`;
-    const ol = $('finalList');
-    ol.innerHTML = '';
-    for (const p of ranked) {
-      const li = document.createElement('li');
-      li.innerHTML = '<span></span><b></b>';
-      li.firstChild.textContent = p.name + (p.chickens ? ` (🐔×${p.chickens})` : '');
-      li.lastChild.textContent = p.score;
-      ol.appendChild(li);
-    }
-    $('againBtn').classList.toggle('hidden', S.table.kind === 'room' && !S.snap.youAreHost);
-    setTimeout(() => $('overView').classList.remove('hidden'), 700);
+    // The shared end window (end-window.js). A card game has no board, so no High scores.
+    // In a room only the host deals again.
+    ArcadeEnd.show({
+      title: `${nameOf(g.winner)} is the Dare Devil!`,
+      score: ranked[0] ? ranked[0].score : null,
+      detail: ranked.map(p => `${p.name}${p.chickens ? ` (🐔×${p.chickens})` : ''} ${p.score}`).join(' · '),
+      again: S.table.kind === 'room' && !S.snap.youAreHost ? null : playAgain,
+      setup: leave,
+      delay: 700
+    });
     Blip.tune([[523, 0.12], [659, 0.12], [784, 0.12], [1047, 0.3]], { type: 'triangle' });
   }
 
   async function playAgain() {
-    $('overView').classList.add('hidden');
     S.overShown = false;
     S.seenCallout = 0;
     try {
@@ -436,7 +435,7 @@
     }
     S.table = null;
     S.snap = null;
-    $('overView').classList.add('hidden');
+    ArcadeEnd.clear();
     show('setup');
     paintLevel(S.level);
   }
@@ -461,7 +460,7 @@
   ArcadeBack.setup({
     atMenu: () => !$('setup').classList.contains('hidden'),
     back: leave,
-    busy: () => !$('game').classList.contains('hidden') && $('overView').classList.contains('hidden'),
+    busy: () => !$('game').classList.contains('hidden') && !ArcadeEnd.has,
     question: () => (S.snap && S.snap.isScreen ? 'End this game for everyone?' : 'Leave this game?')
   });
 
@@ -498,8 +497,6 @@
       renderLevels($('levelList'), S.level, pickLevel);
     });
   }
-  $('againBtn').onclick = playAgain;
-  $('menuBtn').onclick = leave;
   $('helpBtn').onclick = () => help.open();
   Blip.muteButton($('muteBtn'));
 

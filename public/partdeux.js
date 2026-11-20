@@ -12,7 +12,8 @@
 (() => {
   const { $, toast } = ArcadeKit;
   const TV = !!(window.ArcadeTV && ArcadeTV.on);
-  const ask = text => (TV ? ArcadeTV.confirm(text) : Promise.resolve(confirm(text)));
+  // The arcade's own question card (the TV's on a TV), never the browser's confirm box.
+  const ask = text => ArcadeBack.ask(text);
   const API = '/api/partdeux';
   // The one symbol each card shows; the funny names are for the pile and the log.
   const SYMBOLS = { skip: '⊘', draw2: '+2', reverse: '⇄', nope: '✋', gift: '🎁', wild: '★', wild4: '+4' };
@@ -234,7 +235,7 @@
     if (snap.kind === 'room' && !snap.game) { renderLobby(snap); return lobby().render(snap); }
     // A move on the TV's table counts as a game being played (adults' night keeps going).
     if (TV && snap.game && `${snap.game.turn}|${snap.game.deckCount}|${snap.game.top && snap.game.top.id}` !== before) ArcadeTV.played();
-    if (snap.kind === 'room' && snap.game.phase === 'over' && S.overShown && !$('overView').classList.contains('hidden')) { /* keep results */ }
+    if (snap.game && snap.game.phase !== 'over' && S.overShown) { S.overShown = false; S.seenCallout = 0; ArcadeEnd.clear(); }
     show('game');
     lobby().game(snap);
     renderGame();
@@ -567,15 +568,19 @@
     if (S.overShown) return;
     S.overShown = true;
     const iWon = g.winner === me() || S.table.kind === 'local' || S.snap.isScreen;
-    $('overTitle').textContent = `${nameOf(g.winner)} wins!`;
-    $('overHint').textContent = g.players.filter(p => p.id !== g.winner).map(p => `${p.name}: ${p.cards} left`).join(' · ');
-    $('againBtn').classList.toggle('hidden', S.table.kind === 'room' && !S.snap.youAreHost);
-    setTimeout(() => $('overView').classList.remove('hidden'), 900);
+    // The shared end window (end-window.js). A card game has no board, so no score and no High scores.
+    // In a room only the host deals again.
+    ArcadeEnd.show({
+      title: `${nameOf(g.winner)} wins!`,
+      detail: g.players.filter(p => p.id !== g.winner).map(p => `${p.name}: ${p.cards} left`).join(' · '),
+      again: S.table.kind === 'room' && !S.snap.youAreHost ? null : playAgain,
+      setup: leave,
+      delay: 900
+    });
     if (iWon) Blip.tune([[523, 0.12], [659, 0.12], [784, 0.12], [1047, 0.3]], { type: 'triangle' });
   }
 
   async function playAgain() {
-    $('overView').classList.add('hidden');
     S.overShown = false;
     S.seenCallout = 0;
     S.fxSeen = S.jokeSeen = null;
@@ -599,7 +604,8 @@
     }
     S.table = null;
     S.snap = null;
-    for (const id of ['overView', 'passCover', 'calloutView']) $(id).classList.add('hidden');
+    ArcadeEnd.clear();
+    for (const id of ['passCover', 'calloutView']) $(id).classList.add('hidden');
     show('setup');
     paintLevel(S.level);
   }
@@ -627,7 +633,7 @@
   ArcadeBack.setup({
     atMenu: () => !$('setup').classList.contains('hidden'),
     back: leave,
-    busy: () => !$('game').classList.contains('hidden') && $('overView').classList.contains('hidden'),
+    busy: () => !$('game').classList.contains('hidden') && !ArcadeEnd.has,
     question: () => (S.snap && S.snap.isScreen ? 'End this game for everyone?' : 'Leave this game?')
   });
 
@@ -667,8 +673,6 @@
       renderLevels($('levelList'), S.level, pickLevel);
     });
   }
-  $('againBtn').onclick = playAgain;
-  $('menuBtn').onclick = leave;
   $('helpBtn').onclick = () => help.open();
   Blip.muteButton($('muteBtn'));
   addEventListener('resize', () => { if (G()) fitHand($('hand'), $('hand').children.length); });

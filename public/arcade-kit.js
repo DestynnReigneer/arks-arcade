@@ -75,9 +75,7 @@ const ArcadeKit = (() => {
   // score can't go on the board, and NO_NAME says why).
   const NO_NAME = 'Sign in with ARKS ID to put your score on the board.';
   // A TV is signed in as itself, not as whoever has the remote, so a score is
-  // never saved under the TV's name. Games with the remote's letter picker
-  // (wireInitials with tv) use that; the others leave TV scores off the board.
-  const TV_NO_BOARD = 'Scores played on the TV don\'t go on the board. Play on your own device to get on it.';
+  // never saved under the TV's name: the end window asks who played (end-window.js).
   const onTvDevice = () => (typeof TvPlay !== 'undefined' && !!TvPlay.on) ||
     document.documentElement.classList.contains('tv') ||
     (typeof ArcadeProfile !== 'undefined' && ArcadeProfile.arksId && !!ArcadeProfile.arksId().tv);
@@ -89,69 +87,6 @@ const ArcadeKit = (() => {
     if (!token && !name) return null;
     const me = P.get() || {};
     return { profileToken: token, name, avatar: me.avatar || undefined };
-  }
-
-  // The TV only: three boxes picked with the remote like an arcade cabinet
-  // (tv-play.js does the arrows). A TV is signed in as itself, so its scores go
-  // under these letters, not the TV's name. Everywhere else the boxes stay
-  // hidden and empty, and the score goes under boardWho().
-  // tv: true, or a function saying so.
-  function wireInitials(boxes, onEnter, { tv = false } = {}) {
-    const onTv = () => (typeof tv === 'function' ? tv() : tv);
-    boxes.forEach((box, i) => {
-      box.addEventListener('input', () => {
-        box.value = box.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(-1);
-        if (box.value && boxes[i + 1]) boxes[i + 1].focus();
-      });
-      box.addEventListener('keydown', e => {
-        if (e.key === 'Backspace' && !box.value && boxes[i - 1]) boxes[i - 1].focus();
-        if (e.key === 'Enter') onEnter();
-      });
-    });
-    return {
-      tv: () => !!onTv(),
-      value: () => (onTv() ? boxes.map(b => b.value).join('') : ''),
-      reset() {
-        const show = !!onTv();
-        let last = '';
-        if (show) { try { last = localStorage.getItem('arcade.initials') || ''; } catch { /* unavailable */ } }
-        boxes.forEach((b, i) => { b.value = last[i] || ''; });
-        const row = boxes[0].parentElement;
-        row.classList.toggle('hidden', !show);
-        const hint = row.previousElementSibling;
-        if (hint && hint.classList.contains('hint')) hint.classList.toggle('hidden', !show);
-        if (show) boxes[0].focus();
-      },
-      remember(v) { if (onTv()) { try { localStorage.setItem('arcade.initials', v); } catch { /* unavailable */ } } }
-    };
-  }
-
-  // Gets a game-over panel's save part ready. ini: from wireInitials. hint: the
-  // line over the boxes, which says whose name the score goes under ("Saving as
-  // Sam."), or NO_NAME with the Save button (btn) hidden. On a TV it says to
-  // pick initials with the arrows. Asked fresh each time, so a sign-in that
-  // finished during the game counts. -> true on a TV.
-  const TV_LINE = 'Pick your initials with the arrows to get on the board.';
-  function readySave(ini, hint, btn, tvLine = TV_LINE) {
-    ini.reset();
-    const tv = ini.tv();
-    const who = tv ? null : boardWho();
-    const none = onTvDevice() ? TV_NO_BOARD : NO_NAME;
-    if (hint) { hint.classList.remove('hidden'); hint.textContent = tv ? tvLine : who ? `Saving as ${who.name}.` : none; }
-    if (btn) btn.classList.toggle('hidden', !tv && !who);
-    return tv;
-  }
-  // What to send with a save: the TV's initials, or boardWho(). Throws a line
-  // to show when there's neither.
-  function saveFields(ini) {
-    if (ini && ini.tv()) {
-      const v = ini.value();
-      if (!v) throw new Error('Pick a letter with the arrows first.');
-      return { initials: v, profileToken: null };
-    }
-    const w = boardWho();
-    if (!w) throw new Error(onTvDevice() ? TV_NO_BOARD : NO_NAME);
-    return w;
   }
 
   // fmt turns a score into text (a game whose score is a time shows it as a time)
@@ -187,11 +122,9 @@ const ArcadeKit = (() => {
   }
 
   // A signed-in profile gets the credit (the server checks its token), and a
-  // guest's score goes under their name. An entry with initials (a TV's) goes
-  // under those letters instead, with nobody's token or name.
-  const saveScore = (game, entry) => api(`/api/scores/${game}`, entry.initials
-    ? { ...entry, profileToken: null }
-    : { ...(boardWho() || {}), ...entry });
+  // guest's score goes under their name. On a TV the entry carries the TV's own
+  // token and who played (playedBy), from the end window.
+  const saveScore = (game, entry) => api(`/api/scores/${game}`, { ...(boardWho() || {}), ...entry });
 
-  return { $, toast, readMs, joke, api, wireInitials, readySave, saveFields, boardWho, onTvDevice, NO_NAME, TV_NO_BOARD, renderScores, loadScores, saveScore };
+  return { $, toast, readMs, joke, api, boardWho, onTvDevice, NO_NAME, renderScores, loadScores, saveScore };
 })();
