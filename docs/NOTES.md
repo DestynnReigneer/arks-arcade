@@ -7,6 +7,36 @@ to-do list as checkboxes (the rule is in the maintainer's global CLAUDE.md
 and `arks-internal/conventions/sessions.md`): do the checked items in the
 order they were clicked, and keep the rest pinned here.
 
+## Know-It-All's adult levels grew into a real party game (2026-11-17)
+
+The maintainer found Filthy had three genres and a handful of questions, and asked for adult levels with enough
+for hundreds of games, solo or with up to 12 players, without repeats.
+
+- **The questions:** Cheeky 311, Spicy 264, Filthy 268 (765 new ones). The new ones live in plain text files,
+  `trivia/questions/<level>.txt`, one question to a line under a `## Genre` heading; the format is at the top of
+  `cheeky.txt`. `trivia/bank.js` reads them after the ones written in it. A file question's id is a fingerprint of
+  its text (`b-<level>-<12 hex>`), so moving lines around keeps ids; the old ones keep their place numbers.
+- **Genres** (every one has 20 or more): Cheeky has Love & Romance, Booze, Flirty Facts, Movies, Music, Seduction &
+  Flirting, Aphrodisiacs, Lingerie, Kissing, Dating & Apps, Sexy History, Weddings & Honeymoons, Love Myths: True or
+  False and Emoji Riddles. Spicy has Between the Sheets, Dirty Minds, Booze, Body Facts, Sex Around the World, Strip
+  Club & Vegas, Sexy History, Erotic Movies & Books, Naughty Words & Slang, Sex Myths: True or False, Toys & Gadgets
+  and Emoji Riddles. Filthy has Between the Sheets, Positions, Dirty Minds, Kinks & Fetishes, Toys & Gadgets,
+  Swinging & the Lifestyle, The Big O, Naughty Words & Slang, Sex Myths: True or False, Kinky History, Safe & Sexy
+  and Emoji Riddles. Everything is between consenting adults; nothing quotes lyrics or books.
+- **Picture questions:** a question can start with `[[emojis]]`; the question gets a `picture`, which rooms send too,
+  and the page shows it big above the question (`#qPic`). Uploaded pictures aren't built (a plan waits for the
+  maintainer).
+- **No repeats across nights:** table `trivia_seen` (who, question id, when). Who is `p:<profile id>` and
+  `d:<device key>`, a random key the page keeps in `localStorage` (`trivia.device`) and sends as `X-Trivia-Device`.
+  `store.pick({ seen })` gives fresh questions first and then the ones seen longest ago. A room counts everyone at
+  the table (each seat's profile and device, kept with the seat across restarts). Each key keeps its newest 3,000,
+  rows go after 180 days, and the table stays under 300,000 rows. `/questions` now has a limit (120 in 10 minutes).
+- **12 players:** rooms already took 12. A shared device took 8; now 12. `/questions` takes `players`, so each player
+  gets the count picked (before, three or more players fell back to 10 questions in all), and a turns game can have
+  240 questions (it was 100).
+- **Tests:** `test/unit.test.js` (sizes, 20 per genre, no repeats in a level, true or false answers, pictures,
+  `pick()` and `remember()`), `test/api.test.js` (12 players, the next night gets new questions, pictures come
+  through) and `test/browser/trivia-adult.spec.js` (an emoji riddle on screen, 12 names on a shared device).
 ## Tower Defense: the build bar and carrying on to the next level (2026-11-17)
 
 The maintainer played on a laptop and asked for five things, mostly in `public/towers.html` and `public/towers.js`.

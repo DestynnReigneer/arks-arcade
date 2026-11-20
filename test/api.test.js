@@ -1165,6 +1165,20 @@ async function run({ base, root }) {
   ok('filthy questions need the PIN', (await wl('/trivia/questions?level=filthy')).status === 403);
   const filthyQs = (await pinGet('/trivia/questions?level=filthy&count=5', '246810')).data;
   ok('…and come with drinking rules and dares', filthyQs.questions.length === 5 && !!filthyQs.drinks.wrong && filthyQs.dares.length >= 5);
+  // Not repeating questions: a device's key makes the server hold back what it asked there lately.
+  const asDevice = async (p, device) => (await fetch(base + '/api' + p, { headers: { 'X-Adult-Pin': '246810', 'X-Trivia-Device': device } })).json();
+  const dev = 'ab'.repeat(16);
+  const firstNight = (await asDevice('/trivia/questions?level=filthy&count=20&players=5', dev)).questions;
+  ok('pass-and-play gets the count for each player (20 x 5)', firstNight.length === 100 && new Set(firstNight.map(q => q.id)).size === 100);
+  const nextNight = (await asDevice('/trivia/questions?level=filthy&count=20&players=5', dev)).questions;
+  ok('the next game on that device gets none of the same questions', !nextNight.some(q => firstNight.some(x => x.id === q.id)));
+  const otherDevice = (await asDevice('/trivia/questions?level=filthy&count=20&players=12', 'cd'.repeat(16))).questions;
+  ok('12 players on one device get 20 each, and another device has its own memory', otherDevice.length === 240);
+  const thirdNight = (await asDevice('/trivia/questions?level=filthy&count=20&players=5', dev)).questions;
+  ok('once the fresh ones run low, the ones seen longest ago come back first',
+    thirdNight.length === 100 && !thirdNight.some(q => nextNight.some(x => x.id === q.id)));
+  const pic = (await asDevice('/trivia/questions?level=spicy&count=20&genres=Emoji%20Riddles', 'ef'.repeat(16))).questions;
+  ok('emoji riddles come with their picture', pic.length === 20 && pic.every(q => q.picture && q.answers[q.correctIndex] === q.correct));
   ok('topic requests are accepted', (await wl('/trivia/requests', 'POST', { topic: 'Pokemon' })).status === 201);
   ok('…and show up for the admin', (await asAdmin('/trivia/admin/requests')).data.some(r => r.topic === 'Pokemon'));
   const tpack = await asAdmin('/trivia/admin/packs', 'POST', {

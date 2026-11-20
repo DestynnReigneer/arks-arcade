@@ -162,7 +162,7 @@
       row.querySelector('button').onclick = () => { if (S.names.length > (S.mode === 'tvremote' ? 1 : 2)) { S.names.splice(i, 1); renderNames(); } };
       list.appendChild(row);
     });
-    $('addPlayerBtn').classList.toggle('hidden', S.names.length >= 8);
+    $('addPlayerBtn').classList.toggle('hidden', S.names.length >= 12);
   }
 
   function settings() {
@@ -180,7 +180,7 @@
       if (S.mode === 'solo' || S.mode === 'local') return await startLocal();
       if (S.mode === 'host') {
         const r = await RoomPassword.withPassword(password =>
-          api('/api/trivia/rooms', { name: $('hostName').value, settings: settings(), password }, { ...pinHeaders(), ...profileHeaders() }));
+          api('/api/trivia/rooms', { name: $('hostName').value, settings: settings(), password }, { ...pinHeaders(), ...profileHeaders(), ...deviceHeaders() }));
         if (r) enterRoom(r);
         return;
       }
@@ -190,6 +190,18 @@
   // ---- Create a game lobby ----------------------------------------------------------
   const profileToken = () => (typeof ArcadeProfile !== 'undefined' ? ArcadeProfile.token() : null);
   const profileHeaders = () => (profileToken() ? { 'X-Profile-Token': profileToken() } : {});
+  // A random key this device keeps so the server can hold back questions it asked
+  // here lately. It says nothing about who's playing.
+  function deviceHeaders() {
+    try {
+      let key = localStorage.getItem('trivia.device');
+      if (!/^[a-f0-9]{32}$/.test(key || '')) {
+        key = [...crypto.getRandomValues(new Uint8Array(16))].map(b => b.toString(16).padStart(2, '0')).join('');
+        localStorage.setItem('trivia.device', key);
+      }
+      return { 'X-Trivia-Device': key };
+    } catch { return {}; }
+  }
 
   // ---- List Hosted Games ----------------------------------------------------------------
   function startFinding() {
@@ -249,7 +261,7 @@
     try {
       // An adult game asks for its lobby password (not the adult pass).
       const r = await RoomPassword.withPassword(password =>
-        api(`/api/trivia/rooms/${l.code}/join`, { name: $('joinName').value, password }, profileHeaders()));
+        api(`/api/trivia/rooms/${l.code}/join`, { name: $('joinName').value, password }, { ...profileHeaders(), ...deviceHeaders() }));
       if (r) { closeDetails(); enterRoom(r); }
     } catch (e) { $('detailsMsg').textContent = e.message; }
   }
@@ -275,7 +287,7 @@
     // a TV is slow, so the TV makes one up and shows it in its lobby.
     const password = isAdult() ? PASSWORDS[Math.floor(Math.random() * PASSWORDS.length)] + (10 + Math.floor(Math.random() * 90)) : undefined;
     const tvName = (ArcadeTV.state.tv && ArcadeTV.state.tv.name) || 'TV';
-    const r = await api('/api/trivia/rooms', { name: tvName, screen: true, settings: st, password }, pinHeaders());
+    const r = await api('/api/trivia/rooms', { name: tvName, screen: true, settings: st, password }, { ...pinHeaders(), ...deviceHeaders() });
     if (mode === 'tvremote') {
       for (const [i, n] of S.names.entries()) {
         await api(`/api/trivia/rooms/${r.code}/seats`, { playerId: r.playerId, token: r.token, name: n.trim() || `Player ${i + 1}` });
@@ -291,9 +303,9 @@
     const names = S.mode === 'solo' ? ['You'] : S.names.map((n, i) => n.trim() || `Player ${i + 1}`);
     const st = settings();
     const per = st.count;
-    const q = new URLSearchParams({ level: st.level, genres: st.genres.join(','), difficulty: st.difficulty, count: String(per * names.length), seconds: String(st.seconds) });
+    const q = new URLSearchParams({ level: st.level, genres: st.genres.join(','), difficulty: st.difficulty, count: String(per), players: String(names.length), seconds: String(st.seconds) });
     if (st.packId) q.set('pack', String(st.packId));
-    const data = await api(`/api/trivia/questions?${q}`, undefined, pinHeaders());
+    const data = await api(`/api/trivia/questions?${q}`, undefined, { ...pinHeaders(), ...profileHeaders(), ...deviceHeaders() });
     if (!data.questions.length) throw new Error('No questions match. Try more genres.');
     S.game = {
       settings: st, players: names.map(name => ({ id: name, name, score: 0, streak: 0 })),
@@ -577,6 +589,9 @@
     $('turnBanner').classList.toggle('hidden', !banner);
     $('turnBanner').textContent = banner || '';
     $('qText').textContent = q.question;
+    // A picture question: a row of emojis shown big above the question.
+    $('qPic').textContent = q.picture || '';
+    $('qPic').classList.toggle('hidden', !q.picture);
     $('qStatus').textContent = '';
     const box = $('answers');
     box.innerHTML = '';
@@ -753,7 +768,7 @@
   }
   for (const b of $('modeSeg').children) b.onclick = () => setMode(b.dataset.mode);
   $('packSelect').onchange = () => { S.pack = $('packSelect').value; };
-  $('addPlayerBtn').onclick = () => { if (S.names.length < 8) { S.names.push(''); renderNames(); } };
+  $('addPlayerBtn').onclick = () => { if (S.names.length < 12) { S.names.push(''); renderNames(); } };
   $('goBtn').onclick = go;
   $('joinBtn').onclick = joinLobby;
   $('detailsClose').onclick = closeDetails;

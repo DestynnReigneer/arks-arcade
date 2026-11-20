@@ -1,0 +1,319 @@
+# Know-It-All: more Cheeky questions (flirty facts, love songs and cocktails).
+# Read by trivia/bank.js and added after the ones written in bank.js.
+#
+# "## Genre" starts a genre. Every line under it is one question:
+#   difficulty (e, m or h) | question | right answer | wrong | wrong | wrong
+# True or false questions have one wrong answer: "| True | False" or "| False | True".
+# A question can start with a picture made of emojis in double brackets:
+#   e | [[🌹 + 🍫]] Which day is this? | Valentine's Day | ...
+# The | sign can't be used inside a question or an answer.
+
+## Love & Romance
+e | Which Greek goddess of love was born from sea foam? | Aphrodite | Athena | Hera | Artemis
+m | Romeo and Juliet come from which Italian city in Shakespeare's play? | Verona | Venice | Florence | Milan
+e | What are you supposed to do when you end up under the mistletoe? | Kiss | Hug | Dance | Make a wish
+h | People once believed a vein ran straight from the ring finger to the heart. What was it called? | Vena amoris | Vena cava | Aorta amoris | Cor venosa
+h | In 1477, Archduke Maximilian of Austria gave the first recorded diamond engagement ring to whom? | Mary of Burgundy | Catherine of Aragon | Anne Boleyn | Marie Antoinette
+m | Shah Jahan built the Taj Mahal in memory of which wife? | Mumtaz Mahal | Nur Jahan | Jodha Bai | Roshanara
+e | Valentine's Day is named after what kind of person? | A Christian saint | A Roman emperor | A poet | A goddess
+m | Who wrote the poem that begins "How do I love thee? Let me count the ways"? | Elizabeth Barrett Browning | Emily Dickinson | Christina Rossetti | Jane Austen
+m | Which Shakespeare sonnet begins "Shall I compare thee to a summer's day?" | Sonnet 18 | Sonnet 1 | Sonnet 116 | Sonnet 130
+e | What is a "love lock"? | A padlock couples fix to a bridge | A hairstyle | A wedding ring | A diary with a key
+h | Paris took the love locks off which bridge after part of its railing collapsed in 2014? | Pont des Arts | Pont Neuf | Pont Alexandre III | Pont Royal
+h | Which Hindu god of love shoots arrows made of flowers? | Kamadeva | Ganesha | Vishnu | Shiva
+m | Which country celebrates Qixi, a lovers' festival on the seventh day of the seventh lunar month? | China | Thailand | Korea | India
+m | In Japan, who traditionally gives chocolate on Valentine's Day? | Women give it to men | Men give it to women | Kids give it to parents | Bosses give it to staff
+m | What happens on Japan's White Day, a month after Valentine's? | Men return the favor with gifts | Couples get married | Everyone wears white | Singles go on blind dates
+h | On South Korea's Black Day (April 14), singles who got nothing on Valentine's eat what? | Black bean noodles | Black chocolate | Squid ink pasta | Black sesame cake
+m | In Wales, what carved gift was the traditional way to say "I love you"? | A wooden love spoon | A wooden ring | A carved heart box | A walking stick
+m | Brazil celebrates Dia dos Namorados, its Valentine's Day, in which month? | June | February | October | May
+
+## Booze
+e | Which spirit is the base of a mojito? | Rum | Gin | Vodka | Tequila
+e | What is the main spirit in a classic martini? | Gin | Rum | Tequila | Whiskey
+m | A piña colada mixes rum, pineapple juice and what? | Coconut cream | Orange juice | Cream soda | Mango puree
+e | Which cocktail does James Bond order "shaken, not stirred"? | Vodka martini | Old fashioned | Manhattan | Gimlet
+e | Prosecco comes from which country? | Italy | France | Spain | Portugal
+e | Which brunch cocktail mixes sparkling wine and orange juice? | Mimosa | Bellini | Kir Royale | Spritz
+m | A Bellini mixes Prosecco with which fruit? | Peach | Strawberry | Mango | Raspberry
+h | Which bar in Venice invented the Bellini? | Harry's Bar | Caffè Florian | Bar Basso | The Savoy
+m | Which cocktail is whiskey, sweet vermouth and bitters? | Manhattan | Martini | Negroni | Daiquiri
+m | A Negroni is gin, sweet vermouth and what? | Campari | Aperol | Triple sec | Amaretto
+e | Which spirit goes in a Moscow Mule? | Vodka | Gin | Rum | Tequila
+m | A Moscow Mule is traditionally served in a mug made of what? | Copper | Pewter | Glass | Silver
+m | A Kir Royale is Champagne with a splash of what? | Blackcurrant liqueur | Raspberry liqueur | Amaretto | Orange liqueur
+m | A Pornstar Martini is usually garnished with half of which fruit? | Passion fruit | Lime | Peach | Fig
+m | Brazil's caipirinha is made with which spirit? | Cachaça | Pisco | Mezcal | Grappa
+e | Carrie and her friends made which pink cocktail famous on "Sex and the City"? | Cosmopolitan | Pink lady | Strawberry daiquiri | Sea breeze
+e | What does "on the rocks" mean? | Served over ice | Served with salt | Straight from the freezer | Served in a shot glass
+m | What does "neat" mean when you order a whiskey? | Straight, no ice or mixer | With a splash of water | Over one big ice cube | In a clean glass
+
+## Flirty Facts
+m | What do your pupils tend to do when you look at someone you fancy? | Get bigger | Get smaller | Stay the same | Twitch
+m | Which brain chemical, linked to reward, surges when you're falling in love? | Dopamine | Melatonin | Insulin | Histamine
+h | Psychologist Dorothy Tennov coined which word for the giddy, can't-stop-thinking-about-them crush stage? | Limerence | Lascivia | Amorosis | Philia
+m | What is "philematology"? | The science of kissing | The study of love letters | Stamp collecting | The study of flirting
+h | A famous 1987 study found long-married couples come to look more alike. Which psychologist led it? | Robert Zajonc | Sigmund Freud | Alfred Kinsey | B. F. Skinner
+m | The famous "36 questions that lead to love" come from a study by which psychologist? | Arthur Aron | Alfred Kinsey | John Gottman | Helen Fisher
+h | Researcher John Gottman says happy couples have about how many good moments for every bad one? | 5 | 2 | 10 | 1
+m | Gottman's "Four Horsemen" that predict a breakup are criticism, contempt, defensiveness and what? | Stonewalling | Jealousy | Lying | Boredom
+e | Galentine's Day, from "Parks and Recreation", falls on which date? | February 13 | February 15 | March 13 | February 1
+m | According to a study of couples kissing in public, about two-thirds of people tilt their head which way? | To the right | To the left | Straight back | Down
+m | Which anthropologist says love runs on three systems: lust, attraction and attachment? | Helen Fisher | Margaret Mead | Jane Goodall | Esther Perel
+m | Esther Perel wrote which bestseller about keeping desire alive in a long relationship? | Mating in Captivity | The Joy of Sex | Come As You Are | The Five Love Languages
+e | Gary Chapman's bestseller says there are how many "love languages"? | 5 | 3 | 7 | 4
+m | Which of these is one of the five love languages? | Acts of service | Grand gestures | Surprise dates | Inside jokes
+m | When someone says "let's DTR", what do they want to do? | Define the relationship | Date tonight, really | Dance till the end | Ditch the restaurant
+e | Which hormone, nicknamed the "love hormone", floods in when you cuddle and after an orgasm? | Oxytocin | Adrenaline | Cortisol | Thyroxine
+m | Which part of the body flushes red when someone's embarrassed or turned on? | The face and chest | The hands | The feet | The knees
+m | Sweat from a stressed or excited body is partly why people find which sense so attractive? | Smell | Taste | Hearing | Sight
+
+## Movies
+e | In "Pretty Woman", which actress plays Vivian? | Julia Roberts | Meg Ryan | Sandra Bullock | Sharon Stone
+m | Where do the lovers finally meet at the end of "Sleepless in Seattle"? | The top of the Empire State Building | The Space Needle | The Golden Gate Bridge | Times Square
+m | What famous scene in "When Harry Met Sally" happens at Katz's Deli? | Sally fakes an orgasm | Harry proposes | They kiss for the first time | Sally throws a sandwich
+m | Who plays Harry in "When Harry Met Sally"? | Billy Crystal | Tom Hanks | Hugh Grant | Kevin Costner
+m | In "Ghost", which actress plays Molly? | Demi Moore | Meg Ryan | Michelle Pfeiffer | Kim Basinger
+m | Which 1986 film has Kim Basinger and Mickey Rourke's famous blindfolded fridge-food scene? | 9½ Weeks | Wild Orchid | Basic Instinct | Body Heat
+e | "Notting Hill" pairs Julia Roberts with which actor? | Hugh Grant | Colin Firth | Richard Gere | Jude Law
+m | Which Nicholas Sparks movie has the famous kiss in the pouring rain with Ryan Gosling and Rachel McAdams? | The Notebook | A Walk to Remember | Dear John | The Vow
+m | Which Pixar movie opens with a whole love story told in about four minutes with no dialogue? | Up | WALL-E | Toy Story 2 | Coco
+m | In "Love Actually", who plays the prime minister who falls for his tea lady? | Hugh Grant | Colin Firth | Alan Rickman | Bill Nighy
+h | Which movie ends with Richard Gere carrying Debra Winger out of a factory? | An Officer and a Gentleman | Pretty Woman | Runaway Bride | Unfaithful
+h | Who plays Mr. Darcy in the 2005 movie "Pride & Prejudice"? | Matthew Macfadyen | Colin Firth | Tom Hiddleston | Rupert Friend
+m | Which 2011 movie has Ryan Gosling teaching Steve Carell how to pick up women? | Crazy, Stupid, Love | The Proposal | Hitch | Friends with Benefits
+m | In "Hitch", what does Will Smith do for a living? | He's a dating coach | He's a bodyguard | He's a wedding planner | He's a bartender
+e | "Magic Mike" is about men who work as what? | Strippers | Magicians | Firefighters | Bartenders
+e | Who plays Magic Mike? | Channing Tatum | Matthew McConaughey | Joe Manganiello | Zac Efron
+m | "10 Things I Hate About You" is loosely based on which Shakespeare play? | The Taming of the Shrew | Much Ado About Nothing | Twelfth Night | Romeo and Juliet
+m | "Bridget Jones's Diary" borrows its plot from which Jane Austen novel? | Pride and Prejudice | Emma | Sense and Sensibility | Persuasion
+m | "Clueless" is a modern take on which Jane Austen novel? | Emma | Persuasion | Mansfield Park | Pride and Prejudice
+h | At the end of "Casablanca", Ilsa flies off toward which city? | Lisbon | Paris | Madrid | Rome
+m | Which 1987 thriller has Glenn Close as Michael Douglas's obsessed one-night stand? | Fatal Attraction | Basic Instinct | Disclosure | Body Heat
+e | Patrick Swayze and Jennifer Grey practice "the lift" in a lake in which movie? | Dirty Dancing | Footloose | Grease | Flashdance
+
+## Music
+e | Who sang "Like a Virgin"? | Madonna | Cyndi Lauper | Whitney Houston | Janet Jackson
+m | Who sang "Careless Whisper"? | George Michael | Lionel Richie | Phil Collins | Rick Astley
+e | Who sang "Love Me Tender"? | Elvis Presley | Frank Sinatra | Dean Martin | Buddy Holly
+m | Which Righteous Brothers song plays during the pottery scene in "Ghost"? | Unchained Melody | You've Lost That Lovin' Feelin' | Ebb Tide | Soul and Inspiration
+m | Who sang "I Will Always Love You" first, years before Whitney Houston? | Dolly Parton | Patsy Cline | Tammy Wynette | Linda Ronstadt
+m | Which group sang "Let's Talk About Sex"? | Salt-N-Pepa | TLC | En Vogue | Destiny's Child
+e | Who brought "SexyBack" in 2006? | Justin Timberlake | Usher | Ne-Yo | Chris Brown
+m | Which band had a 1991 hit with "I Touch Myself"? | Divinyls | The Bangles | Heart | Blondie
+m | Which Prince hit uses a sports car to describe a fast lover? | Little Red Corvette | Purple Rain | Kiss | 1999
+m | Who sang "Wicked Game", with its famously steamy beach video? | Chris Isaak | Bryan Adams | Richard Marx | Michael Bolton
+m | Whose version of "You Can Leave Your Hat On" plays during the striptease in "9½ Weeks"? | Joe Cocker | Tom Jones | Rod Stewart | Barry White
+m | Whose version of "You Can Leave Your Hat On" plays at the big strip show in "The Full Monty"? | Tom Jones | Joe Cocker | Rod Stewart | Engelbert Humperdinck
+e | Barry White was famous for his deep, smooth what? | Bass voice | Falsetto | Guitar riffs | Drum solos
+m | Who sang "Physical" in 1981, with a workout-themed video? | Olivia Newton-John | Madonna | Donna Summer | Pat Benatar
+m | Donna Summer's "Love to Love You Baby" runs almost 17 minutes on the album. What is it famous for? | Her sighs and moans | A long drum solo | A spoken poem | A full orchestra
+e | Who sang "Hips Don't Lie"? | Shakira | Jennifer Lopez | Rihanna | Christina Aguilera
+m | Which Ed Sheeran hit is about falling for someone's body? | Shape of You | Perfect | Thinking Out Loud | Photograph
+m | Who sang the 1999 hit "Kiss Me"? | Sixpence None the Richer | The Cardigans | Natalie Imbruglia | Vertical Horizon
+e | Beyoncé sang "Crazy in Love" with which rapper? | Jay-Z | Kanye West | Drake | Eminem
+m | Which Motown pair first sang "Ain't No Mountain High Enough" in 1967? | Marvin Gaye and Tammi Terrell | Diana Ross and Lionel Richie | Sonny and Cher | Peaches and Herb
+
+## Seduction & Flirting
+e | What is a wingman for? | Helping a friend pick someone up | Flying the plane | Driving you home | Paying the bar tab
+h | Who did Lady Caroline Lamb famously call "mad, bad and dangerous to know"? | Lord Byron | Casanova | Percy Shelley | Oscar Wilde
+m | Mozart's opera "Don Giovanni" is about which legendary seducer? | Don Juan | Casanova | Romeo | Valentino
+m | What is "breadcrumbing"? | Leading someone on with little flirty messages | Feeding the ducks on a date | Splitting the bill | Leaving a trail to your house
+e | What is "ghosting"? | Vanishing without a word | Dressing up for Halloween | Dating someone older | Flirting in the dark
+e | What does "sliding into the DMs" mean? | Messaging someone privately to flirt | Falling over on the dance floor | Paying someone back | Joining a group chat
+m | What is "love bombing"? | Smothering someone with attention and gifts early on | Proposing on a jumbotron | Breaking up by text | Sending lots of heart emojis to a group
+m | "Rizz", Oxford's 2023 Word of the Year, means what? | Charm and flirting skill | A dance move | A kind of kiss | A dating app
+e | What is a "meet-cute"? | A charming first meeting, like in a rom-com | A speed date | A kissing booth | A puppy playdate
+m | In dating, what is "peacocking"? | Dressing flashy to get noticed | Strutting around the gym | Showing off a tattoo | Bragging about money
+e | What is a "booty call"? | A late-night invitation for sex | A pirate's yell | A dance class | A shoe sale
+m | What is a "situationship"? | A romance with no label | A business partnership | A long-distance marriage | A blind date
+m | What is "orbiting"? | Ghosting someone but still watching their posts | Flying in for a date | Circling the dance floor | Texting every hour
+m | What does "catfishing" mean? | Pretending to be someone else online | Fishing on a date | Flirting with a cat person | Dating someone much older
+h | Which 2010 documentary turned "catfish" into a dating word? | Catfish | Swiped | The Tinder Swindler | Love Is Blind
+m | Which perfume ingredient first came from a gland of a deer and has a famously sexy scent? | Musk | Vanilla | Amber | Patchouli
+h | Ambergris, prized in perfume, comes from which animal? | Sperm whale | Beaver | Musk deer | Civet
+m | Marilyn Monroe famously said she wore what to bed? | A few drops of Chanel No. 5 | Silk pajamas | A man's shirt | Fuzzy socks
+m | What is a "thirst trap"? | A sexy photo posted to get attention | A bar with no water | A dating show | A drinking game
+e | What does "shooting your shot" mean? | Making a move on someone | Taking a tequila shot | Playing basketball | Taking a selfie
+h | In France, "un cinq à sept" (a five to seven) is slang for what? | An after-work meeting with a lover | Happy hour | Dinner time | A nap
+
+## Aphrodisiacs
+m | Legend says Casanova ate about 50 of which food for breakfast? | Oysters | Eggs | Figs | Strawberries
+m | Which compound in chili peppers makes your heart race and your skin flush? | Capsaicin | Caffeine | Menthol | Tannin
+m | Which treat contains phenylethylamine, a chemical linked to the giddy feeling of falling in love? | Chocolate | Popcorn | Bread | Cheese
+e | The word "aphrodisiac" comes from which goddess? | Aphrodite | Athena | Hera | Persephone
+m | The Aztec emperor Montezuma reportedly drank lots of which drink before visiting his wives? | Chocolate | Tequila | Coffee | Pulque
+m | The Aztecs called which fruit "ahuacatl", a word that also meant testicle? | Avocado | Mango | Papaya | Fig
+m | Which spice, picked from crocus flowers, is the world's priciest and an ancient aphrodisiac? | Saffron | Vanilla | Cardamom | Nutmeg
+m | Which root, big in Chinese medicine, is famous for looking like a little man? | Ginseng | Ginger | Turmeric | Licorice
+m | Which fruit, split open, was an ancient symbol of female sexuality? | Fig | Banana | Lemon | Kiwi
+m | Which Peruvian root, nicknamed "Peruvian ginseng", is sold as a libido booster? | Maca | Yuca | Jicama | Taro
+m | Oysters are packed with which mineral, which the body needs to make testosterone? | Zinc | Iron | Calcium | Sodium
+m | Which notorious and dangerous old "aphrodisiac" was made from crushed insects? | Spanish fly | French tickler | Italian honey | Greek fire
+h | Spanish fly isn't really a fly. What is it? | A beetle | A moth | A wasp | A spider
+m | Watermelon contains which amino acid, sometimes hyped as "nature's Viagra"? | Citrulline | Lysine | Glycine | Taurine
+h | Yohimbe bark, sold as a libido booster, comes from trees on which continent? | Africa | South America | Asia | Australia
+h | "Horny goat weed" is the nickname of which herb? | Epimedium | Echinacea | Valerian | Ginkgo
+m | One popular story says the "honeymoon" is named after a month of drinking which honey drink? | Mead | Ale | Wine | Cider
+h | Pigs were used to sniff out truffles because the smell is like what? | A boar's sex pheromone | Rotting acorns | Fresh mud | Sour milk
+e | Which red fruit, dipped in chocolate, is the classic date-night treat? | Strawberry | Cherry | Raspberry | Watermelon
+m | Which ancient Roman poet wrote "The Art of Love", which lists foods to get in the mood? | Ovid | Virgil | Homer | Cicero
+
+## Lingerie
+e | Which brand's runway show had "Angels" wearing wings? | Victoria's Secret | Agent Provocateur | Frederick's of Hollywood | La Perla
+e | Which singer founded the lingerie brand Savage X Fenty? | Rihanna | Beyoncé | Lady Gaga | Ariana Grande
+e | What is Kim Kardashian's shapewear and underwear brand called? | Skims | Spanx | Fenty | Kylie
+h | Which sexy British lingerie brand was cofounded by Joseph Corré, son of Vivienne Westwood? | Agent Provocateur | Ann Summers | Myla | Coco de Mer
+m | What is a "teddy"? | A one-piece lingerie bodysuit | A short robe | A garter | A sleep mask
+e | What holds up stockings? | A garter belt | A bustier | A bralette | A choker
+h | Which Hollywood lingerie company, founded in 1946, says it introduced the push-up bra? | Frederick's of Hollywood | Victoria's Secret | Playtex | Maidenform
+m | The word "corset" comes from the old French word for what? | Body | Waist | Lace | Tight
+m | What is a "balconette" bra? | A bra cut straight across that lifts from below | A strapless bra | A sports bra | A nursing bra
+h | What does the French word "négligée" literally mean? | Neglected | Night | Lace | Light
+m | Which country introduced the modern bikini, in 1946? | France | United States | Brazil | Italy
+m | The bikini was named after what? | An atoll used for nuclear tests | A Brazilian dancer | A French model | A Greek island
+m | What color underwear do Italians wear on New Year's Eve for luck in love? | Red | Gold | White | Black
+m | What is a "chemise"? | A loose, slip-like nightie | A corset | A pair of panties | A robe
+m | Jean Paul Gaultier designed which famous piece for Madonna's 1990 Blond Ambition tour? | A cone bra | A leather catsuit | A feather boa | A lace veil
+e | What does a pasty cover? | A nipple | A belly button | A tattoo | A hip
+m | Which 1950s model was called the "Queen of Pinups"? | Bettie Page | Marilyn Monroe | Betty Grable | Jayne Mansfield
+m | Betty Grable's famous WWII pin-up showed off which body part, insured for a million dollars? | Her legs | Her smile | Her hands | Her hair
+e | What is a thong? | Underwear with a narrow strip at the back | A long nightgown | A slipper | A strapless bra
+m | Silk comes from the cocoons of which creature? | Silkworm moth | Spider | Honeybee | Snail
+m | What is a "bralette"? | A soft bra with no underwire | A strapless corset | A bra with built-in padding only | A tiny bikini top
+
+## Kissing
+e | What is a French kiss? | A kiss with tongue | A kiss on both cheeks | A kiss on the hand | A quick peck
+h | Which French word for French kissing was added to the Petit Robert dictionary in 2014? | Galocher | Bisou | Smack | Câlin
+h | Andy Warhol made a 1963 film that's nothing but couples kissing. What's it called? | Kiss | Blow Job | Sleep | Eat
+m | Which Rodin sculpture shows two naked lovers kissing? | The Kiss | The Thinker | The Gates of Hell | The Burghers of Calais
+m | Gustav Klimt's golden painting "The Kiss" hangs in which city? | Vienna | Paris | Berlin | Prague
+h | The longest kiss on record, in Thailand in 2013, lasted about how long? | 58 hours | 5 hours | 12 hours | 1 week
+e | What is an "Eskimo kiss"? | Rubbing noses | Kissing in the snow | A kiss on the forehead | A kiss with ice cubes
+m | A "butterfly kiss" is done with what? | Eyelashes | Lips on the neck | Fingertips | A feather
+h | A 10-second kiss passes along roughly how many bacteria? | About 80 million | About 800 | About 8,000 | About 8 billion
+h | What's the fancy scientific word for kissing? | Osculation | Oscillation | Ovulation | Osmosis
+m | The muscle that puckers your lips is nicknamed what? | The kissing muscle | The smile muscle | The pout muscle | The love muscle
+h | Thomas Edison's studio filmed one of the first kisses in movie history. In which year? | 1896 | 1910 | 1927 | 1880
+m | Which Hollywood rulebook banned "excessive and lustful kissing" from 1934 on? | The Hays Code | The Ratings Act | The Comstock Law | The Blue Book
+m | In France, the friendly kiss on each cheek is called what? | La bise | Le smack | Le bisou | La galoche
+m | International Kissing Day is on which date? | July 6 | February 14 | April 1 | December 25
+e | At the 2003 MTV VMAs, Madonna kissed Britney Spears and which other singer? | Christina Aguilera | Lady Gaga | Pink | Beyoncé
+h | A 2015 study of 168 cultures found what share kiss romantically on the lips? | Less than half | Nearly all | About 90% | Only one
+m | A study found kissing lowers which stress hormone? | Cortisol | Oxytocin | Dopamine | Estrogen
+e | In 2002's "Spider-Man", who gets the famous upside-down kiss in the rain? | Mary Jane Watson | Gwen Stacy | Black Cat | Betty Brant
+m | Which 1953 movie has Burt Lancaster and Deborah Kerr kissing in the crashing surf? | From Here to Eternity | Roman Holiday | Casablanca | An Affair to Remember
+
+## Dating & Apps
+e | On Tinder, what does swiping right mean? | Yes, I like them | No thanks | Save for later | Block them
+m | Which dating app is famous for women making the first move in straight matches? | Bumble | Hinge | Tinder | OkCupid
+m | Which dating app calls itself "designed to be deleted"? | Hinge | Bumble | Grindr | Match
+m | Which app, launched in 2009, is made for gay and bi men? | Grindr | Scruff | Her | Feeld
+m | Which dating app is built for couples and singles exploring threesomes and open relationships? | Feeld | Hinge | Coffee Meets Bagel | eHarmony
+h | What was Feeld called when it launched? | 3nder | Threeway | Trio | Tinder Plus
+m | Which dating site launched in 1995, making it one of the oldest? | Match.com | eHarmony | OkCupid | Plenty of Fish
+m | In which year did Tinder launch? | 2012 | 2008 | 2015 | 2010
+m | What does "ENM" mean on a dating profile? | Ethical non-monogamy | Every night, maybe | Engaged, not married | Easy, no mess
+e | What does "FWB" stand for? | Friends with benefits | Free weekend booking | First week back | Fun when bored
+e | What is speed dating? | Lots of short dates in one night | Dating at a racetrack | Getting married fast | Dating for a week
+h | Speed dating was invented in 1998 by a rabbi in which city? | Los Angeles | New York | Chicago | Miami
+e | Which reality show has singles date through a wall in "pods"? | Love Is Blind | Love Island | The Bachelor | Too Hot to Handle
+m | On "Too Hot to Handle", what does Lana the AI cone ban? | Kissing and sex | Phones | Alcohol | Swearing
+e | On "The Bachelor", what does the lead hand out to keep someone around? | A rose | A ring | A key | A kiss
+e | Which British show sends singles to a villa to "couple up"? | Love Island | Big Brother | Married at First Sight | Temptation Island
+m | What is "cuffing season"? | Fall and winter, when singles pair up | Wedding season | Spring break | Holiday shopping season
+m | What is "zombieing"? | Someone who ghosted you coming back like nothing happened | Dating at a Halloween party | Texting at 3 a.m. | Dating a horror fan
+h | Stanford research found that by 2017, about how many US couples met online? | About 40% | About 5% | About 90% | About 15%
+m | What is a "Super Like" on Tinder? | Telling someone you're extra keen before they swipe | Blocking someone | Saving a profile | Paying for their date
+
+## Sexy History
+e | Which Egyptian queen seduced both Julius Caesar and Mark Antony? | Cleopatra | Nefertiti | Hatshepsut | Nefertari
+m | Legend says Cleopatra had herself smuggled in to meet Caesar rolled up in what? | A carpet | A barrel | A basket of figs | A coffin
+e | Which king of England had six wives? | Henry VIII | Henry V | Charles II | Edward VII
+m | Madame de Pompadour was the famous mistress of which French king? | Louis XV | Louis XIV | Louis XVI | Napoleon
+e | Marilyn Monroe sang a breathy "Happy Birthday" to which president in 1962? | John F. Kennedy | Dwight Eisenhower | Lyndon Johnson | Richard Nixon
+e | Which Roman town, buried by a volcano in 79 AD, is famous for its erotic wall paintings? | Pompeii | Rome | Ostia | Carthage
+h | What's the name of Pompeii's famous ancient brothel? | The Lupanar | The Forum | The Thermae | The Basilica
+m | In Latin, "lupa" meant both a prostitute and which animal? | She-wolf | Fox | Cat | Rabbit
+m | The Kama Sutra was written in which language? | Sanskrit | Hindi | Pali | Tamil
+h | Who is credited with writing the Kama Sutra? | Vatsyayana | Valmiki | Kalidasa | Chanakya
+m | Which explorer translated the Kama Sutra into English in 1883? | Richard Burton | James Cook | David Livingstone | Walter Raleigh
+m | Which Russian empress was famous for her many lovers? | Catherine the Great | Alexandra Feodorovna | Maria Theresa | Isabella of Castile
+m | Which orange seller turned actress became a famous mistress of King Charles II? | Nell Gwyn | Barbara Villiers | Anne Boleyn | Emma Hamilton
+m | Emma Hamilton had a famous affair with which British admiral? | Horatio Nelson | Francis Drake | John Paul Jones | Walter Raleigh
+m | What was the first name of silent-film heartthrob Valentino? | Rudolph | Roberto | Ricardo | Rafael
+m | Which 1920s flapper star was known as the "It Girl"? | Clara Bow | Louise Brooks | Mae West | Greta Garbo
+h | Which actress spent 10 days in jail in 1927 for her Broadway play called "Sex"? | Mae West | Clara Bow | Jean Harlow | Josephine Baker
+m | Josephine Baker danced in 1920s Paris wearing a skirt made of what? | Bananas | Feathers | Pearls | Leaves
+m | Which ancient Greek poet from the island of Lesbos wrote love poems to women? | Sappho | Homer | Hesiod | Pindar
+m | Which Shakespeare play has the line "If music be the food of love, play on"? | Twelfth Night | Romeo and Juliet | Hamlet | Othello
+
+## Weddings & Honeymoons
+e | What does the bride traditionally toss to the single guests? | Her bouquet | Her veil | Her shoes | Rice
+m | What does the groom traditionally take off the bride's leg and toss? | Her garter | Her stocking | Her shoe | Her anklet
+e | "Something old, something new, something borrowed, something" what? | Blue | Gold | True | Silver
+e | Which city is nicknamed the "Wedding Capital of the World"? | Las Vegas | Reno | Paris | Venice
+m | Which falls were once called the "Honeymoon Capital of the World"? | Niagara Falls | Victoria Falls | Yosemite Falls | Iguazu Falls
+m | Which Pennsylvania mountain resorts are famous for heart-shaped hot tubs? | The Poconos | The Catskills | The Hamptons | Lake Tahoe
+e | The groom traditionally carries the bride over the what? | Threshold | Bridge | Bed | Lawn
+m | Which wedding anniversary is traditionally leather? | 3rd | 1st | 7th | 12th
+m | Which wedding anniversary is traditionally ruby? | 40th | 30th | 35th | 45th
+m | Which wedding anniversary is traditionally paper? | 1st | 5th | 10th | 2nd
+m | Which wedding anniversary is traditionally pearl? | 30th | 20th | 15th | 40th
+h | The diamond wedding anniversary marks how many years? | 60 | 40 | 50 | 75
+m | Which bride wore the Spencer family tiara on her wedding day in 1981? | Princess Diana | Kate Middleton | Sarah Ferguson | Meghan Markle
+h | In which Scottish village did runaway English couples famously marry? | Gretna Green | Edinburgh | Inverness | St Andrews
+e | What does it mean to elope? | Run off to marry in secret | Marry twice | Renew your vows | Have a big church wedding
+m | Which queen made white wedding dresses fashionable when she married in 1840? | Queen Victoria | Queen Elizabeth I | Marie Antoinette | Queen Anne
+m | In the UK, a bachelorette party is called a what? | Hen party | Stag do | Doe night | Girls' do
+m | In the UK, a bachelor party is called a what? | Stag do | Hen do | Buck's night | Ram night
+m | At a Jewish wedding, what does the groom stomp on at the end? | A glass | A plate | A ring box | A flower
+m | Which wedding anniversary is traditionally wood? | 5th | 2nd | 8th | 11th
+
+## Love Myths: True or False
+e | True or false: Valentine's Day is named after a saint. | True | False
+m | True or false: Champagne can only be called Champagne if it comes from the Champagne region of France. | True | False
+e | True or false: The heart shape ♥ looks just like a real human heart. | False | True
+m | True or false: Kissing can pass along the germs that cause colds. | True | False
+m | True or false: Scientists have proven that chocolate works as an aphrodisiac. | False | True
+m | True or false: In Roman myth, Cupid is the son of Venus. | True | False
+m | True or false: Butterflies in your stomach are caused partly by adrenaline. | True | False
+e | True or false: Henry VIII married six times. | True | False
+h | True or false: The oldest known valentine dates back to the 1400s. | True | False
+m | True or false: Tequila is made from a cactus. | False | True
+e | True or false: In "Romeo and Juliet", Juliet belongs to the Capulet family. | True | False
+m | True or false: Gin gets its main flavor from juniper berries. | True | False
+m | True or false: The Kama Sutra is only about sex positions. | False | True
+m | True or false: Alcohol warms your body up on a cold night. | False | True
+e | True or false: Rose petals are edible. | True | False
+m | True or false: Absinthe makes you hallucinate. | False | True
+m | True or false: The Taj Mahal was built as a tomb for a beloved wife. | True | False
+e | True or false: A hickey is a small bruise. | True | False
+m | True or false: Drinking beer before liquor makes you sicker than the other way around. | False | True
+m | True or false: Some penguins give their mates a pebble. | True | False
+e | True or false: Sea otters hold hands while they sleep so they don't drift apart. | True | False
+m | True or false: Most people tilt their head to the left when they go in for a kiss. | False | True
+
+## Emoji Riddles
+e | [[🌹 + ❤️ + 🍫]] Which day of the year do these add up to? | Valentine's Day | Halloween | Thanksgiving | Mother's Day
+e | [[💍 + 🧎 + ❓]] What's happening here? | A proposal | A breakup | A birthday | A job interview
+e | [[🚢 + 🧊 + 💑]] Which movie is this? | Titanic | The Notebook | Ghost | Pretty Woman
+m | [[👻 + 🏺 + 💑]] Which movie is this? | Ghost | Titanic | Dirty Dancing | Casper
+m | [[💃 + 🕺 + 🍉]] Which movie is this? | Dirty Dancing | Footloose | Grease | Saturday Night Fever
+m | [[👠 + 💵 + 🛍️ + 🌹]] Which movie is this? | Pretty Woman | Sex and the City | Maid in Manhattan | The Devil Wears Prada
+m | [[🧛 + ❤️ + 🌲 + 🌧️]] Which movie series is this? | Twilight | True Blood | Dracula | The Vampire Diaries
+m | [[📓 + 🌧️ + 💋 + 🛶]] Which movie is this? | The Notebook | Titanic | Dear John | The Lake House
+e | [[🏡 + 🎈🎈🎈 + 👴]] Which movie with a heartbreaking love story is this? | Up | Toy Story | Ratatouille | Inside Out
+m | [[🕺 + 💪 + 💵]] Which movie about male strippers is this? | Magic Mike | The Full Monty | Showgirls | Hustlers
+e | [[🐶 + 🍝 + 💋]] Which cartoon kiss is this? | Lady and the Tramp | 101 Dalmatians | Bolt | Oliver & Company
+e | [[🍯 + 🌙]] Which trip after the wedding is this? | Honeymoon | Moonlight | Bachelor party | Sweet sixteen
+e | [[💘 + 🏹 + 👼]] Who's this? | Cupid | Robin Hood | Hermes | Tinker Bell
+m | [[👀 + 🍬]] What do you call someone gorgeous to look at? | Eye candy | Sweet tooth | Lollipop | Candy crush
+m | [[🐶 + 🏠]] Where are you if your partner's mad at you? | In the doghouse | In the kennel | On the couch | In the yard
+e | [[☕ + 🍳 + 🛏️]] What's this romantic treat? | Breakfast in bed | A picnic | Room service | Brunch date
+e | [[🥄 + 🥄 + 🛏️]] What's this cozy way to cuddle? | Spooning | Forking | Hugging | Snuggling up
+m | [[🐦 + 🐝]] What talk is this? | The birds and the bees | The facts of life | Pillow talk | Sweet nothings
+m | [[🍬 + 👴 + 💳]] What's an older man who spoils a younger partner called? | Sugar daddy | Candy man | Silver fox | Big spender
+m | [[🐆 + 👩]] What's an older woman who dates younger men called? | Cougar | Panther | Tigress | Lioness
+m | [[👰 + 🏃‍♀️]] Which Julia Roberts movie is this? | Runaway Bride | Pretty Woman | My Best Friend's Wedding | Notting Hill
+e | [[💋 + 🌿 + 🎄]] Which holiday tradition is this? | Kissing under the mistletoe | Decorating the tree | Caroling | Opening presents

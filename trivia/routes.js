@@ -44,15 +44,23 @@ module.exports = function triviaRoutes({ requireAdmin, notify, whoIs = null }) {
 
   router.post('/unlock', adultPin.tryLimiter(), (req, res) => res.json(adultPin.check(req, res)));
 
-  // Questions for a game on this phone (solo or pass-and-play), answers included.
-  router.get('/questions', (req, res, next) => {
+  // Questions for a game on this device (solo or pass-and-play), answers included.
+  // count is per player; players (1 to 12) says how many take turns. Questions this
+  // device or profile saw lately are left for later (store.pick's seen).
+  const questionsLimiter = rateLimit({ windowMs: 10 * 60 * 1000, limit: 120, standardHeaders: true, legacyHeaders: false, message: { error: 'Slow down a little, then try again.' } });
+  router.get('/questions', questionsLimiter, (req, res, next) => {
     try {
       const packId = Number(req.query.pack) || null;
       const pack = packId ? store.packOf(packId) : null;
       const level = pack ? pack.level : bank.levelOf(req.query.level);
       requireLevel(level, req);
       const settings = rooms.cleanSettings({ ...req.query, level, genres: String(req.query.genres || '').split(',').filter(Boolean) });
-      const questions = store.pick({ level, genres: settings.genres, difficulty: settings.difficulty, count: settings.count, packId }).map(store.deal);
+      const players = Math.min(rooms.MAX_PLAYERS, Math.max(1, Math.floor(Number(req.query.players)) || 1));
+      const profile = profileOf(req);
+      const keys = store.memoryKeys({ profileId: profile && profile.id, device: req.get('X-Trivia-Device') });
+      const questions = store.pick({ level, genres: settings.genres, difficulty: settings.difficulty,
+        count: Math.min(rooms.MAX_TURN_QUESTIONS, settings.count * players), packId, seen: store.seenBy(keys) }).map(store.deal);
+      store.remember(keys, questions.map(q => q.id));
       res.json({ level, questions, ...extrasFor(level) });
     } catch (e) { next(e); }
   });
@@ -87,7 +95,7 @@ module.exports = function triviaRoutes({ requireAdmin, notify, whoIs = null }) {
       requireLevel(settings.level, req);
       // screen: this device (a TV) shows the game and doesn't play.
       res.status(201).json(rooms.create({ name: body.name, settings, password: body.password, screen: body.screen === true,
-        profile: profileOf(req) }));
+        profile: profileOf(req), device: req.get('X-Trivia-Device') }));
     } catch (e) { next(e); }
   });
   // Guests don't need an ARKS ID adult pass: an adult game's own lobby password lets
@@ -98,7 +106,7 @@ module.exports = function triviaRoutes({ requireAdmin, notify, whoIs = null }) {
     try {
       const r = rooms.room(req.params.code);
       await require('../arcade/adult-join').refuseKids(req, !!bank.LEVELS[r.settings.level].adult);
-      res.json(rooms.join(req.params.code, (req.body || {}).name, (req.body || {}).password, profileOf(req)));
+      res.json(rooms.join(req.params.code, (req.body || {}).name, (req.body || {}).password, profileOf(req), req.get('X-Trivia-Device')));
     } catch (e) { next(e); }
   });
   // Taking turns: another player on this device, or taking one off again.

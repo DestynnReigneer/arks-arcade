@@ -138,17 +138,9 @@ function shuffle(list) {
   return a;
 }
 
-// Picks a game's questions, spread across the chosen genres so one big
-// genre (Open Trivia DB has a lot of Entertainment) doesn't take over.
-function pick({ level, genres: wanted = [], difficulty = 'mixed', count = 10, packId = null }) {
-  let list = packId
-    ? db.db.prepare('SELECT * FROM trivia_questions WHERE pack_id = ?').all(packId).map(rowToQuestion)
-    : pool(level);
-  if (wanted.length) list = list.filter(q => wanted.includes(q.genre));
-  if (DIFFICULTIES.includes(difficulty)) {
-    const exact = list.filter(q => q.difficulty === difficulty);
-    if (exact.length >= count) list = exact;
-  }
+// Spreads a game's questions across the genres in the list, so one big genre
+// (Open Trivia DB has a lot of Entertainment) doesn't take over.
+function spread(list, count) {
   const byGenre = {};
   for (const q of shuffle(list)) (byGenre[q.genre] = byGenre[q.genre] || []).push(q);
   const buckets = shuffle(Object.values(byGenre));
@@ -157,6 +149,94 @@ function pick({ level, genres: wanted = [], difficulty = 'mixed', count = 10, pa
     for (const b of buckets) if (b.length && out.length < count) out.push(b.pop());
   }
   return out;
+}
+
+// Picks a game's questions. seen (a Map of question id -> when it was last
+// asked, from seenBy below) keeps questions from coming back game after game:
+// questions nobody here has seen come first, and when there aren't enough of
+// those, the ones seen longest ago fill the rest.
+function pick({ level, genres: wanted = [], difficulty = 'mixed', count = 10, packId = null, seen = null }) {
+  let list = packId
+    ? db.db.prepare('SELECT * FROM trivia_questions WHERE pack_id = ?').all(packId).map(rowToQuestion)
+    : pool(level);
+  if (wanted.length) list = list.filter(q => wanted.includes(q.genre));
+  if (DIFFICULTIES.includes(difficulty)) {
+    const exact = list.filter(q => q.difficulty === difficulty);
+    if (exact.length >= count) list = exact;
+  }
+  if (!seen || !seen.size) return spread(list, count);
+  const fresh = list.filter(q => !seen.has(q.id));
+  if (fresh.length >= count) return spread(fresh, count);
+  const oldest = shuffle(list.filter(q => seen.has(q.id))).sort((a, b) => seen.get(a.id) - seen.get(b.id));
+  return shuffle([...fresh, ...oldest.slice(0, count - fresh.length)]);
+}
+
+// ---- remembering what was asked -----------------------------------------------------
+// Who: 'p:<profile id>' for a profile (it follows the person to any device) and
+// 'd:<key>' for a device (a random key the page keeps, so guests get it too).
+// Only question ids and times are kept. Each one keeps its newest SEEN_KEEP, and
+// nothing older than SEEN_DAYS.
+
+db.db.exec(`
+  CREATE TABLE IF NOT EXISTS trivia_seen (
+    who TEXT NOT NULL,
+    qid TEXT NOT NULL,
+    seen_at INTEGER NOT NULL,
+    PRIMARY KEY (who, qid)
+  );
+  CREATE INDEX IF NOT EXISTS trivia_seen_when ON trivia_seen (who, seen_at);
+`);
+const SEEN_KEEP = 3000;
+const SEEN_DAYS = 180;
+const SEEN_TOTAL = 300000;
+let rememberCalls = 0;
+
+const DEVICE_KEY = /^[a-f0-9]{16,64}$/;
+// -> the memory keys for a profile id and a device key (either can be missing).
+function memoryKeys({ profileId = null, device = null } = {}) {
+  const keys = [];
+  if (profileId != null && String(profileId).length && String(profileId).length <= 64) keys.push(`p:${profileId}`);
+  if (typeof device === 'string' && DEVICE_KEY.test(device)) keys.push(`d:${device}`);
+  return keys;
+}
+
+// -> Map of question id -> the latest time any of these keys saw it.
+function seenBy(keys) {
+  const seen = new Map();
+  if (!keys || !keys.length) return seen;
+  const get = db.db.prepare('SELECT qid, seen_at FROM trivia_seen WHERE who = ?');
+  for (const who of new Set(keys)) {
+    for (const r of get.all(who)) if (!(seen.get(r.qid) >= r.seen_at)) seen.set(r.qid, r.seen_at);
+  }
+  return seen;
+}
+
+function remember(keys, ids, now = Date.now()) {
+  if (!keys || !keys.length || !ids || !ids.length) return;
+  const put = db.db.prepare(`INSERT INTO trivia_seen (who, qid, seen_at) VALUES (?, ?, ?)
+    ON CONFLICT (who, qid) DO UPDATE SET seen_at = excluded.seen_at`);
+  const trim = db.db.prepare(`DELETE FROM trivia_seen WHERE who = ? AND seen_at < (
+    SELECT seen_at FROM trivia_seen WHERE who = ? ORDER BY seen_at DESC LIMIT 1 OFFSET ${SEEN_KEEP - 1})`);
+  db.db.exec('BEGIN');
+  try {
+    for (const who of new Set(keys)) {
+      for (const id of ids) put.run(who, String(id), now);
+      trim.run(who, who);
+    }
+    db.db.exec('COMMIT');
+  } catch (e) {
+    db.db.exec('ROLLBACK');
+    throw e;
+  }
+  // Now and then: forget old rows, and keep the whole table to a sensible size.
+  if (++rememberCalls % 50 === 1) {
+    db.db.prepare('DELETE FROM trivia_seen WHERE seen_at < ?').run(now - SEEN_DAYS * 24 * 3600 * 1000);
+    const total = db.db.prepare('SELECT COUNT(*) AS c FROM trivia_seen').get().c;
+    if (total > SEEN_TOTAL) {
+      db.db.prepare(`DELETE FROM trivia_seen WHERE rowid IN (SELECT rowid FROM trivia_seen ORDER BY seen_at ASC LIMIT ?)`)
+        .run(total - Math.floor(SEEN_TOTAL * 0.9));
+    }
+  }
 }
 
 // The answers in a random order, and which one is right.
@@ -240,5 +320,5 @@ async function syncOpenTdb({ force = false } = {}) {
 
 module.exports = {
   DIFFICULTIES, checkQuestion, createPack, listPacks, deletePack, packOf,
-  pool, genres, pick, deal, status, syncOpenTdb
+  pool, genres, pick, deal, status, syncOpenTdb, memoryKeys, seenBy, remember
 };

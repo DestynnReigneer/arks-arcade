@@ -3,6 +3,11 @@
 // Know-It-All's built-in content: questions for every level, couples dares,
 // and drinking rules. The adult parts are only ever sent with an ARKS ID adult pass.
 // Questions are [genre, difficulty (e/m/h), question, correct, wrong, wrong, wrong].
+// Most of the adult questions are in trivia/questions/<level>.txt (read below).
+
+const fs = require('node:fs');
+const path = require('node:path');
+const crypto = require('node:crypto');
 
 const LEVELS = {
   kids: { id: 'kids', label: 'Family', emoji: '🧒', adult: false, blurb: 'Fun facts for everyone.' },
@@ -209,8 +214,42 @@ const DRINKS = {
   filthy: { wrong: 'Wrong as hell. Drink, you beautiful idiot 🥃', streak: 'Three for three! Pick someone to take 3 🔥', last: 'Loser chugs. And does the last dare 😈', everyone: 'Everyone drink, then kiss someone 💋' }
 };
 
-const QUESTIONS = Object.fromEntries(Object.entries(RAW).map(([level, list]) => [level, list.map(([genre, d, question, correct, ...wrong], i) => ({
-  id: `b-${level}-${i}`, source: 'builtin', level, genre, difficulty: DIFF[d], question, correct, wrong
-}))]));
+// The bigger banks live in plain text files, trivia/questions/<level>.txt, one
+// question to a line under a "## Genre" heading (the format is at the top of
+// cheeky.txt). A line that can't be read stops the arcade from starting, so a
+// broken file is caught by the tests, never by players.
+const PICTURE = /^\[\[(.+?)\]\]\s*(.+)$/;
+function readFile(level) {
+  const file = path.join(__dirname, 'questions', `${level}.txt`);
+  if (!fs.existsSync(file)) return [];
+  let genre = null;
+  const out = [];
+  fs.readFileSync(file, 'utf8').split(/\r?\n/).forEach((raw, n) => {
+    const line = raw.trim();
+    if (!line || (line.startsWith('#') && !line.startsWith('##'))) return;
+    if (line.startsWith('## ')) { genre = line.slice(3).trim(); return; }
+    const parts = line.split('|').map(s => s.trim());
+    const [d, text, correct, ...wrong] = parts;
+    if (!genre || !DIFF[d] || !text || !correct || wrong.length < 1 || wrong.length > 3 || wrong.some(w => !w)) {
+      throw new Error(`trivia/questions/${level}.txt line ${n + 1} isn't a question: ${line.slice(0, 60)}`);
+    }
+    const pic = text.match(PICTURE);
+    out.push({ genre, d, question: pic ? pic[2] : text, picture: pic ? pic[1].trim() : null, correct, wrong });
+  });
+  return out;
+}
+
+// Ids: the ones written above keep their place number; the ones from the files
+// get a fingerprint of their text, so moving a line around doesn't change its id
+// (the game remembers ids to avoid repeats).
+const QUESTIONS = Object.fromEntries(Object.entries(RAW).map(([level, list]) => [level, [
+  ...list.map(([genre, d, question, correct, ...wrong], i) => ({
+    id: `b-${level}-${i}`, source: 'builtin', level, genre, difficulty: DIFF[d], question, correct, wrong
+  })),
+  ...readFile(level).map(({ genre, d, question, picture, correct, wrong }) => ({
+    id: `b-${level}-${crypto.createHash('sha1').update(`${picture || ''}|${question}`).digest('hex').slice(0, 12)}`,
+    source: 'builtin', level, genre, difficulty: DIFF[d], question, ...(picture ? { picture } : {}), correct, wrong
+  }))
+]]));
 
 module.exports = { LEVELS, levelOf, QUESTIONS, DARES, DRINKS };

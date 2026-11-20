@@ -44,6 +44,8 @@
   border: 1px solid rgba(45, 226, 230, 0.35); box-shadow: 0 0 22px rgba(45, 226, 230, 0.18), inset 0 0 20px rgba(164, 107, 255, 0.15);
 }
 .q-text { font-size: clamp(17px, 4.8vw, 22px); font-weight: 800; line-height: 1.35; }
+.q-card:has(.q-pic:not(.hidden)) { flex-direction: column; gap: 10px; }
+.q-pic { font-size: clamp(34px, 11vw, 52px); line-height: 1.2; letter-spacing: 2px; overflow-wrap: anywhere; }
 .answers { display: grid; grid-template-columns: 1fr; gap: 8px; margin: 12px 0 8px; }
 @media (min-width: 560px) { .answers { grid-template-columns: 1fr 1fr; } }
 .answers button {
