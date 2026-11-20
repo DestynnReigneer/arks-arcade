@@ -357,9 +357,9 @@
     const daily = st.mode === 'daily';
     const id = st.gameId;
     ArcadeEnd.show({
-      title: `Game over: ${st.total.toLocaleString('en-US')} points`,
+      title: 'Nice scuffling!',
       score: st.total,
-      detail: st.past.map(p => `${p.word} ${p.score.toLocaleString('en-US')}`).join(' · '),
+      detail: st.past.length ? 'Your best words: ' + st.past.slice().sort((a, b) => b.score - a.score).slice(0, 3).map(p => p.word).join(', ') : '',
       save: daily && !st.saved ? async who => {
         const r = await api(`/api/scuffle/solo/${id}/save`, who);
         st.saved = true;

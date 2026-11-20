@@ -301,8 +301,6 @@ test('Dino Dash: High scores inside the window, and a tap or up arrow doesn\'t s
   expect(real, real.join('\n')).toEqual([]);
 });
 
-const TOO_SLOW = ['Too slow, you spun right past your number!', 'You missed your number!', 'Hesitate and the lock wins.', 'The dial got away from you.',
-  'Your number came and went.', 'Blink and you miss it. You blinked.', 'Still thinking? The lock didn\'t wait.', 'Forgot the combo halfway through?'];
 
 test('Tumbler Rumble: a lock\'s words, the plain line for no pops, and today\'s board inside the window', async ({ page }) => {
   test.setTimeout(60000);
@@ -314,7 +312,7 @@ test('Tumbler Rumble: a lock\'s words, the plain line for no pops, and today\'s 
     await expect.poll(() => page.evaluate(() => !!window.TumblerTest), { timeout: 1500 }).toBe(true);
   }).toPass({ timeout: 10000 });
   await expect(card(page)).toBeVisible({ timeout: 20000 });
-  expect(TOO_SLOW).toContain((await card(page).locator('.ew-title').textContent()).trim());
+  await expect(card(page).locator('.ew-title')).toHaveText('Locked out before you even started!');
   await expect(card(page).locator('.ew-saved')).toHaveText('Pop one lock to get on the board.');
   await expect(page.locator('body')).not.toContainText(/\bpins?\b/i);
   // Play again (Enter, once the card has been up a moment), then pop one lock and let the next one slip:
@@ -544,7 +542,7 @@ test('Chess: resigning ends in the window, and the result line under the board b
   await page.locator('#resignBtn').click();
   await page.locator('.ab-confirm [data-leave]').click();
   await expect(card(page)).toBeVisible({ timeout: 10000 });
-  await expect(card(page).locator('.ew-title')).toHaveText('Resigned. The computer wins.');
+  await expect(card(page).locator('.ew-title')).toHaveText('You resigned. The computer wins, and would have won easily, but continuing would have been entertaining...');
   // A loss has nothing to save, and says nothing about it.
   await expect(card(page).locator('.ew-saved')).toHaveCount(0);
   await checkCard(page, { saved: null });
@@ -587,7 +585,7 @@ test('Know-It-All solo: a right answer saves by itself, and a game of none says 
   };
   await play(false);
   await expect(card(page)).toBeVisible({ timeout: 20000 });
-  await expect(card(page).locator('.ew-saved')).toHaveText('Get one right to get on the board.');
+  await expect(card(page).locator('.ew-saved')).toHaveText('Show some brain power and get on the board.');
   await expect(page.locator('.big-emoji:visible')).toHaveCount(0);
   await card(page).getByRole('button', { name: '⚙️ Back to setup' }).click();
   await expectClean(page);
@@ -644,7 +642,7 @@ test('Wordless: a loss has nothing to save and no SCORE heading, and Play again 
   }
   await expect(card(page)).toBeVisible({ timeout: 15000 });
   await expect(page.getByText('SCORE', { exact: true })).toHaveCount(0);
-  await checkCard(page, { plain: 'Solve the word to get on the board.' });
+  await checkCard(page, { plain: 'Solve the word, like the wheel of... anyways, get on the board.' });
   await page.keyboard.press('Enter');
   await expectClean(page);
   await expect(page.locator('#board .tile.filled')).toHaveCount(0);
@@ -671,14 +669,17 @@ test('Rambler solo: the round\'s results stay on the page under the window', asy
 
 // The card games on one device, played to the end by tapping whatever the turn needs. They have no board,
 // so no score to save and no High scores.
-async function playCards(page, steps, max = 400) {
+// inPage: click each button in the page itself, for games whose cards overlap (a click at a spot can land on
+// the card next to the one meant).
+async function playCards(page, steps, max = 400, inPage = false) {
   for (let i = 0; i < max && !(await card(page).isVisible()); i++) {
     let did = false;
     for (const sel of steps) {
       const b = page.locator(sel).first();
       if (await b.isVisible().catch(() => false) && await b.isEnabled().catch(() => false)) {
         // (force: the deck and the cards wobble, so they're never still enough for a normal click)
-        await b.click({ timeout: 2000, force: true }).catch(() => {});
+        if (inPage) await b.evaluate(el => el.click()).catch(() => {});
+        else await b.click({ timeout: 2000, force: true }).catch(() => {});
         did = true;
         break;
       }
@@ -707,7 +708,7 @@ test('Dare Devil: a quick game on one device ends in the window, with no High sc
 });
 
 test('Uh-Oh: Part Deux: a game on one device ends in the window, with no High scores', async ({ page }) => {
-  test.setTimeout(420000);
+  test.setTimeout(540000);
   const problems = watchProblems(page);
   await openAsGuest(page, '/partdeux.html');
   const names = page.locator('#nameList input');
@@ -716,14 +717,16 @@ test('Uh-Oh: Part Deux: a game on one device ends in the window, with no High sc
   await names.nth(1).fill('Ben');
   await page.locator('#goBtn').click();
   const steps = ['#calloutOk', '#passReady', '#colorRow button', '#uhohBtn', '#hand .ok', '#keepBtn', '#drawBtn'];
-  for (let round = 0; round < 400 && !(await card(page).isVisible()); round++) {
+  // A two-player game can run long (draw piles, Nopes, gifts), so it gets a time budget rather than a count.
+  const until = Date.now() + 460000;
+  while (Date.now() < until && !(await card(page).isVisible())) {
     // A gift card: pick a card to give, then who gets it.
     if (await page.locator('#giftPick:not(.hidden)').isVisible().catch(() => false)) {
-      await page.locator('#giftCards > *').first().click({ force: true });
-      await page.locator('#giftTargets button').first().click({ force: true });
+      // (clicked in the page: the little cards overlap, so a click at a spot can land on the wrong one, or none)
+      await page.evaluate(() => { document.querySelector('#giftCards > *').click(); document.querySelector('#giftTargets button').click(); });
       continue;
     }
-    await playCards(page, steps, 8);
+    await playCards(page, steps, 8, true);
   }
   await checkCard(page, { scores: false });
   await expect(card(page).locator('.ew-title')).toContainText('wins!');

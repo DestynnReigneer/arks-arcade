@@ -434,7 +434,7 @@
     const lives = before.length ? `, with ${g.lives} lives left on ${m}` : ` with ${g.lives} lives left`;
     let detail;
     if (!won) detail = `${before.length ? `Beat ${listed(before)}, then held` : 'Held'} out to wave ${g.wave} on ${m} · ${kills} monsters defeated`;
-    else if (next) detail = `All ${E.WAVES} waves on ${all}${lives}. Take on ${E.MAPS[next].label} next and your score keeps going.`;
+    else if (next) detail = `All ${E.WAVES} waves on ${all}${lives}. Next up: ${E.MAPS[next].label} on ${E.MAPS[next].level}`;
     else if (before.length >= LEVELS.length - 1) detail = `All ${E.WAVES} waves on ${all}. You beat every level in one game!`;
     else detail = `All ${E.WAVES} waves on ${all}${lives}`;
     // A carried-on game belongs on All levels, never on one map's board, and saves itself.
@@ -443,6 +443,7 @@
     shell.over({
       score: g.score, board: run ? 'all' : mapId,
       title: won ? 'Victory! The castle is safe! 🏰' : undefined,
+      lost: 'The monsters found the princess, huh, same place Mario looked...',
       detail, delay: 700, saving: saving || undefined,
       extra: next ? { label: `Next level: ${E.MAPS[next].level}`, run: nextLevel } : undefined
     });

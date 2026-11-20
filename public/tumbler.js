@@ -462,7 +462,7 @@
     const saveable = !error && result && result.score > 0 && !result.saved;
     const runId = result && result.runId;
     ArcadeEnd.show({
-      title: anyOf(local.endedBy === 'slip' ? SLOW : WRONG),
+      title: !r.score ? 'Locked out before you even started!' : anyOf(local.endedBy === 'slip' ? SLOW : WRONG),
       score: r.score,
       detail: !r.score ? 'You didn\'t pop any locks this time.' : `You popped ${plural(r.score, 'lock')} in a row and made it to wave ${r.wave}, with ${plural(r.bullseyes, 'perfect pop')}` +
         (r.bestStreak > 1 ? ` and a best streak of ${r.bestStreak} perfect pops in a row.` : '.'),

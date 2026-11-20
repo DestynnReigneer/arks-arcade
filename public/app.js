@@ -582,7 +582,7 @@
     const guessesUsed = guesses.length;
     const score = computeScoreClient({ won, guesses: guessesUsed, hintsUsed, elapsedMs });
     lastResult = { won, guesses: guessesUsed, hintsUsed, elapsedMs, score, word: answer, themeId: currentTheme.id, difficulty };
-    const line = won ? "🎉 You got it! " + answer.toUpperCase() : "😔 Out of tries — it was " + answer.toUpperCase();
+    const line = won ? "🎉 You got it! " + answer.toUpperCase() : "😔 Out of tries. The word was... " + answer.toUpperCase() + ".";
     showMessage(line, true);
     newGameBtn.style.display = "inline-block";
     updateHintUI();
@@ -591,9 +591,10 @@
     ArcadeEnd.show({
       title: line,
       score: r.score,
-      detail: `${DIFFICULTIES[r.difficulty].label} · ` + (r.won
-        ? `${r.guesses} guess${r.guesses === 1 ? '' : 'es'} · ${r.hintsUsed} hint${r.hintsUsed === 1 ? '' : 's'} · ${secs}s`
-        : `Not solved — word was ${r.word.toUpperCase()}`),
+      // A word that wasn't solved is already named in the title.
+      detail: DIFFICULTIES[r.difficulty].label + (r.won
+        ? ` · ${r.guesses} guess${r.guesses === 1 ? '' : 'es'} · ${r.hintsUsed} hint${r.hintsUsed === 1 ? '' : 's'} · ${secs}s`
+        : ''),
       save: r.won && r.score > 0 ? async who => {
         const out = await apiPost('/api/leaderboard', {
           ...who, themeId: r.themeId, won: r.won, guesses: r.guesses, hintsUsed: r.hintsUsed,
@@ -601,7 +602,7 @@
         });
         return { rank: out.rank, id: out.id, where: `on ${DIFFICULTIES[r.difficulty].label}` };
       } : null,
-      noSave: 'Solve the word to get on the board.',
+      noSave: 'Solve the word, like the wheel of... anyways, get on the board.',
       scores: {
         tabs: [{ id: 'theme', label: `${currentTheme.emoji} ${currentTheme.label}` }, { id: 'all', label: 'All themes' }], tab: 'theme',
         load: async tab => {

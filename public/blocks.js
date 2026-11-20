@@ -149,7 +149,7 @@
     if (g.timeUp) Blip.tune([[784, 0.1], [659, 0.1], [523, 0.25]], { type: 'square', volume: 0.05 });
     else { Blip.noise(0.3, 0.14); Blip.tone([300, 60], 0.5, { type: 'sawtooth', volume: 0.07 }); }
     const detail = `${g.lines} line${g.lines === 1 ? '' : 's'} · level ${g.level}${g.tetrises ? ` · ${g.tetrises}× four lines` : ''}`;
-    shell.over({ score: g.score, board: mode, detail, title: g.timeUp ? 'Time\'s up!' : undefined, delay: 500 });
+    shell.over({ score: g.score, board: mode, detail, title: g.timeUp ? 'Time\'s up!' : undefined, lost: 'They all piled up to the top, can\'t have that!', delay: 500 });
   }
 
   // ---- loop -------------------------------------------------------------------------------------

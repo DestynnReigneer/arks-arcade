@@ -12,6 +12,8 @@
 //     onSetup: toSetup,               // Back to setup (left out when a game has nothing to set up)
 //   });
 //   shell.over({ score, board: 'classic', detail: '42 apples', title: 'Game over', delay: 600 });
+//   (lost: the game's own line when the run ends without a personal best; cardDetail: a line for the
+//   end window when it should read differently from the detail kept on the board)
 //   shell.openScores('classic');      // the header's 🏆
 //   shell.best('classic')            // this device's best on that board
 
@@ -32,7 +34,7 @@ const GameShell = (() => {
     // ---- the end of a run ---------------------------------------------------------------------
     // extra: one more button (Tower Defense's Next level). saving: a save the game already
     // started itself (Tower Defense's All levels board), shown instead of saving again.
-    function showOver({ score, board = boardIds[0], detail = '', title, delay = 0, extra, saving }) {
+    function showOver({ score, board = boardIds[0], detail = '', cardDetail, title, lost, delay = 0, extra, saving }) {
       // Only in the browser tests (navigator.webdriver): a run that ends with this score instead.
       if (navigator.webdriver && window.ShellTest && Number.isFinite(window.ShellTest.score)) score = window.ShellTest.score;
       score = Math.max(0, Math.round(score));
@@ -45,9 +47,9 @@ const GameShell = (() => {
           return { rank: r.rank, id: r.id, where };
         } : null;
       ArcadeEnd.show({
-        title: title || (isBest && score > 0 ? 'New personal best! 🎉' : 'Game over'),
-        score: fmt(score), detail, delay, save,
-        noSave: 'Score some points to get on the board.',
+        title: title || (isBest && score > 0 ? 'New personal best! 🎉' : lost || 'Game over'),
+        score: fmt(score), detail: cardDetail !== undefined ? cardDetail : detail, delay, save,
+        noSave: 'Score... and well, get on the board.',
         scores: ArcadeEnd.sharedBoard(game, boards, board, format),
         again: () => onAgain(), againLabel,
         setup: onSetup ? () => onSetup() : null,

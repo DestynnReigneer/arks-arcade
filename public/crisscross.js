@@ -636,7 +636,7 @@
     const mine = g.kind !== 'local' ? g.players.find(p => p.you) : null;
     const me = typeof ArcadeProfile !== 'undefined' ? ArcadeProfile.get() : null;
     ArcadeEnd.show({
-      title: winners.length > 1 ? `It's a tie: ${names(winners.map(p => p.name))}! 🎉` : youWon ? 'You won! 🏆' : `${winners[0].name} wins! 🏆`,
+      title: !g.moves.some(m => m.kind === 'play') ? 'Nobody played a word. Call it a draw.' : winners.length > 1 ? `It's a tie: ${names(winners.map(p => p.name))}! 🎉` : youWon ? 'You won! 🏆' : `${winners[0].name} wins! 🏆`,
       score: (mine || winners[0]).score,
       detail: standings,
       // An online game is on the boards under each player's profile.
