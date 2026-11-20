@@ -20,6 +20,24 @@
   const MAX_STRIKES = 3;      // solo: three misses and the round is lost
   const COLS = 12;
 
+  // Each wedge's label letters, so they can be turned the right way up.
+  const wheelLabels = [];
+  // A wedge in the bottom half of the wheel (where it sits now) would show its
+  // letters upside down, so they're turned around and stacked the other way,
+  // reading top to bottom from the middle out. Called when the wheel stops.
+  function orientLabels() {
+    for (const set of wheelLabels) {
+      const at = ((set.mid + S.rotation) % 360 + 360) % 360;
+      const flip = at > 90 && at < 270;
+      for (const { el, k } of set.texts) {
+        const y = -88 + (flip ? set.n - 1 - k : k) * set.step;
+        el.setAttribute('y', String(y));
+        if (flip) el.setAttribute('transform', `rotate(180 0 ${y})`);
+        else el.removeAttribute('transform');
+      }
+    }
+  }
+
   // 24 wedges, clockwise from the top.
   const WEDGES = [500, 900, 300, 650, 'BANKRUPT', 400, 700, 350, 550, 800, 'LOSE A TURN', 450,
     600, 1000, 300, 500, 750, 400, 850, 350, 500, 600, 450, 700];
@@ -589,19 +607,23 @@
       return [Math.cos(a) * r, Math.sin(a) * r];
     };
     const spinG = $('wheelSpin');
+    wheelLabels.length = 0;
     WEDGES.forEach((w, i) => {
       const [x1, y1] = pt(i * SLICE, 100);
       const [x2, y2] = pt((i + 1) * SLICE, 100);
       const fill = w === 'BANKRUPT' ? 'url(#wg-bankrupt)' : w === 'LOSE A TURN' ? 'url(#wg-lose)'
         : w >= 1000 ? 'url(#wg-gold)' : `url(#wg${i % WEDGE_COLORS.length})`;
       make('path', { d: `M0 0 L${x1} ${y1} A100 100 0 0 1 ${x2} ${y2} Z`, fill, stroke: 'rgba(255,255,255,0.35)', 'stroke-width': '0.6' }, spinG);
-      // Characters stacked from the rim inward, game-show style, so every
-      // label reads the same way up wherever it is on the wheel.
+      // Characters stacked from the rim inward, game-show style. A wedge that
+      // stops in the bottom half turns its letters the right way up
+      // (orientLabels), so LOSE TURN never reads upside down.
       const mid = i * SLICE + SLICE / 2;
       const label = typeof w === 'number' ? String(w) : w === 'LOSE A TURN' ? 'LOSE TURN' : w;
       const size = typeof w === 'number' ? 11 : 5.4;
       const step = typeof w === 'number' ? 11 : 5.6;
       const group = make('g', { transform: `rotate(${mid})` }, spinG);
+      const set = { mid, n: label.length, step, texts: [] };
+      wheelLabels.push(set);
       [...label].forEach((ch, k) => {
         if (ch === ' ') return;
         const t = make('text', {
@@ -609,12 +631,15 @@
           'text-anchor': 'middle', 'dominant-baseline': 'middle', 'font-size': String(size)
         }, group);
         t.textContent = ch;
+        set.texts.push({ el: t, k });
         if (w === 'LOSE A TURN') t.style.fill = '#1b1446';
       });
       // A peg at each wedge boundary
       const [px, py] = pt(i * SLICE, 95);
       make('circle', { cx: px, cy: py, r: '1.8', fill: '#fff', stroke: '#8f97b8', 'stroke-width': '0.6' }, spinG);
     });
+
+    orientLabels();
 
     const still = $('wheelStatic');
     make('circle', { r: '100', fill: 'url(#wheel-shine)', 'pointer-events': 'none' }, still);
@@ -711,6 +736,7 @@
       if (t < 1) requestAnimationFrame(frame);
       else {
         blurAmount.setAttribute('stdDeviation', '0');
+        orientLabels();
         setLeds(() => false);
         wheel.classList.add('won');
         setTimeout(() => { wheel.classList.remove('won'); wheel.classList.add('idle'); }, 1500);
