@@ -684,7 +684,7 @@
       if (S.mode === 'room') return ended.winner === S.me ? `${how}! You win 🎉` : `${how}. ${stripTags(seatName(ended.winner))} wins.`;
       return `${how}! ${COLOR_NAME[ended.winner]} wins 🎉`;
     }
-    return DRAWS[ended.reason] || `It's a draw! (${ended.reason})`;
+    return Object.hasOwn(DRAWS, ended.reason) ? DRAWS[ended.reason] : `It's a draw! (${ended.reason})`;
   }
   // Back to plain text (names were escaped for HTML in seatName).
   const stripTags = s => { const d = document.createElement('div'); d.innerHTML = s; return d.textContent; };
