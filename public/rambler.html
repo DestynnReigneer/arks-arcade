@@ -11,6 +11,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;800&family=Rajdhani:wght@500;600;700&display=swap">
 <link rel="stylesheet" href="rambler.css">
+<link rel="stylesheet" href="setup-steps.css">
 <link rel="stylesheet" href="tutorial.css">
 <link rel="stylesheet" href="adult-mode.css">
 <link rel="stylesheet" href="look.css">
@@ -42,8 +43,9 @@
 
 <!-- ============ SETUP ============ -->
 <section id="setupScreen" class="screen">
-  <!-- Two columns on a tablet or a computer (rambler.css), one on a phone. -->
-  <div class="setup-col">
+  <!-- Two columns on a tablet or a computer (rambler.css). On a phone, two steps
+       (setup-steps.js): the ways to play, then tapping one shows the rest. -->
+  <div class="setup-col" data-step="1">
   <div class="theme-banner hidden" id="themeBanner">
     <span class="tb-emoji" id="tbEmoji"></span>
     <span class="tb-text">
@@ -65,7 +67,6 @@
   </button>
 
   <div class="field">
-    <label>How are you playing?</label>
     <div class="modes" id="modeList">
       <button class="mode tv-only" data-mode="room" aria-pressed="false" id="tvRoomMode">
         <span class="emoji">📺</span>
@@ -74,35 +75,6 @@
           <span class="desc">The TV shows the board big and the clock. Everyone scans the code on the TV and traces words on their own device, all on the same board at the same time.</span>
         </span>
       </button>
-      <button class="mode no-tv" data-mode="solo" aria-pressed="true">
-        <span class="emoji">🙂</span>
-        <span class="body">
-          <span class="name">Solo</span>
-          <span class="desc">Just you and the clock. Beat your own best.</span>
-        </span>
-      </button>
-      <button class="mode no-tv" data-mode="turns" aria-pressed="false">
-        <span class="emoji">🤝</span>
-        <span class="body">
-          <span class="name">Pass &amp; Play</span>
-          <span class="desc">One device, 2–8 players. Same board each turn, hand it on when your time is up.</span>
-        </span>
-      </button>
-      <button class="mode no-tv" data-mode="tabletop" aria-pressed="false">
-        <span class="emoji">📝</span>
-        <span class="body">
-          <span class="name">Tabletop</span>
-          <span class="desc">Real Boggle rules. One shared timer, everyone writes on paper, then type the lists in to score. Best with a drink in hand.</span>
-        </span>
-      </button>
-      <button class="mode mode-marathon no-tv" data-mode="marathon" aria-pressed="false">
-        <span class="emoji">🔥</span>
-        <span class="body">
-          <span class="name">Marathon</span>
-          <span class="desc">Every word buys you more time, and the grid grows as you go. You don't win — you last.</span>
-        </span>
-      </button>
-      <div class="mode-label no-tv"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:1.3em;height:1.3em;vertical-align:-0.28em;margin-right:4px"><rect x="3" y="6" width="11" height="22" rx="2.5"/><rect x="18" y="4" width="11" height="22" rx="2.5"/><path d="M7.5 24h2"/><path d="M22.5 22h2"/></svg>Multiplayer-Multiple devices</div>
       <button class="mode no-tv" data-mode="room" data-go="create" data-go-show="#startBtn" aria-pressed="false">
         <span class="emoji"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:26px;height:26px;display:block"><circle cx="16" cy="7" r="3.2"/><path d="M10 18.5c0-3.4 2.6-5.8 6-5.8s6 2.4 6 5.8"/><circle cx="6.5" cy="10" r="2.6"/><path d="M2 20c0-2.8 1.9-4.8 4.5-4.8"/><circle cx="25.5" cy="10" r="2.6"/><path d="M30 20c0-2.8-1.9-4.8-4.5-4.8"/><path d="M11 30l7-7"/><path d="M18 23a4 4 0 0 1 5.3-5l-2.4 2.4.5 2.2 2.2.5 2.4-2.4a4 4 0 0 1-5 5.3"/></svg></span>
         <span class="body">
@@ -117,11 +89,40 @@
           <span class="desc">Live games lobby waiting to start or started with vacancies.</span>
         </span>
       </button>
+      <button class="mode mode-marathon no-tv" data-mode="marathon" aria-pressed="false">
+        <span class="emoji">🔥</span>
+        <span class="body">
+          <span class="name">Marathon</span>
+          <span class="desc">Every word buys you more time, and the grid grows as you go. You don't win — you last.</span>
+        </span>
+      </button>
+      <button class="mode no-tv" data-mode="solo" aria-pressed="true">
+        <span class="emoji">🙂</span>
+        <span class="body">
+          <span class="name">Solo</span>
+          <span class="desc">Just you and the clock. Beat your own best.</span>
+        </span>
+      </button>
+      <div class="mode-label no-tv"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:1.3em;height:1.3em;vertical-align:-0.28em;margin-right:4px"><rect x="10" y="4" width="12" height="24" rx="2.5"/><path d="M14.5 24h3"/></svg>Multiplayer-Shared device</div>
+      <button class="mode no-tv" data-mode="turns" aria-pressed="false">
+        <span class="emoji">🤝</span>
+        <span class="body">
+          <span class="name">Pass &amp; Play</span>
+          <span class="desc">One device, 2–8 players. Same board each turn, hand it on when your time is up.</span>
+        </span>
+      </button>
+      <button class="mode no-tv" data-mode="tabletop" aria-pressed="false">
+        <span class="emoji">📝</span>
+        <span class="body">
+          <span class="name">Tabletop</span>
+          <span class="desc">Real Boggle rules. One shared timer, everyone writes on paper, then type the lists in to score. Best with a drink in hand.</span>
+        </span>
+      </button>
     </div>
   </div>
   </div>
 
-  <div class="setup-col">
+  <div class="setup-col" data-step="2">
   <div class="field" id="playersField">
     <label>Players</label>
     <div class="players-edit" id="playersEdit"></div>
@@ -535,6 +536,7 @@
 <script src="arcade-qr.js"></script>
 <script src="room-password.js"></script>
 <script src="live.js"></script>
+<script src="setup-steps.js"></script>
 <script src="rambler.js"></script>
 <script src="banner.js" defer></script>
 </body>

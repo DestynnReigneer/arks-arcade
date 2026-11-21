@@ -7,7 +7,7 @@
 // game on purpose forgets it.
 
 const { test, expect } = require('@playwright/test');
-const { quietFonts, watchProblems, openPage } = require('./helpers');
+const { quietFonts, watchProblems, openPage, nextStep } = require('./helpers');
 
 // Past "Who's playing?" and the first-time How to play, when they show.
 async function settle(page) {
@@ -33,6 +33,7 @@ test('Spin & Solve picks the same game back up after a reload, and a sleeping pa
 
   // One player, three rounds, the 30-second clock.
   while (await page.locator('#nameList .name-row').count() > 1) await page.locator('#nameList .name-row:last-child button').click();
+  await nextStep(page);
   await page.locator('#timerSeg [data-secs="30"]').click();
   await page.locator('#goBtn').click();
   await expect(page.locator('#game')).toBeVisible();
@@ -121,6 +122,7 @@ test('a finished round is still there after a reload, and the score saves itself
   await openPage(page, '/spinsolve.html');
   await settle(page);
   while (await page.locator('#nameList .name-row').count() > 1) await page.locator('#nameList .name-row:last-child button').click();
+  await nextStep(page);
   await page.locator('#goBtn').click();
   await expect(page.locator('#game')).toBeVisible();
 
@@ -168,6 +170,7 @@ test('a game the arcade no longer has sends the page back to the setup screen', 
   await quietFonts(page);
   await openPage(page, '/spinsolve.html');
   await settle(page);
+  await nextStep(page);
   await page.locator('#goBtn').click();
   await expect(page.locator('#game')).toBeVisible();
   expect(await remembered(page)).toMatch(/^[0-9a-f]{32}$/);

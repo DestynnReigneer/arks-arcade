@@ -437,7 +437,7 @@ Up to 12 people can play, in a room or taking turns on one device, and each play
 
 #### Know-It-All on a TV
 
-Opened on a TV (a TV app whose browser adds `ARKS-TV/<version>` to its user agent, or any browser with `?tv=1` on the address to try it), the arcade switches to a TV layout: everything is drawn half as big again, it stays inside the edges some TVs cut off, and a thick turquoise ring shows which button the remote is on. The remote's arrows move the ring to the nearest button in that direction, and OK (Enter) presses it. The home page shows the games as big tiles with Know-It-All first. On a TV, Know-It-All's "Who's playing?" offers three ways, and in all of them the TV hosts a room and the server keeps every score:
+Opened on a TV (a TV app whose browser adds `ARKS-TV/<version>` to its user agent, or any browser with `?tv=1` on the address to try it), the arcade switches to a TV layout: everything is drawn half as big again, it stays inside the edges some TVs cut off, and a thick turquoise ring shows which button the remote is on. The remote's arrows move the ring to the nearest button in that direction, and OK (Enter) presses it. The home page shows the games as big tiles with Know-It-All first. On a TV, Know-It-All's "Game mode" offers three ways, and in all of them the TV hosts a room and the server keeps every score:
 
 - **Everyone on their own device:** the TV shows a QR code to scan (and no code to type), the questions, who has locked in and the scores. Everyone answers on their own device at the same time.
 - **Pass one device around:** you take turns. Scan the code with the phone you'll pass around and add everyone's names on it. Before each turn the TV says whose turn it is, and the clock starts when they press I'm ready.

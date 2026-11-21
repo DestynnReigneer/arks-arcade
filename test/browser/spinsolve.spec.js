@@ -6,7 +6,7 @@
 // tapped, and stops again when the answer is in.
 
 const { test, expect } = require('@playwright/test');
-const { quietFonts, watchProblems, openPage } = require('./helpers');
+const { quietFonts, watchProblems, openPage, nextStep } = require('./helpers');
 
 test('the Spin & Solve clock waits for the first spin', async ({ page }) => {
   test.setTimeout(90000);
@@ -23,6 +23,7 @@ test('the Spin & Solve clock waits for the first spin', async ({ page }) => {
 
   // One player, the 30-second clock.
   while (await page.locator('#nameList .name-row').count() > 1) await page.locator('#nameList .name-row:last-child button').click();
+  await nextStep(page);
   await page.locator('#timerSeg [data-secs="30"]').click();
   await page.locator('#goBtn').click();
   await expect(page.locator('#game')).toBeVisible();
@@ -74,6 +75,7 @@ test('on a phone, the totals are in the menu and the wheel is cut at the hub', a
   }
   const close = page.locator('.tut-x');
   if (await close.isVisible().catch(() => false)) await close.click();
+  await nextStep(page);
   await page.locator('#goBtn').click();
   await expect(page.locator('#game')).toBeVisible();
 
@@ -117,6 +119,7 @@ for (const [w, h] of [[412, 640], [360, 740], [390, 844]]) {
     }
     const close = page.locator('.tut-x');
     if (await close.isVisible().catch(() => false)) await close.click();
+    await nextStep(page);
     await page.locator('#goBtn').click();
     await expect(page.locator('#game')).toBeVisible();
     await page.waitForTimeout(400);

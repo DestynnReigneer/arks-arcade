@@ -1590,3 +1590,36 @@ html.tv #joinQr { width: 220px !important; height: 220px !important; }
   html:not(.tv) #setupScreen .mode { padding: 10px 14px; }
   html:not(.tv) #setupScreen .field { margin-bottom: 14px; }
 }
+
+/* ---- The setup in two steps on a phone (setup-steps.js, 2026-11-20) ----
+   The ways to play are the first step and the rest the second, and each is a little
+   tighter, so the second step and Slide to victory fit an upright phone. On a short
+   screen Rambler's own header row gives up some room too, as it does while playing. */
+html:not(.tv) #setupScreen.steps-on { padding-top: 8px; padding-bottom: 8px; }
+html:not(.tv) body:has(#setupScreen.steps-on:not(.hidden)) { padding-bottom: 0; }
+html:not(.tv) #setupScreen.steps-on .daily-card { margin-bottom: 8px; padding: 8px 12px; }
+html:not(.tv) #setupScreen.steps-on .field { margin-bottom: 0; }
+html:not(.tv) #setupScreen.steps-on .setup-col > .field:not(.hidden) ~ .field { margin-top: 12px; }
+html:not(.tv) #setupScreen.steps-on .modes { gap: 6px; }
+html:not(.tv) #setupScreen.steps-on .mode { padding: 8px 12px; gap: 10px; }
+html:not(.tv) #setupScreen.steps-on .mode .name { margin-bottom: 1px; }
+html:not(.tv) #setupScreen.steps-on .mode .desc { line-height: 1.35; }
+html:not(.tv) #setupScreen.steps-on .mode-label { margin-top: 4px; }
+html:not(.tv) #setupScreen.steps-on .field > label { margin-bottom: 6px; }
+html:not(.tv) #setupScreen.steps-on .seg button { padding: 8px 6px; }
+html:not(.tv) #setupScreen.steps-on .note { line-height: 1.4; }
+html:not(.tv) #setupScreen.steps-on .note[style*="margin-top"] { margin-top: 4px !important; }
+html:not(.tv) #setupScreen.steps-on .players-edit { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+html:not(.tv) #setupScreen.steps-on .player-row input { padding-top: 8px; padding-bottom: 8px; }
+html:not(.tv) #setupScreen.steps-on #addPlayerBtn { margin-top: 6px !important; padding-top: 8px; padding-bottom: 8px; }
+html:not(.tv) #setupScreen.steps-on .msg:empty { min-height: 0; margin: 0; }
+html:not(.tv) #setupScreen.steps-on .steps-nav { margin-top: 12px; }
+@media (max-height: 760px) {
+  html:not(.tv) body:has(#setupScreen.steps-on:not(.hidden)) > header { padding-top: 4px; padding-bottom: 4px; }
+  html:not(.tv) #setupScreen.steps-on .seg button { padding: 6px; min-height: 36px; }
+  html:not(.tv) #setupScreen.steps-on .mode { padding-top: 6px; padding-bottom: 6px; }
+  html:not(.tv) #setupScreen.steps-on .setup-col > .field:not(.hidden) ~ .field { margin-top: 8px; }
+  html:not(.tv) #setupScreen.steps-on #nameField .note { margin-bottom: 4px !important; }
+  html:not(.tv) #setupScreen.steps-on #nameInput { padding-top: 7px; padding-bottom: 7px; }
+  html:not(.tv) #setupScreen.steps-on .steps-nav { margin-top: 8px; }
+}

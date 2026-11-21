@@ -2232,6 +2232,7 @@ async function openFromLink(code) {
   } catch { /* falls through */ }
   S.mode = 'find';
   renderSetup();
+  steps.go(2);
   say($('setupMsg'), 'This game isn\'t available. Here are the ones that are.', 'err');
 }
 
@@ -2250,7 +2251,7 @@ function backToSetup() {
   S.results = null;
   S.found = [];
   // Someone who came in from List Hosted Games goes back to the list.
-  if (S.cameFromList) { S.cameFromList = false; S.mode = 'find'; }
+  if (S.cameFromList) { S.cameFromList = false; S.mode = 'find'; steps.go(2); }
   say($('setupMsg'), '');
   screen('setup');
   renderSetup();
@@ -2321,6 +2322,8 @@ function bind() {
         S.players = defaultPlayers(2);
       }
       renderSetup();
+      // On a phone the ways to play are the first step, and a tap on one goes on to the rest.
+      if (steps.active) { steps.go(2); return; }
       // The list of lobbies sits under the ways to play: bring it into view, or the tap seems to do nothing.
       if (S.mode === 'find') $('hostedField').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     };
@@ -2494,11 +2497,20 @@ async function boot() {
   if (joinParam && !TV) openFromLink(joinParam.toUpperCase().slice(0, 4));
 }
 
+// On a phone the setup is two steps: the ways to play, and tapping one shows the
+// board, timer, difficulty and dictionary with Slide to victory (setup-steps.js).
+// There's no Next: the cards already make the first step taller than a phone.
+const steps = SetupSteps.create($('setupScreen'), {
+  start: $('startBtn'), msg: $('setupMsg'), next: false, backClass: 'ghost-btn', nextClass: 'primary-btn'
+});
+const onStep2 = () => steps.active && steps.step === 2 && !$('setupScreen').classList.contains('hidden');
+
 // Back (topbar.js): any other screen goes back to setup, asking first while
-// a round or a marathon is going, and from setup Back goes to the arcade.
+// a round or a marathon is going, from the setup's second step to its first,
+// and from there to the arcade.
 ArcadeBack.setup({
-  atMenu: () => !$('setupScreen').classList.contains('hidden'),
-  back: leaveToSetup,
+  atMenu: () => !$('setupScreen').classList.contains('hidden') && !onStep2(),
+  back: () => { if (onStep2()) steps.go(1); else leaveToSetup(); },
   busy: () => ['playScreen', 'gateScreen', 'entryScreen'].some(id => !$(id).classList.contains('hidden')) ||
     (!$('marathonScreen').classList.contains('hidden') && !M.over)
 });

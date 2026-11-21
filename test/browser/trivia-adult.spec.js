@@ -5,7 +5,7 @@
 // up to 12 players.
 
 const { test, expect } = require('@playwright/test');
-const { quietFonts, watchProblems, openPage } = require('./helpers');
+const { quietFonts, watchProblems, openPage, nextStep, firstStep } = require('./helpers');
 
 async function asGuest(page) {
   await quietFonts(page);
@@ -22,6 +22,7 @@ async function asGuest(page) {
 test('Know-It-All: an emoji riddle shows its picture, and a shared device takes 12 players', async ({ page }) => {
   const problems = await asGuest(page);
   await page.locator('#levelList .level', { hasText: 'Spicy' }).click();
+  await nextStep(page);
   const chip = page.locator('#genreChips button', { hasText: 'Emoji Riddles' });
   await expect(chip).toBeVisible();
   await chip.click();
@@ -37,6 +38,7 @@ test('Know-It-All: an emoji riddle shows its picture, and a shared device takes 
   await page.locator('#quitBtn').click();
   await expect(page.locator('#setup')).toBeVisible();
 
+  await firstStep(page);
   await page.locator('#modeSeg [data-mode="local"]').click();
   const add = page.locator('#addPlayerBtn');
   while (await add.isVisible()) await add.click();
