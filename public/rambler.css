@@ -1540,8 +1540,15 @@ html.tv #joinQr { width: 220px !important; height: 220px !important; }
   html:not(.tv) body:has(#playScreen:not(.hidden)) .fb-corner { display: none; }
   html:not(.tv) body:not(.tv-screen) #playScreen:not(.hidden) { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; padding-top: 10px; padding-bottom: max(10px, env(safe-area-inset-bottom)); }
   html:not(.tv) body:not(.tv-screen) #playScreen > * { flex: none; }
-  html:not(.tv) body:not(.tv-screen) #playScreen > .board-wrap { flex: 0 1 auto; min-height: 0; aspect-ratio: 1; container-type: size; }
-  html:not(.tv) body:not(.tv-screen) #playScreen .board { width: min(100cqw, 100cqh); margin: 0 auto; }
+  /* Never smaller than 160px, even if something squeezes the page (the keyboard). */
+  html:not(.tv) body:not(.tv-screen) #playScreen > .board-wrap { flex: 0 1 auto; min-height: 160px; aspect-ratio: 1; container-type: size; }
+  /* The board is a square as big as its box allows, and the dice and their letters
+     are shares of it, so a 5x5 board shrinks as evenly as a 4x4 one. */
+  html:not(.tv) body:not(.tv-screen) #playScreen .board { width: min(100cqw, 100cqh); height: min(100cqw, 100cqh); margin: 0 auto; gap: clamp(4px, calc(min(100cqw, 100cqh) * 0.024), 8px); }
+  html:not(.tv) body:not(.tv-screen) #playScreen .board.s4 { grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: repeat(4, minmax(0, 1fr)); }
+  html:not(.tv) body:not(.tv-screen) #playScreen .board.s5 { grid-template-columns: repeat(5, minmax(0, 1fr)); grid-template-rows: repeat(5, minmax(0, 1fr)); }
+  html:not(.tv) body:not(.tv-screen) #playScreen .die { min-width: 0; min-height: 0; aspect-ratio: auto; font-size: clamp(12px, calc(min(100cqw, 100cqh) * 0.1), 29px); }
+  html:not(.tv) body:not(.tv-screen) #playScreen .board.s5 .die { font-size: clamp(11px, calc(min(100cqw, 100cqh) * 0.08), 23px); }
   html:not(.tv) body:not(.tv-screen) #playScreen > .trace-bar { order: 1; margin-top: 10px; width: 100%; }
   html:not(.tv) body:not(.tv-screen) #playScreen > .type-row { order: 2; margin-top: 8px; width: 100%; }
   html:not(.tv) body:not(.tv-screen) #playScreen > .mara-actions { order: 3; margin-top: 8px !important; width: 100%; max-width: 380px; margin-inline: auto; }
@@ -1551,6 +1558,23 @@ html.tv #joinQr { width: 220px !important; height: 220px !important; }
   html:not(.tv) body:not(.tv-screen) #playScreen > .found:not(#playRoster)::-webkit-scrollbar { display: none; }
   html:not(.tv) body:not(.tv-screen) #playScreen > #playRoster { order: 5; margin-top: 10px !important; }
   html:not(.tv) body:not(.tv-screen) #playScreen > #tabletopHint { order: 6; margin-top: 10px !important; }
+}
+/* A short screen (the browser's bars showing): Rambler's own header row, the clock and
+   the rows under the board give up some room, so the board stays a good size. */
+@media (orientation: portrait) and (max-height: 760px) {
+  html:not(.tv) body:has(#playScreen:not(.hidden)) > header { padding-top: 4px; padding-bottom: 4px; }
+  html:not(.tv) body:not(.tv-screen) #playScreen:not(.hidden) { padding-top: 4px; }
+  html:not(.tv) body:not(.tv-screen) #playScreen .play-top { margin-bottom: 2px; }
+  html:not(.tv) body:not(.tv-screen) #playScreen .clock { font-size: 21px; }
+  html:not(.tv) body:not(.tv-screen) #playScreen .timer-track { margin-bottom: 8px; }
+  html:not(.tv) body:not(.tv-screen) #playScreen > .trace-bar { margin-top: 8px; min-height: 40px; }
+  html:not(.tv) body:not(.tv-screen) #playScreen > .type-row { margin-top: 6px; }
+  html:not(.tv) body:not(.tv-screen) #playScreen > .type-row input { padding-top: 8px; padding-bottom: 8px; }
+  html:not(.tv) body:not(.tv-screen) #playScreen > .type-row .ghost-btn,
+  html:not(.tv) body:not(.tv-screen) #playScreen > .mara-actions .ghost-btn { padding-top: 8px; padding-bottom: 8px; }
+  html:not(.tv) body:not(.tv-screen) #playScreen > .mara-actions { margin-top: 6px !important; }
+  html:not(.tv) body:not(.tv-screen) #playScreen > .found { margin-top: 8px; }
+  html:not(.tv) body:not(.tv-screen) #playScreen > .found:not(#playRoster) { min-height: 56px; }
 }
 
 /* ---- The setup screen on a tablet or a computer (2026-11-20) ----

@@ -467,7 +467,14 @@
   // ---- wiring -------------------------------------------------------------------------------
   for (const b of $('modeSeg').children) b.onclick = () => setMode(b.dataset.mode);
   for (const b of $('lengthSeg').children) b.onclick = () => { S.length = b.dataset.v; for (const x of $('lengthSeg').children) x.setAttribute('aria-pressed', String(x === b)); };
-  $('addPlayerBtn').onclick = () => { if (S.names.length < 12) { S.names.push(''); renderNames(); } };
+  // A new name can push Start below the screen on a phone; bring it back into view,
+  // above anything that covers the bottom of the page (Chrome's row of tabs).
+  function showStart() {
+    const r = $('goBtn').getBoundingClientRect();
+    const seen = window.visualViewport ? Math.min(window.innerHeight, window.visualViewport.height) : window.innerHeight;
+    if (r.bottom > seen - 8) window.scrollBy(0, r.bottom - seen + 8);
+  }
+  $('addPlayerBtn').onclick = () => { if (S.names.length < 12) { S.names.push(''); renderNames(); showStart(); } };
   $('goBtn').onclick = go;
   $('deckBtn').onclick = () => { Blip.tone([300, 900], 0.15, { type: 'triangle' }); send('draw'); };
   $('doneBtn').onclick = () => { Blip.tune([[660, 0.08], [990, 0.14]], { type: 'triangle' }); send('done'); };

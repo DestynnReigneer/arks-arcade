@@ -17,14 +17,24 @@ order they were clicked, and keep the rest pinned here.
   columns there too (`.setup-col` in `rambler.html`), so all six fit a tablet and a laptop.
 - **Still too long for a phone:** Know-It-All, Spin & Solve and Rambler have more choices than an upright phone
   can show at once, even tightened (Let's play or Slide to victory ends up 130 to 730px below the screen). That
-  needs a design call from the maintainer (fewer choices on the first screen, choices in steps, or shorter
-  descriptions), so they're in `KNOWN` in `fit.spec.js`.
-- **Rambler while playing:** Words with Family's fit. The page is `--app-h` tall, the board shrinks, Hint and I'm
-  done sit under the typing row, and the words found fill the rest and scroll inside it.
+  needs a design call, so they're in `KNOWN` in `fit.spec.js`. The maintainer chose **setup in steps** for these
+  three; that's its own PR.
+- **Rambler while playing:** Words with Family's fit. The page is `--app-h` tall, the board shrinks (never under
+  160px), Hint and I'm done sit under the typing row, and the words found fill the rest and scroll inside it. The
+  dice and their letters are shares of the board's box, so a 5x5 board shrinks evenly. On a short screen Rambler's
+  own header row and the clock give up some room (the board is about 274px at 412x640).
+- **`--app-h` stays put while someone types** (`topbar.js`): a drop of more than 150px while a text box has focus is
+  the phone's keyboard, and fitting the game above it squashed Rambler's board to nothing.
+- **Players' names:** in Dare Devil, Uh-Oh and Know-It-All, + Add player is the next cell after the last name, and
+  adding a player scrolls Start back into view if the new row pushed it off the screen.
+- **Know-It-All in two columns** has What about? on the left and How spicy?, Who's playing? and Let's play on the
+  right, so Let's play comes after every choice; rows of choices stay on one row there.
 - **Big Swing (and the other cabinet games) on a phone:** the stage's height uses `--app-h`, so Chrome's row of
   tabs doesn't cover the big button.
 - **Tests:** `fit.spec.js` has a `setup` list per game, checked at the upright sizes before anything is tapped, and
-  Big Swing in `GAMES` (marked slow; its sideways sizes are skipped until the sideways layouts).
+  Big Swing in `GAMES` (marked slow; its sideways sizes are skipped until the sideways layouts). It also checks
+  Dare Devil's and Uh-Oh's Start with four players, Rambler's 5x5 board on short phones, Rambler with the keyboard
+  open, the bug-report button clear of Know-It-All's answers and Quit, and Know-It-All's rows of choices on a tablet.
 
 ## One end window for every game (2026-11-19)
 

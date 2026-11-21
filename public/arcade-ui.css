@@ -177,31 +177,47 @@ button:disabled { opacity: 0.4; cursor: default; }
   html:not(.tv) .fit-setup #nameList { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); column-gap: 6px; }
   html:not(.tv) .fit-setup .name-row input { padding: 8px 10px; }
   html:not(.tv) .fit-setup #addPlayerBtn { padding: 8px 16px; }
+  /* Where the names have a box of their own (#localSetup), + Add player is the next
+     cell after the last name instead of a row of its own. */
+  html:not(.tv) .fit-setup #localSetup:has(> #nameList + #addPlayerBtn) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 6px; align-items: start; }
+  html:not(.tv) .fit-setup #localSetup:has(> #nameList + #addPlayerBtn) > * { grid-column: 1 / -1; }
+  html:not(.tv) .fit-setup #localSetup:has(> #nameList + #addPlayerBtn) > #nameList { display: contents; }
+  html:not(.tv) .fit-setup #localSetup:has(> #nameList + #addPlayerBtn) .name-row { grid-column: auto; }
+  html:not(.tv) .fit-setup #localSetup:has(> #nameList + #addPlayerBtn) > #addPlayerBtn { grid-column: auto; width: 100%; margin: 0 0 6px; }
 }
 /* A short screen (a phone with the browser's bars showing) tightens a little more. */
 @media (max-height: 700px) {
-  html:not(.tv) .fit-setup .panel { padding: 10px 12px; margin-bottom: 8px; }
+  html:not(.tv) .fit-setup .panel { padding: 8px 12px; margin-bottom: 8px; }
   html:not(.tv) .fit-setup .panel h2 { margin-bottom: 6px; font-size: 15px; }
   html:not(.tv) .fit-setup .panel:not(:last-child) { margin-bottom: 6px; }
-  html:not(.tv) .fit-setup .level { padding: 6px 8px; }
-  html:not(.tv) .fit-setup .level .l-blurb { line-height: 1.25; }
-  html:not(.tv) .fit-setup .seg button { padding: 6px; }
+  html:not(.tv) .fit-setup .level { padding: 5px 8px; }
+  html:not(.tv) .fit-setup .level .l-blurb { line-height: 1.25; margin-top: 1px; }
+  html:not(.tv) .fit-setup .level .l-lock { margin-top: 2px; }
+  /* Buttons stay at least 36px tall, big enough for a thumb. */
+  html:not(.tv) .fit-setup .seg button { padding: 6px; min-height: 36px; }
+  /* Chess has room to spare, so its buttons keep their full size. */
+  html:not(.tv) .fit-setup:has(#colorSeg) .seg button { min-height: 40px; }
   html:not(.tv) .fit-setup .name-row { margin-bottom: 4px; }
-  html:not(.tv) .fit-setup .name-row input { padding: 7px 10px; }
-  html:not(.tv) .fit-setup #addPlayerBtn { padding: 6px 14px; }
+  html:not(.tv) .fit-setup .name-row input { padding: 6px 10px; }
+  html:not(.tv) .fit-setup #addPlayerBtn { padding: 5px 14px; }
   html:not(.tv) .fit-setup button.big { padding: 11px; }
 }
 /* A long setup (.two-col) on a tablet or a computer: its panels side by side, so it
-   fits the height of the screen. Know-It-All puts its long middle panel on the right. */
+   fits the height of the screen, and Start ends the right-hand column, after every
+   choice. Know-It-All puts its long middle panel (What about?) on the left, and How
+   spicy? and Who's playing? on the right. A row of choices stays one row. */
 @media (min-width: 760px) {
   html:not(.tv) body:has(.fit-setup.two-col:not(.hidden)) { max-width: 1100px; }
   html:not(.tv) .fit-setup.two-col:not(.hidden) { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 14px; align-items: start; }
-  html:not(.tv) .fit-setup.two-col > .panel:nth-child(3) { grid-column: 1; }
-  html:not(.tv) .fit-setup.two-col:has(> .panel:nth-child(3)) > .panel:nth-child(2) { grid-column: 2; grid-row: 1 / span 3; }
+  html:not(.tv) .fit-setup.two-col:has(> .panel:nth-child(3)) > .panel:nth-child(1) { grid-column: 2; grid-row: 1; }
+  html:not(.tv) .fit-setup.two-col:has(> .panel:nth-child(3)) > .panel:nth-child(2) { grid-column: 1; grid-row: 1 / span 3; }
+  html:not(.tv) .fit-setup.two-col:has(> .panel:nth-child(3)) > .panel:nth-child(3) { grid-column: 2; grid-row: 2; }
   html:not(.tv) .fit-setup.two-col > :not(.panel) { grid-column: 1 / -1; }
+  html:not(.tv) .fit-setup.two-col .seg { flex-wrap: nowrap; }
+  html:not(.tv) .fit-setup.two-col .seg button { min-width: 0; }
 }
 @media (max-width: 899px) {
   html:not(.tv) body:has(.fit-setup:not(.hidden)) .fb-corner,
-  html:not(.tv) body:has(.fit-setup):has(#game:not(.hidden)) .fb-corner { display: none; }
+  html:not(.tv) body:has(.fit-setup):has(#game:not(.hidden), #play:not(.hidden)) .fb-corner { display: none; }
 }
 
