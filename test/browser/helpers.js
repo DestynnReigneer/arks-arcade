@@ -41,4 +41,16 @@ async function openPage(page, path) {
 
 const chooser = page => page.locator('.apf');
 
-module.exports = { PAGES, quietFonts, watchProblems, openPage, chooser };
+// A setup in two steps on a phone (setup-steps.js): go on to step 2, or back to
+// step 1. Each does nothing when the setup isn't in steps (a laptop, a tablet, a TV)
+// or is already there.
+async function nextStep(page) {
+  const next = page.locator('.steps-next');
+  if (await next.isVisible().catch(() => false)) await next.click();
+}
+async function firstStep(page) {
+  const back = page.locator('.steps-back');
+  if (await back.isVisible().catch(() => false)) await back.click();
+}
+
+module.exports = { PAGES, quietFonts, watchProblems, openPage, chooser, nextStep, firstStep };

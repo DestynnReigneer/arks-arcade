@@ -61,6 +61,8 @@ for (const [game, seg] of [['rambler', '#profileSeg'], ['scuffle', '#dictSeg']])
     await openPage(page, `/${game}.html`);
     await page.getByRole('button', { name: /Play as a guest/ }).click();
     await page.getByRole('button', { name: 'Play', exact: true }).click();
+    // Rambler's word list is on the setup's second step on a phone, after a way to play.
+    if (game === 'rambler') await page.locator('#modeList .mode.no-tv[data-mode="solo"]').click();
     const pick = page.locator(seg).getByRole('button', { name: /Unfiltered/ });
     await pick.click();
     await expect(pick).toHaveAttribute('aria-pressed', 'true');

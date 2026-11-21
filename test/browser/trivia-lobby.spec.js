@@ -5,7 +5,7 @@
 // the host starts; then a third phone joins the game in progress.
 
 const { test, expect } = require('@playwright/test');
-const { quietFonts, watchProblems, openPage } = require('./helpers');
+const { quietFonts, watchProblems, openPage, nextStep } = require('./helpers');
 
 async function asGuest(page, path) {
   await quietFonts(page);
@@ -28,6 +28,7 @@ test('Know-It-All: a lobby, Ready, the chat, starting, and joining a game in pro
   const hostProblems = await asGuest(host, '/trivia.html');
   await host.locator('#modeSeg [data-mode="host"]').click();
   await host.locator('#hostName').fill(who);
+  await nextStep(host);
   await host.locator('#goBtn').click();
   await expect(host.locator('#lobbyTitle')).toHaveText('Your Know-It-All lobby');
   await expect(host.locator('#tvJoin')).toBeHidden();

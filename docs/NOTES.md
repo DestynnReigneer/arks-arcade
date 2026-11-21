@@ -7,6 +7,40 @@ to-do list as checkboxes (the rule is in the maintainer's global CLAUDE.md
 and `arks-internal/conventions/sessions.md`): do the checked items in the
 order they were clicked, and keep the rest pinned here.
 
+## Setup in two steps on a phone: Know-It-All, Spin & Solve and Rambler (2026-11-20)
+
+The maintainer chose "two steps each" for the three setups that didn't fit an upright phone. Built to be tried;
+it waits for the maintainer before it's merged.
+
+- **`public/setup-steps.js` and `setup-steps.css`** (both pages' head and Rambler's): `SetupSteps.create(root,
+  { start, msg, next, backClass, nextClass })`. The page marks its parts `data-step="1"` or `"2"` (a part can move
+  up with `style="--step-order:-1"`). Only under 760px wide and never on a TV (`html.tv`): one step at a time, two
+  dots under it (the current one turquoise), **Next** on step 1, and **Back** beside the game's own start button on
+  step 2 (the start button and the message line move into that row, and back again on a wider screen). Moving
+  between steps only hides and shows, so every choice is kept. Next shows only while the start button does (List
+  Hosted Games has nothing to start). Tablets and laptops keep the one-screen two-column setup.
+- **The top bar's Back** (and the phone's): from step 2 to step 1, then the arcade. Each game's `ArcadeBack.setup`
+  counts step 2 as not the menu. Coming back to the setup from a game lands on the step you left it on (step 2), so
+  Back from a game goes game, step 2, step 1, arcade.
+- **Know-It-All:** step 1 is Game mode (the heading was "Who's playing?") and How spicy?, step 2 What about? and
+  Let's play. **Spin & Solve:** step 1 Who's playing? and How spicy?, step 2 How many rounds?, Turn timer and Let's
+  play. **Rambler:** step 1 is the list of ways to play, and tapping a card goes straight to step 2 (no Next); Create
+  a game lobby and List Hosted Games go to step 2 too (Your name, or the list of lobbies), and Today's Board opens its
+  own screen as before.
+- **Rambler's list, the maintainer's order:** Today's Board, Create a game lobby, List Hosted Games, Marathon, Solo,
+  then a **Multiplayer-Shared device** heading over Pass & Play and Tabletop. "How are you playing?" and the
+  Multiplayer-Multiple devices heading are gone. How to play's Ways to play table follows the same order.
+- **Tightened to fit:** the rows of choices stay one row on a phone in steps (as in two columns), and on a short
+  screen the labels, the drop-down, Suggest a topic or theme and the headings give up a few pixels. Rambler's steps
+  are tighter too (`#setupScreen.steps-on` in `rambler.css`), with its own header row shorter under 760px tall.
+- **Fix:** Know-It-All's play screen had a second `readyHint` (the lobby has one), so the shared-device "Hand the
+  device to ..." line never showed. It's `playReadyHint` now.
+- **Tests:** `fit.spec.js` walks the steps at the upright phone sizes (`steps` per game: step 1 whole, Next or a
+  card, step 2 whole with the start button) and the three KNOWN lines for phones are gone; tablets and laptops keep
+  the `setup` list. `setup-steps.spec.js` checks Next and Back keep choices, the top bar's and the phone's Back go to
+  step 1, Rambler's card tap, no steps on a tablet or a TV, and the hand-off line. `helpers.js` has `nextStep(page)`
+  and `firstStep(page)` for specs that start a game.
+
 ## No scrolling on the setup screens, Rambler while playing, and Big Swing (2026-11-20)
 
 - **Setup screens** (`.fit-setup` in `arcade-ui.css`, on Chess, Know-It-All, Spin & Solve, Dare Devil and Uh-Oh:
@@ -18,7 +52,7 @@ order they were clicked, and keep the rest pinned here.
 - **Still too long for a phone:** Know-It-All, Spin & Solve and Rambler have more choices than an upright phone
   can show at once, even tightened (Let's play or Slide to victory ends up 130 to 730px below the screen). That
   needs a design call, so they're in `KNOWN` in `fit.spec.js`. The maintainer chose **setup in steps** for these
-  three; that's its own PR.
+  three; that's the section above.
 - **Rambler while playing:** Words with Family's fit. The page is `--app-h` tall, the board shrinks (never under
   160px), Hint and I'm done sit under the typing row, and the words found fill the rest and scroll inside it. The
   dice and their letters are shares of the board's box, so a 5x5 board shrinks evenly. On a short screen Rambler's
@@ -27,7 +61,7 @@ order they were clicked, and keep the rest pinned here.
   the phone's keyboard, and fitting the game above it squashed Rambler's board to nothing.
 - **Players' names:** in Dare Devil, Uh-Oh and Know-It-All, + Add player is the next cell after the last name, and
   adding a player scrolls Start back into view if the new row pushed it off the screen.
-- **Know-It-All in two columns** has What about? on the left and How spicy?, Who's playing? and Let's play on the
+- **Know-It-All in two columns** has What about? on the left and How spicy?, Game mode and Let's play on the
   right, so Let's play comes after every choice; rows of choices stay on one row there.
 - **Big Swing (and the other cabinet games) on a phone:** the stage's height uses `--app-h`, so Chrome's row of
   tabs doesn't cover the big button.

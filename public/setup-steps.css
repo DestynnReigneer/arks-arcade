@@ -1,0 +1,41 @@
+/* Setup in two steps on a phone (setup-steps.js, 2026-11-20). Only while the setup is
+   in steps (.steps-on, a phone that isn't a TV): one step shows at a time, the two dots
+   say which (the one you're on in turquoise), and Back sits beside the start button on
+   step 2. Tablets, laptops and TVs never get .steps-on, so nothing here touches them. */
+.steps-nav { display: none; }
+html:not(.tv) .steps-on:not(.hidden) { display: flex; flex-direction: column; }
+html:not(.tv) .steps-on > * { order: var(--step-order, 0); }
+html:not(.tv) .steps-on > .steps-nav { display: block; order: 10; }
+html:not(.tv) .steps-on.on-step-1 [data-step="2"],
+html:not(.tv) .steps-on.on-step-2 [data-step="1"],
+html:not(.tv) .steps-on.on-step-1 .steps-start,
+html:not(.tv) .steps-on.on-step-1 .steps-back,
+html:not(.tv) .steps-on.on-step-2 .steps-next { display: none !important; }
+/* A row of choices stays one row, as it does in two columns on a tablet. */
+html:not(.tv) .fit-setup.steps-on .seg { flex-wrap: nowrap; }
+html:not(.tv) .fit-setup.steps-on .seg button { min-width: 0; }
+/* A part that starts with a heading pushed down (Spin & Solve's rounds) starts at the top. */
+html:not(.tv) .steps-on [data-step] > h2:first-child { margin-top: 0 !important; }
+.steps-dots { display: flex; justify-content: center; gap: 8px; margin: 2px 0 8px; }
+.steps-dots i { width: 8px; height: 8px; border-radius: 50%; background: currentColor; opacity: 0.28; transition: background 0.2s, opacity 0.2s; }
+.on-step-1 .steps-dots i:nth-child(1),
+.on-step-2 .steps-dots i:nth-child(2) { background: #00ffc2; opacity: 1; box-shadow: 0 0 8px rgba(0, 255, 194, 0.6); }
+/* A short screen (a phone with the browser's bars showing): a little tighter still. */
+@media (max-height: 700px) {
+  html:not(.tv) .fit-setup.steps-on label { margin: 6px 0 !important; }
+  html:not(.tv) .fit-setup.steps-on select { padding: 7px 10px; }
+  html:not(.tv) .fit-setup.steps-on #suggestBtn { padding: 7px 12px; margin-top: 4px !important; }
+  html:not(.tv) .fit-setup.steps-on .level .l-lock { margin-top: 1px; }
+  html:not(.tv) .fit-setup.steps-on .panel h2 { margin-bottom: 4px; }
+  html:not(.tv) .fit-setup.steps-on .levels { gap: 4px; }
+  html:not(.tv) .fit-setup.steps-on .hint { margin: 0 0 4px; }
+  html:not(.tv) .steps-on .steps-dots { margin: 0 0 6px; }
+}
+.steps-row { display: flex; gap: 8px; align-items: stretch; }
+.steps-row > button { margin: 0 !important; }
+.steps-row > .steps-next, .steps-row > .steps-start { flex: 1 1 auto; width: auto; }
+.steps-row > .steps-back { flex: 0 0 auto; }
+@media (prefers-reduced-motion: reduce) { .steps-dots i { transition: none; } }
+/* On a phone the bug-report button would sit on Next or the start button, so it waits
+   in the top bar's menu while the setup is in steps (as it does on the fitted setups). */
+html:not(.tv) body:has(.steps-on:not(.hidden)) .fb-corner { display: none; }

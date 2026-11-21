@@ -6,7 +6,7 @@
 // from the menu to the arcade.
 
 const { test, expect } = require('@playwright/test');
-const { quietFonts, watchProblems, openPage } = require('./helpers');
+const { quietFonts, watchProblems, openPage, nextStep } = require('./helpers');
 
 // From the arcade's home page into a game, the way a person gets there, so
 // the browser's history has the home page behind the game.
@@ -77,11 +77,17 @@ test('Back in Criss Cross steps back through its screens', async ({ page }) => {
 
 test('Back in Trivia: a game in progress goes back to setup without asking', async ({ page }) => {
   const problems = await intoGame(page, '/trivia.html');
+  await nextStep(page);
   await page.locator('#goBtn').click();
   await expect(page.locator('#play')).toBeVisible();
   await page.goBack();
   await expect(page.locator('.ab-confirm')).toHaveCount(0);
   await expect(page.locator('#setup')).toBeVisible();
+  // On a phone the setup is two steps, and Back goes from the second to the first.
+  if (await page.locator('#setup.on-step-2').count()) {
+    await page.goBack();
+    await expect(page.locator('#modeSeg')).toBeVisible();
+  }
   await page.goBack();
   await atHome(page);
   expect(problems, problems.join('\n')).toEqual([]);

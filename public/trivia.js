@@ -438,7 +438,7 @@
       $('qTimerFill').style.transform = 'scaleX(1)';
       $('readyTitle').textContent = `${turn.name}'s turn`;
       const seat = snap.players.find(p => p.id === turn.id) || {};
-      $('readyHint').textContent = turn.yours
+      $('playReadyHint').textContent = turn.yours
         ? (snap.isScreen ? `${turn.name}, grab the remote. Press OK when you're ready and the clock starts.`
           : snap.mine.length > 1 ? `Hand the device to ${turn.name}. The clock starts when they press I'm ready.` : 'The clock starts when you press I\'m ready.')
         : seat.on === 'screen' ? `${turn.name} answers with the TV remote.`
@@ -834,11 +834,17 @@
   Blip.muteButton($('muteBtn'));
   Blip.tuneButton($('tuneBtn'));
 
+  // On a phone the setup is two steps: Game mode and How spicy?, then What about?
+  // with Let's play (setup-steps.js).
+  const steps = SetupSteps.create($('setup'), { start: $('goBtn'), msg: $('setupMsg') });
+  const onStep2 = () => steps.active && steps.step === 2 && !$('setup').classList.contains('hidden');
+
   // Back: from a game, its results or a room's lobby to the setup screen
-  // (asking first while questions are left), and from there to the arcade.
+  // (asking first while questions are left), from the setup's second step to
+  // its first, and from there to the arcade.
   ArcadeBack.setup({
-    atMenu: () => !$('setup').classList.contains('hidden'),
-    back: backToSetup,
+    atMenu: () => !$('setup').classList.contains('hidden') && !onStep2(),
+    back: () => { if (onStep2()) steps.go(1); else backToSetup(); },
     busy: () => !$('play').classList.contains('hidden') && !ArcadeEnd.has,
     question: 'Quit this game? It ends here and won\'t be saved.'
   });
