@@ -145,7 +145,8 @@ test('the quick menu is placed again when the phone turns', async ({ browser }, 
 
 // A lobby link from the menu lands with what it opened in view, and the game's
 // rules don't pop up over it on a first visit.
-for (const [game, show] of [['rambler', '#startBtn'], ['trivia', '#goBtn']]) {
+// Know-It-All's lobby asks for the host's name first, which on a phone is the setup's first step.
+for (const [game, show] of [['rambler', '#startBtn'], ['trivia', '#hostName']]) {
   test(`Create a game lobby in ${game} lands in view`, async ({ browser }, info) => {
     test.skip(info.project.name !== 'phone', 'A phone check.');
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
