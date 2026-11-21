@@ -5,15 +5,45 @@
 // leaves 100dvh too tall, so the games that fit the screen use var(--app-h, 100dvh).
 // Where the browser reports the covered part (the visual viewport), this leaves it
 // out. While someone has zoomed in with two fingers it stays put, so the game
-// doesn't shrink under their fingers.
+// doesn't shrink under their fingers. While someone is typing in a box it doesn't
+// shrink either (2026-11-20): the phone's keyboard covers far more than a browser
+// bar, and a game that fitted itself above the keyboard squashed its board to
+// nothing. The page scrolls to the box the usual way instead.
 (() => {
   const vv = window.visualViewport;
   if (!vv) return;
+  let last = 0;
+  let lastW = 0;
+  const typing = () => {
+    const el = document.activeElement;
+    if (!el) return false;
+    if (el.isContentEditable || el.tagName === 'TEXTAREA') return true;
+    return el.tagName === 'INPUT' && !/^(button|checkbox|radio|range|color|file|submit|reset|image|hidden)$/i.test(el.type);
+  };
   const set = () => {
     if (Math.abs(vv.scale - 1) > 0.01) return;
-    document.documentElement.style.setProperty('--app-h', `${Math.round(vv.height)}px`);
+    const h = Math.round(vv.height);
+    const w = Math.round(vv.width);
+    // Turning the device changes the width, and the old height means nothing then.
+    if (w !== lastW) last = 0;
+    lastW = w;
+    if (last && typing() && h < last - 150) return;
+    last = h;
+    document.documentElement.style.setProperty('--app-h', `${h}px`);
   };
   vv.addEventListener('resize', set);
+  // Once the box loses focus the keyboard goes away; check again when it has.
+  document.addEventListener('focusout', () => setTimeout(set, 300));
+  // A page fitted to the screen doesn't scroll, so bring the box above the
+  // keyboard once it has opened, in case the browser didn't.
+  document.addEventListener('focusin', e => {
+    if (!typing()) return;
+    setTimeout(() => {
+      if (document.activeElement !== e.target) return;
+      const r = e.target.getBoundingClientRect();
+      if (r.bottom > vv.offsetTop + vv.height || r.top < vv.offsetTop) e.target.scrollIntoView({ block: 'nearest' });
+    }, 350);
+  });
   set();
 })();
 

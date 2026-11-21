@@ -35,6 +35,8 @@ const SIZES = [
 // screen then (touch: only on a touch screen). board: the part that can't get tiny
 // (null for a game whose board is a wide strip, like Spin & Solve's puzzle).
 // cell: a board of squares to tap ({ cols, min }): on a touch screen each square is at least min pixels across.
+// setup: what has to be whole on the screen on the setup screen, before anything is tapped (every choice up to and
+// including Start), checked at the upright sizes.
 const GAMES = [
   { name: 'Sudoku', path: '/sudoku.html', start: ['#coverBtn'], board: '#board, .sd-board', need: ['.sd-board', '#tools', '#pad'] },
   { name: 'Clueless Crosswords', path: '/clueless.html', start: ['#coverBtn'], board: '#grid', need: ['#clueBar', '#grid', '#tools'], touch: ['#keys'] },
@@ -43,31 +45,48 @@ const GAMES = [
   { name: 'Brick Breaker', path: '/bricks.html', start: [], board: '#canvas', need: ['#canvas'] },
   { name: 'Tower Defense', path: '/towers.html', start: ['#waveBtn'], board: '#canvas', cell: { cols: 10, min: 22 }, need: ['#stage', '#waveBtn', '#buildRow'] },
   { name: 'Words with Family', path: '/crisscross.html', start: ['#newLocalBtn', { fill: '#localPlayers input', text: 'Tester' }, '#localGo'], board: '#board', need: ['#board', '#rack', '#playBtn'] },
-  { name: 'Spin & Solve', path: '/spinsolve.html', start: ['#goBtn'], board: null, need: ['#puzzleBoard', '#spinBtn', '#vowelBtn', '#solveBtn'] },
-  { name: 'Chess', path: '/chess.html', start: ['#goBtn'], board: '#board', need: ['#board', '#statusLine', '#gameBtns'] },
-  { name: 'Know-It-All', path: '/trivia.html', start: ['#goBtn'], board: null, need: ['#qText', '#answers'] },
-  { name: 'Rambler', path: '/rambler.html', start: ['#startBtn'], board: '#board', need: ['#board', '#traceBar', '#doneBtn'] },
-  { name: 'Dare Devil', path: '/daredevil.html', start: ['#goBtn'], board: '#deckBtn', need: ['#scoreStrip', '#deckBtn'] },
-  { name: 'Uh-Oh: Part Deux', path: '/partdeux.html', start: ['#goBtn', '#passReady'], board: null, need: ['#drawPile', '#discard', '#hand', '#drawBtn'] },
+  { name: 'Spin & Solve', path: '/spinsolve.html', start: ['#goBtn'], board: null, need: ['#puzzleBoard', '#spinBtn', '#vowelBtn', '#solveBtn'],
+    setup: ['#levelList', '#packSelect', '#suggestBtn', '#nameList', '#addPlayerBtn', '#roundSeg', '#timerSeg', '#goBtn'] },
+  { name: 'Chess', path: '/chess.html', start: ['#goBtn'], board: '#board', need: ['#board', '#statusLine', '#gameBtns'],
+    setup: ['#modeSeg', '#levelSeg', '#colorSeg', '#goBtn'] },
+  { name: 'Know-It-All', path: '/trivia.html', start: ['#goBtn'], board: null, need: ['#qText', '#answers'],
+    setup: ['#levelList', '#genreChips', '#packSelect', '#diffSeg', '#countSeg', '#secsSeg', '#suggestBtn', '#modeSeg', '#goBtn'] },
+  { name: 'Rambler', path: '/rambler.html', start: ['#startBtn'], board: '#board', need: ['#board', '#traceBar', '#doneBtn'],
+    setup: ['#dailyCard', '#modeList', '#sizeSeg', '#durationSeg', '#difficultySeg', '#profileSeg', '#startBtn'] },
+  { name: 'Dare Devil', path: '/daredevil.html', start: ['#goBtn'], board: '#deckBtn', need: ['#scoreStrip', '#deckBtn'],
+    setup: ['#levelList', '#lengthSeg', '#modeSeg', '#nameList .name-row:last-child', '#addPlayerBtn', '#goBtn'] },
+  { name: 'Uh-Oh: Part Deux', path: '/partdeux.html', start: ['#goBtn', '#passReady'], board: null, need: ['#drawPile', '#discard', '#hand', '#drawBtn'],
+    setup: ['#levelList', '#modeSeg', '#nameList .name-row:last-child', '#addPlayerBtn', '#goBtn'] },
+  // The 3D cabinet games draw in software in the test browser, slowly, so they get triple time.
+  { name: 'Big Swing', path: '/bigswing.html', start: ['.cab-go'], board: '#stage', need: ['#stage', '.cab-pad'], slow: true },
 ];
 
 // Game and size pairs that don't fit yet, with why. Fixed in order on the to-do list.
 const KNOWN = {
-  "Chess @ phone with Chrome's tab row": "skip: fits on some machines and not others; on Windows the bug-report button sits on the Suggest, Undo and Resign buttons",
   "Chess @ phone turned sideways": "the game doesn't have a sideways layout yet, so it scrolls and its top runs off the screen",
   "Chess @ small phone turned sideways": "the game doesn't have a sideways layout yet, so it scrolls and its top runs off the screen",
   "Know-It-All @ phone turned sideways": "the game doesn't have a sideways layout yet, so it scrolls and its top runs off the screen",
   "Know-It-All @ small phone turned sideways": "the game doesn't have a sideways layout yet, so it scrolls and its top runs off the screen",
-  "Rambler @ phone with the browser bars showing": "the Done button is below the screen",
-  "Rambler @ phone with Chrome's tab row": "the Done button is below the screen",
   "Rambler @ phone turned sideways": "the game doesn't have a sideways layout yet, so the board and buttons are below the screen",
   "Rambler @ small phone turned sideways": "the game doesn't have a sideways layout yet, so the board and buttons are below the screen",
-  "Rambler @ laptop": "the Done button is just below the screen",
   "Dare Devil @ phone turned sideways": "the game doesn't have a sideways layout yet, so it scrolls and its top runs off the screen",
   "Dare Devil @ small phone turned sideways": "the game doesn't have a sideways layout yet, so it scrolls and its top runs off the screen",
+  "Big Swing @ phone turned sideways": "skip: the game doesn't have a sideways layout yet, so the stage and its big button are below the screen (skipped rather than expected to fail, because the 3D game is slow to close in the test browser)",
+  "Big Swing @ small phone turned sideways": "skip: the game doesn't have a sideways layout yet, so the stage and its big button are below the screen (skipped rather than expected to fail, because the 3D game is slow to close in the test browser)",
   "Uh-Oh: Part Deux @ phone turned sideways": "the game doesn't have a sideways layout yet, so it scrolls and its top runs off the screen",
   "Uh-Oh: Part Deux @ small phone turned sideways": "the game doesn't have a sideways layout yet, so it scrolls and its top runs off the screen",
   "Uh-Oh: Part Deux @ laptop": "skip: fits on some machines and not others; on Windows the page scrolls a little below the hand",
+  // Setup screens (the second loop below). These three have more choices than an upright phone can show at once,
+  // even tightened, so they need a design call (fewer choices on screen, or choices in steps) before they can fit.
+  "Know-It-All's setup @ phone": "too many choices for a phone's height: Let's play is about 400px below the screen",
+  "Know-It-All's setup @ phone with the browser bars showing": "too many choices for a phone's height: Let's play is about 500px below the screen",
+  "Know-It-All's setup @ phone with Chrome's tab row": "too many choices for a phone's height: Let's play is about 470px below the screen",
+  "Spin & Solve's setup @ phone": "too many choices for a phone's height: Let's play is about 130px below the screen",
+  "Spin & Solve's setup @ phone with the browser bars showing": "too many choices for a phone's height: Let's play is about 280px below the screen",
+  "Spin & Solve's setup @ phone with Chrome's tab row": "too many choices for a phone's height: Let's play is about 240px below the screen",
+  "Rambler's setup @ phone": "too many choices for a phone's height: Slide to victory is about 540px below the screen",
+  "Rambler's setup @ phone with the browser bars showing": "too many choices for a phone's height: Slide to victory is about 730px below the screen",
+  "Rambler's setup @ phone with Chrome's tab row": "too many choices for a phone's height: Slide to victory is about 640px below the screen",
 };
 
 test.describe.configure({ mode: 'parallel' });
@@ -76,6 +95,7 @@ for (const game of GAMES) {
   for (const [label, viewport, touch, covered = 0] of SIZES) {
     test(`${game.name} fits a ${label} (${viewport.width}×${viewport.height})`, async ({ browser }, info) => {
       test.skip(info.project.name !== 'phone', 'The sizes are set here, so one project runs them all.');
+      if (game.slow) test.slow();
       const known = KNOWN[`${game.name} @ ${label}`];
       if (known && known.startsWith('skip: ')) test.skip(true, known.slice(6));
       else if (known) test.fail(true, known);
@@ -157,8 +177,8 @@ for (const game of GAMES) {
 }
 
 // Opens a page at a size, with Chrome's tab row reported the way the check above does.
-async function openAt(browser, path, viewport, covered) {
-  const ctx = await browser.newContext({ viewport, hasTouch: true, isMobile: true });
+async function openAt(browser, path, viewport, covered, touch = true, mobile = touch) {
+  const ctx = await browser.newContext({ viewport, hasTouch: touch, isMobile: mobile });
   const page = await ctx.newPage();
   if (covered) {
     await page.addInitScript(cov => {
@@ -180,6 +200,187 @@ async function openAt(browser, path, viewport, covered) {
   if (await close.isVisible().catch(() => false)) await close.click();
   return { ctx, page };
 }
+
+// The setup screens: every choice and the Start button are whole on the screen without scrolling, not covered,
+// and clear of the bug-report button. Upright sizes only (a phone turned sideways comes later).
+for (const game of GAMES.filter(g => g.setup)) {
+  for (const [label, viewport, touch, covered = 0] of SIZES.filter(s => s[1].height > s[1].width || !s[2])) {
+    test(`${game.name}'s setup fits a ${label} (${viewport.width}×${viewport.height})`, async ({ browser }, info) => {
+      test.skip(info.project.name !== 'phone', 'The sizes are set here, so one project runs them all.');
+      const known = KNOWN[`${game.name}'s setup @ ${label}`];
+      if (known && known.startsWith('skip: ')) test.skip(true, known.slice(6));
+      else if (known) test.fail(true, known);
+      const { ctx, page } = await openAt(browser, game.path, viewport, covered, touch, touch && viewport.width < 900);
+      await page.waitForTimeout(600);
+      const report = await page.evaluate(({ need, covered }) => {
+        const vw = innerWidth, vh = innerHeight - covered, out = [];
+        const bug = document.querySelector('.fb-bug');
+        const br = bug && getComputedStyle(bug).display !== 'none' && bug.getBoundingClientRect();
+        for (const sel of need) {
+          const el = document.querySelector(sel);
+          if (!el) { out.push(`${sel} isn't on the page`); continue; }
+          const r = el.getBoundingClientRect();
+          if (!r.width || !r.height) { out.push(`${sel} is hidden`); continue; }
+          if (r.top < -1 || r.left < -1 || r.bottom > vh + 1 || r.right > vw + 1) {
+            out.push(`${sel} runs off the screen (top ${Math.round(r.top)}, bottom ${Math.round(r.bottom)} of ${vh})`);
+            continue;
+          }
+          const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+          if (hit && hit !== el && !el.contains(hit) && !hit.contains(el)) out.push(`${sel} is covered by ${hit.tagName.toLowerCase()}${hit.id ? '#' + hit.id : ''}`);
+          if (br && br.width && r.left < br.right && r.right > br.left && r.top < br.bottom && r.bottom > br.top) out.push(`the bug-report button sits on ${sel}`);
+        }
+        if (document.documentElement.scrollWidth > vw + 1) out.push(`the page scrolls sideways (${document.documentElement.scrollWidth} wide)`);
+        return out;
+      }, { need: game.setup, covered });
+      await page.screenshot({ path: info.outputPath('setup.png') });
+      expect(report, report.join('\n')).toEqual([]);
+      await ctx.close();
+    });
+  }
+}
+
+const UPRIGHT_PHONES = SIZES.filter(s => s[2] && s[1].height > s[1].width && s[1].width < 600);
+
+// Whole on the screen above anything covering its bottom, and the thing in its middle is itself.
+const onScreen = (page, sel, covered) => page.evaluate(({ sel, covered }) => {
+  const el = document.querySelector(sel);
+  const r = el.getBoundingClientRect();
+  const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+  return r.top >= -1 && r.bottom <= innerHeight - covered + 1 && !!hit && (el === hit || el.contains(hit))
+    ? '' : `${sel}: ${Math.round(r.top)}-${Math.round(r.bottom)} of ${innerHeight - covered}`;
+}, { sel, covered });
+
+// With four players, the names take another row; Start must still be on the screen.
+for (const [game, path] of [['Dare Devil', '/daredevil.html'], ['Uh-Oh: Part Deux', '/partdeux.html']]) {
+  for (const [label, viewport, , covered = 0] of UPRIGHT_PHONES) {
+    test(`${game}'s Start is on the screen with four players on a ${label}`, async ({ browser }, info) => {
+      test.skip(info.project.name !== 'phone', 'The sizes are set here, so one project runs them all.');
+      const { ctx, page } = await openAt(browser, path, viewport, covered);
+      await page.locator('#addPlayerBtn').click();
+      await page.locator('#addPlayerBtn').click();
+      await expect(page.locator('#nameList .name-row')).toHaveCount(4);
+      await page.waitForTimeout(200);
+      expect(await onScreen(page, '#goBtn', covered)).toBe('');
+      expect(await onScreen(page, '#addPlayerBtn', covered)).toBe('');
+      await ctx.close();
+    });
+  }
+}
+
+// Rambler's 5x5 board on a short screen: every die inside the board, and its last row above the word being traced.
+for (const [label, viewport, , covered = 0] of UPRIGHT_PHONES.filter(s => s[1].width === 412)) {
+  test(`Rambler's 5x5 board fits a ${label}`, async ({ browser }, info) => {
+    test.skip(info.project.name !== 'phone', 'The sizes are set here, so one project runs them all.');
+    const { ctx, page } = await openAt(browser, '/rambler.html', viewport, covered);
+    await page.locator('#sizeSeg button').nth(1).click();
+    await page.locator('#startBtn').click();
+    await expect(page.locator('#board .die')).toHaveCount(25);
+    await page.waitForTimeout(500);
+    const out = await page.evaluate(() => {
+      const b = document.querySelector('#board').getBoundingClientRect();
+      const trace = document.querySelector('#traceBar').getBoundingClientRect();
+      const bad = [];
+      for (const d of document.querySelectorAll('#board .die')) {
+        const r = d.getBoundingClientRect();
+        if (r.left < b.left - 1 || r.right > b.right + 1 || r.top < b.top - 1 || r.bottom > b.bottom + 1) bad.push(`a die runs out of the board (${Math.round(r.bottom)} > ${Math.round(b.bottom)})`);
+        if (r.bottom > trace.top + 1) bad.push(`a die sits on the traced word (${Math.round(r.bottom)} > ${Math.round(trace.top)})`);
+      }
+      return [...new Set(bad)];
+    });
+    expect(out).toEqual([]);
+    expect(await onScreen(page, '#doneBtn', covered)).toBe('');
+    await ctx.close();
+  });
+}
+
+// Typing a word in Rambler opens the phone's keyboard, which makes the visual viewport about 300px shorter. The board
+// must not shrink to nothing or spill over the typing row.
+test('Rambler keeps its board when the keyboard opens for typing a word', async ({ browser }, info) => {
+  test.skip(info.project.name !== 'phone', 'The size is set here.');
+  const ctx = await browser.newContext({ viewport: { width: 412, height: 640 }, hasTouch: true, isMobile: true });
+  const page = await ctx.newPage();
+  await page.addInitScript(() => {
+    const vv = new EventTarget();
+    window.__keyboard = 0;
+    window.__openKeyboard = px => { window.__keyboard = px; vv.dispatchEvent(new Event('resize')); };
+    for (const [k, get] of Object.entries({ height: () => innerHeight - window.__keyboard, width: () => innerWidth, scale: () => 1, offsetTop: () => 0, offsetLeft: () => 0, pageTop: () => scrollY, pageLeft: () => scrollX })) {
+      Object.defineProperty(vv, k, { get });
+    }
+    Object.defineProperty(window, 'visualViewport', { value: vv, configurable: true });
+  });
+  await quietFonts(page);
+  await openPage(page, '/rambler.html');
+  const guest = page.getByRole('button', { name: /Play as a guest/ });
+  if (await guest.isVisible().catch(() => false)) {
+    await guest.click();
+    await page.getByRole('button', { name: 'Play', exact: true }).click();
+  }
+  const close = page.locator('.tut-x');
+  if (await close.isVisible().catch(() => false)) await close.click();
+  await page.locator('#startBtn').click();
+  await expect(page.locator('#board .die')).toHaveCount(16);
+  await page.locator('#typeInput').focus();
+  await page.evaluate(() => window.__openKeyboard(300));
+  await page.waitForTimeout(400);
+  const out = await page.evaluate(() => {
+    const b = document.querySelector('#board').getBoundingClientRect();
+    const row = document.querySelector('#typeRow').getBoundingClientRect();
+    const bad = [];
+    if (Math.min(b.width, b.height) < 150) bad.push(`the board shrank to ${Math.round(b.width)}x${Math.round(b.height)}`);
+    for (const d of document.querySelectorAll('#board .die')) {
+      const r = d.getBoundingClientRect();
+      if (r.bottom > row.top + 1 && r.top < row.bottom - 1) { bad.push('a die sits on the typing row'); break; }
+    }
+    return bad;
+  });
+  expect(out).toEqual([]);
+  await ctx.close();
+});
+
+// Know-It-All while playing: the bug-report button isn't over the answers or Quit.
+for (const [label, viewport, , covered = 0] of UPRIGHT_PHONES) {
+  test(`Know-It-All's answers and Quit are clear of the bug-report button on a ${label}`, async ({ browser }, info) => {
+    test.skip(info.project.name !== 'phone', 'The sizes are set here, so one project runs them all.');
+    const { ctx, page } = await openAt(browser, '/trivia.html', viewport, covered);
+    await page.locator('#goBtn').click();
+    await expect(page.locator('#answers button').first()).toBeVisible({ timeout: 10000 });
+    const out = await page.evaluate(() => {
+      const bug = document.querySelector('.fb-bug');
+      const br = bug && getComputedStyle(bug).display !== 'none' && bug.getBoundingClientRect();
+      if (!br || !br.width) return [];
+      const bad = [];
+      for (const el of [...document.querySelectorAll('#answers button'), document.querySelector('#quitBtn')]) {
+        const r = el.getBoundingClientRect();
+        if (r.width && r.left < br.right && r.right > br.left && r.top < br.bottom && r.bottom > br.top) bad.push(`the bug-report button sits on ${el.id || el.textContent.trim()}`);
+      }
+      return bad;
+    });
+    expect(out).toEqual([]);
+    await ctx.close();
+  });
+}
+
+// Know-It-All's setup in two columns on a tablet: each row of choices stays one row.
+test('Know-It-All\'s setup keeps each row of choices on one row on a tablet', async ({ browser }, info) => {
+  test.skip(info.project.name !== 'phone', 'The size is set here.');
+  const { ctx, page } = await openAt(browser, '/trivia.html', { width: 768, height: 1024 }, 0);
+  await page.waitForTimeout(400);
+  const out = await page.evaluate(() => {
+    const bad = [];
+    for (const seg of document.querySelectorAll('#setup .seg')) {
+      const tops = new Set([...seg.children].filter(b => b.getBoundingClientRect().width).map(b => Math.round(b.getBoundingClientRect().top)));
+      if (tops.size > 1) bad.push(`#${seg.id} wraps onto ${tops.size} rows`);
+    }
+    // Start comes after every choice: below the last one in the right-hand column.
+    const go = document.querySelector('#goBtn').getBoundingClientRect();
+    const panels = [...document.querySelectorAll('#setup > .panel')].map(p => p.getBoundingClientRect());
+    const right = panels.filter(p => p.left > innerWidth / 2 - 20);
+    if (!right.length || go.bottom < Math.max(...right.map(p => p.bottom)) - 30) bad.push('Let\'s play isn\'t at the end of the right-hand column');
+    return bad;
+  });
+  expect(out).toEqual([]);
+  await ctx.close();
+});
 
 // A start card that shrinks with its board must still fit inside it, or its text
 // spills over the buttons around it and catches their taps.

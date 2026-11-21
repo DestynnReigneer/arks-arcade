@@ -1525,3 +1525,68 @@ body.tv-screen #playScreen .mara-actions { display: none; }
 body.tv-screen #playRoster .who { font-size: 18px; }
 html.tv .lobby-title { font-size: 28px; }
 html.tv #joinQr { width: 220px !important; height: 220px !important; }
+
+/* ---- No scrolling while you play (2026-11-20) ----
+   Words with Family's fit: the page is exactly the height you can really see
+   (--app-h, topbar.js), the board shrinks when the screen is short, and Hint and
+   I'm done sit right under the typing row. The words found take whatever room is
+   left at the bottom (always enough for a row of words, the board shrinking to
+   make it) and scroll inside it, so a long list never pushes a button off the
+   screen. A phone turned sideways keeps its old layout for now. */
+@media (orientation: portrait), (min-height: 601px) {
+  html:not(.tv):has(#playScreen:not(.hidden)) { height: 100%; overflow: hidden; }
+  html:not(.tv) body:has(#playScreen:not(.hidden)) { height: var(--app-h, 100dvh); min-height: 0; overflow: hidden; padding-bottom: 0; box-sizing: border-box; }
+  html:not(.tv) body:has(#playScreen:not(.hidden)) > * { flex: none; }
+  html:not(.tv) body:has(#playScreen:not(.hidden)) .fb-corner { display: none; }
+  html:not(.tv) body:not(.tv-screen) #playScreen:not(.hidden) { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; padding-top: 10px; padding-bottom: max(10px, env(safe-area-inset-bottom)); }
+  html:not(.tv) body:not(.tv-screen) #playScreen > * { flex: none; }
+  /* Never smaller than 160px, even if something squeezes the page (the keyboard). */
+  html:not(.tv) body:not(.tv-screen) #playScreen > .board-wrap { flex: 0 1 auto; min-height: 160px; aspect-ratio: 1; container-type: size; }
+  /* The board is a square as big as its box allows, and the dice and their letters
+     are shares of it, so a 5x5 board shrinks as evenly as a 4x4 one. */
+  html:not(.tv) body:not(.tv-screen) #playScreen .board { width: min(100cqw, 100cqh); height: min(100cqw, 100cqh); margin: 0 auto; gap: clamp(4px, calc(min(100cqw, 100cqh) * 0.024), 8px); }
+  html:not(.tv) body:not(.tv-screen) #playScreen .board.s4 { grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: repeat(4, minmax(0, 1fr)); }
+  html:not(.tv) body:not(.tv-screen) #playScreen .board.s5 { grid-template-columns: repeat(5, minmax(0, 1fr)); grid-template-rows: repeat(5, minmax(0, 1fr)); }
+  html:not(.tv) body:not(.tv-screen) #playScreen .die { min-width: 0; min-height: 0; aspect-ratio: auto; font-size: clamp(12px, calc(min(100cqw, 100cqh) * 0.1), 29px); }
+  html:not(.tv) body:not(.tv-screen) #playScreen .board.s5 .die { font-size: clamp(11px, calc(min(100cqw, 100cqh) * 0.08), 23px); }
+  html:not(.tv) body:not(.tv-screen) #playScreen > .trace-bar { order: 1; margin-top: 10px; width: 100%; }
+  html:not(.tv) body:not(.tv-screen) #playScreen > .type-row { order: 2; margin-top: 8px; width: 100%; }
+  html:not(.tv) body:not(.tv-screen) #playScreen > .mara-actions { order: 3; margin-top: 8px !important; width: 100%; max-width: 380px; margin-inline: auto; }
+  html:not(.tv) body:not(.tv-screen) #playScreen > .found { order: 4; margin-top: 12px; width: 100%; }
+  html:not(.tv) body:not(.tv-screen) #playScreen > .found:not(#playRoster) { flex: 1 1 0; min-height: 66px; overflow: auto; scrollbar-width: none;
+    -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 18px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 18px), transparent); padding-bottom: 14px; }
+  html:not(.tv) body:not(.tv-screen) #playScreen > .found:not(#playRoster)::-webkit-scrollbar { display: none; }
+  html:not(.tv) body:not(.tv-screen) #playScreen > #playRoster { order: 5; margin-top: 10px !important; }
+  html:not(.tv) body:not(.tv-screen) #playScreen > #tabletopHint { order: 6; margin-top: 10px !important; }
+}
+/* A short screen (the browser's bars showing): Rambler's own header row, the clock and
+   the rows under the board give up some room, so the board stays a good size. */
+@media (orientation: portrait) and (max-height: 760px) {
+  html:not(.tv) body:has(#playScreen:not(.hidden)) > header { padding-top: 4px; padding-bottom: 4px; }
+  html:not(.tv) body:not(.tv-screen) #playScreen:not(.hidden) { padding-top: 4px; }
+  html:not(.tv) body:not(.tv-screen) #playScreen .play-top { margin-bottom: 2px; }
+  html:not(.tv) body:not(.tv-screen) #playScreen .clock { font-size: 21px; }
+  html:not(.tv) body:not(.tv-screen) #playScreen .timer-track { margin-bottom: 8px; }
+  html:not(.tv) body:not(.tv-screen) #playScreen > .trace-bar { margin-top: 8px; min-height: 40px; }
+  html:not(.tv) body:not(.tv-screen) #playScreen > .type-row { margin-top: 6px; }
+  html:not(.tv) body:not(.tv-screen) #playScreen > .type-row input { padding-top: 8px; padding-bottom: 8px; }
+  html:not(.tv) body:not(.tv-screen) #playScreen > .type-row .ghost-btn,
+  html:not(.tv) body:not(.tv-screen) #playScreen > .mara-actions .ghost-btn { padding-top: 8px; padding-bottom: 8px; }
+  html:not(.tv) body:not(.tv-screen) #playScreen > .mara-actions { margin-top: 6px !important; }
+  html:not(.tv) body:not(.tv-screen) #playScreen > .found { margin-top: 8px; }
+  html:not(.tv) body:not(.tv-screen) #playScreen > .found:not(#playRoster) { min-height: 56px; }
+}
+
+/* ---- The setup screen on a tablet or a computer (2026-11-20) ----
+   Two columns, so the choices and Slide to victory fit the height of the screen:
+   today's board and how you're playing on the left, the rest on the right. On a
+   screen up to 900px tall the cards are a little tighter. */
+@media (min-width: 760px) {
+  html:not(.tv) #setupScreen:not(.hidden) { max-width: 1100px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 24px; align-items: start; }
+}
+@media (min-width: 760px) and (max-height: 900px) {
+  html:not(.tv) #setupScreen .daily-card { margin-bottom: 14px; padding: 10px 14px; }
+  html:not(.tv) #setupScreen .modes { gap: 8px; }
+  html:not(.tv) #setupScreen .mode { padding: 10px 14px; }
+  html:not(.tv) #setupScreen .field { margin-bottom: 14px; }
+}

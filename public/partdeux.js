@@ -640,7 +640,14 @@
   // ---- wiring ---------------------------------------------------------------------------------
 
   for (const b of $('modeSeg').children) b.onclick = () => setMode(b.dataset.mode);
-  $('addPlayerBtn').onclick = () => { if (S.names.length < 8) { S.names.push(''); renderNames(); } };
+  // A new name can push Start below the screen on a phone; bring it back into view,
+  // above anything that covers the bottom of the page (Chrome's row of tabs).
+  function showStart() {
+    const r = $('goBtn').getBoundingClientRect();
+    const seen = window.visualViewport ? Math.min(window.innerHeight, window.visualViewport.height) : window.innerHeight;
+    if (r.bottom > seen - 8) window.scrollBy(0, r.bottom - seen + 8);
+  }
+  $('addPlayerBtn').onclick = () => { if (S.names.length < 8) { S.names.push(''); renderNames(); showStart(); } };
   $('goBtn').onclick = go;
   $('drawBtn').onclick = () => { Blip.tone(330, 0.06, { type: 'triangle' }); send({ action: 'draw' }); };
   $('drawPile').onclick = () => $('drawBtn').click();

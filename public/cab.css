@@ -85,8 +85,9 @@
 .cab-pad button.held { background: var(--cab-pink); color: #fff; }
 
 @media (max-width: 700px) {
-  /* Room for the top bar, the score row and the big button under the stage (2026-11-13). */
-  .cab-stage { height: clamp(240px, calc(100dvh - 370px), 640px); }
+  /* Room for the top bar, the score row and the big button under the stage (2026-11-13). The height
+     you can really see (--app-h, topbar.js), so Chrome's row of tabs never covers the button (2026-11-20). */
+  .cab-stage { height: clamp(240px, calc(var(--app-h, 100dvh) - 370px), 640px); }
   .cab-hud { margin-left: 0; gap: 4px 14px; }
   /* on a phone the button is big enough to hit without looking at it */
   .cab-pad button { min-height: 110px; padding: 14px 8px; font-size: 20px; }
