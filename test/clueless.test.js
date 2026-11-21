@@ -140,7 +140,11 @@ async function run({ base, root }) {
   ok('a wrong grid is refused, and doesn\'t give away the answer', bad.status === 400 && bad.data.solved === false && !bad.text.includes(ans));
   ok('a half-empty grid is refused', (await api(`/run/${a.data.runId}/finish`, 'POST', { grid: blank })).status === 400);
   ok('a grid of the wrong size is refused', (await api(`/run/${a.data.runId}/finish`, 'POST', { grid: 'ABC' })).status === 400);
-  const fast = await api(`/run/${a.data.runId}/finish`, 'POST', { grid: ans, timeMs: 1 });
+  // A fresh run, finished straight away: the cutoff is the squares times 20 ms here
+  // (a small puzzle can be under 350 ms), so the run above, with all the requests
+  // before this one, can already be old enough on a slow machine.
+  const fresh = await api('/start', 'POST', { level: 'mini' });
+  const fast = await api(`/run/${fresh.data.runId}/finish`, 'POST', { grid: ans, timeMs: 1 });
   ok('a finish faster than anyone could type is turned away', fast.status === 400 && /faster/.test(fast.data.error), JSON.stringify(fast.data));
 
   // Help, decided and charged by the server.
