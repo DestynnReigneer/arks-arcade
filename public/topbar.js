@@ -13,6 +13,7 @@
   const vv = window.visualViewport;
   if (!vv) return;
   let last = 0;
+  let lastW = 0;
   const typing = () => {
     const el = document.activeElement;
     if (!el) return false;
@@ -22,6 +23,10 @@
   const set = () => {
     if (Math.abs(vv.scale - 1) > 0.01) return;
     const h = Math.round(vv.height);
+    const w = Math.round(vv.width);
+    // Turning the device changes the width, and the old height means nothing then.
+    if (w !== lastW) last = 0;
+    lastW = w;
     if (last && typing() && h < last - 150) return;
     last = h;
     document.documentElement.style.setProperty('--app-h', `${h}px`);
@@ -29,6 +34,16 @@
   vv.addEventListener('resize', set);
   // Once the box loses focus the keyboard goes away; check again when it has.
   document.addEventListener('focusout', () => setTimeout(set, 300));
+  // A page fitted to the screen doesn't scroll, so bring the box above the
+  // keyboard once it has opened, in case the browser didn't.
+  document.addEventListener('focusin', e => {
+    if (!typing()) return;
+    setTimeout(() => {
+      if (document.activeElement !== e.target) return;
+      const r = e.target.getBoundingClientRect();
+      if (r.bottom > vv.offsetTop + vv.height || r.top < vv.offsetTop) e.target.scrollIntoView({ block: 'nearest' });
+    }, 350);
+  });
   set();
 })();
 
