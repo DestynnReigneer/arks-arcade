@@ -73,18 +73,6 @@ const GAMES = [
 
 // Game and size pairs that don't fit yet, with why. Fixed in order on the to-do list.
 const KNOWN = {
-  "Chess @ phone turned sideways": "the game doesn't have a sideways layout yet, so it scrolls and its top runs off the screen",
-  "Chess @ small phone turned sideways": "the game doesn't have a sideways layout yet, so it scrolls and its top runs off the screen",
-  "Know-It-All @ phone turned sideways": "the game doesn't have a sideways layout yet, so it scrolls and its top runs off the screen",
-  "Know-It-All @ small phone turned sideways": "the game doesn't have a sideways layout yet, so it scrolls and its top runs off the screen",
-  "Rambler @ phone turned sideways": "the game doesn't have a sideways layout yet, so the board and buttons are below the screen",
-  "Rambler @ small phone turned sideways": "the game doesn't have a sideways layout yet, so the board and buttons are below the screen",
-  "Dare Devil @ phone turned sideways": "the game doesn't have a sideways layout yet, so it scrolls and its top runs off the screen",
-  "Dare Devil @ small phone turned sideways": "the game doesn't have a sideways layout yet, so it scrolls and its top runs off the screen",
-  "Big Swing @ phone turned sideways": "skip: the game doesn't have a sideways layout yet, so the stage and its big button are below the screen (skipped rather than expected to fail, because the 3D game is slow to close in the test browser)",
-  "Big Swing @ small phone turned sideways": "skip: the game doesn't have a sideways layout yet, so the stage and its big button are below the screen (skipped rather than expected to fail, because the 3D game is slow to close in the test browser)",
-  "Uh-Oh: Part Deux @ phone turned sideways": "the game doesn't have a sideways layout yet, so it scrolls and its top runs off the screen",
-  "Uh-Oh: Part Deux @ small phone turned sideways": "the game doesn't have a sideways layout yet, so it scrolls and its top runs off the screen",
   "Uh-Oh: Part Deux @ laptop": "skip: fits on some machines and not others; on Windows the page scrolls a little below the hand",
 };
 

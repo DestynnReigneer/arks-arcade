@@ -96,3 +96,39 @@ body.tv-screen .log { display: none; }
    it doesn't scroll the card out of sight. */
 body.tv-screen #game:not(.hidden) { display: flex; flex-direction: column; }
 body.tv-screen #quitBtn { order: -1; align-self: flex-end; width: auto; margin: 0 0 8px; padding: 8px 18px; font-size: 14px; }
+
+/* ---- a phone turned sideways (2026-11-22): the deck (or the dare that was drawn)
+   on the left, as tall as the screen under the top bar allows, and the game's name,
+   the scores, whose turn it is, what happened and Leave game in a column beside it,
+   so nothing scrolls. The TV keeps its own layout. */
+@media (orientation: landscape) and (max-height: 600px) {
+  html:not(.tv) body:has(#game:not(.hidden)) {
+    max-width: none; padding-left: 0; padding-right: 0; padding-bottom: 0;
+    --bar-w: calc(min(1100px, 100vw) - 32px); --gap: 20px; --title-h: 24px;
+    --slot: calc((var(--bar-w) - var(--gap)) / 2); --tall: calc(var(--app-h, 100dvh) - 76px - 14px);
+  }
+  html:not(.tv) body:has(#game:not(.hidden)) > header.top {
+    position: absolute; top: 82px; height: var(--title-h); box-sizing: border-box; padding: 0 !important; margin: 0;
+    left: calc(50% - var(--bar-w) / 2 + var(--slot) + var(--gap)); width: var(--slot);
+  }
+  html:not(.tv) #game:not(.hidden) {
+    display: grid; width: var(--bar-w); height: var(--tall); margin: 6px auto 8px;
+    grid-template-columns: var(--slot) var(--slot); column-gap: var(--gap);
+    grid-template-rows: var(--title-h) auto auto auto minmax(0, 1fr) auto;
+    grid-template-areas: "card ." "card scores" "card rule" "card turn" "card log" "card quit";
+  }
+  html:not(.tv) #game > #scoreStrip { grid-area: scores; margin: 4px 0 6px; }
+  html:not(.tv) #game > #ruleBanner { grid-area: rule; margin: 0 0 6px; }
+  html:not(.tv) #game > #turnLine { grid-area: turn; margin: 2px 0 8px; }
+  html:not(.tv) #game > #deckBtn, html:not(.tv) #game > #dareCard { grid-area: card; }
+  html:not(.tv) #game > #deckBtn { align-self: center; }
+  html:not(.tv) #game > #deckBtn { height: min(340px, calc(var(--tall) - 8px)); width: min(260px, calc((var(--tall) - 8px) * 0.76)); gap: 4px; }
+  html:not(.tv) #game > #deckBtn .deck-face { font-size: clamp(48px, calc(var(--tall) * 0.24), 80px); }
+  html:not(.tv) #game > #dareCard { width: 100%; box-sizing: border-box; min-height: 0; height: var(--tall); overflow-y: auto; padding: 12px 14px; }
+  html:not(.tv) #game > #dareCard .dc-text { font-size: clamp(16px, 2.6vw, 22px); padding: 8px 4px; }
+  html:not(.tv) #game > #dareCard .dc-timer { margin-bottom: 8px; padding: 6px 10px; }
+  html:not(.tv) #game > #dareCard .dct-num { font-size: 30px; }
+  html:not(.tv) #game > #dareCard .row-btns button { padding: 10px 6px; }
+  html:not(.tv) #game > #log { grid-area: log; margin: 0; max-height: none; min-height: 0; }
+  html:not(.tv) #game > #quitBtn { grid-area: quit; margin: 8px 0 0; padding-top: 10px; padding-bottom: 10px; }
+}

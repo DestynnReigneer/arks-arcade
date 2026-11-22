@@ -200,3 +200,57 @@ body.tv-screen #latest, body.tv-screen #pendingBanner { order: 4; }
 /* No scrolling while you play (2026-11-13): the page's own bottom padding was the
    only thing past the screen. */
 html:not(.tv) body:has(#game:not(.hidden)) { padding-bottom: 0; }
+
+/* ---- a phone turned sideways (2026-11-22): the table on the left (everyone else,
+   the draw pile and the played pile, what just happened, the game log and Leave
+   game) and your hand on the right under the game's name, as tall as the screen
+   under the top bar allows, so nothing scrolls. The cards on the table get a little
+   smaller; the ones in your hand keep their size. Everyone else stays on one row
+   (it slides sideways when there are many), and the game log opens over the table
+   instead of pushing Leave game off the screen. */
+@media (orientation: landscape) and (max-height: 600px) {
+  html:not(.tv) body:has(#game:not(.hidden)) {
+    max-width: none; padding-left: 0; padding-right: 0;
+    --bar-w: calc(min(1100px, 100vw) - 32px); --gap: 16px; --title-h: 24px;
+    --left: clamp(260px, calc((var(--bar-w) - var(--gap)) * 0.4), 420px);
+    --tall: calc(var(--app-h, 100dvh) - 76px - 12px);
+  }
+  html:not(.tv) body:has(#game:not(.hidden)) > header.top {
+    position: absolute; top: 82px; height: var(--title-h); box-sizing: border-box; padding: 0 !important; margin: 0;
+    left: calc(50% - var(--bar-w) / 2 + var(--left) + var(--gap)); width: calc(var(--bar-w) - var(--left) - var(--gap));
+  }
+  html:not(.tv) #game:not(.hidden) {
+    display: grid; width: var(--bar-w); height: var(--tall); margin: 6px auto 6px;
+    grid-template-columns: calc((var(--left) - 8px) / 2) calc((var(--left) - 8px) / 2) minmax(0, 1fr); column-gap: 8px;
+    grid-template-rows: var(--title-h) auto auto auto minmax(0, 1fr) auto;
+    grid-template-areas: "opp opp ." "opp opp mine" "table table mine" "latest latest mine" ". . mine" "log quit mine";
+  }
+  html:not(.tv) #game > #myArea { margin: 0 0 0 calc(var(--gap) - 8px); }
+  html:not(.tv) #game > #opponents {
+    grid-area: opp; margin: 0 0 4px; padding: 9px 2px 2px; align-self: start; min-width: 0;
+    flex-wrap: nowrap; justify-content: safe center; overflow-x: auto; scrollbar-width: none;
+  }
+  html:not(.tv) #game > #opponents::-webkit-scrollbar { display: none; }
+  html:not(.tv) #game > #opponents li { flex: none; }
+  html:not(.tv) #game > .table { grid-area: table; padding: 6px 8px 2px; gap: 6px; border-radius: 16px; }
+  html:not(.tv) #game .spot { gap: 3px; }
+  html:not(.tv) #game .spot-label { min-height: 2.6em; font-size: 11px; line-height: 1.25; }
+  html:not(.tv) #game .pile { width: 54px; height: 80px; }
+  html:not(.tv) #game .pile-logo { padding: 7px 4px; font-size: 8px; }
+  html:not(.tv) #game .discard .card { width: 56px; height: 82px; }
+  html:not(.tv) #game .discard .card .sym { font-size: 24px; }
+  html:not(.tv) #game .table-mid { gap: 4px; }
+  html:not(.tv) #game .dir { font-size: 22px; }
+  html:not(.tv) #game > .latest { grid-area: latest; margin: 4px 0 0; font-size: 12px; line-height: 1.3; }
+  html:not(.tv) #game > #pendingBanner { grid-area: latest; align-self: end; margin: 0 auto; }
+  html:not(.tv) #game > .log-box { grid-area: log; position: relative; margin: 6px 0 0; padding: 0 10px; display: flex; align-items: center; }
+  html:not(.tv) #game > .log-box summary { padding: 11px 0; }
+  html:not(.tv) #game > .log-box[open] .log {
+    position: absolute; left: 0; bottom: calc(100% + 6px); z-index: 5; width: calc(var(--left) - 24px); max-height: calc(var(--tall) * 0.6);
+    margin: 0; padding: 8px 12px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.5);
+  }
+  html:not(.tv) #game > #quitBtn { grid-area: quit; margin: 6px 0 0; padding-top: 9px; padding-bottom: 9px; }
+  html:not(.tv) #game > #myArea { grid-area: mine; padding: 8px 10px 10px; align-self: start; max-height: calc(var(--tall) - var(--title-h)); box-sizing: border-box; }
+  html:not(.tv) #game .my-area.myturn .turn-banner { font-size: 17px; }
+  html:not(.tv) #game .hand { min-height: 120px; padding: 16px 8px 4px; }
+}

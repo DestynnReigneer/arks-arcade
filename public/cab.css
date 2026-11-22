@@ -96,3 +96,33 @@
 @media (prefers-reduced-motion: reduce) {
   .cab-call.show { animation: none; }
 }
+
+/* A phone turned sideways (2026-11-22): the stage on the left, as tall as the screen under the top bar allows, and
+   the game's name, Start and Pause, the score row and the big button in a column beside it, the button at the
+   bottom under a thumb. Nothing scrolls. The setup screen keeps its own layout. Every cabinet game shares this. */
+@media (orientation: landscape) and (max-height: 600px) {
+  html:not(.tv) body:has(> .cab:not(.cab-in-setup)) {
+    max-width: none; padding-left: 0; padding-right: 0; padding-bottom: 0;
+    --bar-w: calc(min(1100px, 100vw) - 32px); --gap: 16px; --title-h: 24px;
+    --side: clamp(220px, calc(var(--bar-w) * 0.34), 340px); --tall: calc(var(--app-h, 100dvh) - 76px - 14px);
+  }
+  html:not(.tv) body:has(> .cab:not(.cab-in-setup)) > header.top {
+    position: absolute; top: 82px; height: var(--title-h); box-sizing: border-box; padding: 0 !important; margin: 0;
+    left: calc(50% + var(--bar-w) / 2 - var(--side)); width: var(--side);
+  }
+  html:not(.tv) .cab:not(.cab-in-setup) {
+    width: var(--bar-w); max-width: none; height: var(--tall); margin: 6px auto 0; gap: 0 var(--gap);
+    grid-template-columns: minmax(0, 1fr) var(--side); grid-template-rows: var(--title-h) auto minmax(0, 1fr) auto;
+    grid-template-areas: "wrap ." "wrap bar" "wrap ." "wrap pad";
+  }
+  html:not(.tv) .cab:not(.cab-in-setup) > .cab-bar { grid-area: bar; margin-top: 6px; gap: 8px 10px; }
+  html:not(.tv) .cab:not(.cab-in-setup) > .cab-bar .cab-go,
+  html:not(.tv) .cab:not(.cab-in-setup) > .cab-bar .cab-pause { flex: 1 1 0; min-width: 0; }
+  html:not(.tv) .cab:not(.cab-in-setup) > .cab-bar .cab-hud { margin-left: 0; gap: 4px 14px; }
+  html:not(.tv) .cab:not(.cab-in-setup) > .cab-wrap { grid-area: wrap; min-height: 0; }
+  html:not(.tv) .cab:not(.cab-in-setup) .cab-stage { height: var(--tall); }
+  html:not(.tv) .cab:not(.cab-in-setup) > .cab-pad { grid-area: pad; }
+  /* The bug-report button would sit on the big button; it's in the top bar's menu meanwhile. */
+  html:not(.tv) body:has(> .cab:not(.cab-in-setup)) .fb-corner { display: none; }
+  html:not(.tv) .cab:not(.cab-in-setup) > .cab-pad button { min-height: clamp(64px, calc(var(--tall) * 0.36), 110px); padding: 10px 8px; }
+}

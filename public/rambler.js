@@ -169,6 +169,9 @@ function adjacent(a, b, cols) {
 function renderBoard(host, tiles, cols, rows, { fresh = null } = {}) {
   host.className = 'board';
   host.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+  // Its shape, so a layout can keep the squares square in a box of any shape (a marathon grows).
+  host.style.setProperty('--cols', cols);
+  host.style.setProperty('--rows', rows);
   // Shrink the type as the grid grows, or a 7-wide board overflows the phone.
   host.style.fontSize = cols >= 7 ? '0.62em' : cols >= 6 ? '0.74em' : cols >= 5 ? '0.85em' : '1em';
   host.innerHTML = '';

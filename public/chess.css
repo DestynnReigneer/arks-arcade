@@ -150,3 +150,36 @@
   html:not(.tv) #game > #gameChat .lb-lines { height: 110px; }
   html:not(.tv) #game > #quitBtn { grid-area: quit; max-width: none; margin: 10px 0 0; }
 }
+/* A phone turned sideways (2026-11-22): the same side-by-side layout as a computer,
+   with the board as tall as the screen under the top bar allows. The game's name
+   moves to the top of the side column, so the board doesn't lose its height to it,
+   and the gaps beside the board get smaller so the buttons and Back to setup stay on
+   the screen. The moves fill whatever room is left and scroll inside. */
+@media (orientation: landscape) and (max-height: 600px) {
+  html:not(.tv) body:has(#game:not(.hidden)) {
+    max-width: none; padding-left: 0; padding-right: 0; padding-bottom: 0;
+    --bar-w: calc(min(1100px, 100vw) - 32px); --gap: 20px; --title-h: 24px;
+    --board: clamp(160px, min(calc(var(--app-h, 100dvh) - 76px - 14px), calc(var(--bar-w) - var(--gap) - 280px)), 820px);
+  }
+  html:not(.tv) body:has(#game:not(.hidden)) > header.top {
+    position: absolute; top: 82px; height: var(--title-h); box-sizing: border-box; padding: 0 !important; margin: 0;
+    left: calc(50% - var(--bar-w) / 2 + var(--board) + var(--gap)); width: calc(var(--bar-w) - var(--board) - var(--gap));
+  }
+  html:not(.tv) #game:not(.hidden) {
+    display: grid; width: var(--bar-w); height: var(--board); margin: 6px auto 8px;
+    grid-template-columns: var(--board) minmax(0, 1fr); column-gap: var(--gap);
+    grid-template-rows: var(--title-h) auto auto auto auto auto minmax(0, 1fr) auto auto;
+    grid-template-areas: "board ." "board top" "board last" "board bottom" "board status" "board btns" "board moves" "board chat" "board quit";
+  }
+  html:not(.tv) #game > .board-wrap { grid-area: board; }
+  html:not(.tv) #game .board { --size: var(--board); min-width: 0; min-height: 0; }
+  html:not(.tv) #game > #topBar { grid-area: top; max-width: none; margin: 4px 0 6px; }
+  html:not(.tv) #game > #lastMove { grid-area: last; max-width: none; margin: 0 0 6px; }
+  html:not(.tv) #game > #bottomBar { grid-area: bottom; max-width: none; margin: 0; }
+  html:not(.tv) #game > #statusLine { grid-area: status; margin: 6px 0; }
+  html:not(.tv) #game > #gameBtns { grid-area: btns; max-width: none; margin: 0; }
+  html:not(.tv) #game > #moveList { grid-area: moves; max-width: none; max-height: none; min-height: 0; margin: 6px 0 0; }
+  html:not(.tv) #game > #gameChat { grid-area: chat; margin: 6px 0 0; }
+  html:not(.tv) #game > #gameChat .lb-lines { height: 60px; }
+  html:not(.tv) #game > #quitBtn { grid-area: quit; max-width: none; margin: 6px 0 0; padding-top: 10px; padding-bottom: 10px; }
+}
