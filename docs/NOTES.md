@@ -7,6 +7,12 @@ to-do list as checkboxes (the rule is in the maintainer's global CLAUDE.md
 and `arks-internal/conventions/sessions.md`): do the checked items in the
 order they were clicked, and keep the rest pinned here.
 
+## The hold menu comes from the shared kit (2026-11-22)
+
+- `public/longpress.js` is now a kit copy, like `dock.js` and `banner.js`: change it in the kit and sync it, never here.
+  Its looks moved out of the script into `public/longpress.css`, which the script loads itself, so no page changed
+  and the menu looks and works the same. The other apps use the same file for their own hold menus.
+
 ## Setup in two steps on a phone: Know-It-All, Spin & Solve and Rambler (2026-11-20)
 
 The maintainer chose "two steps each" for the three setups that didn't fit an upright phone. Built to be tried;

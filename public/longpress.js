@@ -2,6 +2,10 @@
 
 // Press and hold for more options, the same in every ARKS app.
 //
+// Part of the shared kit: every app has this exact file in public/longpress.js, with
+// its looks in public/longpress.css, which this file loads itself (next to wherever
+// the page loaded this script from). A page only needs <script src="longpress.js">.
+//
 //   LongPress.attach(element, () => ({
 //     title: 'Sudoku, today\'s Easy Challenge',      // optional, shown at the top
 //     items: [
@@ -42,44 +46,25 @@ const LongPress = (() => {
   document.addEventListener('pointerup', () => { if (quietUntil === Infinity) quietUntil = Date.now() + 400; }, true);
   document.addEventListener('pointercancel', () => { if (quietUntil === Infinity) quietUntil = Date.now() + 400; }, true);
 
-  const css = `
-.lp-veil{position:fixed;inset:0;z-index:2147482000;background:rgba(5,4,10,.55);backdrop-filter:blur(2px);opacity:0;transition:opacity .16s}
-.lp-veil.in{opacity:1}
-.lp-card{position:fixed;z-index:2147482001;min-width:240px;max-width:min(360px,calc(100vw - 24px));background:#1e0e39;color:#f5eaff;border:1px solid rgba(255,46,196,.55);border-radius:16px;box-shadow:0 10px 40px rgba(0,0,0,.5),0 0 24px rgba(255,46,196,.18);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;padding:8px;transform:scale(.96);opacity:0;transition:transform .16s,opacity .16s}
-.lp-card.in{transform:none;opacity:1}
-.lp-card.wide{max-width:none}
-.lp-card.short{max-width:none}
-.lp-card.short .lp-list{display:grid;grid-template-columns:1fr 1fr;column-gap:4px}
-.lp-card.short .lp-list>:not(.lp-item){grid-column:1/-1}
-.lp-card.short .lp-item{min-height:42px;padding:7px 12px}
-.lp-card.short .lp-title{padding:4px 12px 6px}
-.lp-title{font-size:13px;color:#c9a8dd;padding:8px 12px 10px;border-bottom:1px solid rgba(245,234,255,.1);margin-bottom:4px;line-height:1.35}
-.lp-item{display:flex;align-items:center;gap:12px;width:100%;min-height:48px;padding:10px 12px;border:0;border-radius:10px;background:transparent;color:inherit;font:inherit;font-size:16px;font-weight:600;text-align:left;cursor:pointer}
-.lp-item:hover,.lp-item:focus-visible{background:rgba(245,234,255,.08);outline:none}
-.lp-item.danger{color:#ff7ab8}
-.lp-item .lp-i{width:24px;text-align:center;font-size:18px}
-.lp-q{padding:10px 12px 12px;font-size:16px;line-height:1.4}
-.lp-row{display:flex;gap:8px;padding:0 4px 4px}
-.lp-row button{flex:1;min-height:46px;border-radius:10px;font:inherit;font-size:15px;font-weight:800;cursor:pointer}
-.lp-safe{border:0;background:#00ffc2;color:#14082b}
-.lp-go{border:1px solid #ff2ec4;background:transparent;color:#f5eaff}
-.lp-sep{height:1px;background:rgba(245,234,255,.1);margin:4px 8px}
-.lp-chips{padding:4px 12px 8px}
-.lp-chips-t{font-size:13px;color:#c9a8dd;margin:2px 0 6px}
-.lp-chips-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(64px,1fr));gap:6px}
-.lp-chips-row button{min-height:44px;border-radius:10px;border:1px solid rgba(77,208,255,.6);background:rgba(77,208,255,.08);color:#f5eaff;font:inherit;font-size:14px;font-weight:700;cursor:pointer}
-.lp-chips-row button:hover,.lp-chips-row button:focus-visible{background:rgba(77,208,255,.2);outline:none}
-.lp-cancel{display:block;width:100%;min-height:46px;margin-top:6px;border:0;border-radius:10px;background:#00ffc2;color:#14082b;font:inherit;font-size:15px;font-weight:800;cursor:pointer}
-.lp-hold{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
-@media (prefers-reduced-motion:reduce){.lp-veil,.lp-card{transition:none}}`;
-
+  // The looks come from longpress.css, a file next to this one, because some apps
+  // don't allow a style tag written by a script. It's asked for as soon as the page
+  // loads, so it's there long before anyone has held a finger down for half a second.
+  const cssHref = (() => {
+    const me = document.currentScript && document.currentScript.src;
+    return me ? me.replace(/longpress\.js(\?.*)?$/, 'longpress.css') : '/longpress.css';
+  })();
   function addStyle() {
-    if (document.getElementById('lp-style')) return;
-    const s = document.createElement('style');
-    s.id = 'lp-style';
-    s.textContent = css;
-    document.head.appendChild(s);
+    let l = document.getElementById('lp-style');
+    if (l) return l;
+    l = document.createElement('link');
+    l.id = 'lp-style';
+    l.rel = 'stylesheet';
+    l.href = cssHref;
+    l.addEventListener('load', () => { if (open) open.again(); });
+    document.head.appendChild(l);
+    return l;
   }
+  addStyle();
 
   // The history step the open menu added. Back takes it off, which closes the menu.
   let entry = false;
@@ -113,7 +98,7 @@ const LongPress = (() => {
   }
 
   // How much of the window can be seen: Chrome's tab row on a phone covers the bottom
-  // of the page without making the window shorter (topbar.js says the same in --app-h).
+  // of the page without making the window shorter.
   function seen() {
     const vv = window.visualViewport;
     const h = vv && vv.scale === 1 && vv.height > 0 ? Math.min(innerHeight, vv.height) : innerHeight;
