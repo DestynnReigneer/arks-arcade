@@ -1051,8 +1051,7 @@
     {
       emoji: '🔡', title: 'Build words that cross',
       html: `<p>Everyone has seven letter tiles on their rack. Take turns putting tiles on the board to make words, across or down, that join onto the words already there, like a crossword.</p>
-        <p>The first word has to cover the <b>★</b> in the middle. After that, every new word has to touch a tile that's already on the board.</p>
-        <p>This game used to be called Criss Cross. Only the name changed, so any game you had going is still in your list.</p>`
+        <p>The first word has to cover the <b>★</b> in the middle. After that, every new word has to touch a tile that's already on the board.</p>`
     },
     {
       emoji: '👆', title: 'Placing your tiles',

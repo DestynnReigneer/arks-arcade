@@ -122,7 +122,6 @@
     .build-row .cost { grid-area: cost; font-size: 12px; }
     html:not(.tv) .tower-head { margin-bottom: 4px; }
     html:not(.tv) .tower-head .em { font-size: 22px; }
-    html:not(.tv) .tower-head small { display: none; }
     html:not(.tv) .tower-stats { margin-bottom: 8px; }
   }
   /* A short phone (the browser's bars showing) lets the next wave's list go, so the towers and the card fit. */
@@ -190,8 +189,9 @@
     html:not(.tv) .tower-head { margin: 0; gap: 6px; min-width: 0; }
     html:not(.tv) .tower-head b { font-size: 13px; }
     html:not(.tv) .tower-head .em { font-size: 20px; }
-    html:not(.tv) .tower-head small { display: none; }
     html:not(.tv) .tower-stats { grid-row: 2; grid-column: 1 / -1; margin: 4px 0 0; font-size: 12px; }
+    /* The smallest sideways phones (360 tall) have no room for the tower's description. */
+    @media (max-height: 370px) { html:not(.tv) .tower-head small { display: none; } }
     html:not(.tv) .tower-actions { grid-row: 1; grid-column: 2; }
     html:not(.tv) .tower-actions button { min-height: 44px; padding: 4px 10px; flex: 0 0 auto; white-space: nowrap; }
     /* With a tower picked, its card needs the room more than the how-to line does. */

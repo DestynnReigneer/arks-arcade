@@ -18,7 +18,7 @@ Guess the hidden word in six tries, with a theme for every word.
 
 ### Rambler (`/rambler.html`)
 
-A dice-and-grid word hunt against the clock. (Boggle-style — "Boggle" is a Hasbro trademark, hence the different name.)
+A word hunt against the clock: find words by joining letters that touch on a grid.
 
 - Rolls the **real printed dice**: the 16-die 4x4 set and the 25-die 5x5 Big set, Qu tile included. Boards are re-rolled until they hold enough words to be worth playing.
 - Standard scoring (3–4 letters = 1, 5 = 2, 6 = 3, 7 = 5, 8+ = 11); 5x5 boards require four letters.
