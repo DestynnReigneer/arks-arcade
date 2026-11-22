@@ -1532,7 +1532,7 @@ html.tv #joinQr { width: 220px !important; height: 220px !important; }
    I'm done sit right under the typing row. The words found take whatever room is
    left at the bottom (always enough for a row of words, the board shrinking to
    make it) and scroll inside it, so a long list never pushes a button off the
-   screen. A phone turned sideways keeps its old layout for now. */
+   screen. A phone turned sideways has its own layout, after the next block. */
 @media (orientation: portrait), (min-height: 601px) {
   html:not(.tv):has(#playScreen:not(.hidden)) { height: 100%; overflow: hidden; }
   html:not(.tv) body:has(#playScreen:not(.hidden)) { height: var(--app-h, 100dvh); min-height: 0; overflow: hidden; padding-bottom: 0; box-sizing: border-box; }
@@ -1557,6 +1557,103 @@ html.tv #joinQr { width: 220px !important; height: 220px !important; }
     -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 18px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 18px), transparent); padding-bottom: 14px; }
   html:not(.tv) body:not(.tv-screen) #playScreen > .found:not(#playRoster)::-webkit-scrollbar { display: none; }
   html:not(.tv) body:not(.tv-screen) #playScreen > #playRoster { order: 5; margin-top: 10px !important; }
+}
+/* A phone turned sideways (2026-11-22): the same fit, side by side. Rambler's own
+   header row stays (it has the profile, How to play, sound and the boards) but gets
+   shorter, the board sits on the left as tall as the rest of the screen, and the
+   clock, the word being traced, and the typing row with Hint and I'm done on the same
+   line sit beside it, with the words found filling the rest of that column and
+   scrolling inside it (always room for a row of them). */
+@media (orientation: landscape) and (max-height: 600px) {
+  html:not(.tv):has(#playScreen:not(.hidden)) { height: 100%; overflow: hidden; }
+  html:not(.tv) body:has(#playScreen:not(.hidden)) {
+    height: var(--app-h, 100dvh); min-height: 0; overflow: hidden; padding-bottom: 0; box-sizing: border-box;
+    --bar-w: calc(min(1100px, 100vw) - 32px); --gap: 20px;
+    --board: clamp(160px, calc(var(--app-h, 100dvh) - 76px - 46px - 16px), 480px);
+  }
+  html:not(.tv) body:has(#playScreen:not(.hidden)) > * { flex: none; }
+  html:not(.tv) body:has(#playScreen:not(.hidden)) .fb-corner { display: none; }
+  html:not(.tv) body:has(#playScreen:not(.hidden)) > header { max-width: none; width: var(--bar-w); padding: 4px 0; box-sizing: border-box; }
+  html:not(.tv) body:not(.tv-screen) #playScreen:not(.hidden) {
+    flex: 1 1 auto; min-height: 0; max-width: none; width: var(--bar-w); box-sizing: border-box; padding: 8px 0;
+    display: grid; grid-template-columns: var(--board) minmax(0, 1fr) auto; column-gap: var(--gap);
+    grid-template-rows: auto auto auto auto minmax(0, 1fr) auto;
+    grid-template-areas: "board top top" "board timer timer" "board trace trace" "board type actions" "board found found" "board roster roster";
+  }
+  html:not(.tv) body:not(.tv-screen) #playScreen > .play-top { grid-area: top; margin-bottom: 2px; }
+  html:not(.tv) body:not(.tv-screen) #playScreen .clock { font-size: 22px; }
+  html:not(.tv) body:not(.tv-screen) #playScreen > .timer-track { grid-area: timer; margin-bottom: 8px; }
+  html:not(.tv) body:not(.tv-screen) #playScreen > .board-wrap { grid-area: board; width: var(--board); height: var(--board); max-width: none; margin: 0; container-type: size; }
+  html:not(.tv) body:not(.tv-screen) #playScreen .board { width: min(100cqw, 100cqh); height: min(100cqw, 100cqh); margin: 0; gap: clamp(4px, calc(min(100cqw, 100cqh) * 0.024), 8px); }
+  html:not(.tv) body:not(.tv-screen) #playScreen .board.s4 { grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: repeat(4, minmax(0, 1fr)); }
+  html:not(.tv) body:not(.tv-screen) #playScreen .board.s5 { grid-template-columns: repeat(5, minmax(0, 1fr)); grid-template-rows: repeat(5, minmax(0, 1fr)); }
+  html:not(.tv) body:not(.tv-screen) #playScreen .die { min-width: 0; min-height: 0; aspect-ratio: auto; font-size: clamp(12px, calc(min(100cqw, 100cqh) * 0.1), 29px); }
+  html:not(.tv) body:not(.tv-screen) #playScreen .board.s5 .die { font-size: clamp(11px, calc(min(100cqw, 100cqh) * 0.08), 23px); }
+  html:not(.tv) body:not(.tv-screen) #playScreen > .trace-bar { grid-area: trace; margin: 0; max-width: none; min-height: 40px; }
+  html:not(.tv) body:not(.tv-screen) #playScreen > .type-row { grid-area: type; margin: 6px 0 0; max-width: none; }
+  html:not(.tv) body:not(.tv-screen) #playScreen > .type-row input { padding-top: 8px; padding-bottom: 8px; }
+  html:not(.tv) body:not(.tv-screen) #playScreen > .type-row .ghost-btn,
+  html:not(.tv) body:not(.tv-screen) #playScreen > .mara-actions .ghost-btn { padding-top: 8px; padding-bottom: 8px; }
+  html:not(.tv) body:not(.tv-screen) #playScreen > .mara-actions { grid-area: actions; margin: 6px 0 0 calc(8px - var(--gap)) !important; }
+  html:not(.tv) body:not(.tv-screen) #playScreen > .mara-actions .ghost-btn { padding-left: 12px; padding-right: 12px; white-space: nowrap; }
+  html:not(.tv) body:not(.tv-screen) #playScreen > .found:not(#playRoster) { grid-area: found; margin: 8px 0 0; max-width: none; min-height: 54px; overflow: auto; scrollbar-width: none;
+    -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 14px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 14px), transparent); padding-bottom: 10px; }
+  html:not(.tv) body:not(.tv-screen) #playScreen > .found:not(#playRoster)::-webkit-scrollbar { display: none; }
+  html:not(.tv) body:not(.tv-screen) #playScreen > #playRoster { grid-area: roster; margin: 6px 0 0 !important; max-width: none; }
+}
+/* The marathon turned sideways, the same way: its board (which grows a row or a
+   column at a time) as big as the box on the left allows with square letters, and
+   the level, clock, score, the two meters on one row, the traced word, and typing
+   with Hint and End run on one row beside it, so a row of words found always shows. */
+@media (orientation: landscape) and (max-height: 600px) {
+  html:not(.tv):has(#marathonScreen:not(.hidden)) { height: 100%; overflow: hidden; }
+  html:not(.tv) body:has(#marathonScreen:not(.hidden)) {
+    height: var(--app-h, 100dvh); min-height: 0; overflow: hidden; padding-bottom: 0; box-sizing: border-box;
+    --bar-w: calc(min(1100px, 100vw) - 32px); --gap: 20px;
+    --board: clamp(160px, calc(var(--app-h, 100dvh) - 76px - 46px - 16px), 480px);
+  }
+  html:not(.tv) body:has(#marathonScreen:not(.hidden)) > * { flex: none; }
+  html:not(.tv) body:has(#marathonScreen:not(.hidden)) .fb-corner { display: none; }
+  html:not(.tv) body:has(#marathonScreen:not(.hidden)) > header { max-width: none; width: var(--bar-w); padding: 4px 0; box-sizing: border-box; }
+  /* body:not(.tv-screen) is here so this outranks the "> * { flex: none }" line above, as solo's does;
+     without it the screen grew past the bottom of the phone and the words found never scrolled. */
+  html:not(.tv) body:not(.tv-screen) #marathonScreen:not(.hidden) {
+    flex: 1 1 auto; min-height: 0; max-width: none; width: var(--bar-w); box-sizing: border-box; padding: 8px 0;
+    display: grid; grid-template-columns: minmax(var(--board), 0.9fr) minmax(0, 1fr) minmax(0, 1fr); column-gap: var(--gap);
+    grid-template-rows: auto auto auto auto minmax(0, 1fr);
+    grid-template-areas: "board hud hud" "board gauge grow" "board trace trace" "board type actions" "board found found";
+  }
+  html:not(.tv) #marathonScreen > .mara-hud { grid-area: hud; margin-bottom: 4px; }
+  html:not(.tv) #marathonScreen .mara-clock { font-size: 26px; }
+  html:not(.tv) #marathonScreen .mara-level b, html:not(.tv) #marathonScreen .mara-score b { font-size: 19px; }
+  html:not(.tv) #marathonScreen > .time-gauge { grid-area: gauge; align-self: center; margin: 0 0 8px; }
+  html:not(.tv) #marathonScreen > .grow-meter { grid-area: grow; margin: 0 0 8px calc(8px - var(--gap)); gap: 6px; }
+  html:not(.tv) #marathonScreen > .grow-meter .cap { white-space: nowrap; }
+  html:not(.tv) #marathonScreen > .board-wrap { grid-area: board; width: 100%; height: var(--board); max-width: none; margin: 0; container-type: size; display: grid; place-items: center; }
+  html:not(.tv) #marathonScreen .board {
+    --c: var(--cols, 4); --r: var(--rows, 4);
+    width: min(100cqw, 100cqh * var(--c) / var(--r)); height: min(100cqh, 100cqw * var(--r) / var(--c));
+    grid-template-rows: repeat(var(--r), minmax(0, 1fr)); gap: clamp(3px, calc(100cqh / var(--r) * 0.08), 8px);
+  }
+  html:not(.tv) #marathonScreen .die { min-width: 0; min-height: 0; aspect-ratio: auto; }
+  html:not(.tv) #marathonScreen > .trace-bar { grid-area: trace; margin: 0; max-width: none; min-height: 40px; }
+  html:not(.tv) #marathonScreen > .type-row { grid-area: type; margin: 6px 0 0; max-width: none; }
+  html:not(.tv) #marathonScreen > .type-row input { padding-top: 8px; padding-bottom: 8px; }
+  html:not(.tv) #marathonScreen > .type-row .ghost-btn,
+  html:not(.tv) #marathonScreen > .mara-actions .ghost-btn { padding-top: 8px; padding-bottom: 8px; }
+  html:not(.tv) #marathonScreen > .mara-actions { grid-area: actions; margin: 6px 0 0 calc(8px - var(--gap)); }
+  html:not(.tv) #marathonScreen > .mara-actions .ghost-btn { padding-left: 10px; padding-right: 10px; white-space: nowrap; }
+  html:not(.tv) #marathonScreen > .found { grid-area: found; margin: 8px 0 0; max-width: none; min-height: 54px; overflow: auto; scrollbar-width: none;
+    -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 14px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 14px), transparent); padding-bottom: 10px; }
+  html:not(.tv) #marathonScreen > .found::-webkit-scrollbar { display: none; }
+}
+/* With the browser's address bar showing too (about 334 tall), the marathon's numbers and the traced word get a
+   little smaller, so the first row of words found stays on the screen. */
+@media (orientation: landscape) and (max-height: 350px) {
+  html:not(.tv) #marathonScreen > .mara-hud { margin-bottom: 0; }
+  html:not(.tv) #marathonScreen .mara-clock { font-size: 22px; }
+  html:not(.tv) #marathonScreen .mara-level b, html:not(.tv) #marathonScreen .mara-score b { font-size: 17px; }
+  html:not(.tv) #marathonScreen > .trace-bar { min-height: 36px; }
 }
 /* A short screen (the browser's bars showing): Rambler's own header row, the clock and
    the rows under the board give up some room, so the board stays a good size. */

@@ -313,6 +313,13 @@ html:not(.tv) .cl-fit > .cl-wrap { width: min(100cqw, 100cqh); margin: 0; }
   }
   html:not(.tv) body.cl-clues-open .cl-lists-x { display: inline-flex; justify-self: end; grid-column: 1 / -1; }
 }
+/* With the browser's address bar showing too (about 334 tall), the gaps around the keyboard get smaller, so its
+   bottom row stays on the screen. */
+@media (orientation: landscape) and (max-height: 350px) and (pointer: coarse) {
+  html:not(.tv) .cl-side > .hud { margin-bottom: 2px; }
+  html:not(.tv) .cl-side .cl-tools { margin-top: 4px; }
+  html:not(.tv) .cl-side .cl-keys .row { margin-top: 2px; }
+}
 
 /* Under the timer on a try that won't be scored. */
 .fun-line { margin: -4px 0 8px; text-align: center; font-weight: 700; }

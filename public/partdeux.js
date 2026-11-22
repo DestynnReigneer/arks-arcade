@@ -328,6 +328,15 @@
     return el;
   }
 
+  // A row that slides sideways says where there's more: .more-l and .more-r fade that edge (partdeux.css), and the
+  // table shows a small arrow while there's more to the right.
+  function markEdges(el) {
+    const max = el.scrollWidth - el.clientWidth;
+    el.classList.toggle('more-l', max > 1 && el.scrollLeft > 1);
+    el.classList.toggle('more-r', max > 1 && el.scrollLeft < max - 1);
+  }
+  $('opponents').addEventListener('scroll', () => markEdges($('opponents')), { passive: true });
+
   // Overlap the hand just enough to fit the row; scroll if it still won't.
   function fitHand(hand, n) {
     const w = hand.firstElementChild ? hand.firstElementChild.offsetWidth : 72;
@@ -381,6 +390,13 @@
       }
       opp.appendChild(li);
     }
+    // A row too long for its box slides sideways: bring whoever's playing into view, and mark which edges have more.
+    const now = opp.querySelector('li.now');
+    if (now && opp.scrollWidth > opp.clientWidth + 1) {
+      const l = now.offsetLeft - opp.offsetLeft, r = l + now.offsetWidth;
+      if (l < opp.scrollLeft || r > opp.scrollLeft + opp.clientWidth) opp.scrollLeft = l - 16;
+    }
+    markEdges(opp);
 
     // The two piles, and what's in play
     const discard = $('discard');
@@ -676,7 +692,7 @@
   }
   $('helpBtn').onclick = () => help.open();
   Blip.muteButton($('muteBtn'));
-  addEventListener('resize', () => { if (G()) fitHand($('hand'), $('hand').children.length); });
+  addEventListener('resize', () => { if (G()) { fitHand($('hand'), $('hand').children.length); markEdges($('opponents')); } });
 
   // ---- boot ---------------------------------------------------------------------------------------
   (async () => {
