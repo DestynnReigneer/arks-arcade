@@ -2250,8 +2250,10 @@ function backToSetup() {
   S.room = null;
   S.results = null;
   S.found = [];
-  // Someone who came in from List Hosted Games goes back to the list.
-  if (S.cameFromList) { S.cameFromList = false; S.mode = 'find'; steps.go(2); }
+  // Back to setup always starts at the first step (Dest, 2026-11-22), even for someone
+  // who came in from List Hosted Games: it's one tap from there.
+  if (S.cameFromList) { S.cameFromList = false; S.mode = 'find'; }
+  steps.go(1);
   say($('setupMsg'), '');
   screen('setup');
   renderSetup();

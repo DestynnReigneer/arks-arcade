@@ -1225,6 +1225,7 @@
     $('roundView').classList.add('hidden');
     $('game').classList.add('hidden');
     $('setup').classList.remove('hidden');
+    steps.go(1);   // back to setup starts at the first step
   }
 
   // On a phone the setup is two steps: Who's playing? and How spicy?, then the

@@ -185,3 +185,19 @@ test('Know-It-All: one device taking turns says who to hand it to', async ({ bro
   expect(problems, problems.join('\n')).toEqual([]);
   await ctx.close();
 });
+
+test('Spin & Solve: leaving a game comes back to step 1, not step 2', async ({ browser }, info) => {
+  test.skip(info.project.name !== 'phone', 'The size is set here.');
+  const { ctx, page, problems } = await open(browser, '/spinsolve.html');
+  const setup = page.locator('#setup');
+  await page.locator('.steps-next').click();
+  await expect(setup).toHaveClass(/on-step-2/);
+  await page.locator('#goBtn').click();
+  await expect(page.locator('#game')).toBeVisible();
+  // The top bar's Back leaves the game (nothing asks, Back means back).
+  await page.locator('.ah-back').click();
+  await expect(setup).toBeVisible();
+  await expect(setup).toHaveClass(/on-step-1/);
+  expect(problems, problems.join('\n')).toEqual([]);
+  await ctx.close();
+});

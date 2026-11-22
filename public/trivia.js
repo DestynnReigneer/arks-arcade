@@ -735,6 +735,7 @@
     if (S.room) { roomPost('leave'); leaveRoom(); }
     S.game = null;
     show('setup');
+    steps.go(1);   // back to setup starts at the first step
     renderLevels();
   }
 
