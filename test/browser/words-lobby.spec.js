@@ -131,9 +131,11 @@ test('Rambler: a lobby with no code, found in List Hosted Games', async ({ brows
   await expect(joiner.locator('#lobbyTitle')).toHaveText(`${who}'s Rambler lobby`);
   await expect(host.locator('#lobbyRoster')).toContainText('Alex');
 
-  // Leaving a lobby that was joined from the list goes back to the list, and the lobby can be joined again.
+  // Leaving a lobby goes back to setup (on a phone, its first step: one tap on List Hosted Games
+  // shows the list again), and the lobby can be joined again.
   await joiner.locator('#leaveRoomBtn').click();
   await expect(joiner.locator('#setupScreen')).toBeVisible();
+  if (await joiner.locator('#setupScreen.on-step-1').count()) await joiner.locator('#modeList [data-mode="find"]').click();
   await expect(joiner.locator('#hostedField')).toBeVisible();
   await expect(host.locator('#lobbyRoster')).not.toContainText('Alex');
   await joiner.locator('#hostedRows .hosted-row', { hasText: `${who}'s lobby` }).click();
