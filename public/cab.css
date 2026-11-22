@@ -112,17 +112,23 @@
   }
   html:not(.tv) .cab:not(.cab-in-setup) {
     width: var(--bar-w); max-width: none; height: var(--tall); margin: 6px auto 0; gap: 0 var(--gap);
-    grid-template-columns: minmax(0, 1fr) var(--side); grid-template-rows: var(--title-h) auto minmax(0, 1fr) auto;
-    grid-template-areas: "wrap ." "wrap bar" "wrap ." "wrap pad";
+    grid-template-columns: minmax(0, 1fr) var(--side); grid-template-rows: var(--title-h) auto minmax(56px, 1fr);
+    grid-template-areas: "wrap ." "wrap bar" "wrap pad";
   }
   html:not(.tv) .cab:not(.cab-in-setup) > .cab-bar { grid-area: bar; margin-top: 6px; gap: 8px 10px; }
   html:not(.tv) .cab:not(.cab-in-setup) > .cab-bar .cab-go,
   html:not(.tv) .cab:not(.cab-in-setup) > .cab-bar .cab-pause { flex: 1 1 0; min-width: 0; }
-  html:not(.tv) .cab:not(.cab-in-setup) > .cab-bar .cab-hud { margin-left: 0; gap: 4px 14px; }
+  html:not(.tv) .cab:not(.cab-in-setup) > .cab-bar .cab-go,
+  html:not(.tv) .cab:not(.cab-in-setup) > .cab-bar .cab-pause { padding-top: 9px; padding-bottom: 9px; }
+  html:not(.tv) .cab:not(.cab-in-setup) > .cab-bar .cab-hud { margin-left: 0; gap: 2px 12px; }
+  html:not(.tv) .cab:not(.cab-in-setup) > .cab-bar .cab-hud b { font-size: 17px; }
+  html:not(.tv) .cab:not(.cab-in-setup) > .cab-bar .cab-hud span { font-size: 11px; }
   html:not(.tv) .cab:not(.cab-in-setup) > .cab-wrap { grid-area: wrap; min-height: 0; }
   html:not(.tv) .cab:not(.cab-in-setup) .cab-stage { height: var(--tall); }
-  html:not(.tv) .cab:not(.cab-in-setup) > .cab-pad { grid-area: pad; }
+  /* The big button takes the room left at the bottom of the column, up to its usual 110px, and never less than a
+     thumb's 56px. */
+  html:not(.tv) .cab:not(.cab-in-setup) > .cab-pad { grid-area: pad; align-self: end; height: min(calc(100% - 8px), 110px); margin-top: 8px; box-sizing: border-box; }
   /* The bug-report button would sit on the big button; it's in the top bar's menu meanwhile. */
   html:not(.tv) body:has(> .cab:not(.cab-in-setup)) .fb-corner { display: none; }
-  html:not(.tv) .cab:not(.cab-in-setup) > .cab-pad button { min-height: clamp(64px, calc(var(--tall) * 0.36), 110px); padding: 10px 8px; }
+  html:not(.tv) .cab:not(.cab-in-setup) > .cab-pad button { min-height: 0; height: 100%; padding: 8px; }
 }

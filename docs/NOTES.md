@@ -17,26 +17,36 @@ and `html:not(.tv)`, so upright phones, tablets, laptops and the TV are unchange
 - **The game's name stays.** It moves to the top of the side column (`header.top` placed there with
   `position: absolute`) instead of taking height from the board. Rambler keeps its own header row (profile, How to
   play, sound and the boards), only shorter.
-- **Chess** (`chess.css`): the board on the left, the players, the last move, the status, the buttons, the moves and
-  Back to setup beside it.
+- **Chess** (`chess.css`): the board on the left, the two players side by side, the last move, the status, the
+  buttons, the moves (always at least two lines) and Back to setup beside it. The board gives up width when the side
+  column needs it.
 - **Know-It-All** (`trivia.css`): the question with its four answers under it on the left (60%), and whose turn,
   the result, the scores, Next question and Quit on the right. A long question scrolls inside its card, and "I'm
   ready" takes the question's place.
-- **Rambler** (`rambler.css`): the board on the left, the clock, the traced word, typing, Hint, I'm done and the words
-  found beside it. **The marathon** too: `renderBoard` in `rambler.js` now sets `--cols` and `--rows` on the board, so
+- **Rambler** (`rambler.css`): the board on the left, the clock, the traced word, typing with Hint and I'm done on
+  the same row, and the words found (always room for a row of them) beside it. The marathon puts its two meters on
+  one row too. **The marathon** too: `renderBoard` in `rambler.js` now sets `--cols` and `--rows` on the board, so
   the growing grid keeps square letters in any box.
-- **Dare Devil** (`daredevil.css`): the deck, or the dare that was drawn (as big as the left half), on the left; the
-  scores, whose turn, the log and Leave game on the right.
+- **Dare Devil** (`daredevil.css`): the deck, or the dare that was drawn, on the left; the scores, whose turn, the
+  log (at least two lines, even with 12 players and a new rule showing) and Leave game on the right.
 - **Uh-Oh: Part Deux** (`partdeux.css`): the table on the left (everyone else on one row that slides when there are
-  many, smaller piles, what just happened, Game log and Leave game side by side), your hand on the right. The game log
+  many, with the edge that has more faded and a small arrow, `markEdges` in `partdeux.js`, smaller piles, what just happened, Game log and Leave game side by side), your hand on the right. The game log
   opens over the table instead of pushing Leave game off the screen.
-- **The 3D cabinet games** (`cab.css`, all five): the stage on the left, the name, Restart and Pause, the score row and
-  the big button beside it. The bug-report button waits in the top bar's menu meanwhile. The setup screens are as
+- **The 3D cabinet games** (`cab.css`, all five): the stage on the left, the name, Restart and Pause, the score row
+  (on one line) and the big button beside it, which takes the room left (56 to 110px). The bug-report button waits in the top bar's menu meanwhile. The setup screens are as
   before.
-- **Tests:** the sideways lines in `KNOWN` in `fit.spec.js` are gone, Big Swing's included.
+- **Tests:** the sideways lines in `KNOWN` in `fit.spec.js` are gone, Big Swing's included. A play-test added a
+  sideways size with the address bar showing (844x334) to `SIZES`, Bucket Drop and the Racer to `GAMES`, and checks
+  that Rambler's and the marathon's first words found are on the screen, that Chess's moves are at least 24px tall
+  and clear of Back to setup, and that Uh-Oh's row of other players fades and shows an arrow when it slides.
+- **The address bar showing (844x334):** Snake and the other `game-shell` games, Clueless Crosswords, Tower Defense
+  (a picked tower's card) and the marathon got a little tighter under `(max-height: 350px)`, so nothing scrolls there.
+  **Tower Defense's squares are 20px there, not 22:** the map's 13 rows need 286px and only 270 are left under the top
+  bar. It's in `KNOWN` until the maintainer picks smaller squares at that size or a map that scrolls a little.
 - **Not done:** the setup screens turned sideways (the check only looks at them upright), and the six games that
   already fit sideways (Sudoku, Clueless Crosswords, Snake, Block Drop, Brick Breaker, Tower Defense) and Words with
   Family still put their name away while you play sideways, as before.
+
 ## The hold menu comes from the shared kit (2026-11-22)
 
 - `public/longpress.js` is now a kit copy, like `dock.js` and `banner.js`: change it in the kit and sync it, never here.

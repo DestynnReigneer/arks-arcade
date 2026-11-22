@@ -200,6 +200,17 @@
     /* The bug-report button would sit on the towers; it's in the top bar's menu meanwhile. */
     html:not(.tv) .fb-corner { display: none; }
   }
+  /* With the browser's address bar showing too (about 334 tall), the wave button and the gaps get smaller, so a
+     picked tower's card fits under the towers without the page scrolling. */
+  @media (orientation: landscape) and (max-height: 350px) and (pointer: coarse) {
+    html:not(.tv) .td-play { margin-bottom: 0; }
+    html:not(.tv) .td-play > .stage { margin-bottom: 0; }
+    html:not(.tv) .td-play > .hud { margin: 2px 0 4px; }
+    html:not(.tv) .wave-bar .primary { padding-top: 6px; padding-bottom: 6px; }
+    html:not(.tv) .td-play > .next-up { margin-top: 2px; }
+    html:not(.tv) .td-play > .build-bar { margin-top: 4px; }
+    html:not(.tv) .td-play > .info { margin: 4px 0 0; padding: 4px 10px; }
+  }
 </style>
 </head>
 <body>

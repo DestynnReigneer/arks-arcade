@@ -1562,8 +1562,9 @@ html.tv #joinQr { width: 220px !important; height: 220px !important; }
 /* A phone turned sideways (2026-11-22): the same fit, side by side. Rambler's own
    header row stays (it has the profile, How to play, sound and the boards) but gets
    shorter, the board sits on the left as tall as the rest of the screen, and the
-   clock, the word being traced, the typing row, Hint and I'm done sit beside it with
-   the words found filling the rest of that column and scrolling inside it. */
+   clock, the word being traced, and the typing row with Hint and I'm done on the same
+   line sit beside it, with the words found filling the rest of that column and
+   scrolling inside it (always room for a row of them). */
 @media (orientation: landscape) and (max-height: 600px) {
   html:not(.tv):has(#playScreen:not(.hidden)) { height: 100%; overflow: hidden; }
   html:not(.tv) body:has(#playScreen:not(.hidden)) {
@@ -1576,9 +1577,9 @@ html.tv #joinQr { width: 220px !important; height: 220px !important; }
   html:not(.tv) body:has(#playScreen:not(.hidden)) > header { max-width: none; width: var(--bar-w); padding: 4px 0; box-sizing: border-box; }
   html:not(.tv) body:not(.tv-screen) #playScreen:not(.hidden) {
     flex: 1 1 auto; min-height: 0; max-width: none; width: var(--bar-w); box-sizing: border-box; padding: 8px 0;
-    display: grid; grid-template-columns: var(--board) minmax(0, 1fr); column-gap: var(--gap);
-    grid-template-rows: auto auto auto auto auto minmax(0, 1fr) auto auto;
-    grid-template-areas: "board top" "board timer" "board trace" "board type" "board actions" "board found" "board roster" "board tabletop";
+    display: grid; grid-template-columns: var(--board) minmax(0, 1fr) auto; column-gap: var(--gap);
+    grid-template-rows: auto auto auto auto minmax(0, 1fr) auto auto;
+    grid-template-areas: "board top top" "board timer timer" "board trace trace" "board type actions" "board found found" "board roster roster" "board tabletop tabletop";
   }
   html:not(.tv) body:not(.tv-screen) #playScreen > .play-top { grid-area: top; margin-bottom: 2px; }
   html:not(.tv) body:not(.tv-screen) #playScreen .clock { font-size: 22px; }
@@ -1594,8 +1595,9 @@ html.tv #joinQr { width: 220px !important; height: 220px !important; }
   html:not(.tv) body:not(.tv-screen) #playScreen > .type-row input { padding-top: 8px; padding-bottom: 8px; }
   html:not(.tv) body:not(.tv-screen) #playScreen > .type-row .ghost-btn,
   html:not(.tv) body:not(.tv-screen) #playScreen > .mara-actions .ghost-btn { padding-top: 8px; padding-bottom: 8px; }
-  html:not(.tv) body:not(.tv-screen) #playScreen > .mara-actions { grid-area: actions; margin: 6px 0 0 !important; }
-  html:not(.tv) body:not(.tv-screen) #playScreen > .found:not(#playRoster) { grid-area: found; margin: 8px 0 0; max-width: none; min-height: 0; overflow: auto; scrollbar-width: none;
+  html:not(.tv) body:not(.tv-screen) #playScreen > .mara-actions { grid-area: actions; margin: 6px 0 0 calc(8px - var(--gap)) !important; }
+  html:not(.tv) body:not(.tv-screen) #playScreen > .mara-actions .ghost-btn { padding-left: 12px; padding-right: 12px; white-space: nowrap; }
+  html:not(.tv) body:not(.tv-screen) #playScreen > .found:not(#playRoster) { grid-area: found; margin: 8px 0 0; max-width: none; min-height: 54px; overflow: auto; scrollbar-width: none;
     -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 14px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 14px), transparent); padding-bottom: 10px; }
   html:not(.tv) body:not(.tv-screen) #playScreen > .found:not(#playRoster)::-webkit-scrollbar { display: none; }
   html:not(.tv) body:not(.tv-screen) #playScreen > #playRoster { grid-area: roster; margin: 6px 0 0 !important; max-width: none; }
@@ -1603,8 +1605,8 @@ html.tv #joinQr { width: 220px !important; height: 220px !important; }
 }
 /* The marathon turned sideways, the same way: its board (which grows a row or a
    column at a time) as big as the box on the left allows with square letters, and
-   the level, clock, score, the meters, the traced word, typing, Hint, End run and
-   the words found beside it. */
+   the level, clock, score, the two meters on one row, the traced word, and typing
+   with Hint and End run on one row beside it, so a row of words found always shows. */
 @media (orientation: landscape) and (max-height: 600px) {
   html:not(.tv):has(#marathonScreen:not(.hidden)) { height: 100%; overflow: hidden; }
   html:not(.tv) body:has(#marathonScreen:not(.hidden)) {
@@ -1617,15 +1619,16 @@ html.tv #joinQr { width: 220px !important; height: 220px !important; }
   html:not(.tv) body:has(#marathonScreen:not(.hidden)) > header { max-width: none; width: var(--bar-w); padding: 4px 0; box-sizing: border-box; }
   html:not(.tv) #marathonScreen:not(.hidden) {
     flex: 1 1 auto; min-height: 0; max-width: none; width: var(--bar-w); box-sizing: border-box; padding: 8px 0;
-    display: grid; grid-template-columns: minmax(var(--board), 1fr) minmax(0, 1.1fr); column-gap: var(--gap);
-    grid-template-rows: auto auto auto auto auto auto minmax(0, 1fr);
-    grid-template-areas: "board hud" "board gauge" "board grow" "board trace" "board type" "board actions" "board found";
+    display: grid; grid-template-columns: minmax(var(--board), 0.9fr) minmax(0, 1fr) minmax(0, 1fr); column-gap: var(--gap);
+    grid-template-rows: auto auto auto auto minmax(0, 1fr);
+    grid-template-areas: "board hud hud" "board gauge grow" "board trace trace" "board type actions" "board found found";
   }
   html:not(.tv) #marathonScreen > .mara-hud { grid-area: hud; margin-bottom: 4px; }
   html:not(.tv) #marathonScreen .mara-clock { font-size: 26px; }
   html:not(.tv) #marathonScreen .mara-level b, html:not(.tv) #marathonScreen .mara-score b { font-size: 19px; }
-  html:not(.tv) #marathonScreen > .time-gauge { grid-area: gauge; margin-bottom: 8px; }
-  html:not(.tv) #marathonScreen > .grow-meter { grid-area: grow; margin-bottom: 8px; }
+  html:not(.tv) #marathonScreen > .time-gauge { grid-area: gauge; align-self: center; margin: 0 0 8px; }
+  html:not(.tv) #marathonScreen > .grow-meter { grid-area: grow; margin: 0 0 8px calc(8px - var(--gap)); gap: 6px; }
+  html:not(.tv) #marathonScreen > .grow-meter .cap { white-space: nowrap; }
   html:not(.tv) #marathonScreen > .board-wrap { grid-area: board; width: 100%; height: var(--board); max-width: none; margin: 0; container-type: size; display: grid; place-items: center; }
   html:not(.tv) #marathonScreen .board {
     --c: var(--cols, 4); --r: var(--rows, 4);
@@ -1638,10 +1641,19 @@ html.tv #joinQr { width: 220px !important; height: 220px !important; }
   html:not(.tv) #marathonScreen > .type-row input { padding-top: 8px; padding-bottom: 8px; }
   html:not(.tv) #marathonScreen > .type-row .ghost-btn,
   html:not(.tv) #marathonScreen > .mara-actions .ghost-btn { padding-top: 8px; padding-bottom: 8px; }
-  html:not(.tv) #marathonScreen > .mara-actions { grid-area: actions; margin: 6px 0 0; }
-  html:not(.tv) #marathonScreen > .found { grid-area: found; margin: 8px 0 0; max-width: none; min-height: 0; overflow: auto; scrollbar-width: none;
+  html:not(.tv) #marathonScreen > .mara-actions { grid-area: actions; margin: 6px 0 0 calc(8px - var(--gap)); }
+  html:not(.tv) #marathonScreen > .mara-actions .ghost-btn { padding-left: 10px; padding-right: 10px; white-space: nowrap; }
+  html:not(.tv) #marathonScreen > .found { grid-area: found; margin: 8px 0 0; max-width: none; min-height: 54px; overflow: auto; scrollbar-width: none;
     -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 14px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 14px), transparent); padding-bottom: 10px; }
   html:not(.tv) #marathonScreen > .found::-webkit-scrollbar { display: none; }
+}
+/* With the browser's address bar showing too (about 334 tall), the marathon's numbers and the traced word get a
+   little smaller, so the first row of words found stays on the screen. */
+@media (orientation: landscape) and (max-height: 350px) {
+  html:not(.tv) #marathonScreen > .mara-hud { margin-bottom: 0; }
+  html:not(.tv) #marathonScreen .mara-clock { font-size: 22px; }
+  html:not(.tv) #marathonScreen .mara-level b, html:not(.tv) #marathonScreen .mara-score b { font-size: 17px; }
+  html:not(.tv) #marathonScreen > .trace-bar { min-height: 36px; }
 }
 /* A short screen (the browser's bars showing): Rambler's own header row, the clock and
    the rows under the board give up some room, so the board stays a good size. */

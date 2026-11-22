@@ -231,7 +231,20 @@ html:not(.tv) body:has(#game:not(.hidden)) { padding-bottom: 0; }
     flex-wrap: nowrap; justify-content: safe center; overflow-x: auto; scrollbar-width: none;
   }
   html:not(.tv) #game > #opponents::-webkit-scrollbar { display: none; }
-  html:not(.tv) #game > #opponents li { flex: none; }
+  html:not(.tv) #game > #opponents { scroll-snap-type: x proximity; }
+  html:not(.tv) #game > #opponents li { flex: none; scroll-snap-align: start; }
+  /* More players than fit: the edge with more fades (partdeux.js marks it), and a small arrow on the right says
+     to swipe. The arrow belongs to the table's grid, so the fade doesn't touch it, and taps go through it. */
+  html:not(.tv) #game > #opponents.more-r { -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 44px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 44px), transparent); }
+  html:not(.tv) #game > #opponents.more-l { -webkit-mask-image: linear-gradient(90deg, transparent, #000 32px); mask-image: linear-gradient(90deg, transparent, #000 32px); }
+  html:not(.tv) #game > #opponents.more-l.more-r { -webkit-mask-image: linear-gradient(90deg, transparent, #000 32px, #000 calc(100% - 44px), transparent); mask-image: linear-gradient(90deg, transparent, #000 32px, #000 calc(100% - 44px), transparent); }
+  html:not(.tv) #game:has(> #opponents.more-r)::after {
+    content: '›'; grid-area: opp; justify-self: end; align-self: start; margin-top: 16px; z-index: 2; pointer-events: none;
+    width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 20px; font-weight: 900; line-height: 1;
+    color: var(--on-accent); background: var(--accent); box-shadow: 0 0 10px rgba(255, 210, 63, 0.5); animation: swipeHint 1.6s ease-in-out infinite;
+  }
+  @keyframes swipeHint { 50% { transform: translateX(-4px); } }
+  @media (prefers-reduced-motion: reduce) { html:not(.tv) #game:has(> #opponents.more-r)::after { animation: none; } }
   html:not(.tv) #game > .table { grid-area: table; padding: 6px 8px 2px; gap: 6px; border-radius: 16px; }
   html:not(.tv) #game .spot { gap: 3px; }
   html:not(.tv) #game .spot-label { min-height: 2.6em; font-size: 11px; line-height: 1.25; }

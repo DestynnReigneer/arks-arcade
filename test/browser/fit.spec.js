@@ -5,8 +5,8 @@
 // and everything you play with must be fully on the screen and not covered, the
 // board can't be squashed to almost nothing, and the page can't scroll sideways.
 //
-// The sizes are the ones people really use. Two are about Chrome on a phone: its
-// address bar makes the page shorter, and its row of tabs along the bottom covers
+// The sizes are the ones people really use. Three are about Chrome on a phone: its
+// address bar makes the page shorter (upright and sideways), and its row of tabs along the bottom covers
 // the page without making it shorter. A game that spreads itself over the whole
 // height (100dvh) hides its buttons under that row. The page can only see the row
 // through the visual viewport (`--app-h` in topbar.js), so the test browser reports
@@ -27,6 +27,7 @@ const SIZES = [
   ["phone with Chrome's tab row", { width: 412, height: 860 }, true, 136],
   ['phone turned sideways', { width: 844, height: 390 }, true],
   ['small phone turned sideways', { width: 740, height: 360 }, true],
+  ['phone turned sideways with the browser bars showing', { width: 844, height: 334 }, true],
   ['tablet', { width: 768, height: 1024 }, true],
   ['laptop', { width: 1366, height: 768 }, false]
 ];
@@ -69,10 +70,14 @@ const GAMES = [
     setup: ['#levelList', '#modeSeg', '#nameList .name-row:last-child', '#addPlayerBtn', '#goBtn'] },
   // The 3D cabinet games draw in software in the test browser, slowly, so they get triple time.
   { name: 'Big Swing', path: '/bigswing.html', start: ['.cab-go'], board: '#stage', need: ['#stage', '.cab-pad'], slow: true },
+  // Two more cabinet games: Bucket Drop's score row is the longest, and the Racer has three big buttons.
+  { name: 'Bucket Drop', path: '/bucketdrop.html', start: ['.cab-go'], board: '#stage', need: ['#stage', '.cab-pad'], slow: true },
+  { name: 'Racer', path: '/racer.html', start: ['.cab-go'], board: '#stage', need: ['#stage', '.cab-pad'], slow: true },
 ];
 
 // Game and size pairs that don't fit yet, with why. Fixed in order on the to-do list.
 const KNOWN = {
+  "Tower Defense @ phone turned sideways with the browser bars showing": "the map's 13 rows need 286px for 22px squares, and only 270 are left under the top bar, so the squares are 20px (the maintainer's call: smaller squares here, or a map that scrolls a little)",
   "Uh-Oh: Part Deux @ laptop": "skip: fits on some machines and not others; on Windows the page scrolls a little below the hand",
 };
 
@@ -546,6 +551,120 @@ for (const [label, viewport, , covered = 0] of SIZES) {
     if (viewport.width > viewport.height && viewport.height < 600) {
       expect(await page.evaluate(() => document.documentElement.scrollHeight - innerHeight)).toBeLessThanOrEqual(1);
     }
+    await ctx.close();
+  });
+}
+
+// ---- Sideways extras (2026-11-22, from a play-test of the sideways layouts) ----
+const SIDEWAYS = SIZES.filter(s => s[2] && s[1].width > s[1].height);
+
+// Words that can be traced on a Rambler board, found from the common word list, to type in.
+const fs = require('fs');
+const path = require('path');
+const COMMON = fs.readFileSync(path.join(__dirname, '..', '..', 'words', 'common-10k.txt'), 'utf8')
+  .split(/\r?\n/).map(w => w.trim().toUpperCase()).filter(w => /^[A-Z]{3,6}$/.test(w));
+function wordsOn(letters, cols, max) {
+  const out = [];
+  const near = (a, b) => a !== b && Math.abs(a % cols - b % cols) <= 1 && Math.abs(Math.floor(a / cols) - Math.floor(b / cols)) <= 1;
+  for (const w of COMMON) {
+    const walk = (pos, trail) => {
+      if (pos === w.length) return true;
+      for (let i = 0; i < letters.length; i++) {
+        if (trail.includes(i) || (trail.length && !near(trail[trail.length - 1], i))) continue;
+        if (w.startsWith(letters[i], pos) && walk(pos + letters[i].length, [...trail, i])) return true;
+      }
+      return false;
+    };
+    if (walk(0, [])) { out.push(w); if (out.length >= max) break; }
+  }
+  return out;
+}
+async function typeWords(page, board, input, add, n) {
+  const { letters, cols } = await page.evaluate(sel => {
+    const b = document.querySelector(sel);
+    return { letters: [...b.children].map(d => d.textContent.trim().toUpperCase()), cols: getComputedStyle(b).gridTemplateColumns.split(' ').length };
+  }, board);
+  for (const w of wordsOn(letters, cols, n)) {
+    await page.locator(input).fill(w);
+    await page.locator(add).click();
+    await page.waitForTimeout(250);
+  }
+}
+
+// Rambler and its marathon: once words are found, the first row of them is on the screen.
+for (const [label, viewport] of SIDEWAYS) {
+  for (const [mode, board, input, add, chips] of [
+    ['solo', '#board', '#typeInput', '#typeBtn', '#foundChips'],
+    ['marathon', '#maraBoard', '#maraInput', '#maraAdd', '#maraChips']
+  ]) {
+    test(`Rambler's ${mode} words found show on a ${label}`, async ({ browser }, info) => {
+      test.skip(info.project.name !== 'phone', 'The sizes are set here, so one project runs them all.');
+      const { ctx, page } = await openAt(browser, '/rambler.html', viewport, 0);
+      await page.locator(`#modeList .mode.no-tv[data-mode="${mode}"]`).click();
+      await page.locator('#startBtn').click();
+      await expect(page.locator(`${board} .die`).first()).toBeVisible();
+      await typeWords(page, board, input, add, 3);
+      await expect(page.locator(`${chips} > *`).first()).toBeVisible();
+      const out = await page.evaluate(sel => {
+        const c = document.querySelector(sel).firstElementChild.getBoundingClientRect();
+        const bad = [];
+        if (c.top < 0 || c.bottom > innerHeight + 1) bad.push(`the first word found is at ${Math.round(c.top)}-${Math.round(c.bottom)} of ${innerHeight}`);
+        if (document.documentElement.scrollHeight > innerHeight + 1) bad.push(`the page scrolls (${document.documentElement.scrollHeight} tall)`);
+        return bad;
+      }, chips);
+      expect(out).toEqual([]);
+      await ctx.close();
+    });
+  }
+}
+
+// Chess: after a move, the moves list is at least two lines tall and clear of Back to setup.
+for (const [label, viewport] of SIDEWAYS) {
+  test(`Chess's moves show above Back to setup on a ${label}`, async ({ browser }, info) => {
+    test.skip(info.project.name !== 'phone', 'The sizes are set here, so one project runs them all.');
+    const { ctx, page } = await openAt(browser, '/chess.html', viewport, 0);
+    await page.locator('#goBtn').click();
+    await page.locator('[data-sq="52"]').click();
+    await page.locator('[data-sq="36"]').click();
+    await expect(page.locator('#moveList')).toBeVisible();
+    await page.waitForTimeout(600);
+    const out = await page.evaluate(() => {
+      const m = document.querySelector('#moveList').getBoundingClientRect();
+      const q = document.querySelector('#quitBtn').getBoundingClientRect();
+      const bad = [];
+      if (m.height < 24) bad.push(`the moves are ${Math.round(m.height)}px tall`);
+      if (m.bottom > q.top + 1) bad.push(`the moves run under Back to setup (${Math.round(m.bottom)} > ${Math.round(q.top)})`);
+      if (q.bottom > innerHeight + 1) bad.push(`Back to setup is off the screen (${Math.round(q.bottom)} of ${innerHeight})`);
+      if (document.documentElement.scrollHeight > innerHeight + 1) bad.push(`the page scrolls (${document.documentElement.scrollHeight} tall)`);
+      return bad;
+    });
+    expect(out).toEqual([]);
+    await ctx.close();
+  });
+}
+
+// Uh-Oh with six players: when the other players don't fit their row, the row says so (a fade and an arrow).
+for (const [label, viewport] of SIDEWAYS) {
+  test(`Uh-Oh's other players show there are more on a ${label}`, async ({ browser }, info) => {
+    test.skip(info.project.name !== 'phone', 'The sizes are set here, so one project runs them all.');
+    const { ctx, page } = await openAt(browser, '/partdeux.html', viewport, 0);
+    for (let i = 0; i < 4; i++) await page.locator('#addPlayerBtn').click();
+    await expect(page.locator('#nameList .name-row')).toHaveCount(6);
+    await page.locator('#goBtn').click();
+    await page.locator('#passReady').click();
+    await expect(page.locator('#opponents li')).toHaveCount(5);
+    await page.waitForTimeout(300);
+    const out = await page.evaluate(() => {
+      const o = document.querySelector('#opponents');
+      if (o.scrollWidth <= o.clientWidth + 1) return [];
+      const bad = [];
+      const mask = getComputedStyle(o).maskImage || getComputedStyle(o).webkitMaskImage;
+      if (!mask || mask === 'none') bad.push('the row slides but nothing fades at its edge');
+      const hint = getComputedStyle(document.querySelector('#game'), '::after').content;
+      if (o.scrollLeft < o.scrollWidth - o.clientWidth - 1 && (!hint || hint === 'none')) bad.push('there are more players to the right but no arrow says so');
+      return bad;
+    });
+    expect(out).toEqual([]);
     await ctx.close();
   });
 }
