@@ -148,7 +148,7 @@ test('Clueless: the highlight is the cursor, and the keyboard types', async ({ p
 test('Words with Family: a first word against the computer, with the remote', async ({ page }) => {
   const problems = watchProblems(page);
   await pairTv(page, '/crisscross.html');
-  await press(page, '#newLocalBtn');
+  await press(page, '#newTvBtn');
   await expect(page.locator('#localPlayers')).toContainText('The computer');
   await press(page, '#localGo');
   await expect(page.locator('#game')).toBeVisible();

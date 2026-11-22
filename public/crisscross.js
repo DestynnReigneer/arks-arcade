@@ -139,6 +139,7 @@
     const p = me();
     $('noProfile').classList.toggle('hidden', !!p);
     $('minepanel').classList.toggle('hidden', !p);
+    $('createPanel').classList.toggle('hidden', !p);
     if (TV) return;
     // The lobbies are for everyone to see; your own games need a profile.
     const refresh = () => { loadHosted(); if (p) loadMine(); };
@@ -299,11 +300,24 @@
   }
 
   // ---- a new game on one phone ------------------------------------------------------------------------
-  function newLocal() {
+  // Three ways in: 'shared' (people pass the device around), 'bot' (you against the computer, with up to three
+  // computer players) and 'tv' (the TV's one button, where people and the computer can mix, as before).
+  const SHARED_HINT = 'Two to four players take turns on this device. Between turns the tiles are hidden, so you can pass it along without peeking.';
+  function localSetup(mode) {
+    S.localMode = mode;
+    const bot = mode === 'bot';
+    $('localTitle').textContent = bot ? 'Against the computer' : 'Who\'s playing?';
+    $('localHint').textContent = bot ? 'You play the computer on this device. Add a second computer player if you want a busier board.' : SHARED_HINT;
+    $('addPerson').classList.toggle('hidden', bot);
+    $('addBot').classList.toggle('hidden', mode === 'shared');
+    $('addBot').textContent = bot ? '🤖 Add another computer player' : '🤖 Add the computer';
+  }
+  function newLocal(mode) {
     show('newLocal');
     $('localMsg').textContent = '';
+    localSetup(mode);
     const p = me();
-    S.localPlayers = [{ name: p ? p.name : '' }, { bot: true }];
+    S.localPlayers = [{ name: p ? p.name : '' }, mode === 'shared' ? { name: '' } : { bot: true }];
     paintLocalPlayers();
     paintLocalDict();
   }
@@ -311,6 +325,8 @@
   function sameLocal(g) {
     show('newLocal');
     $('localMsg').textContent = '';
+    const people = g.players.filter(pl => !pl.bot).length;
+    localSetup(TV ? 'tv' : people === g.players.length ? 'shared' : people === 1 && !g.players[0].bot ? 'bot' : 'tv');
     S.localPlayers = g.players.map(pl => (pl.bot ? { bot: true } : { name: pl.name }));
     S.localDict = g.dictionary;
     paintLocalPlayers();
@@ -328,17 +344,19 @@
       } else {
         const input = document.createElement('input');
         input.maxLength = 16;
-        input.placeholder = `Player ${k + 1}'s name`;
+        const label = S.localMode === 'bot' ? 'Your name' : `Player ${k + 1}'s name`;
+        input.placeholder = label;
         input.value = p.name || '';
-        input.setAttribute('aria-label', `Player ${k + 1}'s name`);
+        input.setAttribute('aria-label', label);
         input.oninput = () => { p.name = input.value; };
         row.appendChild(input);
       }
       const x = document.createElement('button');
       x.className = 'ghost'; x.textContent = '✕'; x.title = 'Take this player out';
-      x.disabled = S.localPlayers.length <= 2;
+      // Against the computer, you stay and so does one computer player; otherwise at least two players stay.
+      x.disabled = S.localMode === 'bot' ? !p.bot || S.localPlayers.filter(q => q.bot).length <= 1 : S.localPlayers.length <= 2;
       x.onclick = () => { S.localPlayers.splice(k, 1); paintLocalPlayers(); };
-      row.appendChild(x);
+      if (!(S.localMode === 'bot' && !p.bot)) row.appendChild(x);
       box.appendChild(row);
     });
     $('addPerson').disabled = $('addBot').disabled = S.localPlayers.length >= 4;
@@ -957,7 +975,9 @@
   ArcadeProfile.arksId().ready.then(id => {
     if (id.on) $('noProfileHint').textContent = 'A game can last a few days, with each person taking their turn whenever they\'re free, so the arcade needs your ARKS ID. Pick your profile to start or to see your open games.';
   }).catch(() => {});
-  $('newLocalBtn').onclick = newLocal;
+  $('newSharedBtn').onclick = () => newLocal('shared');
+  $('newBotBtn').onclick = () => newLocal('bot');
+  $('newTvBtn').onclick = () => newLocal('tv');
   $('onlineGo').onclick = startOnline;
   $('onlineBack').onclick = home;
   $('localGo').onclick = startLocal;

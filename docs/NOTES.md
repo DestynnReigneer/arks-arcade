@@ -9,7 +9,7 @@ order they were clicked, and keep the rest pinned here.
 
 ## The maintainer's setup wording, Tabletop gone, Spin & Solve's Game mode (2026-11-22)
 
-Built on the setup-steps branch (PR #201), as its own PR into it.
+Started on the setup-steps branch (PR #201) and moved onto main once that merged.
 
 - **Wording:** the maintainer's approved lines are in, word for word: every game's suggest button is "💡 Suggest a
   theme or topic", every daily mode is "📅 Daily challenge" on its card or button and as its screen title (Rambler,
@@ -31,6 +31,18 @@ Built on the setup-steps branch (PR #201), as its own PR into it.
 - **The lobby password is gone for good:** `public/room-password.js`, `arcade/room-password.js`, the TV's made-up
   passwords, the rooms' `password`, and `locked` and `lobbyPassword` in snapshots and lobby lists. The `X-Adult-Pin`
   header and `adultPin` fields stay: they carry the ARKS ID adult pass, a name kept from the PIN days.
+- **Second round:** Words with Family's How to play no longer says it used to be Criss Cross (no screen says what
+  something used to be called). Tower Defense's Archer, Cannon and Tesla descriptions are the maintainer's, and a
+  picked tower's card shows its description on phones too, except the smallest sideways phones (360 tall), where
+  the page would scroll 32px (`@media (max-height: 370px)` in `towers.html`). Spin & Solve's turn timer paragraph
+  and Rambler's first README line are the maintainer's.
+- **Words with Family's home screen:** Your games holds only your games. Under it, a Multiplayer-Multiple devices
+  heading (Chess's) over Create a game lobby (its own panel, with a profile) or the card about everyone's own device
+  (without one), then List Hosted Games. The device panel has no heading or hint, just its games and two buttons:
+  🤝 Multiplayer-Shared device (two to four people, no computer) and 🤖 Against the computer (your name and one to
+  three computer players). Both open `#newLocal` set up by `localSetup(mode)`; the TV keeps its one Play on the TV
+  button (`#newTvBtn`, mode `tv`, people and computer mixed as before). Same players again picks the mode from the
+  finished game's seats.
 
 ## Setup in two steps on a phone: Know-It-All, Spin & Solve and Rambler (2026-11-20)
 

@@ -37,7 +37,7 @@ test('placing a first word in Words with Family', async ({ page }) => {
   await expect(logo).toBeVisible();
   expect(await logo.evaluate(img => img.naturalWidth)).toBeGreaterThan(0);
 
-  await page.locator('#newLocalBtn').click();
+  await page.locator('#newBotBtn').click();
   await page.locator('#localPlayers input').first().fill('Tester');
   await page.locator('#localGo').click();
   await expect(page.locator('#game')).toBeVisible();
@@ -74,7 +74,7 @@ test('moving and switching tiles you put down in Words with Family', async ({ pa
   await page.getByRole('button', { name: 'Play', exact: true }).click();
   const close = page.locator('.tut-x');
   if (await close.isVisible().catch(() => false)) await close.click();
-  await page.locator('#newLocalBtn').click();
+  await page.locator('#newBotBtn').click();
   await page.locator('#localPlayers input').first().fill('Tester');
   await page.locator('#localGo').click();
   await expect(page.locator('#rack .cc-tile')).toHaveCount(7);
@@ -137,7 +137,7 @@ test('Words with Family keeps its tiles and buttons high on a tall phone', async
   await page.getByRole('button', { name: 'Play', exact: true }).click();
   const close = page.locator('.tut-x');
   if (await close.isVisible().catch(() => false)) await close.click();
-  await page.locator('#newLocalBtn').click();
+  await page.locator('#newBotBtn').click();
   await page.locator('#localPlayers input').first().fill('Tester');
   await page.locator('#localGo').click();
   await expect(page.locator('#game')).toBeVisible();
@@ -150,4 +150,65 @@ test('Words with Family keeps its tiles and buttons high on a tall phone', async
   expect(board.width, 'the board nearly fills the width').toBeGreaterThan(412 - 12);
   expect(board.x + board.width, 'and stays on the screen').toBeLessThanOrEqual(412);
   expect(await page.locator('#actions .cc-key small').allTextContents()).toEqual(['Pass', 'Swap', 'Recall', 'Shuffle', 'Play']);
+});
+
+// The home screen: your games on their own, then the Multiplayer-Multiple devices heading
+// over the lobbies, then the two ways to play on one device, each with its own setup.
+test('Words with Family: Multiplayer-Shared device and Against the computer set up their own players', async ({ page }) => {
+  await quietFonts(page);
+  const problems = watchProblems(page);
+  await openPage(page, '/crisscross.html');
+  await page.getByRole('button', { name: /Play as a guest/ }).click();
+  await page.getByRole('button', { name: 'Play', exact: true }).click();
+  const close = page.locator('.tut-x');
+  if (await close.isVisible().catch(() => false)) await close.click();
+
+  // A guest: the card about everyone's own device, under the heading, with List Hosted Games.
+  await expect(page.locator('#home .mode-label')).toHaveText('Multiplayer-Multiple devices');
+  await expect(page.locator('#noProfile')).toBeVisible();
+  await expect(page.locator('#createPanel')).toBeHidden();
+  await expect(page.locator('#hostedPanel')).toBeVisible();
+  await expect(page.locator('#newSharedBtn')).toHaveText('🤝 Multiplayer-Shared device');
+  await expect(page.locator('#newBotBtn')).toHaveText('🤖 Against the computer');
+  await expect(page.locator('#newTvBtn')).toBeHidden();
+
+  // Multiplayer-Shared device: two people, + Add player, and no computer.
+  const rows = page.locator('#localPlayers .cc-local-row');
+  await page.locator('#newSharedBtn').click();
+  await expect(page.locator('#localTitle')).toHaveText('Who\'s playing?');
+  await expect(rows).toHaveCount(2);
+  await expect(page.locator('#localPlayers input')).toHaveCount(2);
+  await expect(page.locator('#localPlayers')).not.toContainText('The computer');
+  await expect(page.locator('#addPerson')).toBeVisible();
+  await expect(page.locator('#addBot')).toBeHidden();
+  await page.locator('#addPerson').click();
+  await page.locator('#addPerson').click();
+  await expect(rows).toHaveCount(4);
+  await expect(page.locator('#addPerson')).toBeDisabled();
+  await page.locator('#localBack').click();
+
+  // Against the computer: your name and the computer, up to three computer players.
+  await page.locator('#newBotBtn').click();
+  await expect(page.locator('#localTitle')).toHaveText('Against the computer');
+  await expect(page.locator('#localHint')).toHaveText('You play the computer on this device. Add a second computer player if you want a busier board.');
+  await expect(page.locator('#localPlayers input')).toHaveCount(1);
+  await expect(page.locator('#localPlayers input')).toHaveAttribute('placeholder', 'Your name');
+  await expect(page.locator('#localPlayers .cc-bot')).toHaveCount(1);
+  await expect(page.locator('#addPerson')).toBeHidden();
+  const addBot = page.locator('#addBot');
+  await expect(addBot).toHaveText('🤖 Add another computer player');
+  // The last computer player stays.
+  await expect(rows.nth(1).getByRole('button')).toBeDisabled();
+  await addBot.click();
+  await addBot.click();
+  await expect(page.locator('#localPlayers .cc-bot')).toHaveCount(3);
+  await expect(addBot).toBeDisabled();
+  await rows.nth(2).getByRole('button').click();
+  await rows.nth(1).getByRole('button').click();
+  await expect(page.locator('#localPlayers .cc-bot')).toHaveCount(1);
+  await expect(rows.nth(1).getByRole('button')).toBeDisabled();
+  await page.locator('#localPlayers input').fill('Kim');
+  await page.locator('#localGo').click();
+  await expect(page.locator('#game')).toBeVisible();
+  expect(problems, problems.join('\n')).toEqual([]);
 });

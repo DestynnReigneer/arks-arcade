@@ -66,7 +66,7 @@ test('Back in Chess: a game with no moves goes straight back to setup', async ({
 
 test('Back in Criss Cross steps back through its screens', async ({ page }) => {
   const problems = await intoGame(page, '/crisscross.html');
-  await page.locator('#newLocalBtn').click();
+  await page.locator('#newBotBtn').click();
   await expect(page.locator('#newLocal')).toBeVisible();
   await page.locator('.ah-back').click();
   await expect(page.locator('#home')).toBeVisible();

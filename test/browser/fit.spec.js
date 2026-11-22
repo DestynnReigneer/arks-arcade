@@ -47,7 +47,7 @@ const GAMES = [
   { name: 'Block Drop', path: '/blocks.html', start: [], board: '#canvas', need: ['#canvas'], touch: ['#pad'] },
   { name: 'Brick Breaker', path: '/bricks.html', start: [], board: '#canvas', need: ['#canvas'] },
   { name: 'Tower Defense', path: '/towers.html', start: ['#waveBtn'], board: '#canvas', cell: { cols: 10, min: 22 }, need: ['#stage', '#waveBtn', '#buildRow'] },
-  { name: 'Words with Family', path: '/crisscross.html', start: ['#newLocalBtn', { fill: '#localPlayers input', text: 'Tester' }, '#localGo'], board: '#board', need: ['#board', '#rack', '#playBtn'] },
+  { name: 'Words with Family', path: '/crisscross.html', start: ['#newBotBtn', { fill: '#localPlayers input', text: 'Tester' }, '#localGo'], board: '#board', need: ['#board', '#rack', '#playBtn'] },
   { name: 'Spin & Solve', path: '/spinsolve.html', start: ['?.steps-next', '#goBtn'], board: null, need: ['#puzzleBoard', '#spinBtn', '#vowelBtn', '#solveBtn'],
     setup: ['#levelList', '#packSelect', '#suggestBtn', '#modeSeg', '#roundSeg', '#timerSeg', '#goBtn'],
     steps: { one: ['#modeSeg', '#levelList', '#packSelect', '#suggestBtn', '.steps-next'], next: '.steps-next',
