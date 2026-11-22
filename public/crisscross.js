@@ -336,11 +336,17 @@
   function paintLocalPlayers() {
     const box = $('localPlayers');
     box.innerHTML = '';
+    // Named the way the game names them: "The computer" alone, Computer 1, Computer 2 and so on when there are more.
+    const bots = S.localPlayers.filter(q => q.bot).length;
+    let botNo = 0;
     S.localPlayers.forEach((p, k) => {
       const row = document.createElement('div');
       row.className = 'cc-local-row';
       if (p.bot) {
-        row.innerHTML = '<span class="cc-bot">🤖 The computer</span>';
+        const span = document.createElement('span');
+        span.className = 'cc-bot';
+        span.textContent = bots > 1 ? `🤖 Computer ${++botNo}` : '🤖 The computer';
+        row.appendChild(span);
       } else {
         const input = document.createElement('input');
         input.maxLength = 16;
@@ -353,10 +359,11 @@
       }
       const x = document.createElement('button');
       x.className = 'ghost'; x.textContent = '✕'; x.title = 'Take this player out';
-      // Against the computer, you stay and so does one computer player; otherwise at least two players stay.
-      x.disabled = S.localMode === 'bot' ? !p.bot || S.localPlayers.filter(q => q.bot).length <= 1 : S.localPlayers.length <= 2;
+      // Against the computer, you stay and so does one computer player (no ✕ on either); otherwise at least two
+      // players stay.
+      x.disabled = S.localMode !== 'bot' && S.localPlayers.length <= 2;
       x.onclick = () => { S.localPlayers.splice(k, 1); paintLocalPlayers(); };
-      if (!(S.localMode === 'bot' && !p.bot)) row.appendChild(x);
+      if (S.localMode !== 'bot' || (p.bot && bots > 1)) row.appendChild(x);
       box.appendChild(row);
     });
     $('addPerson').disabled = $('addBot').disabled = S.localPlayers.length >= 4;
@@ -967,6 +974,17 @@
       } catch { /* try again next time */ }
     }, 8000);
   }
+
+  // The home screen's bottom edge fades while there's more of it below the screen.
+  function paintMore() {
+    const more = $('moreBelow');
+    const below = document.documentElement.scrollHeight - (window.scrollY + window.innerHeight);
+    more.classList.toggle('on', !TV && !$('home').classList.contains('hidden') && below > 8);
+  }
+  window.addEventListener('scroll', paintMore, { passive: true });
+  window.addEventListener('resize', paintMore);
+  if (window.ResizeObserver) new ResizeObserver(paintMore).observe(document.body);
+  if (window.MutationObserver) new MutationObserver(paintMore).observe($('home'), { attributes: true, attributeFilter: ['class'], childList: true, subtree: true });
 
   // ---- buttons -----------------------------------------------------------------------------------------------------
   $('newOnlineBtn').onclick = newOnline;

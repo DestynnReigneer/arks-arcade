@@ -561,3 +561,53 @@ for (const [label, viewport, , covered = 0] of SIZES) {
     await ctx.close();
   });
 }
+
+// No button's words cut off on a narrow phone: Dare Devil's game lengths and Clueless Crosswords'
+// two rows of choices (the play-tester's check, 2026-11-22). Clueless's rows stay inside the width,
+// and Words with Family's two ways to play on one device can be reached by a guest.
+for (const viewport of [{ width: 360, height: 640 }, { width: 390, height: 844 }]) {
+  test(`nothing is cut off on a ${viewport.width}x${viewport.height} phone: Dare Devil's lengths, Clueless's choices, Words with Family's device buttons`, async ({ browser }, info) => {
+    test.skip(info.project.name !== 'phone', 'The sizes are set here, so one project runs them all.');
+    const cut = (page, sel) => page.evaluate(sel => [...document.querySelectorAll(sel)]
+      .filter(b => b.offsetParent && b.scrollWidth > b.clientWidth + 1).map(b => b.textContent.trim()), sel);
+    const guestIn = async page => {
+      const guest = page.getByRole('button', { name: /Play as a guest/ });
+      if (await guest.isVisible().catch(() => false)) {
+        await guest.click();
+        await page.getByRole('button', { name: 'Play', exact: true }).click();
+      }
+      const close = page.locator('.tut-x');
+      if (await close.isVisible().catch(() => false)) await close.click();
+    };
+
+    let { ctx, page } = await openAt(browser, '/daredevil.html', viewport, 0);
+    await guestIn(page);
+    expect(await cut(page, '#lengthSeg button')).toEqual([]);
+    await ctx.close();
+
+    ({ ctx, page } = await openAt(browser, '/clueless.html', viewport, 0));
+    await guestIn(page);
+    await expect(page.locator('#levelSeg button').first()).toBeVisible();
+    expect(await cut(page, '#levelSeg button, #modeSeg button')).toEqual([]);
+    const picks = await page.locator('.cl-picks').boundingBox();
+    expect(picks.x).toBeGreaterThanOrEqual(-1);
+    expect(picks.x + picks.width).toBeLessThanOrEqual(viewport.width + 1);
+    for (const seg of ['#levelSeg', '#modeSeg']) {
+      const last = await page.locator(`${seg} button`).last().boundingBox();
+      expect(last.x + last.width, seg).toBeLessThanOrEqual(viewport.width + 1);
+    }
+    await ctx.close();
+
+    ({ ctx, page } = await openAt(browser, '/crisscross.html', viewport, 0));
+    await guestIn(page);
+    for (const id of ['#newSharedBtn', '#newBotBtn']) {
+      const btn = page.locator(id);
+      await btn.scrollIntoViewIfNeeded();
+      await expect(btn).toBeInViewport();
+      expect(await cut(page, id), id).toEqual([]);
+    }
+    await page.locator('#newBotBtn').click();
+    await expect(page.locator('#newLocal')).toBeVisible();
+    await ctx.close();
+  });
+}

@@ -171,6 +171,8 @@ test('Words with Family: Multiplayer-Shared device and Against the computer set 
   await expect(page.locator('#newSharedBtn')).toHaveText('🤝 Multiplayer-Shared device');
   await expect(page.locator('#newBotBtn')).toHaveText('🤖 Against the computer');
   await expect(page.locator('#newTvBtn')).toBeHidden();
+  // No empty strip where this device's games would be listed.
+  await expect(page.locator('#localList')).toBeHidden();
 
   // Multiplayer-Shared device: two people, + Add player, and no computer.
   const rows = page.locator('#localPlayers .cc-local-row');
@@ -197,18 +199,20 @@ test('Words with Family: Multiplayer-Shared device and Against the computer set 
   await expect(page.locator('#addPerson')).toBeHidden();
   const addBot = page.locator('#addBot');
   await expect(addBot).toHaveText('🤖 Add another computer player');
-  // The last computer player stays.
-  await expect(rows.nth(1).getByRole('button')).toBeDisabled();
+  // The only computer player stays, so its row has no ✕ (and neither has yours).
+  await expect(page.locator('#localPlayers .cc-bot')).toHaveText('🤖 The computer');
+  await expect(rows.getByRole('button')).toHaveCount(0);
   await addBot.click();
   await addBot.click();
-  await expect(page.locator('#localPlayers .cc-bot')).toHaveCount(3);
+  // Several are numbered the way the game names them.
+  await expect(page.locator('#localPlayers .cc-bot')).toHaveText(['🤖 Computer 1', '🤖 Computer 2', '🤖 Computer 3']);
   await expect(addBot).toBeDisabled();
-  await rows.nth(2).getByRole('button').click();
-  await rows.nth(1).getByRole('button').click();
-  await expect(page.locator('#localPlayers .cc-bot')).toHaveCount(1);
-  await expect(rows.nth(1).getByRole('button')).toBeDisabled();
+  await rows.nth(3).getByRole('button').click();
+  await expect(page.locator('#localPlayers .cc-bot')).toHaveText(['🤖 Computer 1', '🤖 Computer 2']);
   await page.locator('#localPlayers input').fill('Kim');
   await page.locator('#localGo').click();
   await expect(page.locator('#game')).toBeVisible();
+  await expect(page.locator('#scoreStrip')).toContainText('Computer 1');
+  await expect(page.locator('#scoreStrip')).toContainText('Computer 2');
   expect(problems, problems.join('\n')).toEqual([]);
 });
