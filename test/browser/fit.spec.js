@@ -613,6 +613,24 @@ for (const [label, viewport] of SIDEWAYS) {
         return bad;
       }, chips);
       expect(out).toEqual([]);
+      if (mode === 'marathon') {
+        // A long run: with 30 more words found, the screen still ends on the phone and its words found scroll.
+        await page.evaluate(sel => {
+          const box = document.querySelector(sel);
+          const first = box.firstElementChild;
+          for (let i = 0; i < 30; i++) box.appendChild(first.cloneNode(true));
+        }, chips);
+        await page.waitForTimeout(200);
+        const long = await page.evaluate(sel => {
+          const s = document.querySelector('#marathonScreen').getBoundingClientRect();
+          const f = document.querySelector(sel).closest('.found');
+          const bad = [];
+          if (s.bottom > innerHeight + 1) bad.push(`the marathon screen ends at ${Math.round(s.bottom)} of ${innerHeight}`);
+          if (f.scrollHeight <= f.clientHeight) bad.push(`the words found don't scroll (${f.scrollHeight} in ${f.clientHeight})`);
+          return bad;
+        }, chips);
+        expect(long).toEqual([]);
+      }
       await ctx.close();
     });
   }

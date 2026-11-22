@@ -1617,7 +1617,9 @@ html.tv #joinQr { width: 220px !important; height: 220px !important; }
   html:not(.tv) body:has(#marathonScreen:not(.hidden)) > * { flex: none; }
   html:not(.tv) body:has(#marathonScreen:not(.hidden)) .fb-corner { display: none; }
   html:not(.tv) body:has(#marathonScreen:not(.hidden)) > header { max-width: none; width: var(--bar-w); padding: 4px 0; box-sizing: border-box; }
-  html:not(.tv) #marathonScreen:not(.hidden) {
+  /* body:not(.tv-screen) is here so this outranks the "> * { flex: none }" line above, as solo's does;
+     without it the screen grew past the bottom of the phone and the words found never scrolled. */
+  html:not(.tv) body:not(.tv-screen) #marathonScreen:not(.hidden) {
     flex: 1 1 auto; min-height: 0; max-width: none; width: var(--bar-w); box-sizing: border-box; padding: 8px 0;
     display: grid; grid-template-columns: minmax(var(--board), 0.9fr) minmax(0, 1fr) minmax(0, 1fr); column-gap: var(--gap);
     grid-template-rows: auto auto auto auto minmax(0, 1fr);
