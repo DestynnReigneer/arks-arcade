@@ -63,6 +63,16 @@
 /* A heading inside a row of buttons (#modeSeg) gets a line of its own. */
 .seg > .mode-label { flex: 0 0 100%; margin: 4px 2px 0; }
 .seg > .mode-label:first-child { margin-top: 0; }
+/* On a setup that fits the screen (.fit-setup), the headings share one row above the buttons,
+   each over its own buttons, so they cost one short line instead of two rows. */
+html:not(.tv) .fit-setup .seg:has(> .mode-label) { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px 6px; align-items: end; }
+html:not(.tv) .fit-setup .seg:has(> .mode-label) > .mode-label { margin: 0 2px; font-size: 10px; letter-spacing: .06em; line-height: 1.1; grid-row: 1; }
+html:not(.tv) .fit-setup .seg:has(> .mode-label) > .mode-label:first-child { grid-column: 1; }
+html:not(.tv) .fit-setup .seg:has(> .mode-label) > .mode-label:not(:first-child) { grid-column: 2 / 4; }
+html:not(.tv) .fit-setup .seg:has(> .mode-label) > button { grid-row: 2; align-self: stretch; min-width: 0; line-height: 1.15; }
+@media (max-height: 900px) {
+  html:not(.tv) .fit-setup .seg:has(> .mode-label) > button { padding: 4px 6px; }
+}
 .lb-section-label { margin: 14px 0 6px; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--dim); font-weight: 700; }
 .lb-rows { list-style: none; padding: 0; margin: 10px 0; display: grid; gap: 8px; }
 .lb-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--border);

@@ -96,3 +96,12 @@ body.tv-screen .log { display: none; }
    it doesn't scroll the card out of sight. */
 body.tv-screen #game:not(.hidden) { display: flex; flex-direction: column; }
 body.tv-screen #quitBtn { order: -1; align-self: flex-end; width: auto; margin: 0 0 8px; padding: 8px 18px; font-size: 14px; }
+/* The game lengths stay one row on a phone, and the level cards are as tight as on a
+   short screen, which leaves room for the Game mode headings. */
+html:not(.tv) .fit-setup #lengthSeg { flex-wrap: nowrap; }
+html:not(.tv) .fit-setup #lengthSeg button { flex: 1 1 0; min-width: 0; white-space: nowrap; }
+@media (max-height: 900px) {
+  html:not(.tv) .fit-setup .level { padding: 5px 8px; }
+  html:not(.tv) .fit-setup .level .l-blurb { line-height: 1.25; margin-top: 1px; }
+  html:not(.tv) .fit-setup .level .l-lock { margin-top: 2px; }
+}
