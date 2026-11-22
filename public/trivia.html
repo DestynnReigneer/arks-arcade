@@ -11,6 +11,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&display=swap">
 <link rel="stylesheet" href="arcade-ui.css">
+<link rel="stylesheet" href="setup-steps.css">
 <link rel="stylesheet" href="trivia.css">
 <link rel="stylesheet" href="lobby-ui.css">
 <link rel="stylesheet" href="tutorial.css">
@@ -40,7 +41,7 @@
 
 <!-- ============ setup ============ -->
 <section id="setup" class="fit-setup two-col">
-  <div class="panel">
+  <div class="panel" data-step="1">
     <h2>How spicy?</h2>
     <div class="levels" id="levelList"></div>
     <div id="adultOptions" class="hidden">
@@ -49,7 +50,7 @@
     </div>
   </div>
 
-  <div class="panel">
+  <div class="panel" data-step="2">
     <h2>What about?</h2>
     <p class="hint">Pick genres, or leave them all off for a mix of everything.</p>
     <div class="chips" id="genreChips"></div>
@@ -84,12 +85,12 @@
     <button class="ghost" id="suggestBtn" style="width:100%;margin-top:6px">💡 Suggest a topic</button>
   </div>
 
-  <div class="panel">
-    <h2>Who's playing?</h2>
+  <div class="panel" data-step="1" style="--step-order:-1">
+    <h2>Game mode</h2>
     <div class="seg" id="modeSeg">
       <button data-mode="solo" aria-pressed="true" class="no-tv">🙂 Solo</button>
       <button data-mode="local" aria-pressed="false" class="no-tv">📱 Multiplayer-Shared device</button>
-      <button data-mode="host" data-go="create" data-go-show="#goBtn" aria-pressed="false" class="no-tv"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:1.3em;height:1.3em;vertical-align:-0.28em;margin-right:4px"><circle cx="16" cy="7" r="3.2"/><path d="M10 18.5c0-3.4 2.6-5.8 6-5.8s6 2.4 6 5.8"/><circle cx="6.5" cy="10" r="2.6"/><path d="M2 20c0-2.8 1.9-4.8 4.5-4.8"/><circle cx="25.5" cy="10" r="2.6"/><path d="M30 20c0-2.8-1.9-4.8-4.5-4.8"/><path d="M11 30l7-7"/><path d="M18 23a4 4 0 0 1 5.3-5l-2.4 2.4.5 2.2 2.2.5 2.4-2.4a4 4 0 0 1-5 5.3"/></svg>Create a game lobby</button>
+      <button data-mode="host" data-go="create" data-go-show="#hostSetup" aria-pressed="false" class="no-tv"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:1.3em;height:1.3em;vertical-align:-0.28em;margin-right:4px"><circle cx="16" cy="7" r="3.2"/><path d="M10 18.5c0-3.4 2.6-5.8 6-5.8s6 2.4 6 5.8"/><circle cx="6.5" cy="10" r="2.6"/><path d="M2 20c0-2.8 1.9-4.8 4.5-4.8"/><circle cx="25.5" cy="10" r="2.6"/><path d="M30 20c0-2.8-1.9-4.8-4.5-4.8"/><path d="M11 30l7-7"/><path d="M18 23a4 4 0 0 1 5.3-5l-2.4 2.4.5 2.2 2.2.5 2.4-2.4a4 4 0 0 1-5 5.3"/></svg>Create a game lobby</button>
       <button data-mode="join" data-go="list" aria-pressed="false" class="no-tv">🔎 List Hosted Games</button>
       <button data-mode="tvphones" aria-pressed="false" class="tv-only">📱 Everyone on their own device</button>
       <button data-mode="tvpass" aria-pressed="false" class="tv-only">🔁 Pass one device around</button>
@@ -119,7 +120,7 @@
     <div class="msg" id="setupMsg"></div>
     <button class="primary big" id="goBtn">Let's play</button>
   </div>
-  <p class="credit" id="credit"></p>
+  <p class="credit" id="credit" data-step="2" style="--step-order:11"></p>
 </section>
 
 <!-- ============ lobby ============ -->
@@ -182,7 +183,7 @@
   <div class="turn-banner hidden" id="turnBanner"></div>
   <div class="ready-box hidden" id="readyBox">
     <h2 id="readyTitle"></h2>
-    <p class="hint" id="readyHint"></p>
+    <p class="hint" id="playReadyHint"></p>
     <button class="primary big" id="readyBtn" data-tv-start>I'm ready</button>
   </div>
   <div class="q-timer"><div id="qTimerFill"></div></div>
@@ -268,6 +269,7 @@
 <script src="lobby-ui.js"></script>
 <script src="longpress.js"></script>
 <script src="live.js"></script>
+<script src="setup-steps.js"></script>
 <script src="trivia.js"></script>
 <script src="banner.js" defer></script>
 </body>

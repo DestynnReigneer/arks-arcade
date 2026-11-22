@@ -9,7 +9,7 @@
 
 const { test, expect } = require('@playwright/test');
 const path = require('node:path');
-const { quietFonts, watchProblems, openPage } = require('./helpers');
+const { quietFonts, watchProblems, openPage, nextStep } = require('./helpers');
 const game = require(path.join(__dirname, '..', '..', 'scuffle', 'game.js'));
 
 const card = page => page.locator('.ew-card');
@@ -569,6 +569,7 @@ test('Know-It-All solo: a right answer saves by itself, and a game of none says 
   });
   const guest = await openAsGuest(page, '/trivia.html');
   const play = async right => {
+    await nextStep(page);
     await page.locator('#countSeg button').first().click();
     await page.locator('#goBtn').click();
     const answers = page.locator('#answers button:not([disabled])');
@@ -601,6 +602,7 @@ test('Spin & Solve: a solo game saves by itself, with High scores inside the win
   const problems = watchProblems(page);
   const guest = await openAsGuest(page, '/spinsolve.html');
   while (await page.locator('#nameList .name-row').count() > 1) await page.locator('#nameList .name-row:last-child button').click();
+  await nextStep(page);
   await page.locator('#goBtn').click();
   await expect(page.locator('#game')).toBeVisible();
   const run = () => page.evaluate(() => {

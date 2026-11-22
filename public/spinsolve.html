@@ -11,6 +11,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&display=swap">
 <link rel="stylesheet" href="arcade-ui.css">
+<link rel="stylesheet" href="setup-steps.css">
 <link rel="stylesheet" href="spinsolve.css">
 <link rel="stylesheet" href="tutorial.css">
 <link rel="stylesheet" href="adult-mode.css">
@@ -42,7 +43,7 @@
 
 <!-- ============ setup ============ -->
 <section id="setup" class="fit-setup two-col">
-  <div class="panel">
+  <div class="panel" data-step="1">
     <h2>How spicy?</h2>
     <div class="levels" id="levelList"></div>
     <label style="margin-top:14px">Puzzles
@@ -51,12 +52,15 @@
     <button class="ghost no-tv" id="suggestBtn" style="width:100%">💡 Suggest a theme</button>
   </div>
 
-  <div class="panel">
+  <div class="panel" style="--step-order:-1">
+    <div data-step="1">
     <h2>Who's playing?</h2>
     <p class="hint no-tv">One player plays solo for the 🏆 board. Two to four take turns on this device.</p>
     <p class="hint tv-only">One player plays solo for the 🏆 board. Two to four take turns with the remote: pass it to whoever's turn it is. Add everyone's names, or leave them as they are.</p>
     <div id="nameList"></div>
     <button class="ghost" id="addPlayerBtn">+ Add player</button>
+    </div>
+    <div data-step="2">
     <h2 style="margin-top:18px">How many rounds?</h2>
     <div class="seg" id="roundSeg">
       <button data-rounds="3" aria-pressed="true">3 rounds</button>
@@ -70,6 +74,7 @@
       <button data-secs="60" aria-pressed="false">60s</button>
       <button data-secs="90" aria-pressed="false">90s</button>
       <button data-secs="0" aria-pressed="false">Off</button>
+    </div>
     </div>
     <button class="primary big" id="goBtn">Let's play</button>
   </div>
@@ -210,6 +215,7 @@
 <script src="blip.js"></script>
 <script src="arcade-kit.js"></script>
 <script src="spin-hosts.js"></script>
+<script src="setup-steps.js"></script>
 <script src="spinsolve.js"></script>
 <script src="banner.js" defer></script>
 </body>

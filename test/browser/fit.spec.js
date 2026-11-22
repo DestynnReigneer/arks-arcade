@@ -19,7 +19,7 @@
 // that fits on some machines and not others starts with "skip: " and isn't run.
 
 const { test, expect } = require('@playwright/test');
-const { quietFonts, watchProblems, openPage } = require('./helpers');
+const { quietFonts, watchProblems, openPage, nextStep } = require('./helpers');
 
 const SIZES = [
   ['phone', { width: 390, height: 844 }, true],
@@ -31,12 +31,15 @@ const SIZES = [
   ['laptop', { width: 1366, height: 768 }, false]
 ];
 
-// start: what a person taps to get to the first move ({ fill, text } types into a box). need: what must be on the
+// start: what a person taps to get to the first move ({ fill, text } types into a box; a selector starting with
+// "?" is tapped only when it's showing, like Next on a phone's setup in steps). need: what must be on the
 // screen then (touch: only on a touch screen). board: the part that can't get tiny
 // (null for a game whose board is a wide strip, like Spin & Solve's puzzle).
 // cell: a board of squares to tap ({ cols, min }): on a touch screen each square is at least min pixels across.
 // setup: what has to be whole on the screen on the setup screen, before anything is tapped (every choice up to and
-// including Start), checked at the upright sizes.
+// including Start), checked at the upright sizes. steps: a setup that's two steps on a phone (setup-steps.js): what
+// has to be whole on the screen on step 1 (one), what's tapped to go on (next), and what on step 2 (two). On an
+// upright phone those are checked instead of `setup`, which a tablet and a laptop still get.
 const GAMES = [
   { name: 'Sudoku', path: '/sudoku.html', start: ['#coverBtn'], board: '#board, .sd-board', need: ['.sd-board', '#tools', '#pad'] },
   { name: 'Clueless Crosswords', path: '/clueless.html', start: ['#coverBtn'], board: '#grid', need: ['#clueBar', '#grid', '#tools'], touch: ['#keys'] },
@@ -45,14 +48,21 @@ const GAMES = [
   { name: 'Brick Breaker', path: '/bricks.html', start: [], board: '#canvas', need: ['#canvas'] },
   { name: 'Tower Defense', path: '/towers.html', start: ['#waveBtn'], board: '#canvas', cell: { cols: 10, min: 22 }, need: ['#stage', '#waveBtn', '#buildRow'] },
   { name: 'Words with Family', path: '/crisscross.html', start: ['#newLocalBtn', { fill: '#localPlayers input', text: 'Tester' }, '#localGo'], board: '#board', need: ['#board', '#rack', '#playBtn'] },
-  { name: 'Spin & Solve', path: '/spinsolve.html', start: ['#goBtn'], board: null, need: ['#puzzleBoard', '#spinBtn', '#vowelBtn', '#solveBtn'],
-    setup: ['#levelList', '#packSelect', '#suggestBtn', '#nameList', '#addPlayerBtn', '#roundSeg', '#timerSeg', '#goBtn'] },
+  { name: 'Spin & Solve', path: '/spinsolve.html', start: ['?.steps-next', '#goBtn'], board: null, need: ['#puzzleBoard', '#spinBtn', '#vowelBtn', '#solveBtn'],
+    setup: ['#levelList', '#packSelect', '#suggestBtn', '#nameList', '#addPlayerBtn', '#roundSeg', '#timerSeg', '#goBtn'],
+    steps: { one: ['#nameList', '#addPlayerBtn', '#levelList', '#packSelect', '#suggestBtn', '.steps-next'], next: '.steps-next',
+      two: ['#roundSeg', '#timerSeg', '.steps-back', '#goBtn'] } },
   { name: 'Chess', path: '/chess.html', start: ['#goBtn'], board: '#board', need: ['#board', '#statusLine', '#gameBtns'],
     setup: ['#modeSeg', '#levelSeg', '#colorSeg', '#goBtn'] },
-  { name: 'Know-It-All', path: '/trivia.html', start: ['#goBtn'], board: null, need: ['#qText', '#answers'],
-    setup: ['#levelList', '#genreChips', '#packSelect', '#diffSeg', '#countSeg', '#secsSeg', '#suggestBtn', '#modeSeg', '#goBtn'] },
-  { name: 'Rambler', path: '/rambler.html', start: ['#startBtn'], board: '#board', need: ['#board', '#traceBar', '#doneBtn'],
-    setup: ['#dailyCard', '#modeList', '#sizeSeg', '#durationSeg', '#difficultySeg', '#profileSeg', '#startBtn'] },
+  { name: 'Know-It-All', path: '/trivia.html', start: ['?.steps-next', '#goBtn'], board: null, need: ['#qText', '#answers'],
+    setup: ['#levelList', '#genreChips', '#packSelect', '#diffSeg', '#countSeg', '#secsSeg', '#suggestBtn', '#modeSeg', '#goBtn'],
+    steps: { one: ['#modeSeg', '#levelList', '.steps-next'], next: '.steps-next',
+      two: ['#genreChips', '#packSelect', '#diffSeg', '#countSeg', '#secsSeg', '#suggestBtn', '.steps-back', '#goBtn'] } },
+  // Rambler's first step is its ways to play, and tapping one goes on (there's no Next).
+  { name: 'Rambler', path: '/rambler.html', start: ['#modeList .mode.no-tv[data-mode="solo"]', '#startBtn'], board: '#board', need: ['#board', '#traceBar', '#doneBtn'],
+    setup: ['#dailyCard', '#modeList', '#sizeSeg', '#durationSeg', '#difficultySeg', '#profileSeg', '#startBtn'],
+    steps: { one: ['#dailyCard', '#modeList'], next: '#modeList .mode.no-tv[data-mode="solo"]',
+      two: ['#sizeSeg', '#durationSeg', '#difficultySeg', '#profileSeg', '.steps-back', '#startBtn'] } },
   { name: 'Dare Devil', path: '/daredevil.html', start: ['#goBtn'], board: '#deckBtn', need: ['#scoreStrip', '#deckBtn'],
     setup: ['#levelList', '#lengthSeg', '#modeSeg', '#nameList .name-row:last-child', '#addPlayerBtn', '#goBtn'] },
   { name: 'Uh-Oh: Part Deux', path: '/partdeux.html', start: ['#goBtn', '#passReady'], board: null, need: ['#drawPile', '#discard', '#hand', '#drawBtn'],
@@ -76,17 +86,6 @@ const KNOWN = {
   "Uh-Oh: Part Deux @ phone turned sideways": "the game doesn't have a sideways layout yet, so it scrolls and its top runs off the screen",
   "Uh-Oh: Part Deux @ small phone turned sideways": "the game doesn't have a sideways layout yet, so it scrolls and its top runs off the screen",
   "Uh-Oh: Part Deux @ laptop": "skip: fits on some machines and not others; on Windows the page scrolls a little below the hand",
-  // Setup screens (the second loop below). These three have more choices than an upright phone can show at once,
-  // even tightened, so they need a design call (fewer choices on screen, or choices in steps) before they can fit.
-  "Know-It-All's setup @ phone": "too many choices for a phone's height: Let's play is about 400px below the screen",
-  "Know-It-All's setup @ phone with the browser bars showing": "too many choices for a phone's height: Let's play is about 500px below the screen",
-  "Know-It-All's setup @ phone with Chrome's tab row": "too many choices for a phone's height: Let's play is about 470px below the screen",
-  "Spin & Solve's setup @ phone": "too many choices for a phone's height: Let's play is about 130px below the screen",
-  "Spin & Solve's setup @ phone with the browser bars showing": "too many choices for a phone's height: Let's play is about 280px below the screen",
-  "Spin & Solve's setup @ phone with Chrome's tab row": "too many choices for a phone's height: Let's play is about 240px below the screen",
-  "Rambler's setup @ phone": "too many choices for a phone's height: Slide to victory is about 540px below the screen",
-  "Rambler's setup @ phone with the browser bars showing": "too many choices for a phone's height: Slide to victory is about 730px below the screen",
-  "Rambler's setup @ phone with Chrome's tab row": "too many choices for a phone's height: Slide to victory is about 640px below the screen",
 };
 
 test.describe.configure({ mode: 'parallel' });
@@ -123,7 +122,10 @@ for (const game of GAMES) {
       const close = page.locator('.tut-x');
       if (await close.isVisible().catch(() => false)) await close.click();
       for (const s of game.start) {
-        if (typeof s === 'string') await page.locator(s).first().click();
+        if (typeof s === 'string' && s.startsWith('?')) {
+          const maybe = page.locator(s.slice(1)).first();
+          if (await maybe.isVisible().catch(() => false)) await maybe.click();
+        } else if (typeof s === 'string') await page.locator(s).first().click();
         else await page.locator(s.fill).first().fill(s.text);
       }
       await page.waitForTimeout(1000);
@@ -212,31 +214,50 @@ for (const game of GAMES.filter(g => g.setup)) {
       else if (known) test.fail(true, known);
       const { ctx, page } = await openAt(browser, game.path, viewport, covered, touch, touch && viewport.width < 900);
       await page.waitForTimeout(600);
-      const report = await page.evaluate(({ need, covered }) => {
-        const vw = innerWidth, vh = innerHeight - covered, out = [];
-        const bug = document.querySelector('.fb-bug');
-        const br = bug && getComputedStyle(bug).display !== 'none' && bug.getBoundingClientRect();
-        for (const sel of need) {
-          const el = document.querySelector(sel);
-          if (!el) { out.push(`${sel} isn't on the page`); continue; }
-          const r = el.getBoundingClientRect();
-          if (!r.width || !r.height) { out.push(`${sel} is hidden`); continue; }
-          if (r.top < -1 || r.left < -1 || r.bottom > vh + 1 || r.right > vw + 1) {
-            out.push(`${sel} runs off the screen (top ${Math.round(r.top)}, bottom ${Math.round(r.bottom)} of ${vh})`);
-            continue;
-          }
-          const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
-          if (hit && hit !== el && !el.contains(hit) && !hit.contains(el)) out.push(`${sel} is covered by ${hit.tagName.toLowerCase()}${hit.id ? '#' + hit.id : ''}`);
-          if (br && br.width && r.left < br.right && r.right > br.left && r.top < br.bottom && r.bottom > br.top) out.push(`the bug-report button sits on ${sel}`);
-        }
-        if (document.documentElement.scrollWidth > vw + 1) out.push(`the page scrolls sideways (${document.documentElement.scrollWidth} wide)`);
-        return out;
-      }, { need: game.setup, covered });
+      // An upright phone: the setup in two steps, each whole on the screen.
+      const steps = game.steps && viewport.width < 760 ? game.steps : null;
+      if (steps) {
+        const one = await setupReport(page, steps.one, covered);
+        await page.screenshot({ path: info.outputPath('setup-step1.png') });
+        await page.locator(steps.next).first().click();
+        await page.waitForTimeout(400);
+        const two = await setupReport(page, steps.two, covered);
+        await page.screenshot({ path: info.outputPath('setup-step2.png') });
+        expect([...one.map(x => `step 1: ${x}`), ...two.map(x => `step 2: ${x}`)], [...one, ...two].join('\n')).toEqual([]);
+        await ctx.close();
+        return;
+      }
+      const report = await setupReport(page, game.setup, covered);
       await page.screenshot({ path: info.outputPath('setup.png') });
       expect(report, report.join('\n')).toEqual([]);
       await ctx.close();
     });
   }
+}
+
+// What's wrong with a setup screen as it is now: each of `need` whole on the screen, not covered and clear of the
+// bug-report button, and nothing scrolling sideways.
+function setupReport(page, need, covered) {
+  return page.evaluate(({ need, covered }) => {
+    const vw = innerWidth, vh = innerHeight - covered, out = [];
+    const bug = document.querySelector('.fb-bug');
+    const br = bug && getComputedStyle(bug).display !== 'none' && bug.getBoundingClientRect();
+    for (const sel of need) {
+      const el = document.querySelector(sel);
+      if (!el) { out.push(`${sel} isn't on the page`); continue; }
+      const r = el.getBoundingClientRect();
+      if (!r.width || !r.height) { out.push(`${sel} is hidden`); continue; }
+      if (r.top < -1 || r.left < -1 || r.bottom > vh + 1 || r.right > vw + 1) {
+        out.push(`${sel} runs off the screen (top ${Math.round(r.top)}, bottom ${Math.round(r.bottom)} of ${vh})`);
+        continue;
+      }
+      const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+      if (hit && hit !== el && !el.contains(hit) && !hit.contains(el)) out.push(`${sel} is covered by ${hit.tagName.toLowerCase()}${hit.id ? '#' + hit.id : ''}`);
+      if (br && br.width && r.left < br.right && r.right > br.left && r.top < br.bottom && r.bottom > br.top) out.push(`the bug-report button sits on ${sel}`);
+    }
+    if (document.documentElement.scrollWidth > vw + 1) out.push(`the page scrolls sideways (${document.documentElement.scrollWidth} wide)`);
+    return out;
+  }, { need, covered });
 }
 
 const UPRIGHT_PHONES = SIZES.filter(s => s[2] && s[1].height > s[1].width && s[1].width < 600);
@@ -272,6 +293,7 @@ for (const [label, viewport, , covered = 0] of UPRIGHT_PHONES.filter(s => s[1].w
   test(`Rambler's 5x5 board fits a ${label}`, async ({ browser }, info) => {
     test.skip(info.project.name !== 'phone', 'The sizes are set here, so one project runs them all.');
     const { ctx, page } = await openAt(browser, '/rambler.html', viewport, covered);
+    await page.locator('#modeList .mode.no-tv[data-mode="solo"]').click();
     await page.locator('#sizeSeg button').nth(1).click();
     await page.locator('#startBtn').click();
     await expect(page.locator('#board .die')).toHaveCount(25);
@@ -317,6 +339,7 @@ test('Rambler keeps its board when the keyboard opens for typing a word', async 
   }
   const close = page.locator('.tut-x');
   if (await close.isVisible().catch(() => false)) await close.click();
+  await page.locator('#modeList .mode.no-tv[data-mode="solo"]').click();
   await page.locator('#startBtn').click();
   await expect(page.locator('#board .die')).toHaveCount(16);
   await page.locator('#typeInput').focus();
@@ -342,6 +365,7 @@ for (const [label, viewport, , covered = 0] of UPRIGHT_PHONES) {
   test(`Know-It-All's answers and Quit are clear of the bug-report button on a ${label}`, async ({ browser }, info) => {
     test.skip(info.project.name !== 'phone', 'The sizes are set here, so one project runs them all.');
     const { ctx, page } = await openAt(browser, '/trivia.html', viewport, covered);
+    await nextStep(page);
     await page.locator('#goBtn').click();
     await expect(page.locator('#answers button').first()).toBeVisible({ timeout: 10000 });
     const out = await page.evaluate(() => {

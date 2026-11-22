@@ -1225,13 +1225,20 @@
     $('roundView').classList.add('hidden');
     $('game').classList.add('hidden');
     $('setup').classList.remove('hidden');
+    steps.go(1);   // back to setup starts at the first step
   }
 
+  // On a phone the setup is two steps: Who's playing? and How spicy?, then the
+  // rounds and the turn timer with Let's play (setup-steps.js).
+  const steps = SetupSteps.create($('setup'), { start: $('goBtn') });
+  const onStep2 = () => steps.active && steps.step === 2 && !$('setup').classList.contains('hidden');
+
   // Back: from a game (or its results) to the setup screen, asking first
-  // while the game's going, and from there to the arcade.
+  // while the game's going, from the setup's second step to its first, and
+  // from there to the arcade.
   ArcadeBack.setup({
-    atMenu: () => !$('setup').classList.contains('hidden'),
-    back: backToSetup,
+    atMenu: () => !$('setup').classList.contains('hidden') && !onStep2(),
+    back: () => { if (onStep2()) steps.go(1); else backToSetup(); },
     busy: () => !$('game').classList.contains('hidden') && !ArcadeEnd.has
   });
 
