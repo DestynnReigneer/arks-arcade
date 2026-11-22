@@ -94,3 +94,42 @@
 /* The wobbling emoji used to poke past the card and flash a scrollbar */
 .overlay .callout-card { overflow: visible; max-height: none; }
 .callout-card .big-emoji { display: inline-block; }
+
+/* ---- a phone turned sideways (2026-11-22): the question with its four answers
+   under it on the left, as tall as the screen under the top bar allows, and the
+   game's name, whose turn it is, how the answer went, the scores, Next question and
+   Quit in a column beside it, so nothing scrolls. A long question scrolls inside
+   its card. On a shared device, "I'm ready" takes the question's place. */
+@media (orientation: landscape) and (max-height: 600px) {
+  html:not(.tv) body:has(#play:not(.hidden)) {
+    max-width: none; padding-left: 0; padding-right: 0; padding-bottom: 0;
+    --bar-w: calc(min(1100px, 100vw) - 32px); --gap: 18px; --title-h: 24px;
+    --main: calc((var(--bar-w) - var(--gap)) * 0.6); --tall: calc(var(--app-h, 100dvh) - 76px - 12px);
+  }
+  html:not(.tv) body:has(#play:not(.hidden)) > header.top {
+    position: absolute; top: 82px; height: var(--title-h); box-sizing: border-box; padding: 0 !important; margin: 0;
+    left: calc(50% - var(--bar-w) / 2 + var(--main) + var(--gap)); width: calc(var(--bar-w) - var(--main) - var(--gap));
+  }
+  html:not(.tv) #play:not(.hidden) {
+    display: grid; width: var(--bar-w); height: var(--tall); margin: 6px auto 6px;
+    grid-template-columns: var(--main) minmax(0, 1fr); column-gap: var(--gap);
+    grid-template-rows: var(--title-h) auto auto auto minmax(0, 1fr) auto auto;
+    grid-template-areas: "qtop ." "timer turn" "card status" "card scores" "card chat" "card next" "answers quit";
+  }
+  html:not(.tv) #play > .q-top { grid-area: qtop; }
+  html:not(.tv) #play > .q-timer { grid-area: timer; margin: 4px 0 8px; }
+  html:not(.tv) #play > .turn-banner { grid-area: turn; margin: 0 0 4px; font-size: 14px; }
+  html:not(.tv) #play > .q-card { grid-area: card; min-height: 0; padding: 12px 14px; overflow-y: auto; }
+  html:not(.tv) #play > .ready-box { grid-column: 1; grid-row: 3 / 8; align-self: center; margin: 0; }
+  html:not(.tv) #play .q-text { font-size: clamp(16px, 2.4vw, 21px); line-height: 1.3; }
+  html:not(.tv) #play .q-pic { font-size: clamp(28px, 6vh, 44px); }
+  html:not(.tv) #play > .answers { grid-area: answers; grid-template-columns: 1fr 1fr; gap: 8px; margin: 8px 0 0; }
+  html:not(.tv) #play > .answers button { padding: 9px 10px; font-size: 14px; min-height: 48px; }
+  html:not(.tv) #play > .status-line { grid-area: status; margin: 0 0 4px; }
+  html:not(.tv) #play > .score-strip { grid-area: scores; margin: 0 0 6px; max-height: 100%; overflow-y: auto; }
+  html:not(.tv) #play > #gameChat { grid-area: chat; margin: 0 !important; min-height: 0; overflow: hidden; }
+  html:not(.tv) #play > #gameChat .lb-lines { height: 50px; }
+  html:not(.tv) #play > .row-btns { grid-area: next; margin: 0; }
+  html:not(.tv) #play > .row-btns:not(:has(button:not(.hidden))) { display: none; }
+  html:not(.tv) #play > #quitBtn { grid-area: quit; align-self: end; margin: 8px 0 0; padding-top: 10px; padding-bottom: 10px; }
+}

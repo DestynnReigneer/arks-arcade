@@ -92,3 +92,8 @@ html:not(.tv) body[data-state="playing"] > .options { display: none; }
   /* The thumb buttons shrink with the screen, down to a size a thumb still hits. */
   html:not(.tv) body:has(> .stage):not(:has(#info)) .pad-btn { height: clamp(44px, calc((var(--app-h, 100dvh) - 260px) / 2), 62px); }
 }
+/* A phone turned sideways with the browser's address bar showing (about 334 tall): the gaps in the side column get
+   smaller, so the arrows still fit without scrolling. */
+@media (orientation: landscape) and (max-height: 350px) and (pointer: coarse) {
+  html:not(.tv) body:has(> .stage):not(:has(#info)) > :is(.hud, .options, .pad) { margin-bottom: 6px; }
+}
