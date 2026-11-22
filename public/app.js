@@ -61,6 +61,11 @@
   let puzzle = { category: null, clue: null, endsLike: null };
   let puzzleToken = 0;
   let gameOver = false;
+  // True while a guess's tiles are turning over. Keys wait until it's done: the
+  // guess is already counted, so an Enter pressed meanwhile used to send the same
+  // guess again on the next row and use up a try.
+  let revealing = false;
+  let revealTimer = null;
   let startTime = 0;
   let lastResult = null;
 
@@ -344,6 +349,8 @@
     hintsRemaining = MAX_HINTS;
     hintsUsed = 0;
     gameOver = false;
+    clearTimeout(revealTimer);
+    revealing = false;
     lastResult = null;
     startTime = Date.now();
     messageEl.textContent = "";
@@ -515,7 +522,9 @@
     const isWin = guess === answer;
     const isLastGuess = guesses.length === MAX_GUESSES;
 
-    setTimeout(() => {
+    revealing = true;
+    revealTimer = setTimeout(() => {
+      revealing = false;
       if (isWin) {
         endGame(true);
       } else if (isLastGuess) {
@@ -528,7 +537,7 @@
   }
 
   function handleKey(key) {
-    if (gameOver) return;
+    if (gameOver || revealing) return;
     const r = guesses.length;
     if (r >= MAX_GUESSES) return;
 

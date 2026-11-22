@@ -80,6 +80,19 @@ body {
 }
 .hidden { display: none !important; }
 
+/* A short message over the page (ArcadeKit.toast), the same look as the other games'
+   toast in arcade-ui.css. It sits above the profile card too, since a guest's Hint
+   shows it and opens that card at the same time, and taps go through it. */
+.toast {
+  position: fixed; left: 50%; bottom: max(24px, calc(100dvh - var(--app-h, 100dvh) + 24px)); transform: translateX(-50%);
+  z-index: 2147483001; pointer-events: none;
+  background: var(--card-2); border: 1px solid var(--accent); color: var(--text);
+  padding: 10px 16px; border-radius: 10px; font-size: 14px; max-width: calc(100vw - 32px); text-align: center;
+}
+@media (orientation: landscape) and (max-height: 600px) and (pointer: coarse) {
+  html:not(.tv) .toast { bottom: auto; top: 84px; }
+}
+
 /* ---- chrome ---- */
 header {
   width: 100%;

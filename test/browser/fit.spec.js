@@ -686,3 +686,35 @@ for (const [label, viewport] of SIDEWAYS) {
     await ctx.close();
   });
 }
+
+// The 3D cabinet games' setup screens on a phone turned sideways (a play-test found Start half off the screen): every
+// choice and Start whole on the screen, clear of the bug-report button, and nothing to scroll either way. Big Swing
+// and Bucket Drop have no setup. The 3D draws in software here, slowly, so they get triple time.
+const CAB_SETUPS = [['Launcher', '/launcher.html'], ['Train Station', '/train.html'], ['Racer', '/racer.html']];
+for (const [game, path] of CAB_SETUPS) {
+  for (const [label, viewport] of SIDEWAYS) {
+    test(`${game}'s setup fits a ${label} (${viewport.width}×${viewport.height})`, async ({ browser }, info) => {
+      test.skip(info.project.name !== 'phone', 'The sizes are set here, so one project runs them all.');
+      test.slow();
+      const { ctx, page } = await openAt(browser, path, viewport, 0);
+      await expect(page.locator('.cab-setup')).toBeVisible({ timeout: 20000 });
+      // Who's playing? can come up a moment after the page opens: play as a guest.
+      await page.waitForTimeout(800);
+      const guest = page.getByRole('button', { name: /Play as a guest/ });
+      if (await guest.isVisible().catch(() => false)) {
+        await guest.click();
+        await page.getByRole('button', { name: 'Play', exact: true }).click();
+        await page.waitForTimeout(400);
+      }
+      const segs = await page.locator('.cab-opts .cab-seg').count();
+      expect(segs).toBeGreaterThan(0);
+      const need = [...Array(segs)].map((_, i) => `.cab-opts .cab-seg:nth-child(${i + 1})`).concat('.cab-setup .cab-go');
+      const report = await setupReport(page, need, 0);
+      const tall = await page.evaluate(() => document.documentElement.scrollHeight);
+      if (tall > viewport.height + 1) report.push(`the page scrolls (${tall} tall of ${viewport.height})`);
+      await page.screenshot({ path: info.outputPath('cab-setup.png') });
+      expect(report, report.join('\n')).toEqual([]);
+      await ctx.close();
+    });
+  }
+}
