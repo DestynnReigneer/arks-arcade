@@ -1557,7 +1557,6 @@ html.tv #joinQr { width: 220px !important; height: 220px !important; }
     -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 18px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 18px), transparent); padding-bottom: 14px; }
   html:not(.tv) body:not(.tv-screen) #playScreen > .found:not(#playRoster)::-webkit-scrollbar { display: none; }
   html:not(.tv) body:not(.tv-screen) #playScreen > #playRoster { order: 5; margin-top: 10px !important; }
-  html:not(.tv) body:not(.tv-screen) #playScreen > #tabletopHint { order: 6; margin-top: 10px !important; }
 }
 /* A short screen (the browser's bars showing): Rambler's own header row, the clock and
    the rows under the board give up some room, so the board stays a good size. */

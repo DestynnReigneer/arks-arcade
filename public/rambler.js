@@ -33,7 +33,7 @@ const S = {
   boardId: null,
   board: null,
   minLength: 3,
-  players: [],          // [{ id, name }] for turns/tabletop
+  players: [],          // [{ id, name }] for Pass & Play (turns)
   submissions: [],      // [{ id, name, words: [] }]
   turnIndex: 0,
 
@@ -113,7 +113,7 @@ function mmss(ms) {
 function screen(name) {
   if (name !== 'results' && name !== 'maraResults' && window.ArcadeEnd) ArcadeEnd.clear();
   for (const id of ['setupScreen', 'profileScreen', 'dailyScreen', 'lobbyScreen', 'gateScreen',
-                    'playScreen', 'entryScreen', 'resultsScreen', 'marathonScreen',
+                    'playScreen', 'resultsScreen', 'marathonScreen',
                     'maraResultsScreen']) {
     $(id).classList.toggle('hidden', id !== `${name}Screen`);
   }
@@ -252,7 +252,7 @@ const TRACERS = {
     traceEl: () => $('traceBar'),
     tiles: () => S.board,
     cols: () => S.size,
-    enabled: () => S.mode !== 'tabletop' && !(S.room && S.room.isScreen),
+    enabled: () => !(S.room && S.room.isScreen),
     submit: w => submitWord(w)
   },
   maraBoard: {
@@ -419,19 +419,17 @@ function beginTurn() {
   renderFound();
 
   const alone = S.mode === 'solo' || S.mode === 'daily';
-  const tabletop = S.mode === 'tabletop';
   $('turnName').innerHTML = '';
-  if (!(alone || tabletop)) {
+  if (!alone) {
     const b = document.createElement('b');
     b.textContent = player.name;
     $('turnName').append(b, "'s turn");
   }
   $('playRoster').classList.add('hidden');   // single-device modes have no roster
-  $('typeRow').classList.toggle('hidden', tabletop);
-  $('traceBar').classList.toggle('hidden', tabletop);
-  $('foundChips').parentElement.classList.toggle('hidden', tabletop);
-  $('tabletopHint').classList.toggle('hidden', !tabletop);
-  $('doneBtn').textContent = tabletop ? 'Stop the clock' : "I'm done";
+  $('typeRow').classList.remove('hidden');
+  $('traceBar').classList.remove('hidden');
+  $('foundChips').parentElement.classList.remove('hidden');
+  $('doneBtn').textContent = "I'm done";
 
   screen('play');
   startClock(Date.now() + S.duration * 1000, endTurn);
@@ -439,18 +437,12 @@ function beginTurn() {
 
 function endTurn() {
   stopClock();
-  if (S.mode !== 'tabletop') {
-    S.submissions.push({
-      id: S.players[S.turnIndex].id,
-      name: S.players[S.turnIndex].name,
-      words: S.found.map(f => f.word)
-    });
-  }
+  S.submissions.push({
+    id: S.players[S.turnIndex].id,
+    name: S.players[S.turnIndex].name,
+    words: S.found.map(f => f.word)
+  });
 
-  if (S.mode === 'tabletop') {
-    S.turnIndex = 0;
-    return showEntry();
-  }
   S.turnIndex++;
   if (S.turnIndex < S.players.length) return showGate();
   finishSingleDevice();
@@ -463,33 +455,6 @@ function showGate() {
     ? "Everyone gets the same board. Don't peek before your turn."
     : `Same board as before. ${S.duration / 60 >= 1 ? '' : ''}Hand the device over.`;
   screen('gate');
-}
-
-function showEntry() {
-  const player = S.players[S.turnIndex];
-  $('entryName').textContent = player.name;
-  $('entryText').value = '';
-  say($('entryMsg'), '');
-  renderBoard($('entryBoard'), S.board, S.size, S.size);
-  $('entryNextBtn').textContent =
-    S.turnIndex === S.players.length - 1 ? 'Score the round' : 'Next player';
-  screen('entry');
-  $('entryText').focus();
-}
-
-function takeEntry() {
-  const words = $('entryText').value
-    .toUpperCase()
-    .split(/[^A-Z]+/)
-    .filter(Boolean);
-  S.submissions.push({
-    id: S.players[S.turnIndex].id,
-    name: S.players[S.turnIndex].name,
-    words
-  });
-  S.turnIndex++;
-  if (S.turnIndex < S.players.length) return showEntry();
-  finishSingleDevice();
 }
 
 async function finishSingleDevice() {
@@ -1490,7 +1455,6 @@ function applyRoomState(snap) {
       // The TV only shows the board: the words are traced on the phones.
       $('typeRow').classList.toggle('hidden', !!snap.isScreen);
       $('traceBar').classList.toggle('hidden', !!snap.isScreen);
-      $('tabletopHint').classList.add('hidden');
       $('doneBtn').textContent = "I'm done";
       $('playRosterTitle').textContent = snap.isScreen ? 'Words found so far' : 'Everyone else';
       screen('play');
@@ -1978,7 +1942,7 @@ function renderSetup() {
     b.setAttribute('aria-pressed', String(b.dataset.mode === S.mode));
   }
 
-  const needsRoster = S.mode === 'turns' || S.mode === 'tabletop';
+  const needsRoster = S.mode === 'turns';
   const marathon = S.mode === 'marathon';
   // List Hosted Games: the lobbies to pick from replace the game's own settings.
   const finding = S.mode === 'find';
@@ -2282,7 +2246,7 @@ async function saveToBoard(results) {
   if (!target || !results || results.boardSaved) throw new Error('This score is already on the board.');
   // In a pass-around game the winner may not be whoever owns this device, so
   // the score goes under the name they played under in the round.
-  const shared = S.mode === 'turns' || S.mode === 'tabletop';
+  const shared = S.mode === 'turns';
   const me = boardIdentity();
   const who = shared ? {} : me;
   if (!shared && S.mode !== 'room' && !me.profileId && !me.name) throw new Error(NO_BOARD_NAME);
@@ -2311,7 +2275,7 @@ function bind() {
     b.onclick = () => {
       S.mode = b.dataset.mode;
       say($('setupMsg'), '');
-      if ((S.mode === 'turns' || S.mode === 'tabletop') && S.players.length < 2) {
+      if (S.mode === 'turns' && S.players.length < 2) {
         S.players = defaultPlayers(2);
       }
       renderSetup();
@@ -2366,8 +2330,6 @@ function bind() {
     }
     endTurn();
   };
-
-  $('entryNextBtn').onclick = takeEntry;
 
   $('resultsScreen').addEventListener('click', e => {
     const el = e.target.closest('[data-word]');
@@ -2504,7 +2466,7 @@ const onStep2 = () => steps.active && steps.step === 2 && !$('setupScreen').clas
 ArcadeBack.setup({
   atMenu: () => !$('setupScreen').classList.contains('hidden') && !onStep2(),
   back: () => { if (onStep2()) steps.go(1); else leaveToSetup(); },
-  busy: () => ['playScreen', 'gateScreen', 'entryScreen'].some(id => !$(id).classList.contains('hidden')) ||
+  busy: () => ['playScreen', 'gateScreen'].some(id => !$(id).classList.contains('hidden')) ||
     (!$('marathonScreen').classList.contains('hidden') && !M.over)
 });
 

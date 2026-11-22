@@ -171,7 +171,7 @@ router.get('/config', (req, res) => {
   });
 });
 
-// ---- single-device rounds (solo, hotseat turns, tabletop) -------------------
+// ---- single-device rounds (solo, the daily, Pass & Play turns) -------------
 
 router.post('/board', boardLimiter, (req, res, next) => {
   try {
@@ -398,7 +398,7 @@ router.post('/leaderboard', leaderboardLimiter, (req, res, next) => {
       if (!entry.result) throw fail('That round has not been scored yet.', 409);
       result = entry.result;
       playerId = String(body.playerId || 'p0');
-      mode = ['solo', 'turns', 'tabletop'].includes(body.mode) ? body.mode : 'solo';
+      mode = ['solo', 'turns'].includes(body.mode) ? body.mode : 'solo';
       durationSec = Math.max(0, Math.min(3600, parseInt(body.durationSec, 10) || 0));
     }
 

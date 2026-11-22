@@ -111,13 +111,6 @@
           <span class="desc">One device, 2–8 players. Same board each turn, hand it on when your time is up.</span>
         </span>
       </button>
-      <button class="mode no-tv" data-mode="tabletop" aria-pressed="false">
-        <span class="emoji">📝</span>
-        <span class="body">
-          <span class="name">Tabletop</span>
-          <span class="desc">Real Boggle rules. One shared timer, everyone writes on paper, then type the lists in to score. Best with a drink in hand.</span>
-        </span>
-      </button>
     </div>
   </div>
   </div>
@@ -291,31 +284,10 @@
     <div class="roster" id="playRosterList" style="margin-bottom:0"></div>
   </div>
 
-  <div id="tabletopHint" class="panel hidden" style="margin-top:18px">
-    <h3>Everyone plays at once</h3>
-    <div class="sub">Write your words on paper. Nobody touches the device until the buzzer — then you'll each type your list in.</div>
-  </div>
-
   <div class="mara-actions" style="margin-top:18px">
     <button id="hintBtn" class="ghost-btn">💡 Hint</button>
     <button id="doneBtn" class="ghost-btn">I'm done</button>
   </div>
-</section>
-
-<!-- ============ TABLETOP WORD ENTRY ============ -->
-<section id="entryScreen" class="screen hidden">
-  <div class="result-head">
-    <div class="t">Type in the words for</div>
-    <div class="v" id="entryName">—</div>
-    <div class="s">One per line, or separated by spaces. Spelling counts.</div>
-  </div>
-  <div class="board-wrap" style="max-width:300px;margin-bottom:16px">
-    <div class="board" id="entryBoard"></div>
-  </div>
-  <textarea id="entryText" autocapitalize="characters" spellcheck="false"
-            placeholder="cat&#10;cater&#10;caterer"></textarea>
-  <div class="msg" id="entryMsg"></div>
-  <button id="entryNextBtn" class="primary-btn">Next player</button>
 </section>
 
 <!-- ============ MARATHON ============ -->

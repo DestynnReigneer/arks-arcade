@@ -45,7 +45,6 @@ window.ramblerTutorial = Tutorial.create('rambler', [
         <tr><td>🙂 Solo</td><td>You against the clock.</td></tr>
         <tr><td colspan="2" style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;opacity:0.7;padding-top:10px">📱 Multiplayer-Shared device</td></tr>
         <tr><td>🤝 Pass &amp; Play</td><td>One device, take turns on the same board.</td></tr>
-        <tr><td>📝 Tabletop</td><td>Everyone writes on paper, then types their lists in.</td></tr>
       </table>`
   },
   {

@@ -135,7 +135,7 @@ test('Rambler: tapping a way to play goes straight to step 2, and Back keeps it 
   await expect(screen).toHaveClass(/on-step-1/);
   expect(new URL(page.url()).pathname).toBe('/rambler.html');
 
-  // Today's Board still opens its own screen.
+  // The daily challenge still opens its own screen.
   await page.locator('#dailyCard').click();
   await expect(page.locator('#dailyScreen')).toBeVisible();
   expect(problems, problems.join('\n')).toEqual([]);

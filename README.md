@@ -24,10 +24,9 @@ A dice-and-grid word hunt against the clock. (Boggle-style — "Boggle" is a Has
 - Standard scoring (3–4 letters = 1, 5 = 2, 6 = 3, 7 = 5, 8+ = 11); 5x5 boards require four letters.
 - **Duplicate cancellation** — a word more than one player found scores nothing for anyone, which is the rule that makes hunting obscure words pay.
 - End-of-round reveal showing every word nobody found.
-- Four ways to play:
+- Three ways to play:
   - **Solo** — you against the clock.
   - **Pass & Play** — one device, 2–8 players, same board each turn.
-  - **Tabletop** — one shared timer, everyone writes on paper, then the lists get typed in for scoring. The device is just the buzzer and the scorekeeper.
   - **Multiplayer-Multiple devices** — everyone on their own device, on the same board with one timer. One person chooses **Create a game lobby**, and everyone else finds it in **List Hosted Games** (or in the home page's Lobbies list) and taps it to join. Nobody types a code. Live word counts (counts only — never the words).
 - Two dictionaries: a **Kids** list with the rude words removed, and an **Unfiltered** list with slang and profanity added on top. Separate leaderboards, so the two never share a scale.
 - **Difficulty** — Easy (three-letter words count, roomier timer, richer boards), Normal (the box rules), Hard (four letters minimum, less time, scores multiplied by 1.35).
@@ -56,7 +55,7 @@ Because of Marathon, boards are rectangular internally. Anything that takes a bo
 
 | Feature | Server | UI |
 |---|---|---|
-| Solo / Pass & Play / Tabletop / Multiplayer-Multiple devices | done | done |
+| Solo / Pass & Play / Multiplayer-Multiple devices | done | done |
 | Marathon | done | done |
 | Profiles, streaks, coins, milestones | done | done |
 | Hints | done | done |
