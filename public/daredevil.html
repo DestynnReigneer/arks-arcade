@@ -43,15 +43,17 @@
     <label class="toggle hidden" id="drinkRow"><input type="checkbox" id="drinkingOpt"> 🍺 <b>Drinking</b>: chicken out and you drink</label>
     <div class="hint" style="margin-top:12px">How long?</div>
     <div class="seg" id="lengthSeg">
-      <button data-v="quick" aria-pressed="false">⚡ Quick · 15</button>
-      <button data-v="standard" aria-pressed="true">🎲 Standard · 30</button>
-      <button data-v="long" aria-pressed="false">🌙 Long · 50</button>
+      <button data-v="quick" aria-pressed="false">⚡ Quick, 15 cards</button>
+      <button data-v="standard" aria-pressed="true">Standard, 30 cards</button>
+      <button data-v="long" aria-pressed="false">Long, 50 cards</button>
     </div>
   </div>
   <div class="panel">
-    <h2>How are you playing?</h2>
+    <h2>Game mode</h2>
     <div class="seg" id="modeSeg">
+      <div class="mode-label no-tv"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:1.3em;height:1.3em;vertical-align:-0.28em;margin-right:4px"><rect x="10" y="4" width="12" height="24" rx="2.5"/><path d="M14.5 24h3"/></svg>Multiplayer-Shared device</div>
       <button data-mode="local" aria-pressed="true" class="no-tv">📱 Multiplayer-Shared device</button>
+      <div class="mode-label no-tv"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:1.3em;height:1.3em;vertical-align:-0.28em;margin-right:4px"><rect x="3" y="6" width="11" height="22" rx="2.5"/><rect x="18" y="4" width="11" height="22" rx="2.5"/><path d="M7.5 24h2"/><path d="M22.5 22h2"/></svg>Multiplayer-Multiple devices</div>
       <button data-mode="host" data-go="create" aria-pressed="false" class="no-tv"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:1.3em;height:1.3em;vertical-align:-0.28em;margin-right:4px"><circle cx="16" cy="7" r="3.2"/><path d="M10 18.5c0-3.4 2.6-5.8 6-5.8s6 2.4 6 5.8"/><circle cx="6.5" cy="10" r="2.6"/><path d="M2 20c0-2.8 1.9-4.8 4.5-4.8"/><circle cx="25.5" cy="10" r="2.6"/><path d="M30 20c0-2.8-1.9-4.8-4.5-4.8"/><path d="M11 30l7-7"/><path d="M18 23a4 4 0 0 1 5.3-5l-2.4 2.4.5 2.2 2.2.5 2.4-2.4a4 4 0 0 1-5 5.3"/></svg>Create a game lobby</button>
       <button data-mode="join" data-go="list" aria-pressed="false" class="no-tv">🔎 List Hosted Games</button>
       <button data-mode="tvphones" aria-pressed="false" class="tv-only">📱 Everyone on their own device</button>
@@ -92,7 +94,7 @@
     <ul class="people" id="lobbyPlayers"></ul>
     <div id="seatBox" class="hidden">
       <p class="hint">Passing this device around? Add everyone who'll share it.</p>
-      <label>Another player on this device<input id="seatName" maxlength="16" placeholder="e.g. Jordan"></label>
+      <label>Add a player on this device<input id="seatName" maxlength="16" placeholder="e.g. Jordan"></label>
       <button class="ghost" id="seatAdd" style="width:100%;margin-bottom:10px">+ Add player</button>
     </div>
     <div id="hostControls" class="hidden">

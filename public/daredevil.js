@@ -90,7 +90,7 @@
 
   function setMode(mode) {
     S.mode = mode;
-    for (const b of $('modeSeg').children) b.setAttribute('aria-pressed', String(b.dataset.mode === mode));
+    for (const b of $('modeSeg').querySelectorAll('[data-mode]')) b.setAttribute('aria-pressed', String(b.dataset.mode === mode));
     // The remote plays for everyone on the TV: the same list of names as sharing a phone.
     const panel = mode === 'tvremote' ? 'local' : mode;
     for (const m of ['local', 'host', 'join', 'tvphones', 'tvpass']) $(`${m}Setup`).classList.toggle('hidden', m !== panel);
@@ -460,7 +460,7 @@
   });
 
   // ---- wiring -------------------------------------------------------------------------------
-  for (const b of $('modeSeg').children) b.onclick = () => setMode(b.dataset.mode);
+  for (const b of $('modeSeg').querySelectorAll('[data-mode]')) b.onclick = () => setMode(b.dataset.mode);
   for (const b of $('lengthSeg').children) b.onclick = () => { S.length = b.dataset.v; for (const x of $('lengthSeg').children) x.setAttribute('aria-pressed', String(x === b)); };
   // A new name can push Start below the screen on a phone; bring it back into view,
   // above anything that covers the bottom of the page (Chrome's row of tabs).

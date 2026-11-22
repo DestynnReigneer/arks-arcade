@@ -1,11 +1,36 @@
 # Status and to-dos
 
-Last updated 2026-11-20. Update this file whenever a piece of work lands or
+Last updated 2026-11-22. Update this file whenever a piece of work lands or
 a plan changes, so the next session can pick up from here. When the
 maintainer says "I'm back", start from "Last session" below, then show the
 to-do list as checkboxes (the rule is in the maintainer's global CLAUDE.md
 and `arks-internal/conventions/sessions.md`): do the checked items in the
 order they were clicked, and keep the rest pinned here.
+
+## The maintainer's setup wording, Tabletop gone, Spin & Solve's Game mode (2026-11-22)
+
+Built on the setup-steps branch (PR #201), as its own PR into it.
+
+- **Wording:** the maintainer's approved lines are in, word for word: every game's suggest button is "💡 Suggest a
+  theme or topic", every daily mode is "📅 Daily challenge" on its card or button and as its screen title (Rambler,
+  Shuffle Scuffle, Clueless Crosswords; code names, API paths and board keys are unchanged), Rambler's daily, Marathon
+  and lobby lines, its How to play scoring rule and "someone else found it too" on a canceled word, Chess's "Play as",
+  "Your game's settings" and "Against the computer", Dare Devil's deck card, game lengths and How to play line,
+  Know-It-All's "Show the QR code on the TV", "Add a player on this device", Words with Family's "+ Add player",
+  Clueless Crosswords' "🔀 New crossword", the Racer's touch setting and Wordless's "🏆 High scores", plus the README.
+- **Game mode headings:** Dare Devil and Uh-Oh: Part Deux say Game mode, with a Multiplayer-Shared device heading over
+  the one-device choice and a Multiplayer-Multiple devices heading over Create a game lobby and List Hosted Games
+  (Chess's `.mode-label` and icons; `.seg > .mode-label` in `lobby-ui.css` gives a heading inside a row of buttons a
+  line of its own). Shuffle Scuffle says Game mode, with Solo over the daily and free play and Multiplayer-Multiple
+  devices over the lobby buttons. The pages that loop over `#modeSeg` now pick only `[data-mode]` buttons, so a tap on
+  a heading does nothing (Chess's tapping its heading used to unpick every mode).
+- **Rambler's Tabletop is gone**, client and server (the board mode `tabletop` is refused like any unknown mode and
+  saved as solo). Pass & Play is the only choice under Multiplayer-Shared device.
+- **Spin & Solve's setup has a Game mode:** 🙂 Solo (no names list) or Multiplayer-Shared device (two to four names,
+  never fewer than two). Solo is picked first. The game is unchanged; Solo sends only the first name.
+- **The lobby password is gone for good:** `public/room-password.js`, `arcade/room-password.js`, the TV's made-up
+  passwords, the rooms' `password`, and `locked` and `lobbyPassword` in snapshots and lobby lists. The `X-Adult-Pin`
+  header and `adultPin` fields stay: they carry the ARKS ID adult pass, a name kept from the PIN days.
 
 ## Setup in two steps on a phone: Know-It-All, Spin & Solve and Rambler (2026-11-20)
 
@@ -28,7 +53,7 @@ it waits for the maintainer before it's merged.
   a game lobby and List Hosted Games go to step 2 too (Your name, or the list of lobbies), and Today's Board opens its
   own screen as before.
 - **Rambler's list, the maintainer's order:** Today's Board, Create a game lobby, List Hosted Games, Marathon, Solo,
-  then a **Multiplayer-Shared device** heading over Pass & Play and Tabletop. "How are you playing?" and the
+  then a **Multiplayer-Shared device** heading over Pass & Play (Tabletop was removed on 2026-11-22). "How are you playing?" and the
   Multiplayer-Multiple devices heading are gone. How to play's Ways to play table follows the same order.
 - **Tightened to fit:** the rows of choices stay one row on a phone in steps (as in two columns), and on a short
   screen the labels, the drop-down, Suggest a topic or theme and the headings give up a few pixels. Rambler's steps

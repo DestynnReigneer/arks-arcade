@@ -60,6 +60,9 @@
 .mode-card b { display: block; font-size: 17px; }
 .mode-card small { display: block; color: var(--muted); font-size: 14px; line-height: 1.3; margin-top: 2px; }
 .mode-label { margin: 10px 2px 0; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--dim); font-weight: 700; }
+/* A heading inside a row of buttons (#modeSeg) gets a line of its own. */
+.seg > .mode-label { flex: 0 0 100%; margin: 4px 2px 0; }
+.seg > .mode-label:first-child { margin-top: 0; }
 .lb-section-label { margin: 14px 0 6px; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--dim); font-weight: 700; }
 .lb-rows { list-style: none; padding: 0; margin: 10px 0; display: grid; gap: 8px; }
 .lb-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--border);

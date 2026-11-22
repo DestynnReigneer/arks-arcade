@@ -17,7 +17,7 @@
   const TV = !!(window.ArcadeTV && ArcadeTV.on);
   // [id, name, the shorter name a phone shows]
   const LEVELS = [['mini', 'Family mini · 5×5', '👪 Mini 5×5'], ['big', 'Big · 7×7', '🧠 Big 7×7']];
-  const MODES = [['daily', '📅 Today\'s puzzle', '📅 Today'], ['free', '🎲 Free play', '🎲 Free play']];
+  const MODES = [['daily', '📅 Daily challenge', '📅 Daily challenge'], ['free', '🎲 Free play', '🎲 Free play']];
   const LABEL = { mini: 'Family mini', big: 'Big' };
   const store = (k, v) => { try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch { /* private mode */ } };
   const recall = (k, d = null) => { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch { return d; } };
@@ -382,13 +382,13 @@
     }
     if (ticket !== opening) return;
     if (md === 'free') {
-      cover(`Free play: ${LABEL[lv]}`, 'A random crossword at this level, just for fun. Free play times don\'t go on the board, because everyone gets a different one. Once it\'s up, New board picks another one until you type your first letter.', 'Start', begin);
+      cover(`Free play: ${LABEL[lv]}`, 'A random crossword at this level, just for fun. Free play times don\'t go on the board, because everyone gets a different one. Once it\'s up, New crossword picks another one until you type your first letter.', 'Start', begin);
       return;
     }
     const blurb = lv === 'mini'
       ? 'A quick 5 by 5 crossword with family-friendly clues. Everyone gets the same one today, so you can race each other.'
       : 'A bigger 7 by 7 crossword with trickier clues. Everyone gets the same one today, so you can race each other.';
-    cover(`Today's ${LABEL[lv]}`, `${blurb} It stays the same all day; for a different one, pick Free play. The clock starts when you tap Start, and you can pause it whenever you need to.`, 'Start', begin);
+    cover(`📅 Daily challenge: ${LABEL[lv]}`, `${blurb} It stays the same all day; for a different one, pick Free play. The clock starts when you tap Start, and you can pause it whenever you need to.`, 'Start', begin);
   }
 
   // Free play's New board: drop the crossword you haven't touched yet and
@@ -580,7 +580,7 @@
         return { rank: r.dayRank, where: `in ${LABEL[lv]} for today`, id: r.id };
       },
       noSave: run.saved ? 'Your time is on the board.'
-        : free ? 'Free play times don\'t go on the board, because everyone gets a different crossword. Today\'s puzzle is the one to race on.'
+        : free ? 'Free play times don\'t go on the board, because everyone gets a different crossword. The daily challenge is the one to race on.'
         : "Just for fun, this try won't be scored",
       scores: timesBoard(lv),
       // Free play goes again with a new crossword; the daily one is once a day, so the other level is the way on.
@@ -746,8 +746,8 @@
     },
     {
       emoji: '🎲', title: 'Free play',
-      html: `<p>Want more? Pick <b>🎲 Free play</b> at the top for a random crossword at either level. Today's puzzle stays the same all day, but free play gives you a different one every time.</p>
-        <p>Don't like the look of it? Tap <b>🔀 New board</b> for another, as often as you like, until you type your first letter. Free play times don't go on the board, because everyone gets a different crossword.</p>`
+      html: `<p>Want more? Pick <b>🎲 Free play</b> at the top for a random crossword at either level. The daily challenge stays the same all day, but free play gives you a different one every time.</p>
+        <p>Don't like the look of it? Tap <b>🔀 New crossword</b> for another, as often as you like, until you type your first letter. Free play times don't go on the board, because everyone gets a different crossword.</p>`
     },
     {
       emoji: '👆', title: 'Filling it in',

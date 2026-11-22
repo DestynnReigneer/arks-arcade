@@ -136,7 +136,7 @@
     const panel = mode === 'tvremote' ? 'local' : mode;
     for (const m of ['solo', 'local', 'host', 'join', 'tvphones', 'tvpass']) $(`${m}Setup`).classList.toggle('hidden', m !== panel);
     $('goBtn').textContent = mode === 'host' ? 'Create lobby'
-      : mode === 'tvphones' || mode === 'tvpass' ? 'Show the code on the TV' : 'Let\'s play';
+      : mode === 'tvphones' || mode === 'tvpass' ? 'Show the QR code on the TV' : 'Let\'s play';
     // List Hosted Games: the lobbies to pick from replace the game's own settings.
     const finding = mode === 'join';
     for (const id of ['levelList', 'genreChips']) $(id).closest('.panel').classList.toggle('hidden', finding);
@@ -741,7 +741,7 @@
         <tr><td>📱 Multiplayer-Shared device</td><td>Take turns; everyone gets their own questions.</td></tr>
         <tr><td>📱📱 Multiplayer-Multiple devices</td><td>Players use their own devices. The quickest to answer correctly, receives the highest score. Join from 🔎 List Hosted Games.</td></tr>
       </table>` },
-    { emoji: '🎚️', title: 'Pick what you like', html: `<p>Choose <b>genres</b> (or none for a mix), a <b>difficulty</b>, how many questions, and how long to answer.</p><p>Got an idea for a topic? Tap <b>💡 Suggest a topic</b>.</p>` },
+    { emoji: '🎚️', title: 'Pick what you like', html: `<p>Choose <b>genres</b> (or none for a mix), a <b>difficulty</b>, how many questions, and how long to answer.</p><p>Got an idea for a topic? Tap <b>💡 Suggest a theme or topic</b>.</p>` },
     { emoji: '🔞', title: 'For adults', html: `<p><b>Cheeky</b>, <b>Spicy</b> and <b>Filthy</b> get spicier as you go.</p><p>🍺 <b>Drinking</b>: wrong answers drink, three in a row gives drinks, last place finishes theirs.</p><p>💋 <b>Couples dares</b>: miss a question, do a dare. The heat matches the level.</p><div class="tut-tip">Tap <b>?</b> at the top any time to see this again.</div>` }
   ]);
 

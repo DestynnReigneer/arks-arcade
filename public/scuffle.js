@@ -120,7 +120,7 @@
     daily.classList.toggle('faded', done);
     if (done) daily.setAttribute('aria-disabled', 'true'); else { daily.removeAttribute('aria-disabled'); daily.classList.remove('tip-on'); }
     $('dailyTip').textContent = done ? `You've played today's ${LIST[S.dict]} daily. Come back tomorrow for a new one.` : '';
-    for (const b of $('modeSeg').children) b.setAttribute('aria-pressed', String(b.dataset.mode === S.mode));
+    for (const b of $('modeSeg').querySelectorAll('[data-mode]')) b.setAttribute('aria-pressed', String(b.dataset.mode === S.mode));
     $('modeHint').textContent = S.mode === 'daily'
       ? `${HINTS.daily} The ${LIST[S.dict]} daily has its own letters and its own board; ${S.dict === 'adult' ? 'family words' : 'the unfiltered list'} has a separate one.`
       : HINTS[S.mode];
@@ -855,7 +855,7 @@
     {
       emoji: '📅', title: 'Daily or free play',
       html: `<table>
-          <tr><td>📅 Daily</td><td>Four rounds of 75 seconds, with letters that are the same for everybody today. There are two: one for <b>family words</b> and one for the <b>unfiltered</b> list, each with its own letters and its own 🏆 board. Pick the list under Which words count. Your first go at each can go on its board. New letters arrive at midnight.</td></tr>
+          <tr><td>📅 Daily challenge</td><td>Four rounds of 75 seconds, with letters that are the same for everybody today. There are two: one for <b>family words</b> and one for the <b>unfiltered</b> list, each with its own letters and its own 🏆 board. Pick the list under Which words count. Your first go at each can go on its board. New letters arrive at midnight.</td></tr>
           <tr><td>✔️ Played it?</td><td>Once you've played today's daily for a list, its button fades (tap or point at it to see why) and free play is picked for you. Come back tomorrow for a new one.</td></tr>
           <tr><td>🎲 Free play</td><td>New letters every game. Pick how many rounds and how long. These scores don't go on the board.</td></tr>
         </table>`
@@ -873,7 +873,7 @@
   ]);
 
   // ---- wiring -------------------------------------------------------------------------------
-  for (const b of $('modeSeg').children) {
+  for (const b of $('modeSeg').querySelectorAll('[data-mode]')) {
     b.onclick = () => {
       // A daily you've already played only says why it's faded.
       if (b.dataset.mode === 'daily' && dailyDone(S.dict)) {

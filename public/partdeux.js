@@ -106,7 +106,7 @@
 
   function setMode(mode) {
     S.mode = mode;
-    for (const b of $('modeSeg').children) b.setAttribute('aria-pressed', String(b.dataset.mode === mode));
+    for (const b of $('modeSeg').querySelectorAll('[data-mode]')) b.setAttribute('aria-pressed', String(b.dataset.mode === mode));
     for (const m of ['local', 'host', 'join', 'tvphones', 'tvpass']) $(`${m}Setup`).classList.toggle('hidden', m !== mode);
     $('goBtn').textContent = mode === 'host' ? 'Create lobby' : mode === 'join' ? 'Join the game'
       : mode.startsWith('tv') ? 'Show the code on the TV' : 'Deal \'em';
@@ -633,7 +633,7 @@
 
   // ---- wiring ---------------------------------------------------------------------------------
 
-  for (const b of $('modeSeg').children) b.onclick = () => setMode(b.dataset.mode);
+  for (const b of $('modeSeg').querySelectorAll('[data-mode]')) b.onclick = () => setMode(b.dataset.mode);
   // A new name can push Start below the screen on a phone; bring it back into view,
   // above anything that covers the bottom of the page (Chrome's row of tabs).
   function showStart() {

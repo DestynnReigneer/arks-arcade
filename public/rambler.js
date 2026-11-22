@@ -518,7 +518,7 @@ function renderDailyCard() {
   const card = $('dailyCard');
   const d = S.daily;
   if (!d) {
-    $('dcSub').textContent = 'One board. Everyone in the house. Four minutes.';
+    $('dcSub').textContent = 'One board a day for the whole house, with four minutes on the clock.';
     $('dcRight').textContent = '';
     return;
   }
@@ -540,7 +540,7 @@ function renderDailyCard() {
   } else {
     $('dcSub').textContent = standings.length
       ? `${standings.length} ${standings.length === 1 ? 'person has' : 'people have'} played it. You haven't.`
-      : 'One board. Everyone in the house. Four minutes.';
+      : 'One board a day for the whole house, with four minutes on the clock.';
     $('dcRight').textContent = '›';
   }
 }
@@ -1595,7 +1595,7 @@ function showResults(results) {
     for (const w of r.words) {
       const line = document.createElement('div');
       line.className = `word-line${!w.valid ? ' bad' : w.canceled ? ' dead' : ''}`;
-      const label = !w.valid ? w.reason : w.canceled ? 'everyone found it' : '';
+      const label = !w.valid ? w.reason : w.canceled ? 'someone else found it too' : '';
       line.innerHTML = `<span class="w"></span><span class="p${w.points ? '' : ' zero'}"></span>`;
       line.querySelector('.w').textContent = w.word;
       line.querySelector('.p').textContent = w.points ? `+${w.points}` : label;
