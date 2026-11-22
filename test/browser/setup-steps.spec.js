@@ -80,14 +80,25 @@ test('Know-It-All: Next and Back keep the choices, and the top bar\'s Back goes 
   await ctx.close();
 });
 
-test('Spin & Solve: Next and Back keep the players, the level and the rounds', async ({ browser }, info) => {
+test('Spin & Solve: Game mode, then Next and Back keep the players, the level and the rounds', async ({ browser }, info) => {
   test.skip(info.project.name !== 'phone', 'The size is set here.');
   const { ctx, page, problems } = await open(browser, '/spinsolve.html');
-  await expect(page.locator('#nameList')).toBeVisible();
+  // Step 1 is Game mode. Solo is picked first and has no names to fill in.
+  await expect(page.locator('#setup .panel h2').filter({ hasText: 'Game mode' })).toBeVisible();
+  await expect(pressed(page, '#modeSeg')).toHaveAttribute('data-mode', 'solo');
+  await expect(page.locator('#nameList')).toBeHidden();
   await expect(page.locator('#roundSeg')).toBeHidden();
+  // Multiplayer-Shared device shows two to four names, and never fewer than two.
+  await page.locator('#modeSeg [data-mode="local"]').click();
+  await expect(page.locator('#nameList')).toBeVisible();
   const names = page.locator('#nameList .name-row');
-  const before = await names.count();
-  if (before < 4) await page.locator('#addPlayerBtn').click();
+  await expect(names).toHaveCount(2);
+  await expect(names.first().locator('button')).toBeHidden();
+  await page.locator('#addPlayerBtn').click();
+  await page.locator('#addPlayerBtn').click();
+  await expect(names).toHaveCount(4);
+  await expect(page.locator('#addPlayerBtn')).toBeHidden();
+  await names.last().locator('button').click();
   const count = await names.count();
   await names.first().locator('input').fill('Kim');
   await page.locator('.steps-next').click();
@@ -102,6 +113,9 @@ test('Spin & Solve: Next and Back keep the players, the level and the rounds', a
   await expect(pressed(page, '#timerSeg')).toHaveAttribute('data-secs', '0');
   await page.goBack();
   await expect(page.locator('#nameList')).toBeVisible();
+  // Back to Solo hides the names again.
+  await page.locator('#modeSeg [data-mode="solo"]').click();
+  await expect(page.locator('#nameList')).toBeHidden();
   expect(problems, problems.join('\n')).toEqual([]);
   await ctx.close();
 });

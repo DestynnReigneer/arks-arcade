@@ -54,11 +54,18 @@
 
   <div class="panel" style="--step-order:-1">
     <div data-step="1">
-    <h2>Who's playing?</h2>
-    <p class="hint no-tv">One player plays solo for the 🏆 board. Two to four take turns on this device.</p>
-    <p class="hint tv-only">One player plays solo for the 🏆 board. Two to four take turns with the remote: pass it to whoever's turn it is. Add everyone's names, or leave them as they are.</p>
-    <div id="nameList"></div>
-    <button class="ghost" id="addPlayerBtn">+ Add player</button>
+    <h2>Game mode</h2>
+    <div class="seg" id="modeSeg">
+      <button data-mode="solo" aria-pressed="true">🙂 Solo</button>
+      <button data-mode="local" aria-pressed="false">Multiplayer-Shared device</button>
+    </div>
+    <div id="soloSetup"><p class="hint">One player plays solo for the 🏆 board.</p></div>
+    <div id="localSetup" class="hidden">
+      <p class="hint no-tv">Two to four take turns on this device.</p>
+      <p class="hint tv-only">Two to four take turns with the remote: pass it to whoever's turn it is. Add everyone's names, or leave them as they are.</p>
+      <div id="nameList"></div>
+      <button class="ghost" id="addPlayerBtn">+ Add player</button>
+    </div>
     </div>
     <div data-step="2">
     <h2 style="margin-top:18px">How many rounds?</h2>

@@ -52,7 +52,7 @@
   const SLICE = 360 / WEDGES.length;
 
   const S = {
-    names: [typeof ArcadeProfile !== 'undefined' && !TV ? ArcadeProfile.name() : '', ''], rounds: 3, players: [], cur: 0, round: 0, puzzle: null,
+    mode: 'solo', names: [typeof ArcadeProfile !== 'undefined' && !TV ? ArcadeProfile.name() : '', ''], rounds: 3, players: [], cur: 0, round: 0, puzzle: null,
     used: new Set(), strikes: 0, wedge: null, busy: false, rotation: 0, run: null, state: null,
     config: null, level: 'kids', pack: 'all', banter: null,
     turnSecs: 45, timeLeft: 0, clock: null, idleSince: 0, jokedThisTurn: false, heckledThisRound: false, heckling: false,
@@ -70,18 +70,31 @@
 
   // ---- setup --------------------------------------------------------------------
 
+  // Game mode: Solo plays the first name alone; Multiplayer-Shared device shows
+  // the names list, with 2 to 4 players taking turns on this device.
+  function setMode(mode) {
+    S.mode = mode === 'local' ? 'local' : 'solo';
+    for (const b of $('modeSeg').querySelectorAll('[data-mode]')) b.setAttribute('aria-pressed', String(b.dataset.mode === S.mode));
+    if (S.mode === 'local') while (S.names.length < 2) S.names.push('');
+    $('soloSetup').classList.toggle('hidden', S.mode !== 'solo');
+    $('localSetup').classList.toggle('hidden', S.mode !== 'local');
+    renderNames();
+  }
+
   function renderNames() {
     const list = $('nameList');
     list.innerHTML = '';
+    if (S.mode !== 'local') return;
     S.names.forEach((n, i) => {
       const row = document.createElement('div');
       row.className = 'name-row';
       row.innerHTML = `<input maxlength="12" placeholder="Player ${i + 1}"><button title="Remove">✕</button>`;
+      row.querySelector('button').classList.toggle('hidden', S.names.length <= 2);
       const input = row.querySelector('input');
       input.value = n;
       input.addEventListener('input', () => { S.names[i] = input.value; });
       row.querySelector('button').addEventListener('click', () => {
-        if (S.names.length > 1) { S.names.splice(i, 1); renderNames(); }
+        if (S.names.length > 2) { S.names.splice(i, 1); renderNames(); }
       });
       list.appendChild(row);
     });
@@ -329,7 +342,7 @@
     if (window.ArcadeStats) ArcadeStats.play();
     Blip.unlock();
     try {
-      const body = { names: S.names, rounds: S.rounds, ...(S.pack === 'all' ? { level: S.level } : { pack: S.pack }) };
+      const body = { names: S.mode === 'local' ? S.names : S.names.slice(0, 1), rounds: S.rounds, ...(S.pack === 'all' ? { level: S.level } : { pack: S.pack }) };
       const got = await api('/api/spinsolve/run/start', body, { ...pinHeaders(), ...profileHeaders() });
       S.run = got.id;
       S.banter = got.banter;
@@ -1228,7 +1241,7 @@
     steps.go(1);   // back to setup starts at the first step
   }
 
-  // On a phone the setup is two steps: Who's playing? and How spicy?, then the
+  // On a phone the setup is two steps: Game mode (with the names) and How spicy?, then the
   // rounds and the turn timer with Let's play (setup-steps.js).
   const steps = SetupSteps.create($('setup'), { start: $('goBtn') });
   const onStep2 = () => steps.active && steps.step === 2 && !$('setup').classList.contains('hidden');
@@ -1283,6 +1296,7 @@
   // ---- wiring ---------------------------------------------------------------------------
 
   $('addPlayerBtn').addEventListener('click', () => { if (S.names.length < 4) { S.names.push(''); renderNames(); } });
+  for (const b of $('modeSeg').querySelectorAll('[data-mode]')) b.addEventListener('click', () => setMode(b.dataset.mode));
   for (const b of $('roundSeg').children) {
     b.addEventListener('click', () => {
       S.rounds = Number(b.dataset.rounds);
@@ -1350,7 +1364,7 @@
   buildWheel();
   fitWheel();
   Host.setHost('vee');
-  renderNames();
+  setMode(S.mode);
   // Once the levels are known: a game this page was in the middle of comes back.
   loadConfig().then(pickUpGame);
   // On a TV, How to play waits for the ? button instead of opening by itself.
