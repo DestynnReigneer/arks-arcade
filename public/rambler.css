@@ -93,7 +93,7 @@ body {
   html:not(.tv) .toast { bottom: auto; top: 84px; }
   /* With the "Who's playing?" card open (a guest's Hint opens it with the message), the card fills the
      screen's height, so the message sits in the space beside the card instead of over its words. */
-  html:not(.tv) body:has(.apf) .toast {
+  html:not(.tv) body:has(.apf.open) .toast {
     top: 50%; left: 12px; transform: translateY(-50%);
     width: max(96px, calc((100vw - 440px) / 2 - 24px)); max-width: none; box-sizing: border-box; padding: 8px 10px; font-size: 13px;
   }

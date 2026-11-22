@@ -718,3 +718,27 @@ for (const [game, path] of CAB_SETUPS) {
     });
   }
 }
+
+// Rambler's messages on a phone turned sideways: at the top while nothing covers the page (also after the
+// Who's playing? card was opened and closed), and beside that card, never on its words, while it's open.
+for (const [label, viewport] of SIDEWAYS) {
+  test(`Rambler's messages stay clear of the Who's playing? card on a ${label}`, async ({ browser }, info) => {
+    test.skip(info.project.name !== 'phone', 'The sizes are set here, so one project runs them all.');
+    const { ctx, page } = await openAt(browser, '/rambler.html', viewport, 0);
+    const toast = () => page.evaluate(() => {
+      ArcadeKit.toast('A message');
+      const t = document.querySelector('.toast').getBoundingClientRect();
+      const open = document.querySelector('.apf.open .apf-card');
+      const c = open && open.getBoundingClientRect();
+      return { top: Math.round(t.top), centered: Math.abs((t.left + t.right) / 2 - innerWidth / 2) < 2,
+        onCard: !!c && !(t.right <= c.left || t.left >= c.right || t.bottom <= c.top || t.top >= c.bottom) };
+    });
+    const closed = await toast();
+    expect(closed.centered, 'the message is centered at the top with the card closed').toBe(true);
+    await page.evaluate(() => { ArcadeProfile.open(); });   // it resolves when the card closes, so don't wait on it
+    await expect(page.locator('.apf.open')).toBeVisible();
+    const open = await toast();
+    expect(open.onCard, 'the message sits on the card').toBe(false);
+    await ctx.close();
+  });
+}
