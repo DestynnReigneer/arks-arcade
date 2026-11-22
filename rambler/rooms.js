@@ -67,8 +67,6 @@ function snapshot(room, forPlayerId) {
     // screen: a TV hosts this room; isScreen: you're that TV.
     screen: !!room.screen,
     isScreen: !!(room.screen && room.screen.id === forPlayerId),
-    locked: !!room.password,
-    lobbyPassword: room.hostId === forPlayerId ? room.password : null,
     // Something everyone still in the room should read once (who was moved out, and why).
     notice: room.notice && Date.now() - room.notice.at < NOTICE_MS ? { id: room.notice.id, text: room.notice.text } : null,
     you: me ? { id: me.id, name: me.name } : null,
@@ -111,8 +109,7 @@ function broadcast(room) {
 
 // ---- kept between restarts ---------------------------------------------------------
 // A room as plain data: everything but who's connected right now and its
-// running timer. It holds the seats' tokens and, for an Unfiltered room, its
-// lobby password, so it never leaves the server.
+// running timer. It holds the seats' tokens, so it never leaves the server.
 function pack(room) {
   return {
     code: room.code, createdAt: room.createdAt, lastActivity: room.lastActivity, state: room.state, settings: room.settings,
@@ -120,7 +117,7 @@ function pack(room) {
     players: [...room.players.values()].map(p => ({
       id: p.id, token: p.token, name: p.name, words: p.words, ready: p.ready, joinedAt: p.joinedAt, kid: !!p.kid
     })),
-    hostId: room.hostId, password: room.password, results: room.results,
+    hostId: room.hostId, results: room.results,
     screen: room.screen ? { id: room.screen.id, token: room.screen.token, name: room.screen.name } : null
   };
 }
@@ -139,11 +136,9 @@ function restore(now = Date.now()) {
       settings: normalizeSettings(data.settings), board: null, boardId: null, minLength: null, totalWords: 0, built: null,
       startedAt: Number(data.startedAt) || null, endsAt: Number(data.endsAt) || null,
       players: new Map(), clients: new Set(), results: data.results || null, timer: null,
-      hostId: data.hostId, onFinish: null, password: data.password || null,
+      hostId: data.hostId, onFinish: null,
       screen: data.screen ? { id: String(data.screen.id), token: String(data.screen.token), name: cleanName(data.screen.name, 'TV'), clients: 0, screen: true } : null
     };
-    // An unfiltered room always has its password, and a family one never does.
-    room.password = null;
     for (const p of data.players) {
       room.players.set(String(p.id), {
         id: String(p.id), token: String(p.token), name: cleanName(p.name, 'Player'), words: Array.isArray(p.words) ? p.words : [],
@@ -209,7 +204,6 @@ function addPlayer(room, rawName) {
   return player;
 }
 
-const roomPassword = require('../arcade/room-password');
 const adultJoin = require('../arcade/adult-join');
 // A seat saved before kids were marked (2026-11-15) has no kid field. One that
 // also had no adult's sign-in may be a kid's, so it counts as one.
@@ -218,7 +212,7 @@ const store = require('../arcade/room-store')('rambler');
 const clock = require('../arcade/room-clock');
 
 // screen: this device (a TV) hosts and shows the game, and doesn't play.
-function createRoom({ hostName, size, profile, durationSec, password, screen = false }) {
+function createRoom({ hostName, size, profile, durationSec, screen = false }) {
   if (rooms.size >= MAX_ROOMS) {
     sweep();
     if (rooms.size >= MAX_ROOMS) throw fail('Too many rooms open right now.', 503);
@@ -242,11 +236,8 @@ function createRoom({ hostName, size, profile, durationSec, password, screen = f
     timer: null,
     hostId: null,
     onFinish: null,
-    password: null,
     screen: null
   };
-  // The Unfiltered dictionary is adult: those rooms get a lobby password.
-  if (room.settings.profile === 'adult') room.password = roomPassword.requireNew(password);
   rooms.set(room.code, room);
 
   if (screen) {
@@ -285,9 +276,8 @@ function requireHost(room, player) {
 }
 
 // kid: this device is a kid's or a teen's (arcade/adult-join.js), so it leaves if the game turns adult.
-function joinRoom(code, name, password, kid = false) {
+function joinRoom(code, name, kid = false) {
   const room = requireRoom(code);
-  roomPassword.check(room, password);
   if (room.players.size >= MAX_PLAYERS) {
     throw fail(`Room is full (${MAX_PLAYERS} players).`, 409);
   }
@@ -329,9 +319,7 @@ function updateSettings(code, id, suppliedToken, settings) {
   // setting it leaves out stays as it is instead of going back to where it started.
   const named = Object.fromEntries(Object.entries(settings || {}).filter(([, value]) => value !== undefined && value !== null));
   const next = normalizeSettings({ ...room.settings, ...named });
-  // The password comes before anything else, so a switch that's refused changes nothing.
   const turningAdult = next.profile === 'adult' && room.settings.profile !== 'adult';
-  if (next.profile === 'adult') { if (!room.password) room.password = roomPassword.requireNew(settings.password); } else room.password = null;
   if (turningAdult) moveOutForAdultWords(room);
   room.settings = next;
   touch(room);
@@ -342,8 +330,7 @@ function updateSettings(code, id, suppliedToken, settings) {
 // The room just switched to the unfiltered word list, which is only for adults.
 // Everyone the arcade doesn't know to be one leaves, and their page is told why.
 // The host stays, and so does anyone signed in with ARKS ID as an adult (asked
-// now, not remembered from when they joined). A guest can come back with the
-// password the host just made up.
+// now, not remembered from when they joined).
 function moveOutForAdultWords(room) {
   const going = [...room.players.values()].filter(p => p.id !== room.hostId && p.kid);
   if (!going.length) return;
@@ -374,7 +361,7 @@ function lobbies() {
       status: room.players.size >= MAX_PLAYERS ? 'full' : room.state === 'playing' ? 'playing' : 'open',
       between: room.state === 'results',
       size: room.settings.size, durationSec: room.settings.durationSec,
-      adult: room.settings.profile === 'adult', locked: !!room.password
+      adult: room.settings.profile === 'adult'
     };
   });
 }

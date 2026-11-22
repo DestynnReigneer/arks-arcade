@@ -249,7 +249,6 @@ for (const game of [
       await expect(guest.locator('#lobbyScreen')).toBeHidden();
       await expect(host.locator('#lobbyNotice')).toHaveText(note);
       await expect(host.locator('#lobbyRoster')).not.toContainText('Milo');
-      await expect(host.locator('#lobbyPassword')).toHaveText('');
     }
     for (const c of ctxs) await c.close();
   });

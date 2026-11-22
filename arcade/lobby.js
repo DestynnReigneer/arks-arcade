@@ -2,8 +2,7 @@
 
 // The arcade's "join a game" board: every room being hosted right now, in
 // any game, so a phone that just scanned the QR code can find the game
-// everyone's in. Adult games are listed too (it's for parties), marked and
-// locked: joining one needs the lobby password its host made up.
+// everyone's in. Adult games are listed too (it's for parties), marked adult.
 // Also: the address phones should use, and QR codes for it.
 
 const os = require('node:os');
@@ -32,7 +31,7 @@ function collect(viewer = null) {
   // Rambler: a room can be joined at any time, even in the middle of a round.
   for (const l of require('../rambler/rooms').lobbies()) {
     add('rambler', {
-      adult: l.adult, locked: l.locked, code: l.code, host: l.host, players: l.count, max: l.max,
+      adult: l.adult, code: l.code, host: l.host, players: l.count, max: l.max,
       status: l.status === 'playing' ? 'live' : l.status,
       detail: `${l.size === 5 ? '5x5' : '4x4'} board${l.adult ? ' · Unfiltered' : ''}`
     });
@@ -52,7 +51,7 @@ function collect(viewer = null) {
   const trivia = require('../trivia/rooms');
   for (const l of trivia.lobbies(viewer)) {
     add('trivia', {
-      adult: l.adult, locked: l.locked, code: l.code, host: l.host, players: l.count, max: l.max,
+      adult: l.adult, code: l.code, host: l.host, players: l.count, max: l.max,
       status: l.status === 'full' ? 'full' : l.status === 'playing' ? 'live' : 'open',
       detail: l.question ? `Game started · question ${l.question.index} of ${l.question.total}` : (l.adult ? l.level : 'Everyone on their own device')
     });
@@ -62,7 +61,7 @@ function collect(viewer = null) {
   for (const [game, mod] of [['partdeux', '../partdeux/tables'], ['daredevil', '../daredevil/tables']]) {
     for (const l of require(mod).lobbies(viewer)) {
       add(game, {
-        adult: l.adult, locked: l.locked, code: l.code, host: l.host, players: l.count, max: l.max, status: l.status,
+        adult: l.adult, code: l.code, host: l.host, players: l.count, max: l.max, status: l.status,
         detail: `${l.level[0].toUpperCase() + l.level.slice(1)} deck${l.drinking ? ' · 🍺' : ''}`
       });
     }
@@ -71,7 +70,7 @@ function collect(viewer = null) {
   // Shuffle Scuffle: latecomers can jump in mid-game, on the next word.
   for (const l of require('../scuffle/rooms').lobbies()) {
     add('scuffle', {
-      adult: l.adult, locked: l.locked, code: l.code, host: l.host, players: l.count, max: l.max,
+      adult: l.adult, code: l.code, host: l.host, players: l.count, max: l.max,
       status: l.status === 'playing' ? 'live' : l.status,
       detail: l.round ? `Game started · round ${l.round.index} of ${l.round.total}` : `${l.rounds} rounds · ${l.seconds}s each${l.adult ? ' · Unfiltered' : ''}`
     });

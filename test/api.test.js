@@ -570,7 +570,7 @@ async function run({ base, root }) {
   const hostedNow = async () => (await api('/lobbies')).data.lobbies;
   const adaRow = (await hostedNow()).find(l => l.code === host.code);
   ok('the lobby is in List Hosted Games with its host, its players and its settings', !!adaRow && adaRow.host === 'Ada' && adaRow.count === 2 && adaRow.max === 8 &&
-    adaRow.status === 'open' && adaRow.players.join() === 'Ada,Bo' && adaRow.size === 4 && adaRow.durationSec === 60 && adaRow.adult === false && adaRow.locked === false,
+    adaRow.status === 'open' && adaRow.players.join() === 'Ada,Bo' && adaRow.size === 4 && adaRow.durationSec === 60 && adaRow.adult === false,
     JSON.stringify(adaRow));
   const hostedText = JSON.stringify(await hostedNow());
   ok('the list carries nobody\'s seat', !hostedText.includes(host.token) && !hostedText.includes(g.token) && !hostedText.includes(host.playerId));
@@ -652,7 +652,7 @@ async function run({ base, root }) {
     switched.status === 200 && switched.data.settings.profile === 'adult' && switched.data.players.map(q => q.name).join() === 'Ada,Bo' && !switched.data.notice,
     JSON.stringify(switched.data.players));
   const markedRow = (await hostedNow()).find(l => l.code === host.code);
-  ok('the list marks it unfiltered, and not locked', markedRow.adult === true && !markedRow.locked);
+  ok('the list marks it unfiltered', markedRow.adult === true);
   // The page sends one setting at a time, and the others stay as they are.
   const sized = await api(`/rooms/${host.code}/settings`, 'POST', { ...host, size: 5 });
   const clocked = await api(`/rooms/${host.code}/settings`, 'POST', { ...host, durationSec: 300 });
@@ -1239,7 +1239,7 @@ async function run({ base, root }) {
   ok('…and it counts its players, not its questions', robin.players === 1 &&
     (await wl('/trivia/lobbies')).data.lobbies.find(l => l.code === lobbyHost.code).count === 1, JSON.stringify(robin));
   const listedAdult = lobbyNow.rooms.find(r => r.code === adultRoom.code);
-  ok('adult games are on the lobby too, marked adult and not locked', !!listedAdult && listedAdult.adult && !listedAdult.locked);
+  ok('adult games are on the lobby too, marked adult', !!listedAdult && listedAdult.adult);
   ok('a guest joins an adult game with nothing to type', (await wl(`/trivia/rooms/${adultRoom.code}/join`, 'POST', { name: 'Pal' })).status === 200);
 
   // Rambler locks its adult games the same way
@@ -1278,7 +1278,7 @@ async function run({ base, root }) {
   const pdRoom = (await party('partdeux', '/rooms', 'POST', { name: 'Host', level: 'filthy', drinking: true }, { 'X-Adult-Pin': '246810' })).data;
   const pdGuest = (await party('partdeux', `/rooms/${pdRoom.code}/join`, 'POST', { name: 'Pal' })).data;
   ok('Uh-Oh: a guest joins an adult room with nothing to type', !!pdGuest.playerId);
-  ok('Uh-Oh rooms show on the arcade lobby, marked adult and not locked', (await wl('/lobby')).data.rooms.some(r => r.game === 'partdeux' && r.code === pdRoom.code && !r.locked && r.adult));
+  ok('Uh-Oh rooms show on the arcade lobby, marked adult', (await wl('/lobby')).data.rooms.some(r => r.game === 'partdeux' && r.code === pdRoom.code && r.adult));
   ok('Uh-Oh: the host can\'t start until everyone is ready', (await party('partdeux', `/rooms/${pdRoom.code}/start`, 'POST', { playerId: pdRoom.playerId, token: pdRoom.token })).status === 409);
   await party('partdeux', `/rooms/${pdRoom.code}/lobby-ready`, 'POST', { playerId: pdGuest.playerId, token: pdGuest.token, ready: true });
   await party('partdeux', `/rooms/${pdRoom.code}/start`, 'POST', { playerId: pdRoom.playerId, token: pdRoom.token });

@@ -1536,7 +1536,6 @@ function renderPlayRoster(snap) {
 }
 
 function renderLobby(snap) {
-  $('lobbyPassword').textContent = snap.lobbyPassword ? `🔒 Lobby password: ${snap.lobbyPassword}` : snap.locked ? '🔒 This game is locked with a password.' : '';
   $('lobbyTitle').textContent = snap.screen ? 'Rambler on the TV' : snap.youAreHost ? 'Your Rambler lobby' : `${snap.hostName}'s Rambler lobby`;
   $('lobbyHow').textContent = snap.isScreen
     ? 'Everyone scans the code with their own phone and types their name. The board shows up big here on the TV, and you all trace words on your phones at the same time.'
@@ -1574,7 +1573,7 @@ function renderLobby(snap) {
 }
 
 function pushRoomSettings(patch) {
-  RoomPassword.withPassword(password => api(`/rooms/${S.creds.code}/settings`, { method: 'POST', body: { ...S.creds, ...patch, password } }))
+  api(`/rooms/${S.creds.code}/settings`, { method: 'POST', body: { ...S.creds, ...patch } })
     .catch(e => alert(e.message));
 }
 
@@ -2081,15 +2080,12 @@ async function startPressed() {
     }
 
     if (S.mode === 'room' && TV) {
-      // The TV hosts as its screen. An Unfiltered room needs a lobby password
-      // for the guests' phones; the TV makes one up and shows it in its lobby.
-      const PASSWORDS = ['tacos', 'disco', 'pickle', 'waffle', 'banjo', 'noodle', 'meteor', 'cactus', 'walrus', 'jelly'];
+      // The TV hosts as its screen.
       const data = await api('/rooms', {
         method: 'POST',
         body: {
           name: (ArcadeTV.state.tv && ArcadeTV.state.tv.name) || 'TV', screen: true,
-          size: S.size, profile: S.profile, durationSec: S.duration, adultPin: S.adultPin,
-          password: S.profile === 'adult' ? PASSWORDS[Math.floor(Math.random() * PASSWORDS.length)] + (10 + Math.floor(Math.random() * 90)) : undefined
+          size: S.size, profile: S.profile, durationSec: S.duration, adultPin: S.adultPin
         }
       });
       S.creds = { code: data.code, playerId: data.playerId, token: data.token };
@@ -2098,19 +2094,16 @@ async function startPressed() {
     }
 
     if (S.mode === 'room') {
-      // An Unfiltered room gets a lobby password the host makes up.
-      const data = await RoomPassword.withPassword(password => api('/rooms', {
+      const data = await api('/rooms', {
         method: 'POST',
         body: {
           name: $('nameInput').value || (S.player ? S.player.name : guestName()),
           size: S.size,
           profile: S.profile,
           durationSec: S.duration,
-          adultPin: S.adultPin,
-          password
+          adultPin: S.adultPin
         }
-      }));
-      if (!data) return;
+      });
       S.creds = { code: data.code, playerId: data.playerId, token: data.token };
       openStream();
       return;
@@ -2207,12 +2200,10 @@ async function joinHosted() {
   if (!l) return;
   say($('hostedMsg'), '');
   try {
-    // An unfiltered lobby asks for its lobby password (not the adult pass).
-    const data = await RoomPassword.withPassword(password => api(`/rooms/${l.code}/join`, {
+    const data = await api(`/rooms/${l.code}/join`, {
       method: 'POST',
-      body: { name: S.player ? S.player.name : $('hostedName').value || guestName(), password }
-    }));
-    if (!data) return;
+      body: { name: S.player ? S.player.name : $('hostedName').value || guestName() }
+    });
     closeHosted();
     S.creds = { code: data.code, playerId: data.playerId, token: data.token };
     S.cameFromList = true;

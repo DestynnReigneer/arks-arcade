@@ -1,14 +1,14 @@
 'use strict';
 
 // The HTTP side of a party card game (Uh-Oh: Part Deux, Dare Devil): one
-// phone or a phone each, adult levels behind the PIN for hosting and a
-// lobby password for joining. Each game passes in its tables and config.
+// phone or a phone each. Hosting an adult level needs an adult's ARKS ID
+// sign-in, and anyone but a kid's or a teen's device can join. Each game
+// passes in its tables and config.
 
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const adultPin = require('./adult-pin');
 const adultJoin = require('./adult-join');
-const roomPassword = require('./room-password');
 
 function fail(message, status = 400) {
   return Object.assign(new Error(message), { status });
@@ -16,8 +16,8 @@ function fail(message, status = 400) {
 
 function makeRoutes({ tables, config }) {
   const router = express.Router();
-  // Hosting adult content needs an ARKS ID adult pass; joining someone's adult room
-  // needs only that room's lobby password.
+  // Hosting adult content needs an ARKS ID adult pass; anyone can join someone's adult
+  // room but a kid's or a teen's device.
   const assertLevelAllowed = (level, req) => {
     if (!tables.isAdult(level)) return;
     if (!adultPin.matches(req.get('X-Adult-Pin') || '')) throw fail('Adult games aren\'t available on this device.', 403);
@@ -58,13 +58,13 @@ function makeRoutes({ tables, config }) {
       const body = req.body || {};
       assertLevelAllowed(body.level, req);
       // screen: a TV hosts the room and shows the table; it doesn't play.
-      const { table, player } = tables.createRoom({ name: body.name, level: body.level, drinking: body.drinking, password: body.password, options: body.options, screen: body.screen === true,
+      const { table, player } = tables.createRoom({ name: body.name, level: body.level, drinking: body.drinking, options: body.options, screen: body.screen === true,
         profile: profileOf(req) });
       res.status(201).json({ code: table.id, playerId: player.id, token: player.token });
     } catch (e) { next(e); }
   });
-  // Guests get into a adults room with its lobby password; a phone signed
-  // in to ARKS ID as a kid, a teen or a TV doesn't, whatever it types.
+  // Guests get into an adult room; a device signed in to ARKS ID as a kid,
+  // a teen or a TV doesn't.
   router.post('/rooms/:code/join', limiter, async (req, res, next) => {
     try {
       const body = req.body || {};
@@ -73,7 +73,7 @@ function makeRoutes({ tables, config }) {
       // adult in between. An adult's sign-in is kept with the seat, for the day the host does.
       const kid = await adultJoin.kid(req);
       adultJoin.refuse(kid, tables.isAdult(tables.room(req.params.code).level));
-      const { table, player } = tables.joinRoom(req.params.code, body.name, body.password, profileOf(req), kid);
+      const { table, player } = tables.joinRoom(req.params.code, body.name, profileOf(req), kid);
       res.status(201).json({ code: table.id, playerId: player.id, token: player.token });
     } catch (e) { next(e); }
   });
@@ -84,7 +84,7 @@ function makeRoutes({ tables, config }) {
     try {
       const body = req.body || {};
       if (body.level !== undefined) assertLevelAllowed(body.level, req);
-      tables.settings(...creds(req), { level: body.level, drinking: body.drinking, password: body.password, options: body.options });
+      tables.settings(...creds(req), { level: body.level, drinking: body.drinking, options: body.options });
       res.json({ ok: true });
     } catch (e) { next(e); }
   });
@@ -104,7 +104,7 @@ function makeRoutes({ tables, config }) {
   });
 
   router.use((err, req, res, next) => {
-    res.status(err.status || 500).json({ error: err.message, ...roomPassword.extra(err) });
+    res.status(err.status || 500).json({ error: err.message });
   });
   return router;
 }

@@ -193,23 +193,20 @@
         return;
       }
       if (S.mode === 'tvphones') {
-        // The TV hosts as its screen. The unfiltered list needs a lobby
-        // password for the guests' phones; the TV makes one up and shows it.
-        const PASSWORDS = ['tacos', 'disco', 'pickle', 'waffle', 'banjo', 'noodle', 'meteor', 'cactus', 'walrus', 'jelly'];
-        const password = S.dict === 'adult' ? PASSWORDS[Math.floor(Math.random() * PASSWORDS.length)] + (10 + Math.floor(Math.random() * 90)) : undefined;
+        // The TV hosts as its screen.
         if (window.ArcadeStats) ArcadeStats.play();
         enterRoom(await api('/api/scuffle/rooms', {
-          name: (ArcadeTV.state.tv && ArcadeTV.state.tv.name) || 'TV', screen: true, password,
+          name: (ArcadeTV.state.tv && ArcadeTV.state.tv.name) || 'TV', screen: true,
           settings: { rounds: S.rounds, seconds: S.seconds, dictionary: S.dict }
         }, pinHeaders()));
         return;
       }
       if (S.mode === 'host') {
-        const r = await RoomPassword.withPassword(password => api('/api/scuffle/rooms', {
-          name: $('hostName').value || myName(), password,
+        const r = await api('/api/scuffle/rooms', {
+          name: $('hostName').value || myName(),
           settings: { rounds: S.rounds, seconds: S.seconds, dictionary: S.dict }
-        }, pinHeaders()));
-        if (r) enterRoom(r);
+        }, pinHeaders());
+        enterRoom(r);
       }
     } catch (e) { $('setupMsg').textContent = e.message; }
   }
@@ -275,10 +272,8 @@
     if (!l) return;
     $('detailsMsg').textContent = '';
     try {
-      // An adult game asks for its lobby password (not the adult pass).
-      const r = await RoomPassword.withPassword(password =>
-        api(`/api/scuffle/rooms/${l.code}/join`, { name: token() ? myName() : $('joinName').value || myName(), password }));
-      if (r) { closeDetails(); enterRoom(r); }
+      const r = await api(`/api/scuffle/rooms/${l.code}/join`, { name: token() ? myName() : $('joinName').value || myName() });
+      closeDetails(); enterRoom(r);
     } catch (e) { $('detailsMsg').textContent = e.message; }
   }
   // Opening scuffle.html?join=CODE (the TV's QR code, or the home page's list): that lobby's details.
@@ -503,8 +498,7 @@
     if (!snap.screen) ArcadeQR.lobbyButton($('lobbySettings'), 'scuffle.html', snap.code);
     if (snap.screen && $('joinQr').dataset.code !== snap.code) { $('joinQr').dataset.code = snap.code; ArcadeQR.forGame($('joinQr'), 'scuffle.html', snap.code); }
     const s = snap.settings;
-    $('lobbySettings').textContent = `${s.rounds} rounds of ${s.seconds} seconds, ${s.dictionary === 'adult' ? 'unfiltered words' : 'family words'}` +
-      (snap.lobbyPassword ? `. Lobby password: ${snap.lobbyPassword}` : snap.locked ? '. Locked with a password' : '') + '.';
+    $('lobbySettings').textContent = `${s.rounds} rounds of ${s.seconds} seconds, ${s.dictionary === 'adult' ? 'unfiltered words' : 'family words'}.`;
     $('lobbyHow').textContent = snap.isScreen
       ? 'Scan the code to join. Everyone races on the same letters, and the letters, the clock and the scores are here on the TV.'
       : '';

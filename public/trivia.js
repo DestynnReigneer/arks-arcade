@@ -179,9 +179,8 @@
       if (S.mode.startsWith('tv')) return await hostOnTv(S.mode);
       if (S.mode === 'solo' || S.mode === 'local') return await startLocal();
       if (S.mode === 'host') {
-        const r = await RoomPassword.withPassword(password =>
-          api('/api/trivia/rooms', { name: $('hostName').value, settings: settings(), password }, { ...pinHeaders(), ...profileHeaders(), ...deviceHeaders() }));
-        if (r) enterRoom(r);
+        const r = await api('/api/trivia/rooms', { name: $('hostName').value, settings: settings() }, { ...pinHeaders(), ...profileHeaders(), ...deviceHeaders() });
+        enterRoom(r);
         return;
       }
     } catch (e) { $('setupMsg').textContent = e.message; }
@@ -259,10 +258,8 @@
     if (!l) return;
     $('detailsMsg').textContent = '';
     try {
-      // An adult game asks for its lobby password (not the adult pass).
-      const r = await RoomPassword.withPassword(password =>
-        api(`/api/trivia/rooms/${l.code}/join`, { name: $('joinName').value, password }, { ...profileHeaders(), ...deviceHeaders() }));
-      if (r) { closeDetails(); enterRoom(r); }
+      const r = await api(`/api/trivia/rooms/${l.code}/join`, { name: $('joinName').value }, { ...profileHeaders(), ...deviceHeaders() });
+      closeDetails(); enterRoom(r);
     } catch (e) { $('detailsMsg').textContent = e.message; }
   }
   // Opening trivia.html?join=CODE (from the home page's list): that lobby's details.
@@ -279,15 +276,11 @@
   // The TV makes the room as its screen (it shows the game and doesn't play).
   // Everyone on their own phone answers together; passing a phone around or
   // using the remote takes turns. With the remote, the TV holds every player.
-  const PASSWORDS = ['tacos', 'disco', 'pickle', 'waffle', 'banjo', 'noodle', 'meteor', 'cactus', 'walrus', 'jelly'];
   async function hostOnTv(mode) {
     if (window.ArcadeStats) ArcadeStats.play();
     const st = { ...settings(), style: mode === 'tvphones' ? 'together' : 'turns' };
-    // An adult game needs a lobby password for the guests' phones. Typing on
-    // a TV is slow, so the TV makes one up and shows it in its lobby.
-    const password = isAdult() ? PASSWORDS[Math.floor(Math.random() * PASSWORDS.length)] + (10 + Math.floor(Math.random() * 90)) : undefined;
     const tvName = (ArcadeTV.state.tv && ArcadeTV.state.tv.name) || 'TV';
-    const r = await api('/api/trivia/rooms', { name: tvName, screen: true, settings: st, password }, { ...pinHeaders(), ...deviceHeaders() });
+    const r = await api('/api/trivia/rooms', { name: tvName, screen: true, settings: st }, { ...pinHeaders(), ...deviceHeaders() });
     if (mode === 'tvremote') {
       for (const [i, n] of S.names.entries()) {
         await api(`/api/trivia/rooms/${r.code}/seats`, { playerId: r.playerId, token: r.token, name: n.trim() || `Player ${i + 1}` });
@@ -508,7 +501,7 @@
     const s = snap.settings;
     const turns = s.style === 'turns';
     $('lobbyLevel').textContent = `${s.levelLabel} · ${s.count} questions${turns ? ' each' : ''} · ${s.seconds}s each` +
-      (s.drinking ? ' · 🍺 Drinking' : '') + (s.couples ? ' · 💋 Dares' : '') + (snap.lobbyPassword ? ` · 🔒 Password: ${snap.lobbyPassword}` : snap.locked ? ' · 🔒 Locked' : '');
+      (s.drinking ? ' · 🍺 Drinking' : '') + (s.couples ? ' · 💋 Dares' : '');
     $('lobbyHow').textContent = !snap.screen ? ''
       : !turns ? 'Everyone scans the code with their own phone and types their name. You all answer at the same time on your phones, and the questions show up here on the TV.'
         : snap.isScreen ? 'Scan the code with the phone you\'ll pass around and add everyone\'s names on it, or add players right here to play with the remote. Each player gets their own questions, one turn at a time.'

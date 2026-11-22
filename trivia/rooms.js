@@ -25,7 +25,6 @@ const crypto = require('node:crypto');
 const store = require('./store');
 const bank = require('./bank');
 const Rules = require('../public/trivia-rules');
-const roomPassword = require('../arcade/room-password');
 const chat = require('../arcade/room-chat').create('trivia');
 // Rooms live in memory, and each one is written down as it changes and read back
 // when the arcade starts (restore, below), so a restart ends nobody's game.
@@ -78,7 +77,7 @@ const turns = r => r.settings.style === 'turns';
 // screen: this device shows the game (a TV) and doesn't play.
 // profile: { id, name } when the host has one.
 // device: the random key the page keeps for not repeating questions (store.memoryKeys).
-function create({ name, settings, password, screen = false, profile = null, device = null }) {
+function create({ name, settings, screen = false, profile = null, device = null }) {
   if (rooms.size >= MAX_ROOMS) throw fail('Too many trivia games running. Try again later.', 503);
   const host = { id: makeId(), token: makeToken(), name: cleanName(profile && !screen ? profile.name : name, screen ? 'TV' : 'Host'), score: 0, streak: 0, clients: 0, owner: null,
     profileId: profile && !screen ? profile.id : null, ready: true, device: cleanDevice(device) };
@@ -87,10 +86,8 @@ function create({ name, settings, password, screen = false, profile = null, devi
     settings: cleanSettings(settings),
     phase: 'lobby', qIndex: -1, questions: [], answers: {}, qEndsAt: 0, qStartedAt: 0, turnId: null,
     reveal: null, finale: null, timer: null, clients: new Set(), lastActivity: Date.now(),
-    password: null, muted: new Set()
+    muted: new Set()
   };
-  // Adult games get a lobby password the host makes up; guests need it to join.
-  if (bank.LEVELS[r.settings.level].adult) r.password = roomPassword.requireNew(password);
   rooms.set(r.code, r);
   saved.saveNow(r.code, pack(r));
   return { code: r.code, playerId: host.id, token: host.token };
@@ -99,8 +96,8 @@ function create({ name, settings, password, screen = false, profile = null, devi
 // ---- kept between restarts ---------------------------------------------------------
 // A room as plain data: everything but who's connected right now, its running
 // timer and this question's answers (an interrupted question starts over). It
-// holds the seats' tokens, the questions with their right answers and, for an
-// adult room, its lobby password, so it never leaves the server.
+// holds the seats' tokens and the questions with their right answers, so it
+// never leaves the server.
 function pack(r) {
   const seat = p => ({
     id: p.id, token: p.token || null, name: p.name, score: p.score, streak: p.streak, owner: p.owner || null,
@@ -109,7 +106,7 @@ function pack(r) {
   return {
     code: r.code, hostId: r.hostId, players: r.players.map(seat), screen: r.screen ? seat(r.screen) : null, settings: r.settings,
     phase: r.phase, qIndex: r.qIndex, questions: r.questions, turnId: r.turnId, reveal: r.reveal, finale: r.finale,
-    lastActivity: r.lastActivity, password: r.password, muted: [...r.muted]
+    lastActivity: r.lastActivity, muted: [...r.muted]
   };
 }
 
@@ -133,12 +130,10 @@ function restore(now = Date.now()) {
       settings: cleanSettings(data.settings), phase: data.phase, qIndex: Number.isInteger(data.qIndex) ? data.qIndex : -1,
       questions: Array.isArray(data.questions) ? data.questions : [], answers: {}, qEndsAt: 0, qStartedAt: 0, turnId: data.turnId || null,
       reveal: data.reveal || null, finale: data.finale || null, timer: null, clients: new Set(),
-      lastActivity: Number(data.lastActivity) || savedAt, password: data.password || null,
+      lastActivity: Number(data.lastActivity) || savedAt,
       muted: new Set(Array.isArray(data.muted) ? data.muted : [])
     };
     if (!member(r, r.hostId)) r.hostId = r.screen ? r.screen.id : r.players[0].id;
-    // An adult level always has its password; a room that lost it doesn't come back.
-    r.password = null;
     // A game with no question behind it can't be shown: back to the lobby, with everyone still in their seat.
     const going = ['ready', 'question', 'reveal'].includes(r.phase);
     if ((going && !r.questions[r.qIndex]) || (r.phase === 'reveal' && !r.reveal) || (r.phase === 'over' && !r.finale)) {
@@ -189,9 +184,8 @@ function uniqueName(r, raw) {
 }
 
 // profile: { id, name } when the person joining has one.
-function join(code, name, password, profile = null, device = null) {
+function join(code, name, profile = null, device = null) {
   const r = room(code);
-  roomPassword.check(r, password);
   if (r.phase !== 'lobby' && !joinsLate(r)) {
     throw fail(turns(r) ? 'That game takes turns, so it can\'t be joined partway. Catch the next one!' : 'That game has already started.', 409);
   }
@@ -433,8 +427,6 @@ function snapshot(r, viewerId) {
     host: r.hostId === viewerId,
     isScreen: !!(viewer && viewer.screen),
     screen: !!r.screen,
-    locked: !!r.password,
-    lobbyPassword: r.hostId === viewerId ? r.password : null,
     hostName: host ? host.name : '',
     settings: { ...r.settings, levelLabel: bank.LEVELS[r.settings.level].label },
     allReady: allReady(r),
@@ -512,7 +504,7 @@ function lobbies(profile) {
     out.push({ code: r.code, host: host ? host.name : '', screen: !!r.screen, players: r.players.map(p => p.name), count: r.players.length, max: MAX_PLAYERS,
       status: r.players.length >= MAX_PLAYERS ? 'full' : r.phase === 'lobby' ? 'open' : 'playing',
       question: r.phase === 'lobby' ? null : { index: r.qIndex + 1, total: r.questions.length },
-      level: bank.LEVELS[r.settings.level].label, adult: !!bank.LEVELS[r.settings.level].adult, locked: !!r.password,
+      level: bank.LEVELS[r.settings.level].label, adult: !!bank.LEVELS[r.settings.level].adult,
       style: r.settings.style, questions: r.settings.count,
       mine: !!profile && r.players.some(p => p.profileId === profile.id) });
   }

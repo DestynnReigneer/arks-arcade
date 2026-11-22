@@ -229,7 +229,7 @@ async function run({ base, root }) {
   const hosted = async () => (await api('/lobbies')).data.lobbies;
   const row = (await hosted()).find(l => l.code === lob.code);
   ok('a new lobby is in List Hosted Games, with its host, its players and its settings', !!row && row.host === 'Kim' && row.count === 1 && row.max === 12 &&
-    row.status === 'open' && row.players.join() === 'Kim' && row.rounds === 3 && row.seconds === 60 && row.adult === false && row.locked === false && row.round === null,
+    row.status === 'open' && row.players.join() === 'Kim' && row.rounds === 3 && row.seconds === 60 && row.adult === false && row.round === null,
     JSON.stringify(row));
   const gus = (await api(`/rooms/${lob.code}/join`, 'POST', { name: 'Gus' })).data;
   ok('whoever taps it is in', (await hosted()).find(l => l.code === lob.code).players.join() === 'Kim,Gus');
@@ -243,7 +243,7 @@ async function run({ base, root }) {
   ok('with the adult pass the lobby turns unfiltered, with no password, and the guest stays',
     turned.status === 200 && afterTurn.settings.dictionary === 'adult' && afterTurn.players.map(q => q.name).join() === 'Kim,Gus' && !afterTurn.notice, JSON.stringify(afterTurn.players));
   const marked = (await hosted()).find(l => l.code === lob.code);
-  ok('the list marks it unfiltered, and not locked', marked.adult === true && !marked.locked);
+  ok('the list marks it unfiltered', marked.adult === true);
   await api(`/rooms/${lob.code}/start`, 'POST', lob);
   const going = (await hosted()).find(l => l.code === lob.code);
   ok('a game that has started is still listed, with the round it\'s on', going.status === 'playing' && going.round.index === 1 && going.round.total === 3, JSON.stringify(going));

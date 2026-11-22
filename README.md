@@ -498,7 +498,7 @@ Tumbler Rumble, Snake, Dino Dash, Block Drop, Brick Breaker, Tower Defense, Sudo
 
 A game controller works in a web browser too, not only on the TV: the D-pad, the sticks and the buttons above go through the browser's Gamepad API (`public/tv-play.js`). In the ARKS TV app the controller's A button arrives as OK and B as Back.
 
-The rooms gained `screen: true` when making one (`POST /api/partdeux/rooms`, `/api/daredevil/rooms`, `/api/scuffle/rooms`, `/api/rambler/rooms`), and `screen` and `isScreen` in what the room sends. The card games also gained `POST /rooms/:code/seats` `{ name }` and `/seats/remove` `{ seat }` (more players on one device, before the game starts), `as` on `/act` (which of the device's players is moving), and `mine` (the players this device holds) and `as` (whose hand the snapshot shows) in the room's state. With ARKS ID on, a device signed in as a kid, a teen or a TV is turned away from a adults room in all four games, password or not (`arcade/adult-join.js`); guests still get in with the lobby password.
+The rooms gained `screen: true` when making one (`POST /api/partdeux/rooms`, `/api/daredevil/rooms`, `/api/scuffle/rooms`, `/api/rambler/rooms`), and `screen` and `isScreen` in what the room sends. The card games also gained `POST /rooms/:code/seats` `{ name }` and `/seats/remove` `{ seat }` (more players on one device, before the game starts), `as` on `/act` (which of the device's players is moving), and `mine` (the players this device holds) and `as` (whose hand the snapshot shows) in the room's state. With ARKS ID on, a device signed in as a kid, a teen or a TV is turned away from an adult room in all four games (`arcade/adult-join.js`); guests still get in.
 
 ### Shared
 
