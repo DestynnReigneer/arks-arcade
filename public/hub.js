@@ -225,7 +225,7 @@
           img.style.cssText = 'width:26px;height:26px;display:block';
           li.querySelector('.l-emoji').appendChild(img);
         } else li.querySelector('.l-emoji').textContent = r.emoji;
-        li.querySelector('.l-title').textContent = `${r.adult ? '🔞 ' : ''}${r.label} · ${r.host || 'someone'}'s game${r.locked ? ' 🔒' : ''}`;
+        li.querySelector('.l-title').textContent = `${r.adult ? '🔞 ' : ''}${r.label} · ${r.host || 'someone'}'s game`;
         li.querySelector('.l-sub').textContent = `${r.players}/${r.max} players · ${r.detail}${r.status === 'playing' ? ' · game in progress' : ''}`;
         const join = li.querySelector('.l-join');
         join.textContent = STATUS[r.status];

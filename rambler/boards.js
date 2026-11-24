@@ -11,7 +11,7 @@ const crypto = require('node:crypto');
 // *before* they broadcast the round start, or clients receive a null board id
 // and every word check 404s.
 //
-// A board for a round on one device (solo, the daily, taking turns, tabletop)
+// A board for a round on one device (solo, the daily, or taking turns)
 // is also written down (keep), and read back when the arcade starts, so a
 // round that was being played can still be checked and scored after a
 // restart. A room's board isn't: it's kept with its room (rooms.js).

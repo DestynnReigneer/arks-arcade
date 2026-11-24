@@ -1576,7 +1576,6 @@ html.tv #joinQr { width: 220px !important; height: 220px !important; }
     -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 18px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 18px), transparent); padding-bottom: 14px; }
   html:not(.tv) body:not(.tv-screen) #playScreen > .found:not(#playRoster)::-webkit-scrollbar { display: none; }
   html:not(.tv) body:not(.tv-screen) #playScreen > #playRoster { order: 5; margin-top: 10px !important; }
-  html:not(.tv) body:not(.tv-screen) #playScreen > #tabletopHint { order: 6; margin-top: 10px !important; }
 }
 /* A phone turned sideways (2026-11-22): the same fit, side by side. Rambler's own
    header row stays (it has the profile, How to play, sound and the boards) but gets
@@ -1597,8 +1596,8 @@ html.tv #joinQr { width: 220px !important; height: 220px !important; }
   html:not(.tv) body:not(.tv-screen) #playScreen:not(.hidden) {
     flex: 1 1 auto; min-height: 0; max-width: none; width: var(--bar-w); box-sizing: border-box; padding: 8px 0;
     display: grid; grid-template-columns: var(--board) minmax(0, 1fr) auto; column-gap: var(--gap);
-    grid-template-rows: auto auto auto auto minmax(0, 1fr) auto auto;
-    grid-template-areas: "board top top" "board timer timer" "board trace trace" "board type actions" "board found found" "board roster roster" "board tabletop tabletop";
+    grid-template-rows: auto auto auto auto minmax(0, 1fr) auto;
+    grid-template-areas: "board top top" "board timer timer" "board trace trace" "board type actions" "board found found" "board roster roster";
   }
   html:not(.tv) body:not(.tv-screen) #playScreen > .play-top { grid-area: top; margin-bottom: 2px; }
   html:not(.tv) body:not(.tv-screen) #playScreen .clock { font-size: 22px; }
@@ -1620,7 +1619,6 @@ html.tv #joinQr { width: 220px !important; height: 220px !important; }
     -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 14px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 14px), transparent); padding-bottom: 10px; }
   html:not(.tv) body:not(.tv-screen) #playScreen > .found:not(#playRoster)::-webkit-scrollbar { display: none; }
   html:not(.tv) body:not(.tv-screen) #playScreen > #playRoster { grid-area: roster; margin: 6px 0 0 !important; max-width: none; }
-  html:not(.tv) body:not(.tv-screen) #playScreen > #tabletopHint { grid-area: tabletop; margin: 6px 0 0 !important; padding: 8px 12px; }
 }
 /* The marathon turned sideways, the same way: its board (which grows a row or a
    column at a time) as big as the box on the left allows with square letters, and

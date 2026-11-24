@@ -106,10 +106,10 @@
 
   function setMode(mode) {
     S.mode = mode;
-    for (const b of $('modeSeg').children) b.setAttribute('aria-pressed', String(b.dataset.mode === mode));
+    for (const b of $('modeSeg').querySelectorAll('[data-mode]')) b.setAttribute('aria-pressed', String(b.dataset.mode === mode));
     for (const m of ['local', 'host', 'join', 'tvphones', 'tvpass']) $(`${m}Setup`).classList.toggle('hidden', m !== mode);
     $('goBtn').textContent = mode === 'host' ? 'Create lobby' : mode === 'join' ? 'Join the game'
-      : mode.startsWith('tv') ? 'Show the code on the TV' : 'Deal \'em';
+      : mode.startsWith('tv') ? 'Show the QR code on the TV' : 'Deal \'em';
     $('levelList').closest('.panel').classList.toggle('hidden', mode === 'join');
     lobby().mode(mode);
   }
@@ -148,9 +148,8 @@
         return applySnap(r);
       }
       if (S.mode === 'host') {
-        const r = await RoomPassword.withPassword(password =>
-          api('/rooms', { method: 'POST', body: { name: $('hostName').value, level: S.level, drinking, password }, headers: { ...pinHeaders(), ...lobby().headers() } }));
-        if (r) enterRoom(r);
+        const r = await api('/rooms', { method: 'POST', body: { name: $('hostName').value, level: S.level, drinking }, headers: { ...pinHeaders(), ...lobby().headers() } });
+        enterRoom(r);
         return;
       }
     } catch (e) { $('setupMsg').textContent = e.message; }
@@ -158,15 +157,11 @@
 
   // ---- the TV hosts ------------------------------------------------------------------
   // The TV makes the room as its screen: it shows the table and starts the
-  // game, and doesn't play. An adult deck needs a lobby password for the
-  // guests' phones; typing on a TV is slow, so the TV makes one up and shows
-  // it in its lobby.
-  const PASSWORDS = ['tacos', 'disco', 'pickle', 'waffle', 'banjo', 'noodle', 'meteor', 'cactus', 'walrus', 'jelly'];
+  // game, and doesn't play.
   async function hostOnTv(drinking) {
     if (window.ArcadeStats) ArcadeStats.play();
-    const password = levelInfo(S.level).adult ? PASSWORDS[Math.floor(Math.random() * PASSWORDS.length)] + (10 + Math.floor(Math.random() * 90)) : undefined;
     const name = (ArcadeTV.state.tv && ArcadeTV.state.tv.name) || 'TV';
-    const r = await api('/rooms', { method: 'POST', body: { name, screen: true, level: S.level, drinking, password }, headers: pinHeaders() });
+    const r = await api('/rooms', { method: 'POST', body: { name, screen: true, level: S.level, drinking }, headers: pinHeaders() });
     enterRoom(r);
   }
 
@@ -271,8 +266,7 @@
     if (!snap.screen) ArcadeQR.lobbyButton($('joinQr'), 'partdeux.html', snap.code);
     if (snap.screen && $('joinQr').dataset.code !== snap.code) { $('joinQr').dataset.code = snap.code; ArcadeQR.forGame($('joinQr'), 'partdeux.html', snap.code); }
     const lv = levelInfo(snap.level);
-    $('lobbyInfo').textContent = `Deck: ${lv.emoji} ${lv.label}` + (snap.drinking ? ' · 🍺 Drinking' : '') +
-      (snap.lobbyPassword ? ` · 🔒 Password: ${snap.lobbyPassword}` : snap.locked ? ' · 🔒 Locked' : '');
+    $('lobbyInfo').textContent = `Deck: ${lv.emoji} ${lv.label}` + (snap.drinking ? ' · 🍺 Drinking' : '');
     $('lobbyHow').textContent = !snap.isScreen ? ''
       : S.mode === 'tvpass' ? 'Scan the code with the phone you\'ll pass around, then add everyone\'s names on it. The table shows up here on the TV, and the phone shows each person their own cards on their turn.'
         : 'Everyone scans the code with their own phone and types their name. Your cards stay on your phone, and the table shows up here on the TV. Sharing a phone? Add more players on it.';
@@ -309,7 +303,7 @@
       renderLevels($('lobbyLevels'), snap.level, async id => {
         if (levelInfo(id).adult && !unlocked() && !(await unlockAdult())) return;
         try {
-          await RoomPassword.withPassword(password => api(`/rooms/${snap.code}/settings`, { method: 'POST', body: { ...roomCreds(), level: id, password }, headers: pinHeaders() }));
+          await api(`/rooms/${snap.code}/settings`, { method: 'POST', body: { ...roomCreds(), level: id }, headers: pinHeaders() });
         } catch (e) { $('lobbyMsg').textContent = e.message; }
       });
       $('lobbyDrinkRow').classList.toggle('hidden', !lv.adult);
@@ -655,7 +649,7 @@
 
   // ---- wiring ---------------------------------------------------------------------------------
 
-  for (const b of $('modeSeg').children) b.onclick = () => setMode(b.dataset.mode);
+  for (const b of $('modeSeg').querySelectorAll('[data-mode]')) b.onclick = () => setMode(b.dataset.mode);
   // A new name can push Start below the screen on a phone; bring it back into view,
   // above anything that covers the bottom of the page (Chrome's row of tabs).
   function showStart() {
@@ -664,6 +658,16 @@
     if (r.bottom > seen - 8) window.scrollBy(0, r.bottom - seen + 8);
   }
   $('addPlayerBtn').onclick = () => { if (S.names.length < 8) { S.names.push(''); renderNames(); showStart(); } };
+  // The name was read when the page opened; a guest who picks their name (or someone
+  // who signs in) after that gets it in the first box, unless it was typed over.
+  if (typeof ArcadeProfile !== 'undefined' && !TV) {
+    let had = ArcadeProfile.name();
+    ArcadeProfile.onChange(() => {
+      const now = ArcadeProfile.name();
+      if (!S.names[0] || S.names[0] === had) { S.names[0] = now; renderNames(); }
+      had = now;
+    });
+  }
   $('goBtn').onclick = go;
   $('drawBtn').onclick = () => { Blip.tone(330, 0.06, { type: 'triangle' }); send({ action: 'draw' }); };
   $('drawPile').onclick = () => $('drawBtn').click();

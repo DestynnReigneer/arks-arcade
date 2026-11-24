@@ -8,6 +8,7 @@
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="apple-touch-icon" href="/custom/brand/app-icon-180.png">
 <link rel="stylesheet" href="arcade-ui.css">
+<link rel="stylesheet" href="lobby-ui.css">
 <link rel="stylesheet" href="tutorial.css">
 <link rel="stylesheet" href="crisscross.css">
 <link rel="stylesheet" href="adult-mode.css">
@@ -46,7 +47,15 @@
     <h2 id="mineTitle">Your games</h2>
     <p class="hint" id="mineHint"></p>
     <ul class="cc-list" id="mineList"></ul>
+  </div>
+  <div class="mode-label no-tv"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:1.3em;height:1.3em;vertical-align:-0.28em;margin-right:4px"><rect x="3" y="6" width="11" height="22" rx="2.5"/><rect x="18" y="4" width="11" height="22" rx="2.5"/><path d="M7.5 24h2"/><path d="M22.5 22h2"/></svg>Multiplayer-Multiple devices</div>
+  <div class="panel no-tv" id="createPanel">
     <button class="primary big" id="newOnlineBtn" data-go="create"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:1.3em;height:1.3em;vertical-align:-0.28em;margin-right:4px"><circle cx="16" cy="7" r="3.2"/><path d="M10 18.5c0-3.4 2.6-5.8 6-5.8s6 2.4 6 5.8"/><circle cx="6.5" cy="10" r="2.6"/><path d="M2 20c0-2.8 1.9-4.8 4.5-4.8"/><circle cx="25.5" cy="10" r="2.6"/><path d="M30 20c0-2.8-1.9-4.8-4.5-4.8"/><path d="M11 30l7-7"/><path d="M18 23a4 4 0 0 1 5.3-5l-2.4 2.4.5 2.2 2.2.5 2.4-2.4a4 4 0 0 1-5 5.3"/></svg>Create a game lobby</button>
+  </div>
+  <div class="panel no-tv" id="noProfile">
+    <h2>Playing on everyone's own device</h2>
+    <p class="hint" id="noProfileHint">A game can last a few days, with each person taking their turn whenever they're free, so the arcade needs to know who you are. Pick your profile to start or to see your open games.</p>
+    <button class="primary big" id="pickProfileBtn">Pick my profile</button>
   </div>
   <!-- List Hosted Games: every Words with Family lobby that's waiting for players. -->
   <div class="panel no-tv" id="hostedPanel" data-go="list">
@@ -54,19 +63,17 @@
     <p class="hint" id="hostedHint"></p>
     <ul class="cc-list" id="hostedList"></ul>
   </div>
-  <div class="panel no-tv" id="noProfile">
-    <h2>Playing on everyone's own device</h2>
-    <p class="hint" id="noProfileHint">A game can last a few days, with each person taking their turn whenever they're free, so the arcade needs to know who you are. Pick your profile to start or to see your open games.</p>
-    <button class="primary big" id="pickProfileBtn">Pick my profile</button>
-  </div>
-  <div class="panel">
-    <h2 class="no-tv">On this device</h2>
-    <p class="hint no-tv">Pass one device around the table, or play against the computer. Guests are welcome.</p>
+  <!-- Games on this device: pass it around, or play the computer. -->
+  <div class="panel" id="localPanel">
     <h2 class="tv-only">On the TV</h2>
     <p class="hint tv-only">Play against the computer with the remote, or pass the remote between players. The tiles show on the TV, so everyone in the room can see them. For secret tiles, start a game with the family on your own devices.</p>
     <ul class="cc-list" id="localList"></ul>
-    <button class="ghost big" id="newLocalBtn" data-tv-start>🤝 <span class="no-tv">Play on this device</span><span class="tv-only">Play on the TV</span></button>
+    <button class="ghost big no-tv" id="newSharedBtn">🤝 Multiplayer-Shared device</button>
+    <button class="ghost big no-tv" id="newBotBtn">🤖 Against the computer</button>
+    <button class="ghost big tv-only" id="newTvBtn" data-tv-start>🤝 Play on the TV</button>
   </div>
+  <!-- More of the page below the screen: the bottom edge fades, with an arrow. -->
+  <div class="cc-more no-tv" id="moreBelow" aria-hidden="true">⌄</div>
 </section>
 
 <!-- ============ a new online game ============ -->
@@ -96,11 +103,11 @@
 <!-- ============ a new game on one phone ============ -->
 <section id="newLocal" class="hidden">
   <div class="panel">
-    <h2>Who's playing?</h2>
-    <p class="hint">Two to four players take turns on this device. Between turns the tiles are hidden, so you can pass it along without peeking.</p>
+    <h2 id="localTitle">Who's playing?</h2>
+    <p class="hint" id="localHint">Two to four players take turns on this device. Between turns the tiles are hidden, so you can pass it along without peeking.</p>
     <div id="localPlayers"></div>
     <div class="row-btns">
-      <button class="ghost" id="addPerson">➕ Add a person</button>
+      <button class="ghost" id="addPerson">+ Add player</button>
       <button class="ghost" id="addBot">🤖 Add the computer</button>
     </div>
   </div>

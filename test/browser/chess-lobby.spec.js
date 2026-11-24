@@ -29,7 +29,7 @@ test('Chess: creating a lobby, finding it, Ready, the chat and starting', async 
   const hostProblems = await asGuest(host, '/chess.html');
   await expect(host.locator('#setup h2')).toHaveText('Choose game mode');
   await host.locator('#modeSeg [data-mode="host"]').click();
-  await expect(host.locator('#create h2')).toHaveText('Set Chess Settings');
+  await expect(host.locator('#create h2')).toHaveText('Your game\'s settings');
   // Nothing asks who can join: a lobby is open to anyone at the arcade, and nobody is picked.
   await expect(host.locator('#whoSeg')).toHaveCount(0);
   await expect(host.locator('#create')).not.toContainText('Who can join');

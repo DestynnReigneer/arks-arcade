@@ -104,9 +104,8 @@ window.PartyLobby = (() => {
       if (!current) return;
       q('[data-msg]').textContent = '';
       try {
-        // An adult game asks for its lobby password (not the adult pass).
-        const r = await RoomPassword.withPassword(password => post(`/rooms/${current.code}/join`, { name: q('[data-name]').value, password }));
-        if (r) { close(); stop(); enterRoom(r); }
+        const r = await post(`/rooms/${current.code}/join`, { name: q('[data-name]').value });
+        close(); stop(); enterRoom(r);
       } catch (e) { q('[data-msg]').textContent = e.message; }
     };
     q('[data-join]').addEventListener('click', join);

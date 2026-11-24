@@ -84,7 +84,7 @@
     pad: [['◀', 'left'], ['▶', 'right'], ['GAS', 'gas']],
     options: [{ id: 'track', label: 'Track', def: 'sunset', choices: ORDER.map(function (k) { return [k, TRACKS[k].name]; }) },
       { id: 'gas', label: 'Gas', def: 'auto', choices: [['pedal', 'Hold to go'], ['auto', 'Always on']] },
-      { id: 'touch', label: 'Touch', def: 'tap', choices: [['tap', 'Tap like the keys'], ['slide', 'Slide']] }],
+      { id: 'touch', label: 'Steering on a touch screen', def: 'tap', choices: [['tap', 'Tap left or right'], ['slide', 'Slide a finger']] }],
     init: function () {
       this.cam = new THREE.PerspectiveCamera(62, 1, 0.1, 1400);
       this.keys = { left: false, right: false, gas: false }; this.keyWheel = 0; this.touchSteer = null; this.touchGas = false; this.built = {}; this.t = 0;

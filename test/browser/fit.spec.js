@@ -48,10 +48,10 @@ const GAMES = [
   { name: 'Block Drop', path: '/blocks.html', start: [], board: '#canvas', need: ['#canvas'], touch: ['#pad'] },
   { name: 'Brick Breaker', path: '/bricks.html', start: [], board: '#canvas', need: ['#canvas'] },
   { name: 'Tower Defense', path: '/towers.html', start: ['#waveBtn'], board: '#canvas', cell: { cols: 10, min: 22 }, need: ['#stage', '#waveBtn', '#buildRow'] },
-  { name: 'Words with Family', path: '/crisscross.html', start: ['#newLocalBtn', { fill: '#localPlayers input', text: 'Tester' }, '#localGo'], board: '#board', need: ['#board', '#rack', '#playBtn'] },
+  { name: 'Words with Family', path: '/crisscross.html', start: ['#newBotBtn', { fill: '#localPlayers input', text: 'Tester' }, '#localGo'], board: '#board', need: ['#board', '#rack', '#playBtn'] },
   { name: 'Spin & Solve', path: '/spinsolve.html', start: ['?.steps-next', '#goBtn'], board: null, need: ['#puzzleBoard', '#spinBtn', '#vowelBtn', '#solveBtn'],
-    setup: ['#levelList', '#packSelect', '#suggestBtn', '#nameList', '#addPlayerBtn', '#roundSeg', '#timerSeg', '#goBtn'],
-    steps: { one: ['#nameList', '#addPlayerBtn', '#levelList', '#packSelect', '#suggestBtn', '.steps-next'], next: '.steps-next',
+    setup: ['#levelList', '#packSelect', '#suggestBtn', '#modeSeg', '#roundSeg', '#timerSeg', '#goBtn'],
+    steps: { one: ['#modeSeg', '#levelList', '#packSelect', '#suggestBtn', '.steps-next'], next: '.steps-next',
       two: ['#roundSeg', '#timerSeg', '.steps-back', '#goBtn'] } },
   { name: 'Chess', path: '/chess.html', start: ['#goBtn'], board: '#board', need: ['#board', '#statusLine', '#gameBtns'],
     setup: ['#modeSeg', '#levelSeg', '#colorSeg', '#goBtn'] },
@@ -68,6 +68,8 @@ const GAMES = [
     setup: ['#levelList', '#lengthSeg', '#modeSeg', '#nameList .name-row:last-child', '#addPlayerBtn', '#goBtn'] },
   { name: 'Uh-Oh: Part Deux', path: '/partdeux.html', start: ['#goBtn', '#passReady'], board: null, need: ['#drawPile', '#discard', '#hand', '#drawBtn'],
     setup: ['#levelList', '#modeSeg', '#nameList .name-row:last-child', '#addPlayerBtn', '#goBtn'] },
+  { name: 'Shuffle Scuffle', path: '/scuffle.html', start: ['#goBtn'], board: null, need: ['#tiles', '#enterBtn'],
+    setup: ['#modeSeg', '#goBtn'] },
   // The 3D cabinet games draw in software in the test browser, slowly, so they get triple time.
   { name: 'Big Swing', path: '/bigswing.html', start: ['.cab-go'], board: '#stage', need: ['#stage', '.cab-pad'], slow: true },
   // Two more cabinet games: Bucket Drop's score row is the longest, and the Racer has three big buttons.
@@ -77,6 +79,11 @@ const GAMES = [
 
 // Game and size pairs that don't fit yet, with why. Fixed in order on the to-do list.
 const KNOWN = {
+  // Shuffle Scuffle joined this list for its setup screen (2026-11-24); its play screen wasn't part of the sideways
+  // layouts, so Enter (or the bottom of the page) is still below a sideways phone's screen.
+  "Shuffle Scuffle @ phone turned sideways": "the play screen isn't fitted to a sideways phone yet: the page is 547px tall on a 390px screen",
+  "Shuffle Scuffle @ small phone turned sideways": "the play screen isn't fitted to a sideways phone yet: Enter ends at 387 of 360",
+  "Shuffle Scuffle @ phone turned sideways with the browser bars showing": "the play screen isn't fitted to a sideways phone yet: Enter ends at 387 of 334",
   "Tower Defense @ phone turned sideways with the browser bars showing": "the map's 13 rows need 286px for 22px squares, and only 270 are left under the top bar, so the squares are 20px (the maintainer's call: smaller squares here, or a map that scrolls a little)",
   "Uh-Oh: Part Deux @ laptop": "skip: fits on some machines and not others; on Windows the page scrolls a little below the hand",
 };
@@ -548,6 +555,10 @@ for (const [label, viewport, , covered = 0] of SIZES) {
     await page.waitForTimeout(300);
     expect(await check('.tower-actions button')).toEqual([]);
     expect(await check('#buildRow button')).toEqual([]);
+    // The tower's description and its count on a line of its own are never left out, even on the smallest
+    // sideways phone.
+    await expect(page.locator('.tower-head .kills')).toHaveText('Monsters defeated: 0');
+    expect(await check('.tower-head small')).toEqual([]);
     if (viewport.width > viewport.height && viewport.height < 600) {
       expect(await page.evaluate(() => document.documentElement.scrollHeight - innerHeight)).toBeLessThanOrEqual(1);
     }
@@ -742,3 +753,88 @@ for (const [label, viewport] of SIDEWAYS) {
     await ctx.close();
   });
 }
+
+// No button's words cut off on a narrow phone: Dare Devil's game lengths and Clueless Crosswords'
+// two rows of choices (the play-tester's check, 2026-11-22). Clueless's rows stay inside the width,
+// and Words with Family's two ways to play on one device can be reached by a guest.
+for (const viewport of [{ width: 360, height: 640 }, { width: 390, height: 844 }]) {
+  test(`nothing is cut off on a ${viewport.width}x${viewport.height} phone: Dare Devil's lengths, Clueless's choices, Words with Family's device buttons`, async ({ browser }, info) => {
+    test.skip(info.project.name !== 'phone', 'The sizes are set here, so one project runs them all.');
+    const cut = (page, sel) => page.evaluate(sel => [...document.querySelectorAll(sel)]
+      .filter(b => b.offsetParent && b.scrollWidth > b.clientWidth + 1).map(b => b.textContent.trim()), sel);
+    const guestIn = async page => {
+      const guest = page.getByRole('button', { name: /Play as a guest/ });
+      if (await guest.isVisible().catch(() => false)) {
+        await guest.click();
+        await page.getByRole('button', { name: 'Play', exact: true }).click();
+      }
+      const close = page.locator('.tut-x');
+      if (await close.isVisible().catch(() => false)) await close.click();
+    };
+
+    let { ctx, page } = await openAt(browser, '/daredevil.html', viewport, 0);
+    await guestIn(page);
+    expect(await cut(page, '#lengthSeg button')).toEqual([]);
+    await ctx.close();
+
+    ({ ctx, page } = await openAt(browser, '/clueless.html', viewport, 0));
+    await guestIn(page);
+    await expect(page.locator('#levelSeg button').first()).toBeVisible();
+    expect(await cut(page, '#levelSeg button, #modeSeg button')).toEqual([]);
+    const picks = await page.locator('.cl-picks').boundingBox();
+    expect(picks.x).toBeGreaterThanOrEqual(-1);
+    expect(picks.x + picks.width).toBeLessThanOrEqual(viewport.width + 1);
+    for (const seg of ['#levelSeg', '#modeSeg']) {
+      const last = await page.locator(`${seg} button`).last().boundingBox();
+      expect(last.x + last.width, seg).toBeLessThanOrEqual(viewport.width + 1);
+    }
+    await ctx.close();
+
+    ({ ctx, page } = await openAt(browser, '/crisscross.html', viewport, 0));
+    await guestIn(page);
+    for (const id of ['#newSharedBtn', '#newBotBtn']) {
+      const btn = page.locator(id);
+      await btn.scrollIntoViewIfNeeded();
+      await expect(btn).toBeInViewport();
+      expect(await cut(page, id), id).toEqual([]);
+    }
+    await page.locator('#newBotBtn').click();
+    await expect(page.locator('#newLocal')).toBeVisible();
+    await ctx.close();
+  });
+}
+
+// Words with Family's "more below" arrow sits above Chrome's row of tabs, where it can be seen, and it shows when
+// the tab row covers the rest of the home screen.
+test("Words with Family's more-below arrow is above Chrome's tab row", async ({ browser }, info) => {
+  test.skip(info.project.name !== 'phone', 'The size is set here.');
+  const [, viewport, , covered] = SIZES.find(s => s[3]);
+  const ctx = await browser.newContext({ viewport, hasTouch: true, isMobile: true });
+  // Enough games on this device to make the home screen longer than what's left above the tab row.
+  await ctx.addInitScript(() => {
+    if (localStorage.getItem('crisscross.local')) return;
+    const games = Array.from({ length: 8 }, (_, i) => ({ id: `fake${i}`, key: 'k', names: ['Kim', 'Computer'], dictionary: 'kids', at: Date.now() }));
+    localStorage.setItem('crisscross.local', JSON.stringify(games));
+  });
+  const page = await ctx.newPage();
+  await page.addInitScript(cov => {
+    const vv = new EventTarget();
+    for (const [k, get] of Object.entries({ height: () => innerHeight - cov, width: () => innerWidth, scale: () => 1, offsetTop: () => 0, offsetLeft: () => 0, pageTop: () => scrollY, pageLeft: () => scrollX })) {
+      Object.defineProperty(vv, k, { get });
+    }
+    Object.defineProperty(window, 'visualViewport', { value: vv, configurable: true });
+  }, covered);
+  await quietFonts(page);
+  await openPage(page, '/crisscross.html');
+  const guest = page.getByRole('button', { name: /Play as a guest/ });
+  if (await guest.isVisible().catch(() => false)) {
+    await guest.click();
+    await page.getByRole('button', { name: 'Play', exact: true }).click();
+  }
+  const close = page.locator('.tut-x');
+  if (await close.isVisible().catch(() => false)) await close.click();
+  await expect(page.locator('#moreBelow')).toHaveClass(/\bon\b/);
+  const box = await page.locator('#moreBelow').boundingBox();
+  expect(box.y + box.height).toBeLessThanOrEqual(viewport.height - covered + 1);
+  await ctx.close();
+});

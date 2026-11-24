@@ -33,7 +33,7 @@ const S = {
   boardId: null,
   board: null,
   minLength: 3,
-  players: [],          // [{ id, name }] for turns/tabletop
+  players: [],          // [{ id, name }] for Pass & Play (turns)
   submissions: [],      // [{ id, name, words: [] }]
   turnIndex: 0,
 
@@ -113,7 +113,7 @@ function mmss(ms) {
 function screen(name) {
   if (name !== 'results' && name !== 'maraResults' && window.ArcadeEnd) ArcadeEnd.clear();
   for (const id of ['setupScreen', 'profileScreen', 'dailyScreen', 'lobbyScreen', 'gateScreen',
-                    'playScreen', 'entryScreen', 'resultsScreen', 'marathonScreen',
+                    'playScreen', 'resultsScreen', 'marathonScreen',
                     'maraResultsScreen']) {
     $(id).classList.toggle('hidden', id !== `${name}Screen`);
   }
@@ -261,7 +261,7 @@ const TRACERS = {
     traceEl: () => $('traceBar'),
     tiles: () => S.board,
     cols: () => S.size,
-    enabled: () => S.mode !== 'tabletop' && !(S.room && S.room.isScreen),
+    enabled: () => !(S.room && S.room.isScreen),
     submit: w => submitWord(w)
   },
   maraBoard: {
@@ -428,19 +428,17 @@ function beginTurn() {
   renderFound();
 
   const alone = S.mode === 'solo' || S.mode === 'daily';
-  const tabletop = S.mode === 'tabletop';
   $('turnName').innerHTML = '';
-  if (!(alone || tabletop)) {
+  if (!alone) {
     const b = document.createElement('b');
     b.textContent = player.name;
     $('turnName').append(b, "'s turn");
   }
   $('playRoster').classList.add('hidden');   // single-device modes have no roster
-  $('typeRow').classList.toggle('hidden', tabletop);
-  $('traceBar').classList.toggle('hidden', tabletop);
-  $('foundChips').parentElement.classList.toggle('hidden', tabletop);
-  $('tabletopHint').classList.toggle('hidden', !tabletop);
-  $('doneBtn').textContent = tabletop ? 'Stop the clock' : "I'm done";
+  $('typeRow').classList.remove('hidden');
+  $('traceBar').classList.remove('hidden');
+  $('foundChips').parentElement.classList.remove('hidden');
+  $('doneBtn').textContent = "I'm done";
 
   screen('play');
   startClock(Date.now() + S.duration * 1000, endTurn);
@@ -448,18 +446,12 @@ function beginTurn() {
 
 function endTurn() {
   stopClock();
-  if (S.mode !== 'tabletop') {
-    S.submissions.push({
-      id: S.players[S.turnIndex].id,
-      name: S.players[S.turnIndex].name,
-      words: S.found.map(f => f.word)
-    });
-  }
+  S.submissions.push({
+    id: S.players[S.turnIndex].id,
+    name: S.players[S.turnIndex].name,
+    words: S.found.map(f => f.word)
+  });
 
-  if (S.mode === 'tabletop') {
-    S.turnIndex = 0;
-    return showEntry();
-  }
   S.turnIndex++;
   if (S.turnIndex < S.players.length) return showGate();
   finishSingleDevice();
@@ -472,33 +464,6 @@ function showGate() {
     ? "Everyone gets the same board. Don't peek before your turn."
     : `Same board as before. ${S.duration / 60 >= 1 ? '' : ''}Hand the device over.`;
   screen('gate');
-}
-
-function showEntry() {
-  const player = S.players[S.turnIndex];
-  $('entryName').textContent = player.name;
-  $('entryText').value = '';
-  say($('entryMsg'), '');
-  renderBoard($('entryBoard'), S.board, S.size, S.size);
-  $('entryNextBtn').textContent =
-    S.turnIndex === S.players.length - 1 ? 'Score the round' : 'Next player';
-  screen('entry');
-  $('entryText').focus();
-}
-
-function takeEntry() {
-  const words = $('entryText').value
-    .toUpperCase()
-    .split(/[^A-Z]+/)
-    .filter(Boolean);
-  S.submissions.push({
-    id: S.players[S.turnIndex].id,
-    name: S.players[S.turnIndex].name,
-    words
-  });
-  S.turnIndex++;
-  if (S.turnIndex < S.players.length) return showEntry();
-  finishSingleDevice();
 }
 
 async function finishSingleDevice() {
@@ -562,7 +527,7 @@ function renderDailyCard() {
   const card = $('dailyCard');
   const d = S.daily;
   if (!d) {
-    $('dcSub').textContent = 'One board. Everyone in the house. Four minutes.';
+    $('dcSub').textContent = 'One board a day for the whole house, with four minutes on the clock.';
     $('dcRight').textContent = '';
     return;
   }
@@ -584,7 +549,7 @@ function renderDailyCard() {
   } else {
     $('dcSub').textContent = standings.length
       ? `${standings.length} ${standings.length === 1 ? 'person has' : 'people have'} played it. You haven't.`
-      : 'One board. Everyone in the house. Four minutes.';
+      : 'One board a day for the whole house, with four minutes on the clock.';
     $('dcRight').textContent = '›';
   }
 }
@@ -640,7 +605,7 @@ function renderDaily() {
 
   $('dailyPlayBtn').textContent = played
     ? 'Play it again'
-    : `Play today's board · ${mmss((d.durationSec || 240) * 1000)}`;
+    : 'Play the daily challenge';
 
   // Replaying is allowed and banks nothing. Saying so is better than either
   // locking the board -- which means telling a seven-year-old no -- or letting
@@ -658,14 +623,14 @@ function renderDaily() {
     $('dailyReplayNote').textContent = `${mins} minutes, one scoring go. Make it count.`;
   }
 
-  renderDailyStandings($('dailyStandings'), standings);
+  renderDailyStandings($('dailyStandings'), standings, { empty: false });
   $('dailyBoardSub').textContent = dictionaryNote(standings);
 }
 
 // Everyone gets the same letters, but not the same word list, and pretending
 // otherwise would make the standings quietly dishonest.
 function dictionaryNote(standings) {
-  if (!standings.length) return 'Nobody has played it yet. Be the first name on it.';
+  if (!standings.length) return 'Nobody has played yet. Be first on the leaderboard.';
   const lists = new Set(standings.map(r => r.profile));
   if (lists.size > 1) {
     return 'Same sixteen letters for everyone. The unfiltered list is the wider one, ' +
@@ -674,10 +639,11 @@ function dictionaryNote(standings) {
   return `${standings.length} ${standings.length === 1 ? 'go' : 'goes'} at the same sixteen letters.`;
 }
 
-function renderDailyStandings(host, standings, { mineId = null } = {}) {
+// The daily screen says it once, under its heading (dictionaryNote), so its list stays empty.
+function renderDailyStandings(host, standings, { mineId = null, empty = true } = {}) {
   host.innerHTML = '';
   if (!standings.length) {
-    host.innerHTML = '<div class="note">No scores yet today.</div>';
+    if (empty) host.innerHTML = '<div class="note">No scores yet today.</div>';
     return;
   }
   const me = mineId || (S.player ? S.player.id : null);
@@ -1499,7 +1465,6 @@ function applyRoomState(snap) {
       // The TV only shows the board: the words are traced on the phones.
       $('typeRow').classList.toggle('hidden', !!snap.isScreen);
       $('traceBar').classList.toggle('hidden', !!snap.isScreen);
-      $('tabletopHint').classList.add('hidden');
       $('doneBtn').textContent = "I'm done";
       $('playRosterTitle').textContent = snap.isScreen ? 'Words found so far' : 'Everyone else';
       screen('play');
@@ -1545,7 +1510,6 @@ function renderPlayRoster(snap) {
 }
 
 function renderLobby(snap) {
-  $('lobbyPassword').textContent = snap.lobbyPassword ? `🔒 Lobby password: ${snap.lobbyPassword}` : snap.locked ? '🔒 This game is locked with a password.' : '';
   $('lobbyTitle').textContent = snap.screen ? 'Rambler on the TV' : snap.youAreHost ? 'Your Rambler lobby' : `${snap.hostName}'s Rambler lobby`;
   $('lobbyHow').textContent = snap.isScreen
     ? 'Everyone scans the code with their own phone and types their name. The board shows up big here on the TV, and you all trace words on your phones at the same time.'
@@ -1583,7 +1547,7 @@ function renderLobby(snap) {
 }
 
 function pushRoomSettings(patch) {
-  RoomPassword.withPassword(password => api(`/rooms/${S.creds.code}/settings`, { method: 'POST', body: { ...S.creds, ...patch, password } }))
+  api(`/rooms/${S.creds.code}/settings`, { method: 'POST', body: { ...S.creds, ...patch } })
     .catch(e => notice(e.message));
 }
 
@@ -1641,7 +1605,7 @@ function showResults(results) {
     for (const w of r.words) {
       const line = document.createElement('div');
       line.className = `word-line${!w.valid ? ' bad' : w.canceled ? ' dead' : ''}`;
-      const label = !w.valid ? w.reason : w.canceled ? 'everyone found it' : '';
+      const label = !w.valid ? w.reason : w.canceled ? 'someone else found it too' : '';
       line.innerHTML = `<span class="w"></span><span class="p${w.points ? '' : ' zero'}"></span>`;
       line.querySelector('.w').textContent = w.word;
       line.querySelector('.p').textContent = w.points ? `+${w.points}` : label;
@@ -1988,7 +1952,7 @@ function renderSetup() {
     b.setAttribute('aria-pressed', String(b.dataset.mode === S.mode));
   }
 
-  const needsRoster = S.mode === 'turns' || S.mode === 'tabletop';
+  const needsRoster = S.mode === 'turns';
   const marathon = S.mode === 'marathon';
   // List Hosted Games: the lobbies to pick from replace the game's own settings.
   const finding = S.mode === 'find';
@@ -2025,7 +1989,7 @@ function renderSetup() {
     ? `${profile.words.toLocaleString()} words. ${profile.blurb}.`
     : '';
 
-  $('startBtn').textContent = TV ? 'Show the code on the TV'
+  $('startBtn').textContent = TV ? 'Show the QR code on the TV'
     : S.mode === 'room' ? 'Create lobby' : S.mode === 'marathon' ? 'Start the run' : 'Slide to victory';
 }
 
@@ -2090,15 +2054,12 @@ async function startPressed() {
     }
 
     if (S.mode === 'room' && TV) {
-      // The TV hosts as its screen. An Unfiltered room needs a lobby password
-      // for the guests' phones; the TV makes one up and shows it in its lobby.
-      const PASSWORDS = ['tacos', 'disco', 'pickle', 'waffle', 'banjo', 'noodle', 'meteor', 'cactus', 'walrus', 'jelly'];
+      // The TV hosts as its screen.
       const data = await api('/rooms', {
         method: 'POST',
         body: {
           name: (ArcadeTV.state.tv && ArcadeTV.state.tv.name) || 'TV', screen: true,
-          size: S.size, profile: S.profile, durationSec: S.duration, adultPin: S.adultPin,
-          password: S.profile === 'adult' ? PASSWORDS[Math.floor(Math.random() * PASSWORDS.length)] + (10 + Math.floor(Math.random() * 90)) : undefined
+          size: S.size, profile: S.profile, durationSec: S.duration, adultPin: S.adultPin
         }
       });
       S.creds = { code: data.code, playerId: data.playerId, token: data.token };
@@ -2107,19 +2068,16 @@ async function startPressed() {
     }
 
     if (S.mode === 'room') {
-      // An Unfiltered room gets a lobby password the host makes up.
-      const data = await RoomPassword.withPassword(password => api('/rooms', {
+      const data = await api('/rooms', {
         method: 'POST',
         body: {
           name: $('nameInput').value || (S.player ? S.player.name : guestName()),
           size: S.size,
           profile: S.profile,
           durationSec: S.duration,
-          adultPin: S.adultPin,
-          password
+          adultPin: S.adultPin
         }
-      }));
-      if (!data) return;
+      });
       S.creds = { code: data.code, playerId: data.playerId, token: data.token };
       openStream();
       return;
@@ -2216,12 +2174,10 @@ async function joinHosted() {
   if (!l) return;
   say($('hostedMsg'), '');
   try {
-    // An unfiltered lobby asks for its lobby password (not the adult pass).
-    const data = await RoomPassword.withPassword(password => api(`/rooms/${l.code}/join`, {
+    const data = await api(`/rooms/${l.code}/join`, {
       method: 'POST',
-      body: { name: S.player ? S.player.name : $('hostedName').value || guestName(), password }
-    }));
-    if (!data) return;
+      body: { name: S.player ? S.player.name : $('hostedName').value || guestName() }
+    });
     closeHosted();
     S.creds = { code: data.code, playerId: data.playerId, token: data.token };
     S.cameFromList = true;
@@ -2300,7 +2256,7 @@ async function saveToBoard(results) {
   if (!target || !results || results.boardSaved) throw new Error('This score is already on the board.');
   // In a pass-around game the winner may not be whoever owns this device, so
   // the score goes under the name they played under in the round.
-  const shared = S.mode === 'turns' || S.mode === 'tabletop';
+  const shared = S.mode === 'turns';
   const me = boardIdentity();
   const who = shared ? {} : me;
   if (!shared && S.mode !== 'room' && !me.profileId && !me.name) throw new Error(NO_BOARD_NAME);
@@ -2329,7 +2285,7 @@ function bind() {
     b.onclick = () => {
       S.mode = b.dataset.mode;
       say($('setupMsg'), '');
-      if ((S.mode === 'turns' || S.mode === 'tabletop') && S.players.length < 2) {
+      if (S.mode === 'turns' && S.players.length < 2) {
         S.players = defaultPlayers(2);
       }
       renderSetup();
@@ -2384,8 +2340,6 @@ function bind() {
     }
     endTurn();
   };
-
-  $('entryNextBtn').onclick = takeEntry;
 
   $('resultsScreen').addEventListener('click', e => {
     const el = e.target.closest('[data-word]');
@@ -2522,7 +2476,7 @@ const onStep2 = () => steps.active && steps.step === 2 && !$('setupScreen').clas
 ArcadeBack.setup({
   atMenu: () => !$('setupScreen').classList.contains('hidden') && !onStep2(),
   back: () => { if (onStep2()) steps.go(1); else leaveToSetup(); },
-  busy: () => ['playScreen', 'gateScreen', 'entryScreen'].some(id => !$(id).classList.contains('hidden')) ||
+  busy: () => ['playScreen', 'gateScreen'].some(id => !$(id).classList.contains('hidden')) ||
     (!$('marathonScreen').classList.contains('hidden') && !M.over)
 });
 

@@ -208,9 +208,12 @@ function createLocal({ players, dictionary }, now = Date.now()) {
   const list = (Array.isArray(players) ? players : []).slice(0, E.MAX_PLAYERS + 1);
   if (list.length < 2 || list.length > E.MAX_PLAYERS) throw fail('A game needs 2 to 4 players.');
   const seen = new Set();
+  // One computer player is "Computer"; two or more are Computer 1, Computer 2 and so on, in seat order.
+  const bots = list.filter(p => p && p.bot).length;
+  let botNo = 0;
   const clean = list.map((p, k) => {
     const isBot = !!(p && p.bot);
-    let name = isBot ? 'Computer' : cleanName(p && p.name) || `Player ${k + 1}`;
+    let name = isBot ? (bots > 1 ? `Computer ${++botNo}` : 'Computer') : cleanName(p && p.name) || `Player ${k + 1}`;
     while (seen.has(name.toLowerCase())) name = `${name.slice(0, 13)} ${k + 1}`;
     seen.add(name.toLowerCase());
     return isBot ? { name, bot: true } : { name };

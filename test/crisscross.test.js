@@ -183,6 +183,10 @@ async function run({ base, root }) {
   ok('playing the computer: it takes its turn straight after yours', move.res.status === 200 && move.res.data.game.moves.length === 2 && move.res.data.game.yourTurn,
     JSON.stringify(move.res.data.game && move.res.data.game.moves));
   ok('…and its rack is never shown', move.res.data.game.rackSeat === 0 && !move.res.text.includes('"racks"'));
+  const twoBots = await api('/games', 'POST', { kind: 'local', players: [{ name: 'Ana' }, { bot: true }, { bot: true }] });
+  ok('two computer players are Computer 1 and Computer 2, one is Computer',
+    twoBots.status === 201 && twoBots.data.game.players.map(p => p.name).join() === 'Ana,Computer 1,Computer 2' &&
+    vsBot.data.game.players.map(p => p.name).join() === 'Ana,Computer', JSON.stringify(twoBots.data.game && twoBots.data.game.players));
   ok('only computers isn\'t a game', (await api('/games', 'POST', { kind: 'local', players: [{ bot: true }, { bot: true }] })).status === 400);
 
   console.log('\n-- criss cross: online games between profiles --');

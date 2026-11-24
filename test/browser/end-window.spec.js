@@ -484,7 +484,7 @@ test('Words with Family: a game that stalls ends in the window, and leaving asks
   page.on('dialog', d => { browserBox = true; d.dismiss(); });
   await openAsGuest(page, '/crisscross.html');
   // Against the computer: leaving goes back to your games, with no "Computer wins" and no confetti.
-  await page.locator('#newLocalBtn').click();
+  await page.locator('#newBotBtn').click();
   await page.locator('#localPlayers input').first().fill('Tester');
   await page.locator('#localGo').click();
   await expect(page.locator('#game')).toBeVisible();
@@ -495,9 +495,7 @@ test('Words with Family: a game that stalls ends in the window, and leaving asks
   await expect(layer(page)).toBeHidden();
   await expect(page.getByText('Computer wins')).toHaveCount(0);
   // Two people on one device who both pass three times: the game stalls and ends.
-  await page.locator('#newLocalBtn').click();
-  await page.locator('#addPerson').click();
-  await page.locator('#localPlayers .cc-local-row', { hasText: 'The computer' }).getByRole('button').click();
+  await page.locator('#newSharedBtn').click();
   await page.locator('#localPlayers input').nth(0).fill('Ana');
   await page.locator('#localPlayers input').nth(1).fill('Ben');
   await page.locator('#localGo').click();

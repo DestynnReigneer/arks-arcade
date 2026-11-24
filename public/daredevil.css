@@ -136,3 +136,14 @@ body.tv-screen #quitBtn { order: -1; align-self: flex-end; width: auto; margin: 
   html:not(.tv) #game > #log { grid-area: log; margin: 0; max-height: none; min-height: 0; }
   html:not(.tv) #game > #quitBtn { grid-area: quit; margin: 6px 0 0; padding-top: 8px; padding-bottom: 8px; }
 }
+
+/* The game lengths stay one row on a phone (a long label wraps onto a second line),
+   and the level cards are as tight as on a short screen, which leaves room for the
+   Game mode headings. */
+html:not(.tv) .fit-setup #lengthSeg { flex-wrap: nowrap; }
+html:not(.tv) .fit-setup #lengthSeg button { flex: 1 1 auto; min-width: 0; line-height: 1.15; padding-left: 4px; padding-right: 4px; font-size: 13px; }
+@media (max-height: 900px) {
+  html:not(.tv) .fit-setup .level { padding: 5px 8px; }
+  html:not(.tv) .fit-setup .level .l-blurb { line-height: 1.25; margin-top: 1px; }
+  html:not(.tv) .fit-setup .level .l-lock { margin-top: 2px; }
+}

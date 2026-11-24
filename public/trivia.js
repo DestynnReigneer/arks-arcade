@@ -136,7 +136,7 @@
     const panel = mode === 'tvremote' ? 'local' : mode;
     for (const m of ['solo', 'local', 'host', 'join', 'tvphones', 'tvpass']) $(`${m}Setup`).classList.toggle('hidden', m !== panel);
     $('goBtn').textContent = mode === 'host' ? 'Create lobby'
-      : mode === 'tvphones' || mode === 'tvpass' ? 'Show the code on the TV' : 'Let\'s play';
+      : mode === 'tvphones' || mode === 'tvpass' ? 'Show the QR code on the TV' : 'Let\'s play';
     // List Hosted Games: the lobbies to pick from replace the game's own settings.
     const finding = mode === 'join';
     for (const id of ['levelList', 'genreChips']) $(id).closest('.panel').classList.toggle('hidden', finding);
@@ -179,9 +179,8 @@
       if (S.mode.startsWith('tv')) return await hostOnTv(S.mode);
       if (S.mode === 'solo' || S.mode === 'local') return await startLocal();
       if (S.mode === 'host') {
-        const r = await RoomPassword.withPassword(password =>
-          api('/api/trivia/rooms', { name: $('hostName').value, settings: settings(), password }, { ...pinHeaders(), ...profileHeaders(), ...deviceHeaders() }));
-        if (r) enterRoom(r);
+        const r = await api('/api/trivia/rooms', { name: $('hostName').value, settings: settings() }, { ...pinHeaders(), ...profileHeaders(), ...deviceHeaders() });
+        enterRoom(r);
         return;
       }
     } catch (e) { $('setupMsg').textContent = e.message; }
@@ -259,10 +258,8 @@
     if (!l) return;
     $('detailsMsg').textContent = '';
     try {
-      // An adult game asks for its lobby password (not the adult pass).
-      const r = await RoomPassword.withPassword(password =>
-        api(`/api/trivia/rooms/${l.code}/join`, { name: $('joinName').value, password }, { ...profileHeaders(), ...deviceHeaders() }));
-      if (r) { closeDetails(); enterRoom(r); }
+      const r = await api(`/api/trivia/rooms/${l.code}/join`, { name: $('joinName').value }, { ...profileHeaders(), ...deviceHeaders() });
+      closeDetails(); enterRoom(r);
     } catch (e) { $('detailsMsg').textContent = e.message; }
   }
   // Opening trivia.html?join=CODE (from the home page's list): that lobby's details.
@@ -279,15 +276,11 @@
   // The TV makes the room as its screen (it shows the game and doesn't play).
   // Everyone on their own phone answers together; passing a phone around or
   // using the remote takes turns. With the remote, the TV holds every player.
-  const PASSWORDS = ['tacos', 'disco', 'pickle', 'waffle', 'banjo', 'noodle', 'meteor', 'cactus', 'walrus', 'jelly'];
   async function hostOnTv(mode) {
     if (window.ArcadeStats) ArcadeStats.play();
     const st = { ...settings(), style: mode === 'tvphones' ? 'together' : 'turns' };
-    // An adult game needs a lobby password for the guests' phones. Typing on
-    // a TV is slow, so the TV makes one up and shows it in its lobby.
-    const password = isAdult() ? PASSWORDS[Math.floor(Math.random() * PASSWORDS.length)] + (10 + Math.floor(Math.random() * 90)) : undefined;
     const tvName = (ArcadeTV.state.tv && ArcadeTV.state.tv.name) || 'TV';
-    const r = await api('/api/trivia/rooms', { name: tvName, screen: true, settings: st, password }, { ...pinHeaders(), ...deviceHeaders() });
+    const r = await api('/api/trivia/rooms', { name: tvName, screen: true, settings: st }, { ...pinHeaders(), ...deviceHeaders() });
     if (mode === 'tvremote') {
       for (const [i, n] of S.names.entries()) {
         await api(`/api/trivia/rooms/${r.code}/seats`, { playerId: r.playerId, token: r.token, name: n.trim() || `Player ${i + 1}` });
@@ -508,7 +501,7 @@
     const s = snap.settings;
     const turns = s.style === 'turns';
     $('lobbyLevel').textContent = `${s.levelLabel} · ${s.count} questions${turns ? ' each' : ''} · ${s.seconds}s each` +
-      (s.drinking ? ' · 🍺 Drinking' : '') + (s.couples ? ' · 💋 Dares' : '') + (snap.lobbyPassword ? ` · 🔒 Password: ${snap.lobbyPassword}` : snap.locked ? ' · 🔒 Locked' : '');
+      (s.drinking ? ' · 🍺 Drinking' : '') + (s.couples ? ' · 💋 Dares' : '');
     $('lobbyHow').textContent = !snap.screen ? ''
       : !turns ? 'Everyone scans the code with their own phone and types their name. You all answer at the same time on your phones, and the questions show up here on the TV.'
         : snap.isScreen ? 'Scan the code with the phone you\'ll pass around and add everyone\'s names on it, or add players right here to play with the remote. Each player gets their own questions, one turn at a time.'
@@ -748,7 +741,7 @@
         <tr><td>📱 Multiplayer-Shared device</td><td>Take turns; everyone gets their own questions.</td></tr>
         <tr><td>📱📱 Multiplayer-Multiple devices</td><td>Players use their own devices. The quickest to answer correctly, receives the highest score. Join from 🔎 List Hosted Games.</td></tr>
       </table>` },
-    { emoji: '🎚️', title: 'Pick what you like', html: `<p>Choose <b>genres</b> (or none for a mix), a <b>difficulty</b>, how many questions, and how long to answer.</p><p>Got an idea for a topic? Tap <b>💡 Suggest a topic</b>.</p>` },
+    { emoji: '🎚️', title: 'Pick what you like', html: `<p>Choose <b>genres</b> (or none for a mix), a <b>difficulty</b>, how many questions, and how long to answer.</p><p>Got an idea for a topic? Tap <b>💡 Suggest a theme or topic</b>.</p>` },
     { emoji: '🔞', title: 'For adults', html: `<p><b>Cheeky</b>, <b>Spicy</b> and <b>Filthy</b> get spicier as you go.</p><p>🍺 <b>Drinking</b>: wrong answers drink, three in a row gives drinks, last place finishes theirs.</p><p>💋 <b>Couples dares</b>: miss a question, do a dare. The heat matches the level.</p><div class="tut-tip">Tap <b>?</b> at the top any time to see this again.</div>` }
   ]);
 

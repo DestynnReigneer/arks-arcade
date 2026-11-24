@@ -1,7 +1,7 @@
 'use strict';
 
 // Uh-Oh: Part Deux tables: the shared party-game plumbing (one phone or a
-// phone each, lobby passwords for adult decks) around this game's engine.
+// phone each) around this game's engine.
 
 const { makeTables } = require('../arcade/party-tables');
 const engine = require('./engine');

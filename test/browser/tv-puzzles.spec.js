@@ -148,7 +148,7 @@ test('Clueless: the highlight is the cursor, and the keyboard types', async ({ p
 test('Words with Family: a first word against the computer, with the remote', async ({ page }) => {
   const problems = watchProblems(page);
   await pairTv(page, '/crisscross.html');
-  await press(page, '#newLocalBtn');
+  await press(page, '#newTvBtn');
   await expect(page.locator('#localPlayers')).toContainText('The computer');
   await press(page, '#localGo');
   await expect(page.locator('#game')).toBeVisible();
@@ -179,9 +179,9 @@ test('Words with Family: a first word against the computer, with the remote', as
 test('Spin & Solve: spin, call a letter and type an answer with the remote', async ({ page }) => {
   const problems = watchProblems(page);
   await pairTv(page, '/spinsolve.html');
-  // Just one player, with the remote.
-  await press(page, '#nameList .name-row:nth-child(2) button');
-  await expect(page.locator('#nameList .name-row')).toHaveCount(1);
+  // Just one player, with the remote: Solo is the first game mode, and it has no names list.
+  await expect(page.locator('#modeSeg [data-mode="solo"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#nameList')).toBeHidden();
   await press(page, '#timerSeg [data-secs="0"]');
   await press(page, '#goBtn');
   await expect(page.locator('#game')).toBeVisible();

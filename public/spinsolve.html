@@ -49,16 +49,23 @@
     <label style="margin-top:14px">Puzzles
       <select id="packSelect"></select>
     </label>
-    <button class="ghost no-tv" id="suggestBtn" style="width:100%">💡 Suggest a theme</button>
+    <button class="ghost no-tv" id="suggestBtn" style="width:100%">💡 Suggest a theme or topic</button>
   </div>
 
   <div class="panel" style="--step-order:-1">
     <div data-step="1">
-    <h2>Who's playing?</h2>
-    <p class="hint no-tv">One player plays solo for the 🏆 board. Two to four take turns on this device.</p>
-    <p class="hint tv-only">One player plays solo for the 🏆 board. Two to four take turns with the remote: pass it to whoever's turn it is. Add everyone's names, or leave them as they are.</p>
-    <div id="nameList"></div>
-    <button class="ghost" id="addPlayerBtn">+ Add player</button>
+    <h2>Game mode</h2>
+    <div class="seg" id="modeSeg">
+      <button data-mode="solo" aria-pressed="true">🙂 Solo</button>
+      <button data-mode="local" aria-pressed="false">📱 Multiplayer-Shared device</button>
+    </div>
+    <div id="soloSetup"><p class="hint">Single player, plays for the 🏆 board.</p><div id="soloName"></div></div>
+    <div id="localSetup" class="hidden">
+      <p class="hint no-tv">Up to 4 players on a single device.</p>
+      <p class="hint tv-only">Two to four take turns with the remote: pass it to whoever's turn it is. Add everyone's names, or leave them as they are.</p>
+      <div id="nameList"></div>
+      <button class="ghost" id="addPlayerBtn">+ Add player</button>
+    </div>
     </div>
     <div data-step="2">
     <h2 style="margin-top:18px">How many rounds?</h2>
@@ -163,7 +170,7 @@
 
 <div class="overlay hidden" id="requestView">
   <div class="card-panel">
-    <h2>💡 Suggest a theme</h2>
+    <h2>💡 Suggest a theme or topic</h2>
     <p class="hint">What should the next puzzle pack be about? The arcade's owner gets your idea.</p>
     <div id="requestForm">
       <label>Theme idea<input id="reqTopic" maxlength="60" placeholder="e.g. Pokémon, Disney movies, camping"></label>
