@@ -1357,7 +1357,11 @@ async function run({ base, root }) {
     raw.close();
     const pip = (await wl('/profiles')).data.find(p => p.id === '0ldp1nf00d000001');
     ok('a profile with an old PIN shows no PIN or lock', !!pip && !('hasPin' in pip) && !('locked' in pip), JSON.stringify(pip));
-    ok('…and is picked straight away, with no PIN', !!(await wl('/profiles/0ldp1nf00d000001/use', 'POST', {})).data.token);
+    const used = await wl('/profiles/0ldp1nf00d000001/use', 'POST', {});
+    ok('…and is picked straight away, with no PIN', !!used.data.token);
+    const adminPip = (await asAdmin('/profiles/admin')).data;
+    const leaks = s => /pin_|hasPin|"locked"|"x"|"y"/.test(JSON.stringify(s));
+    ok('…and neither the admin list nor the pick hands out anything of the old PIN', !leaks(adminPip) && !leaks(used.data));
     await asAdmin('/profiles/admin/0ldp1nf00d000001', 'DELETE');
   }
   ok('an approved profile becomes a Rambler player with the same id', !!(await wl(`/rambler/players/${asked.data.id}`)).data);

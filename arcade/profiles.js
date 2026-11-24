@@ -52,7 +52,8 @@ function secret() {
 }
 const sign = (id, version) => crypto.createHmac('sha256', secret()).update(`${id}:${version}`).digest('base64url');
 // A profile token. pin_version is only a token version now (from the PIN
-// days); it's kept so tokens already handed out keep working. One handed out at an ARKS ID sign-in also names that sign-in
+// days); it's kept so tokens already handed out keep working. One handed out
+// at an ARKS ID sign-in also names that sign-in
 // (signin: a short key for it, never the sign-in's id), and works only while the
 // sign-in does (the maintainer, 2026-11-15): signing out ends it everywhere it was
 // copied to, the way the adult pass ends.

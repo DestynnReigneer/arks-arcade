@@ -132,7 +132,7 @@ WireGuard):
   (type a name, or get "Guest 1", "Guest 2"…).
 - **New profile** lets anyone ask for one with a name and an avatar. Approve it
   in **Admin → Arcade → Profiles**.
-- Scores are credited to the profile (the server checks a signed token).
+- Scores are credited to the profile (the server checks a signed token). Without ARKS ID, anyone using the arcade can pick any approved profile, so treat profiles as name tags, not accounts.
 
 ### Signing in through ARKS ID (optional)
 
