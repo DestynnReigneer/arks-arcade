@@ -14,8 +14,8 @@
 //   store.remove(code)                       the room closed
 //   store.restoreEach(row => { ... })       each kept room, once, when the arcade starts (row: { code, data, savedAt })
 //
-// What's written holds seat tokens and, for an adult room, its lobby
-// password, so it stays in the database and no route ever sends it out.
+// What's written holds seat tokens, so it stays in the database and no
+// route ever sends it out.
 
 const db = require('../db');
 

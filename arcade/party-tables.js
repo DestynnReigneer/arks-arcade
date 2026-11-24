@@ -9,8 +9,7 @@
 //     A phone in a room can hold more players (seats) and be passed around
 //     between them, and a room can be hosted by a screen (a TV): it shows the
 //     table to everyone and starts the game, but it isn't a player itself.
-// Adult levels get a lobby password the host makes up. Each game supplies
-// its own engine; this handles the seats, codes, passwords and sockets.
+// Each game supplies its own engine; this handles the seats, codes and sockets.
 //
 // The lobby: a room shows up in List Hosted Games and on the home page, and anyone at
 // the arcade can join it. Nobody is picked or told about it: people find it in the
@@ -28,7 +27,6 @@
 //     levels: { [id]: { adult } }       which levels are adult
 
 const crypto = require('node:crypto');
-const roomPassword = require('./room-password');
 const adultJoin = require('./adult-join');
 // A seat saved before kids were marked (2026-11-15) has no kid field. One that
 // also had no adult's sign-in may be a kid's, so it counts as one.
@@ -91,14 +89,13 @@ function makeTables({ game = 'party', title = 'the game', engine, act, levels, m
 
   // ---- kept between restarts -------------------------------------------------------
   // A table as plain data: everything but who's connected right now. It holds the
-  // seats' tokens, every hand and, for an adult room, its lobby password, so it
-  // never leaves the server.
+  // seats' tokens and every hand, so it never leaves the server.
   function pack(t) {
     if (t.kind === 'local') {
       return { id: t.id, kind: 'local', token: t.token, names: t.names, level: t.level, drinking: t.drinking, options: t.options, lastActivity: t.lastActivity, game: t.game };
     }
     return {
-      id: t.id, kind: 'room', level: t.level, drinking: t.drinking, options: t.options, password: t.password,
+      id: t.id, kind: 'room', level: t.level, drinking: t.drinking, options: t.options,
       players: [...t.players.values()].map(p => ({
         id: p.id, token: p.token || null, name: p.name, owner: p.owner || null, profileId: p.profileId || null, ready: !!p.ready, kid: !!p.kid
       })),
@@ -124,7 +121,7 @@ function makeTables({ game = 'party', title = 'the game', engine, act, levels, m
         } else if (data.kind === 'room' && Array.isArray(data.players) && (data.players.length || data.screen)) {
           t = {
             id: code, kind: 'room', level: levelOf(data.level), drinking: !!data.drinking, options: cleanOptions(data.options || {}),
-            password: data.password || null, players: new Map(), hostId: data.hostId,
+            players: new Map(), hostId: data.hostId,
             screen: data.screen ? { id: String(data.screen.id), token: String(data.screen.token), name: cleanName(data.screen.name, 'TV'), clients: 0, screen: true } : null,
             game: data.game || null, clients: new Set(), lastActivity, muted: new Set(Array.isArray(data.muted) ? data.muted : [])
           };
@@ -135,8 +132,8 @@ function makeTables({ game = 'party', title = 'the game', engine, act, levels, m
             });
           }
           if (!member(t, t.hostId)) t.hostId = t.screen ? t.screen.id : ([...t.players.values()].find(x => x.token) || {}).id || null;
-          // An adult level always has its password, and a family one never does; a room with no host can't be run.
-          if (!isAdult(t.level)) { t.password = null; t.drinking = false; }
+          // Only an adult level has Drinking; a room with no host can't be run.
+          if (!isAdult(t.level)) t.drinking = false;
           if (!t.hostId) t = null;
         }
       }
@@ -209,12 +206,11 @@ function makeTables({ game = 'party', title = 'the game', engine, act, levels, m
 
   // screen: this device (a TV) hosts and shows the game, and doesn't play.
   // profile: the host's { id, name }.
-  function createRoom({ name, level, drinking, password, options, screen = false, profile = null }) {
+  function createRoom({ name, level, drinking, options, screen = false, profile = null }) {
     roomForMore();
     const lv = levelOf(level);
     const t = {
       id: makeCode(), kind: 'room', level: lv, drinking: !!drinking && isAdult(lv), options: cleanOptions(options || {}),
-      password: isAdult(lv) ? roomPassword.requireNew(password) : null,
       players: new Map(), hostId: null, screen: null, game: null, clients: new Set(), lastActivity: Date.now(),
       muted: new Set()
     };
@@ -255,9 +251,8 @@ function makeTables({ game = 'party', title = 'the game', engine, act, levels, m
   }
 
   // kid: this device is a kid's or a teen's (arcade/adult-join.js), so it leaves if the game turns adult.
-  function joinRoom(code, name, password, profile = null, kid = false) {
+  function joinRoom(code, name, profile = null, kid = false) {
     const t = room(code);
-    roomPassword.check(t, password);
     // One seat per profile: joining again (another device, or after a reload) gets the same seat back.
     const mine = profile && [...t.players.values()].find(p => p.token && p.profileId === profile.id);
     if (mine) { mine.kid = !!kid; touch(t); return { table: t, player: mine }; }
@@ -317,7 +312,7 @@ function makeTables({ game = 'party', title = 'the game', engine, act, levels, m
   // device, and their page is told why. The host stays, and so does anyone signed
   // in with ARKS ID as an adult: that's asked again now, not remembered from when
   // they joined, so someone who signed out since, or whose account stopped being
-  // an adult's, goes too. A guest can come back with the lobby password.
+  // an adult's, goes too.
   function moveOutForAdultLevel(t) {
     const going = [...t.players.values()].filter(p => p.token && p.id !== t.hostId && p.kid);
     const names = [];
@@ -334,7 +329,7 @@ function makeTables({ game = 'party', title = 'the game', engine, act, levels, m
     chat.note(t.id, `${who} ${names.length === 1 ? 'was' : 'were'} removed, the host switched game mode to adult.`);
   }
 
-  function settings(code, playerId, token, { level, drinking, password, options }) {
+  function settings(code, playerId, token, { level, drinking, options }) {
     const t = room(code);
     const p = authenticate(t, playerId, token);
     if (p.id !== t.hostId) throw fail('Only the host can change that.', 403);
@@ -343,10 +338,8 @@ function makeTables({ game = 'party', title = 'the game', engine, act, levels, m
       const lv = levelOf(level);
       // It's the host's lobby, so the host can turn it adult at any time (the maintainer's
       // call, 2026-11-14). Nobody who joined a family game is left sitting in an adult one:
-      // whoever isn't known to be an adult is moved out first. The password comes before
-      // anything else, so a switch that's refused changes nothing.
+      // whoever isn't known to be an adult is moved out first.
       const turningAdult = isAdult(lv) && !isAdult(t.level);
-      if (isAdult(lv)) { if (!t.password) t.password = roomPassword.requireNew(password); } else t.password = null;
       if (turningAdult) moveOutForAdultLevel(t);
       t.level = lv;
     }
@@ -418,7 +411,6 @@ function makeTables({ game = 'party', title = 'the game', engine, act, levels, m
       // screen: a TV hosts this room; isScreen: you're that TV. mine: the
       // players this phone plays for; as: whose hand this snapshot shows.
       screen: !!t.screen, isScreen: !!(device && device.screen), hostName: host ? host.name : '', mine, as,
-      locked: !!t.password, lobbyPassword: t.hostId === viewerId ? t.password : null,
       allReady: allReady(t), muted: !!(device && t.muted.has(device.id)), chat: chat.list(t.id, viewerId),
       players: [...t.players.values()].map(p => ({
         id: p.id, name: p.name, online: (owner(p) || p).clients > 0, host: p.id === t.hostId,
@@ -471,7 +463,7 @@ function makeTables({ game = 'party', title = 'the game', engine, act, levels, m
       if (t.kind !== 'room') continue;
       const host = member(t, t.hostId);
       out.push({ code: t.id, host: host ? host.name : '', screen: !!t.screen, players: [...t.players.values()].map(p => p.name), count: t.players.size, max: maxPlayers,
-        status: t.players.size >= maxPlayers ? 'full' : playing(t) ? 'playing' : 'open', level: t.level, adult: isAdult(t.level), locked: !!t.password,
+        status: t.players.size >= maxPlayers ? 'full' : playing(t) ? 'playing' : 'open', level: t.level, adult: isAdult(t.level),
         drinking: !!t.drinking, mine: !!profile && [...t.players.values()].some(p => p.profileId === profile.id) });
     }
     return out;

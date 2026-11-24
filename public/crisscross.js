@@ -135,10 +135,12 @@
     S.view = null; S.key = null;
     setUrl({});
     show('home');
-    paintLocalList();
     const p = me();
+    // Your games from the server are a profile's; another profile starts with none loaded.
+    if (!p || (S.mine && S.mine.profile !== p.id)) S.mine = null;
+    paintMine();
     $('noProfile').classList.toggle('hidden', !!p);
-    $('minepanel').classList.toggle('hidden', !p);
+    $('createPanel').classList.toggle('hidden', !p);
     if (TV) return;
     // The lobbies are for everyone to see; your own games need a profile.
     const refresh = () => { loadHosted(); if (p) loadMine(); };
@@ -165,19 +167,47 @@
   }
 
   async function loadMine() {
-    const list = $('mineList');
+    const p = me();
+    let mine;
     try {
       const r = await call('/mine');
-      $('mineTitle').textContent = r.yourTurn ? `Your turn in ${r.yourTurn} game${r.yourTurn === 1 ? '' : 's'}` : 'Your games';
-      $('mineHint').textContent = r.games.length
-        ? 'Tap a game to open it. Games you\'re waiting on update by themselves.'
-        : 'No Games Running... join or start a game.';
-      list.innerHTML = '';
-      for (const g of r.games) list.appendChild(gameItem(g));
+      mine = { profile: p && p.id, games: r.games, yourTurn: r.yourTurn };
     } catch (e) {
-      list.innerHTML = '<li class="empty"></li>';
-      list.firstChild.textContent = e.message;
+      mine = { profile: p && p.id, games: [], yourTurn: 0, error: e.message };
     }
+    // An answer for a profile picked before this one doesn't replace the one for this profile.
+    const now = me();
+    if (!now || !p || now.id !== p.id) return;
+    S.mine = mine;
+    paintMine();
+  }
+
+  // Your games: every game this person has, in one list. First the ones on everyone's own device
+  // (from the server, with a profile), then the ones on this device (kept on it, profile or not).
+  // On the TV, this device's games stay in their own panel.
+  function paintMine() {
+    if (TV) { paintLocalList($('localList')); return; }
+    const p = me();
+    const local = localGames();
+    // A late answer from /mine for a profile picked before this one is never shown.
+    const mine = p && S.mine && S.mine.profile === p.id ? S.mine : null;
+    const online = mine ? mine.games : [];
+    $('minepanel').classList.toggle('hidden', !p && !local.length);
+    $('mineTitle').textContent = mine && mine.yourTurn ? `Your turn in ${mine.yourTurn} game${mine.yourTurn === 1 ? '' : 's'}` : 'Your games';
+    // Before a profile's games have loaded, say nothing rather than "No Games Running".
+    $('mineHint').textContent = online.length || local.length
+      ? 'Tap a game to open it. Games you\'re waiting on update by themselves.'
+      : p && !mine ? '' : 'No Games Running... join or start a game.';
+    const list = $('mineList');
+    list.innerHTML = '';
+    if (mine && mine.error) {
+      const li = document.createElement('li');
+      li.className = 'empty';
+      li.textContent = mine.error;
+      list.appendChild(li);
+    }
+    for (const g of online) list.appendChild(gameItem(g));
+    paintLocalList(list, true);
   }
 
   function gameItem(g) {
@@ -251,9 +281,9 @@
     loadMine();
   }
 
-  function paintLocalList() {
-    const list = $('localList');
-    list.innerHTML = '';
+  // This device's games, added to a list (Your games) or filling one (the TV's own panel).
+  function paintLocalList(list, append = false) {
+    if (!append) list.innerHTML = '';
     for (const g of localGames()) {
       const li = document.createElement('li');
       li.innerHTML = '<span class="cc-li-main"><div class="cc-li-title"></div><div class="cc-li-sub"></div></span><button class="cc-x" title="Forget this game" aria-label="Forget this game">✕</button>';
@@ -263,7 +293,7 @@
       li.querySelector('.cc-x').onclick = e => {
         e.stopPropagation();
         saveLocalGames(localGames().filter(x => x.id !== g.id));
-        paintLocalList();
+        paintMine();
       };
       list.appendChild(li);
     }
@@ -299,11 +329,26 @@
   }
 
   // ---- a new game on one phone ------------------------------------------------------------------------
-  function newLocal() {
+  // Three ways in: 'shared' (people pass the device around), 'bot' (you against the computer, with up to three
+  // computer players) and 'tv' (the TV's one button, where people and the computer can mix, as before).
+  const SHARED_HINT = 'Two to four players take turns on this device. Between turns the tiles are hidden, so you can pass it along without peeking.';
+  function localSetup(mode) {
+    S.localMode = mode;
+    const bot = mode === 'bot';
+    $('localTitle').textContent = bot ? 'Against the computer' : 'Who\'s playing?';
+    $('localHint').textContent = bot ? 'Play a computer on this device. Add up to three computer players.' : SHARED_HINT;
+    $('addPerson').classList.toggle('hidden', bot);
+    $('addBot').classList.toggle('hidden', mode === 'shared');
+    $('addBot').textContent = bot ? '🤖 Add another computer player' : '🤖 Add the computer';
+  }
+  function newLocal(mode) {
     show('newLocal');
     $('localMsg').textContent = '';
+    localSetup(mode);
     const p = me();
-    S.localPlayers = [{ name: p ? p.name : '' }, { bot: true }];
+    // Without a sign-in, a guest's name (from the Who's playing? card) fills the first seat.
+    const first = p ? p.name : !TV && typeof ArcadeProfile !== 'undefined' ? ArcadeProfile.name() : '';
+    S.localPlayers = [{ name: first }, mode === 'shared' ? { name: '' } : { bot: true }];
     paintLocalPlayers();
     paintLocalDict();
   }
@@ -311,6 +356,8 @@
   function sameLocal(g) {
     show('newLocal');
     $('localMsg').textContent = '';
+    const people = g.players.filter(pl => !pl.bot).length;
+    localSetup(TV ? 'tv' : people === g.players.length ? 'shared' : people === 1 && !g.players[0].bot ? 'bot' : 'tv');
     S.localPlayers = g.players.map(pl => (pl.bot ? { bot: true } : { name: pl.name }));
     S.localDict = g.dictionary;
     paintLocalPlayers();
@@ -320,25 +367,34 @@
   function paintLocalPlayers() {
     const box = $('localPlayers');
     box.innerHTML = '';
+    // Named the way the game names them: "The computer" alone, Computer 1, Computer 2 and so on when there are more.
+    const bots = S.localPlayers.filter(q => q.bot).length;
+    let botNo = 0;
     S.localPlayers.forEach((p, k) => {
       const row = document.createElement('div');
       row.className = 'cc-local-row';
       if (p.bot) {
-        row.innerHTML = '<span class="cc-bot">🤖 The computer</span>';
+        const span = document.createElement('span');
+        span.className = 'cc-bot';
+        span.textContent = bots > 1 ? `🤖 Computer ${++botNo}` : '🤖 The computer';
+        row.appendChild(span);
       } else {
         const input = document.createElement('input');
         input.maxLength = 16;
-        input.placeholder = `Player ${k + 1}'s name`;
+        const label = S.localMode === 'bot' ? 'Your name' : `Player ${k + 1}'s name`;
+        input.placeholder = label;
         input.value = p.name || '';
-        input.setAttribute('aria-label', `Player ${k + 1}'s name`);
+        input.setAttribute('aria-label', label);
         input.oninput = () => { p.name = input.value; };
         row.appendChild(input);
       }
       const x = document.createElement('button');
       x.className = 'ghost'; x.textContent = '✕'; x.title = 'Take this player out';
-      x.disabled = S.localPlayers.length <= 2;
+      // Against the computer, you stay and so does one computer player (no ✕ on either); otherwise at least two
+      // players stay.
+      x.disabled = S.localMode !== 'bot' && S.localPlayers.length <= 2;
       x.onclick = () => { S.localPlayers.splice(k, 1); paintLocalPlayers(); };
-      row.appendChild(x);
+      if (S.localMode !== 'bot' || (p.bot && bots > 1)) row.appendChild(x);
       box.appendChild(row);
     });
     $('addPerson').disabled = $('addBot').disabled = S.localPlayers.length >= 4;
@@ -950,6 +1006,19 @@
     }, 8000);
   }
 
+  // The home screen's bottom edge fades while there's more of it below the screen.
+  function paintMore() {
+    const more = $('moreBelow');
+    // What Chrome's row of tabs covers counts as below the screen (the visual viewport is shorter then).
+    const seen = window.visualViewport ? Math.min(window.innerHeight, window.visualViewport.height) : window.innerHeight;
+    const below = document.documentElement.scrollHeight - (window.scrollY + seen);
+    more.classList.toggle('on', !TV && !$('home').classList.contains('hidden') && below > 8);
+  }
+  window.addEventListener('scroll', paintMore, { passive: true });
+  window.addEventListener('resize', paintMore);
+  if (window.ResizeObserver) new ResizeObserver(paintMore).observe(document.body);
+  if (window.MutationObserver) new MutationObserver(paintMore).observe($('home'), { attributes: true, attributeFilter: ['class'], childList: true, subtree: true });
+
   // ---- buttons -----------------------------------------------------------------------------------------------------
   $('newOnlineBtn').onclick = newOnline;
   $('pickProfileBtn').onclick = () => ArcadeProfile.open();
@@ -957,7 +1026,9 @@
   ArcadeProfile.arksId().ready.then(id => {
     if (id.on) $('noProfileHint').textContent = 'A game can last a few days, with each person taking their turn whenever they\'re free, so the arcade needs your ARKS ID. Pick your profile to start or to see your open games.';
   }).catch(() => {});
-  $('newLocalBtn').onclick = newLocal;
+  $('newSharedBtn').onclick = () => newLocal('shared');
+  $('newBotBtn').onclick = () => newLocal('bot');
+  $('newTvBtn').onclick = () => newLocal('tv');
   $('onlineGo').onclick = startOnline;
   $('onlineBack').onclick = home;
   $('localGo').onclick = startLocal;
@@ -1051,8 +1122,7 @@
     {
       emoji: '🔡', title: 'Build words that cross',
       html: `<p>Everyone has seven letter tiles on their rack. Take turns putting tiles on the board to make words, across or down, that join onto the words already there, like a crossword.</p>
-        <p>The first word has to cover the <b>★</b> in the middle. After that, every new word has to touch a tile that's already on the board.</p>
-        <p>This game used to be called Criss Cross. Only the name changed, so any game you had going is still in your list.</p>`
+        <p>The first word has to cover the <b>★</b> in the middle. After that, every new word has to touch a tile that's already on the board.</p>`
     },
     {
       emoji: '👆', title: 'Placing your tiles',

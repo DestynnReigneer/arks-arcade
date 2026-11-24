@@ -1,6 +1,6 @@
 # Status and to-dos
 
-Last updated 2026-11-20. Update this file whenever a piece of work lands or
+Last updated 2026-11-22. Update this file whenever a piece of work lands or
 a plan changes, so the next session can pick up from here. When the
 maintainer says "I'm back", start from "Last session" below, then show the
 to-do list as checkboxes (the rule is in the maintainer's global CLAUDE.md
@@ -53,6 +53,90 @@ and `html:not(.tv)`, so upright phones, tablets, laptops and the TV are unchange
   Its looks moved out of the script into `public/longpress.css`, which the script loads itself, so no page changed
   and the menu looks and works the same. The other apps use the same file for their own hold menus.
 
+## The maintainer's setup wording, Tabletop gone, Spin & Solve's Game mode (2026-11-22)
+
+Started on the setup-steps branch (PR #201) and moved onto main once that merged.
+
+- **Wording:** the maintainer's approved lines are in, word for word: every game's suggest button is "💡 Suggest a
+  theme or topic", every daily mode is "📅 Daily challenge" on its card or button and as its screen title (Rambler,
+  Shuffle Scuffle, Clueless Crosswords; code names, API paths and board keys are unchanged), Rambler's daily, Marathon
+  and lobby lines, its How to play scoring rule and "someone else found it too" on a canceled word, Chess's "Play as",
+  "Your game's settings" and "Against the computer", Dare Devil's deck card, game lengths and How to play line,
+  Know-It-All's "Show the QR code on the TV", "Add a player on this device", Words with Family's "+ Add player",
+  Clueless Crosswords' "🔀 New crossword", the Racer's touch setting and Wordless's "🏆 High scores", plus the README.
+- **Game mode headings:** Dare Devil and Uh-Oh: Part Deux say Game mode, with a Multiplayer-Shared device heading over
+  the one-device choice and a Multiplayer-Multiple devices heading over Create a game lobby and List Hosted Games
+  (Chess's `.mode-label` and icons; `.seg > .mode-label` in `lobby-ui.css` gives a heading inside a row of buttons a
+  line of its own). Shuffle Scuffle says Game mode, with Solo over the daily and free play and Multiplayer-Multiple
+  devices over the lobby buttons. The pages that loop over `#modeSeg` now pick only `[data-mode]` buttons, so a tap on
+  a heading does nothing (Chess's tapping its heading used to unpick every mode).
+- **Rambler's Tabletop is gone**, client and server (the board mode `tabletop` is refused like any unknown mode and
+  saved as solo). Pass & Play is the only choice under Multiplayer-Shared device.
+- **Spin & Solve's setup has a Game mode:** 🙂 Solo (one name box, since the third round below) or Multiplayer-Shared device (two to four names,
+  never fewer than two). Solo is picked first. The game is unchanged; Solo sends only the first name.
+- **The lobby password is gone for good:** `public/room-password.js`, `arcade/room-password.js`, the TV's made-up
+  passwords, the rooms' `password`, and `locked` and `lobbyPassword` in snapshots and lobby lists. The `X-Adult-Pin`
+  header and `adultPin` fields stay: they carry the ARKS ID adult pass, a name kept from the PIN days.
+- **Second round:** Words with Family's How to play no longer says it used to be Criss Cross (no screen says what
+  something used to be called). Tower Defense's Archer, Cannon and Tesla descriptions are the maintainer's, and a
+  picked tower's card shows its description on phones too, except the smallest sideways phones (360 tall), where
+  the page would scroll 32px (the third round below shows it there too). Spin & Solve's turn timer paragraph
+  and Rambler's first README line are the maintainer's.
+- **Words with Family's home screen:** Your games holds only your games. Under it, a Multiplayer-Multiple devices
+  heading (Chess's) over Create a game lobby (its own panel, with a profile) or the card about everyone's own device
+  (without one), then List Hosted Games. The device panel has no heading or hint, just its games and two buttons:
+  🤝 Multiplayer-Shared device (two to four people, no computer) and 🤖 Against the computer (your name and one to
+  three computer players). Both open `#newLocal` set up by `localSetup(mode)`; the TV keeps its one Play on the TV
+  button (`#newTvBtn`, mode `tv`, people and computer mixed as before). Same players again picks the mode from the
+  finished game's seats.
+- **Third round, the maintainer's last answers:**
+  - **Spin & Solve:** under Solo, "Single player, plays for the 🏆 board."; under Multiplayer-Shared device, "Up to 4
+    players on a single device." **Solo has a name box again** (`#soloName`, the same box as the shared names, with
+    "Player 1" as its placeholder; not on a TV, which picks who played at the end). Before this PR the names list
+    always showed and its first box was the Solo name; hiding it left a guest playing as "Player 1". The box is the
+    first name of the list, so it carries over between the modes, and the page now follows `ArcadeProfile.onChange`:
+    a guest who picks their name after the page opened (or someone who signs in) gets it in the box, unless they
+    typed over it. Before, the name was read only once, when the page loaded.
+  - **The daily buttons say just "📅 Daily"** (Rambler's card, Shuffle Scuffle's mode button, Clueless Crosswords'
+    mode button). Screen titles and How to play keep "📅 Daily challenge"; Clueless Crosswords' daily screen is
+    "📅 Daily challenge: Mini" or "📅 Daily challenge: Big" (`DAILY_LABEL`; Free play's title is unchanged).
+  - **Rambler's daily screen:** the button is "Play the daily challenge" (no clock, no "today's board"), and an empty
+    day says only "Nobody has played yet. Be first on the leaderboard." under Today in this house. The list under it
+    stays empty (`renderDailyStandings(..., { empty: false })`); the result screen after a daily still says "No
+    scores yet today." when it has nobody to list.
+  - **Dare Devil and Uh-Oh: Part Deux:** the Multiplayer-Shared device heading over the button with the same words is
+    gone; Multiplayer-Multiple devices still sits over the lobby buttons (on a phone it spans the second and third
+    columns, over them).
+  - **Words with Family's home:** every game the person has is in Your games. `paintMine()` lists the games on
+    everyone's own device (from `/mine`, with a profile) and then the games on this device (`crisscross.local`), so
+    "No Games Running..." only shows when there are none of either. Your games shows without a profile when this
+    device has games. The device panel keeps its two buttons; on the TV its games stay in that panel. Against the
+    computer's line is "Play a computer on this device. Add up to three computer players."
+  - **Tower Defense:** a picked tower's count is on its own line, "Monsters defeated: 0". The rule hiding the
+    description on the smallest sideways phones is gone (the maintainer's rule: information is never hidden on a small
+    screen). Instead the `(max-height: 370px)` block tightens the gaps and the description's lines, and at 350 tall
+    the score row is shorter too, so the longest description (the Cannon's) fits at 844x334, 740x360 and 844x390
+    with nothing to scroll. `fit.spec.js` checks the description and the count are on the screen at every size.
+  - **"Show the QR code on the TV"** in Dare Devil, Uh-Oh: Part Deux, Rambler and Shuffle Scuffle, like Know-It-All.
+  - **The suggest pop-ups** in Know-It-All, Spin & Solve and Wordless are titled "💡 Suggest a theme or topic".
+- **Fixes after the guardian and the play-tester (2026-11-24):**
+  - **Words with Family:** `loadMine` keeps an answer only while the profile it asked for is still the one picked,
+    and `paintMine` shows `S.mine` only for that profile, so a slow `/mine` never lists an earlier profile's games.
+    Without a sign-in, a guest's name (`ArcadeProfile.name()`) fills the first player on this device. The "more
+    below" arrow (`.cc-more`) sits at `calc(100dvh - var(--app-h, 100dvh))`, above Chrome's row of tabs, and
+    `paintMore` counts what the tab row covers as below the screen.
+  - **Shuffle Scuffle's setup** is `.fit-setup` now, with its Game mode row in four columns (each heading over its
+    two buttons, `scuffle.css`). Play today's letters went from 611-662 to 445-490 at 412x640. It's in `GAMES` in
+    `fit.spec.js` with a `setup` list; its play screen isn't fitted to a sideways phone yet, so those three sizes
+    are in `KNOWN`.
+  - **Dare Devil and Uh-Oh: Part Deux** follow `ArcadeProfile.onChange` like Spin & Solve: a guest's name picked
+    after the page opened fills the first box, unless a name was typed there.
+  - **Spin & Solve:** `backToSetup()` stops the clock and hides the letter picker and the solve box too.
+  - **Tests:** `guest-name.spec.js` (a guest names themselves on the card: Spin & Solve's Solo box, Words with
+    Family's first player, Dare Devil's and Uh-Oh's first name), a slow `/mine` with a profile switch in
+    `crisscross.spec.js`, Back with the letter picker open in `back.spec.js`, and the arrow above the tab row in
+    `fit.spec.js`.
+
 ## Setup in two steps on a phone: Know-It-All, Spin & Solve and Rambler (2026-11-20)
 
 The maintainer chose "two steps each" for the three setups that didn't fit an upright phone. Built to be tried;
@@ -74,7 +158,7 @@ it waits for the maintainer before it's merged.
   a game lobby and List Hosted Games go to step 2 too (Your name, or the list of lobbies), and Today's Board opens its
   own screen as before.
 - **Rambler's list, the maintainer's order:** Today's Board, Create a game lobby, List Hosted Games, Marathon, Solo,
-  then a **Multiplayer-Shared device** heading over Pass & Play and Tabletop. "How are you playing?" and the
+  then a **Multiplayer-Shared device** heading over Pass & Play (Tabletop was removed on 2026-11-22). "How are you playing?" and the
   Multiplayer-Multiple devices heading are gone. How to play's Ways to play table follows the same order.
 - **Tightened to fit:** the rows of choices stay one row on a phone in steps (as in two columns), and on a short
   screen the labels, the drop-down, Suggest a topic or theme and the headings give up a few pixels. Rambler's steps

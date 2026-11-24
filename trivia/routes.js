@@ -94,19 +94,18 @@ module.exports = function triviaRoutes({ requireAdmin, notify, whoIs = null }) {
       const settings = rooms.cleanSettings(body.settings || {});
       requireLevel(settings.level, req);
       // screen: this device (a TV) shows the game and doesn't play.
-      res.status(201).json(rooms.create({ name: body.name, settings, password: body.password, screen: body.screen === true,
+      res.status(201).json(rooms.create({ name: body.name, settings, screen: body.screen === true,
         profile: profileOf(req), device: req.get('X-Trivia-Device') }));
     } catch (e) { next(e); }
   });
-  // Guests don't need an ARKS ID adult pass: an adult game's own lobby password lets
-  // them in. With ARKS ID on, a phone signed in as a kid or a teen (or a TV)
-  // is turned away from an adult game whatever it types: joining a game on the
-  // TV plays as the phone's own owner, it never unlocks anything.
+  // Guests don't need an ARKS ID adult pass to join an adult game. With ARKS ID on,
+  // a device signed in as a kid or a teen (or a TV) is turned away from one: joining
+  // a game on the TV plays as the device's own owner, it never unlocks anything.
   router.post('/rooms/:code/join', createLimiter, async (req, res, next) => {
     try {
       const r = rooms.room(req.params.code);
       await require('../arcade/adult-join').refuseKids(req, !!bank.LEVELS[r.settings.level].adult);
-      res.json(rooms.join(req.params.code, (req.body || {}).name, (req.body || {}).password, profileOf(req), req.get('X-Trivia-Device')));
+      res.json(rooms.join(req.params.code, (req.body || {}).name, profileOf(req), req.get('X-Trivia-Device')));
     } catch (e) { next(e); }
   });
   // Taking turns: another player on this device, or taking one off again.
@@ -172,6 +171,6 @@ module.exports = function triviaRoutes({ requireAdmin, notify, whoIs = null }) {
   });
 
   router.use('/admin', admin);
-  router.use((err, req, res, next) => { res.status(err.status || 500).json({ error: err.message, ...require('../arcade/room-password').extra(err) }); });
+  router.use((err, req, res, next) => { res.status(err.status || 500).json({ error: err.message }); });
   return router;
 };

@@ -31,21 +31,20 @@ window.ramblerTutorial = Tutorial.create('rambler', [
   {
     emoji: '👥',
     title: 'Playing with others',
-    html: `<p>The classic Boggle rule: if <b>more than one player</b> finds the same word, <b>nobody</b> scores it.</p>
+    html: `<p>The classic Boggle rule: if <b>more than one player</b> has the same word, <b>neither of them</b> score.</p>
       <p>So hunt for the words nobody else will think of.</p>`
   },
   {
     emoji: '🎮',
     title: 'Ways to play',
     html: `<table>
-        <tr><td>📅 Today's Board</td><td>One board a day for the whole house.</td></tr>
-        <tr><td><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:1.2em;height:1.2em;vertical-align:-0.25em;margin-right:2px"><circle cx="16" cy="7" r="3.2"/><path d="M10 18.5c0-3.4 2.6-5.8 6-5.8s6 2.4 6 5.8"/><circle cx="6.5" cy="10" r="2.6"/><path d="M2 20c0-2.8 1.9-4.8 4.5-4.8"/><circle cx="25.5" cy="10" r="2.6"/><path d="M30 20c0-2.8-1.9-4.8-4.5-4.8"/><path d="M11 30l7-7"/><path d="M18 23a4 4 0 0 1 5.3-5l-2.4 2.4.5 2.2 2.2.5 2.4-2.4a4 4 0 0 1-5 5.3"/></svg> Create a game lobby</td><td>Set up your hosted game settings and rules.</td></tr>
-        <tr><td>🔎 List Hosted Games</td><td>Live games lobby waiting to start or started with vacancies.</td></tr>
+        <tr><td>📅 Daily challenge</td><td>One board a day for the whole house.</td></tr>
+        <tr><td><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:1.2em;height:1.2em;vertical-align:-0.25em;margin-right:2px"><circle cx="16" cy="7" r="3.2"/><path d="M10 18.5c0-3.4 2.6-5.8 6-5.8s6 2.4 6 5.8"/><circle cx="6.5" cy="10" r="2.6"/><path d="M2 20c0-2.8 1.9-4.8 4.5-4.8"/><circle cx="25.5" cy="10" r="2.6"/><path d="M30 20c0-2.8-1.9-4.8-4.5-4.8"/><path d="M11 30l7-7"/><path d="M18 23a4 4 0 0 1 5.3-5l-2.4 2.4.5 2.2 2.2.5 2.4-2.4a4 4 0 0 1-5 5.3"/></svg> Create a game lobby</td><td>Choose your settings and open a lobby that others can join.</td></tr>
+        <tr><td>🔎 List Hosted Games</td><td>Lobbies waiting for players, and games that still have room to join.</td></tr>
         <tr><td>🔥 Marathon</td><td>Each word buys more time, and the grid grows.</td></tr>
         <tr><td>🙂 Solo</td><td>You against the clock.</td></tr>
         <tr><td colspan="2" style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;opacity:0.7;padding-top:10px">📱 Multiplayer-Shared device</td></tr>
         <tr><td>🤝 Pass &amp; Play</td><td>One device, take turns on the same board.</td></tr>
-        <tr><td>📝 Tabletop</td><td>Everyone writes on paper, then types their lists in.</td></tr>
       </table>`
   },
   {

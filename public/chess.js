@@ -58,7 +58,7 @@
   // ---- setup ---------------------------------------------------------------------
 
   function pressed(seg, attr, value) {
-    for (const b of seg.children) b.setAttribute('aria-pressed', String(b.dataset[attr] === value));
+    for (const b of seg.querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset[attr] === value));
   }
 
   // Choose game mode: the computer and one device start from here; Create a game
@@ -870,7 +870,7 @@
       emoji: '🎮',
       title: 'Ways to play',
       html: `<table>
-          <tr><td>🤖 VS Computer</td><td>Easy, Medium or Hard. Win to get on the 🏆 board.</td></tr>
+          <tr><td>🤖 Against the computer</td><td>Easy, Medium or Hard. Win to get on the 🏆 board.</td></tr>
           <tr><td>📱 Multiplayer-Shared device</td><td>Two players take turns sharing this device. The board turns to face whoever's move it is.</td></tr>
           <tr><td>📱📱 Multiplayer-Multiple devices</td><td>Each player on their own device. Create a game lobby, or join one from 🔎 List Hosted Games, and start once everyone taps Ready. There's a chat under the board, and the game is saved until you finish it.</td></tr>
           <tr><td>🔎 List Hosted Games</td><td>The lobbies waiting for players. Tap one to see who's in and join.</td></tr>
@@ -881,7 +881,7 @@
 
   // ---- wiring ------------------------------------------------------------------------------
 
-  for (const b of $('modeSeg').children) b.addEventListener('click', () => setMode(b.dataset.mode));
+  for (const b of $('modeSeg').querySelectorAll('[data-mode]')) b.addEventListener('click', () => setMode(b.dataset.mode));
   for (const b of $('levelSeg').children) b.addEventListener('click', () => { S.level = b.dataset.level; pressed($('levelSeg'), 'level', S.level); });
   for (const b of $('colorSeg').children) b.addEventListener('click', () => { S.colorPref = b.dataset.color; pressed($('colorSeg'), 'color', S.colorPref); });
   for (const b of $('scoreBoardSeg').children) b.addEventListener('click', () => openScores(b.dataset.board));

@@ -213,10 +213,11 @@
       const def = E.TOWERS[tower.type], s = E.stats(tower), up = E.upgradeCost(tower);
       const head = document.createElement('div');
       head.className = 'tower-head';
-      head.innerHTML = '<span class="em"></span><div><b></b><small></small></div>';
+      head.innerHTML = '<span class="em"></span><div><b></b><small></small><small class="kills"></small></div>';
       head.querySelector('.em').textContent = def.emoji;
       head.querySelector('b').textContent = `${def.label} · level ${tower.level + 1} of ${def.levels.length}`;
-      head.querySelector('small').textContent = `${def.blurb} ${tower.kills} defeated.`;
+      head.querySelector('small').textContent = def.blurb;
+      head.querySelector('.kills').textContent = `Monsters defeated: ${tower.kills}`;
       const st = document.createElement('div');
       st.className = 'tower-stats';
       const bits = [`Damage ${s.damage}`, `Range ${s.range}`, `${s.rate}/sec`];

@@ -14,7 +14,6 @@
 
 const crypto = require('node:crypto');
 const game = require('./game');
-const roomPassword = require('../arcade/room-password');
 const adultJoin = require('../arcade/adult-join');
 // A seat saved before kids were marked (2026-11-15) has no kid field. One that
 // also had no adult's sign-in may be a kid's, so it counts as one.
@@ -60,16 +59,14 @@ function newPlayer(r, name) {
 }
 
 // screen: this device (a TV) hosts and shows the game, and doesn't play.
-function create({ name, settings, password, screen = false }) {
+function create({ name, settings, screen = false }) {
   if (rooms.size >= MAX_ROOMS) sweep();
   if (rooms.size >= MAX_ROOMS) throw fail('Too many games running right now. Try again later.', 503);
   const r = {
     code: makeCode(), settings: cleanSettings(settings), phase: 'lobby', players: [], hostId: null, screen: null,
     rounds: [], index: -1, endsAt: 0, firstFull: null, timer: null, clients: new Set(),
-    lastActivity: Date.now(), password: null, history: []
+    lastActivity: Date.now(), history: []
   };
-  // The adult list gets a lobby password the host makes up.
-  if (r.settings.dictionary === 'adult') r.password = roomPassword.requireNew(password);
   if (screen) {
     r.screen = { id: makeId(), token: makeToken(), name: cleanName(name, 'TV'), clients: 0, screen: true };
     r.hostId = r.screen.id;
@@ -87,11 +84,11 @@ function create({ name, settings, password, screen = false }) {
 
 // ---- kept between restarts ---------------------------------------------------------
 // A room as plain data: everything but who's connected right now and its
-// running timer. It holds the seats' tokens, the round's words and, for an
-// adult room, its lobby password, so it never leaves the server.
+// running timer. It holds the seats' tokens and the round's words, so it never
+// leaves the server.
 function pack(r) {
   return {
-    code: r.code, settings: r.settings, phase: r.phase, hostId: r.hostId, password: r.password,
+    code: r.code, settings: r.settings, phase: r.phase, hostId: r.hostId,
     players: r.players.map(p => ({
       id: p.id, token: p.token, name: p.name, score: p.score, found: [...p.found], roundScore: p.roundScore,
       done: p.done, joinedAt: p.joinedAt, kid: !!p.kid
@@ -111,7 +108,7 @@ function restore(now = Date.now()) {
       data.settings && ['lobby', 'playing', 'reveal', 'over'].includes(data.phase) && (data.players.length || data.screen);
     if (!good || now - (Number(data.lastActivity) || savedAt) > TTL_MS) return false;
     const r = {
-      code, settings: cleanSettings(data.settings), phase: data.phase, hostId: data.hostId, password: data.password || null,
+      code, settings: cleanSettings(data.settings), phase: data.phase, hostId: data.hostId,
       players: data.players.map(p => ({
         id: String(p.id), token: String(p.token), name: cleanName(p.name, 'Player'), score: Number(p.score) || 0,
         found: new Map(Array.isArray(p.found) ? p.found : []), roundScore: Number(p.roundScore) || 0, done: !!p.done,
@@ -122,8 +119,6 @@ function restore(now = Date.now()) {
       endsAt: Number(data.endsAt) || 0, firstFull: data.firstFull || null, timer: null, clients: new Set(),
       lastActivity: Number(data.lastActivity) || savedAt, history: Array.isArray(data.history) ? data.history : []
     };
-    // An unfiltered room always has its password, and a family one never does.
-    r.password = null;
     // A round or a reveal with no round behind it can't be shown: back to the lobby, seats and scores kept.
     if ((r.phase === 'playing' || r.phase === 'reveal') && !r.rounds[r.index]) { r.phase = 'lobby'; r.index = -1; r.rounds = []; }
     if (!member(r, r.hostId)) r.hostId = r.screen ? r.screen.id : r.players.slice().sort((a, b) => a.joinedAt - b.joinedAt)[0].id;
@@ -154,9 +149,8 @@ const requireHost = (r, p) => { if (r.hostId !== p.id) throw fail('Only the host
 
 // Joining is open any time, even mid-game: a latecomer starts on zero.
 // kid: this device is a kid's or a teen's (arcade/adult-join.js), so it leaves if the game turns adult.
-function join(code, name, password, kid = false) {
+function join(code, name, kid = false) {
   const r = room(code);
-  roomPassword.check(r, password);
   if (r.players.length >= MAX_PLAYERS) throw fail(`That game is full (${MAX_PLAYERS} players).`, 409);
   const p = newPlayer(r, name);
   p.kid = !!kid;
@@ -170,9 +164,7 @@ function updateSettings(code, playerId, token, settings = {}) {
   requireHost(r, authenticate(r, playerId, token));
   if (r.phase === 'playing' || r.phase === 'reveal') throw fail('Change the settings between games.', 409);
   const next = cleanSettings({ ...r.settings, ...settings });
-  // The password comes before anything else, so a switch that's refused changes nothing.
   const turningAdult = next.dictionary === 'adult' && r.settings.dictionary !== 'adult';
-  if (next.dictionary === 'adult') { if (!r.password) r.password = roomPassword.requireNew(settings.password); } else r.password = null;
   if (turningAdult) moveOutForAdultWords(r);
   r.settings = next;
   touch(r);
@@ -181,8 +173,7 @@ function updateSettings(code, playerId, token, settings = {}) {
 // The room just switched to the unfiltered word list, which is only for adults.
 // Everyone the arcade doesn't know to be one leaves, and their page is told why.
 // The host stays, and so does anyone signed in with ARKS ID as an adult (asked
-// now, not remembered from when they joined). A guest can come back with the
-// password the host just made up.
+// now, not remembered from when they joined).
 function moveOutForAdultWords(r) {
   const going = r.players.filter(p => p.id !== r.hostId && p.kid);
   if (!going.length) return;
@@ -211,7 +202,7 @@ function lobbies() {
       status: r.players.length >= MAX_PLAYERS ? 'full' : going ? 'playing' : 'open',
       round: going ? { index: r.index + 1, total: r.rounds.length } : null,
       rounds: r.settings.rounds, seconds: r.settings.seconds,
-      adult: r.settings.dictionary === 'adult', locked: !!r.password
+      adult: r.settings.dictionary === 'adult'
     };
   });
 }
@@ -313,7 +304,6 @@ function snapshot(r, viewerId) {
     hostName: (member(r, r.hostId) || {}).name || '',
     // screen: a TV hosts this room; isScreen: you're that TV.
     screen: !!r.screen, isScreen: !!(r.screen && r.screen.id === viewerId),
-    locked: !!r.password, lobbyPassword: r.hostId === viewerId ? r.password : null,
     // Something everyone still in the room should read once (who was moved out, and why).
     notice: r.notice && Date.now() - r.notice.at < NOTICE_MS ? { id: r.notice.id, text: r.notice.text } : null,
     settings: r.settings, maxPlayers: MAX_PLAYERS,

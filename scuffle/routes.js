@@ -6,7 +6,6 @@ const express = require('express');
 const rateLimit = require('express-rate-limit');
 const adultPin = require('../arcade/adult-pin');
 const adultJoin = require('../arcade/adult-join');
-const roomPassword = require('../arcade/room-password');
 const { today } = require('../rambler/progress');
 const game = require('./game');
 const solo = require('./solo');
@@ -15,7 +14,7 @@ const rooms = require('./rooms');
 const fail = (message, status = 400) => Object.assign(new Error(message), { status });
 
 // The adult word list needs an ARKS ID adult pass, checked on every path that could reach it. Guests joining a room
-// don't need it: the room's own lobby password lets them in.
+// don't need it: anyone but a kid's or a teen's device can join.
 function assertDictionary(dictionary, req) {
   if (game.profileOf(dictionary) !== 'adult') return;
   const supplied = req.get('X-Adult-Pin') || (req.body && req.body.adultPin) || '';
@@ -73,7 +72,7 @@ router.post('/rooms', roomLimit, (req, res, next) => {
     const settings = rooms.cleanSettings(body(req).settings || {});
     assertDictionary(settings.dictionary, req);
     // screen: a TV hosts the room and shows it; it doesn't play.
-    res.status(201).json(rooms.create({ name: body(req).name, settings, password: body(req).password, screen: body(req).screen === true }));
+    res.status(201).json(rooms.create({ name: body(req).name, settings, screen: body(req).screen === true }));
   } catch (e) { next(e); }
 });
 // A phone signed in to ARKS ID as a kid, a teen or a TV can't join a room on the unfiltered list.
@@ -83,14 +82,14 @@ router.post('/rooms/:code/join', roomLimit, async (req, res, next) => {
     // switch to the unfiltered list between the check and the join.
     const kid = await adultJoin.kid(req);
     adultJoin.refuse(kid, rooms.room(req.params.code).settings.dictionary === 'adult');
-    res.json(rooms.join(req.params.code, body(req).name, body(req).password, kid));
+    res.json(rooms.join(req.params.code, body(req).name, kid));
   } catch (e) { next(e); }
 });
 router.post('/rooms/:code/settings', (req, res, next) => {
   try {
     const s = body(req).settings || {};
     if (s.dictionary !== undefined) assertDictionary(s.dictionary, req);
-    rooms.updateSettings(...creds(req), { ...s, password: body(req).password });
+    rooms.updateSettings(...creds(req), s);
     res.json({ ok: true });
   } catch (e) { next(e); }
 });
@@ -109,7 +108,7 @@ router.get('/rooms/:code/events', (req, res, next) => {
 
 router.use((err, req, res, next) => {
   if (!err.status) return next(err);
-  res.status(err.status).json({ error: err.message, ...roomPassword.extra(err) });
+  res.status(err.status).json({ error: err.message });
 });
 
 module.exports = router;

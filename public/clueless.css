@@ -16,14 +16,12 @@ body[data-dir="down"] { --dir: var(--down); }
 .cl-picks .seg { margin: 0; flex-wrap: nowrap; }
 .cl-picks .seg button { flex: 1 1 0; min-width: 0; padding-left: 6px; padding-right: 6px; }
 .cl-picks .short { display: none; }
-/* On a phone the two choices sit side by side with shorter names, to leave
-   room for the grid and the keyboard. */
+/* On a phone the two rows of choices stack, as on a laptop, with slimmer buttons
+   to leave room for the grid and the keyboard. */
 @media (max-width: 520px) {
-  .cl-picks { grid-template-columns: 1fr 1fr; }
+  .cl-picks { gap: 3px; }
   .cl-picks .seg { gap: 4px; }
-  .cl-picks .seg button { padding: 9px 2px; font-size: 12.5px; white-space: nowrap; }
-  .cl-picks .long { display: none; }
-  .cl-picks .short { display: inline; }
+  .cl-picks .seg button { padding: 4px; font-size: 13px; white-space: nowrap; }
 }
 
 .level-seg button { min-width: 0; }

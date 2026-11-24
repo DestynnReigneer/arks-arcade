@@ -96,7 +96,7 @@ test('each party game\'s page fits the TV and offers the TV ways to play', async
     ['/partdeux.html', ['tvphones', 'tvpass'], ['local', 'host', 'join']],
     ['/daredevil.html', ['tvphones', 'tvpass', 'tvremote'], ['local', 'host', 'join']],
     ['/scuffle.html', ['tvphones', 'daily', 'free'], ['host', 'join']],
-    ['/rambler.html', ['room'], ['solo', 'turns', 'tabletop', 'marathon']]
+    ['/rambler.html', ['room'], ['solo', 'turns', 'marathon']]
   ]) {
     await page.goto(path);
     await page.waitForLoadState('networkidle');

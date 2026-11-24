@@ -150,3 +150,10 @@ body.tv-screen .score-strip li { font-size: 18px; }
    on them keeps the full word in sight. */
 body.tv-screen #reveal:not(.hidden) { display: flex; flex-direction: column; }
 body.tv-screen #reveal > .stack { order: -1; margin-bottom: 12px; }
+
+/* The setup fits the screen (.fit-setup in arcade-ui.css). Its Game mode row has two headings over two buttons
+   each (Solo over the daily and free play, Multiplayer-Multiple devices over the lobby buttons), so the row is
+   four columns there, each heading over its own pair. */
+html:not(.tv) .fit-setup #modeSeg:has(> .mode-label) { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+html:not(.tv) .fit-setup #modeSeg:has(> .mode-label) > .mode-label:first-child { grid-column: 1 / 3; }
+html:not(.tv) .fit-setup #modeSeg:has(> .mode-label) > .mode-label:not(:first-child) { grid-column: 3 / 5; }

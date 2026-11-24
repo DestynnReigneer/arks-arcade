@@ -137,7 +137,7 @@ const checkLimiter = limit(10, 2000, 'Slow down a moment.');
 const scoreLimiter = limit(10, 120, 'Too many rounds scored. Try again shortly.');
 const leaderboardLimiter = limit(10, 30, 'Too many score submissions. Try again in a few minutes.');
 const roomLimiter = limit(60, 40, 'Too many rooms created. Try again later.');
-// Joining takes a lobby password when the room is unfiltered, so one address only gets so many tries.
+// One address only gets so many tries at joining a lobby.
 const joinLimiter = limit(10, 40, 'Too many tries, wait a few minutes, then try again.');
 
 // ---- config ----------------------------------------------------------------
@@ -171,7 +171,7 @@ router.get('/config', (req, res) => {
   });
 });
 
-// ---- single-device rounds (solo, hotseat turns, tabletop) -------------------
+// ---- single-device rounds (solo, the daily, Pass & Play turns) -------------
 
 router.post('/board', boardLimiter, (req, res, next) => {
   try {
@@ -398,7 +398,7 @@ router.post('/leaderboard', leaderboardLimiter, (req, res, next) => {
       if (!entry.result) throw fail('That round has not been scored yet.', 409);
       result = entry.result;
       playerId = String(body.playerId || 'p0');
-      mode = ['solo', 'turns', 'tabletop'].includes(body.mode) ? body.mode : 'solo';
+      mode = ['solo', 'turns'].includes(body.mode) ? body.mode : 'solo';
       durationSec = Math.max(0, Math.min(3600, parseInt(body.durationSec, 10) || 0));
     }
 
@@ -450,7 +450,6 @@ router.post('/rooms', roomLimiter, (req, res, next) => {
       size: body.size,
       profile,
       durationSec: body.durationSec,
-      password: body.password,
       // screen: a TV hosts the room and shows the board; it doesn't play.
       screen: body.screen === true
     });
@@ -472,7 +471,7 @@ router.post('/rooms/:code/join', joinLimiter, async (req, res, next) => {
     // switch to the unfiltered list between the check and the join.
     const kid = await adultJoin.kid(req);
     adultJoin.refuse(kid, rooms.requireRoom(req.params.code).settings.profile === 'adult');
-    const { room, player } = rooms.joinRoom(req.params.code, (req.body || {}).name, (req.body || {}).password, kid);
+    const { room, player } = rooms.joinRoom(req.params.code, (req.body || {}).name, kid);
     res.status(201).json({
       code: room.code,
       playerId: player.id,
@@ -511,8 +510,7 @@ router.post('/rooms/:code/settings', (req, res, next) => {
     const room = rooms.updateSettings(req.params.code, body.playerId, body.token, {
       size: body.size,
       profile: body.profile,
-      durationSec: body.durationSec,
-      password: body.password
+      durationSec: body.durationSec
     });
     res.json(rooms.snapshot(room, body.playerId));
   } catch (e) {
@@ -803,7 +801,7 @@ router.delete('/players/:id', (req, res, next) => {
 router.use((err, req, res, _next) => {
   const status = err.status || 500;
   if (status >= 500) console.error('rambler:', err);
-  res.status(status).json({ error: status >= 500 ? 'Something went wrong.' : err.message, ...require('../arcade/room-password').extra(err) });
+  res.status(status).json({ error: status >= 500 ? 'Something went wrong.' : err.message });
 });
 
 module.exports = router;

@@ -88,7 +88,6 @@ async function run({ base }) {
     ok('the host turns a family lobby adult with people in it, no password asked', turned.status === 200, JSON.stringify(turned.data));
     const now = (await view(game, fam.code, fam)).data;
     ok('…and everyone stays', now.players.length === 4, JSON.stringify(now.players.map(p => p.name)));
-    ok("…and the lobby isn't locked", !now.locked && !(await api(`/${game}/lobbies`)).data.lobbies.find(l => l.code === fam.code).locked);
     ok('switching back to a family level moves nobody', (await api(`${room(fam.code)}/settings`, 'POST', { ...seat(fam), level: 'kids' })).status === 200 &&
       (await view(game, fam.code, fam)).data.players.length === 4);
     await api(`${room(fam.code)}/leave`, 'POST', seat(fam));

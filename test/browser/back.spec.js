@@ -66,7 +66,7 @@ test('Back in Chess: a game with no moves goes straight back to setup', async ({
 
 test('Back in Criss Cross steps back through its screens', async ({ page }) => {
   const problems = await intoGame(page, '/crisscross.html');
-  await page.locator('#newLocalBtn').click();
+  await page.locator('#newBotBtn').click();
   await expect(page.locator('#newLocal')).toBeVisible();
   await page.locator('.ah-back').click();
   await expect(page.locator('#home')).toBeVisible();
@@ -90,6 +90,31 @@ test('Back in Trivia: a game in progress goes back to setup without asking', asy
   }
   await page.goBack();
   await atHome(page);
+  expect(problems, problems.join('\n')).toEqual([]);
+});
+
+// Back while a letter is being picked takes the picker away with the game.
+test('Back in Spin & Solve: the letter picker goes with the game', async ({ page }) => {
+  test.setTimeout(90000);
+  const problems = await intoGame(page, '/spinsolve.html');
+  await nextStep(page);
+  await page.locator('#goBtn').click();
+  await expect(page.locator('#game')).toBeVisible();
+  // Spin until a letter's worth something (a Bankrupt or Lose a Turn spins again).
+  for (let i = 0; i < 8 && !(await page.locator('#letterView').isVisible()); i++) {
+    await expect(page.locator('#spinBtn')).toBeEnabled({ timeout: 15000 });
+    await page.locator('#spinBtn').click();
+    await expect(page.locator('#letterView, #spinBtn:enabled').first()).toBeVisible({ timeout: 15000 });
+  }
+  await expect(page.locator('#letterView')).toBeVisible();
+  await page.goBack();
+  // A game in progress may ask first; leave it.
+  await expect(page.locator('.ab-confirm, #setup:not(.hidden)').first()).toBeVisible();
+  const leave = page.locator('.ab-confirm button', { hasText: 'Leave' });
+  if (await leave.isVisible().catch(() => false)) await leave.click();
+  await expect(page.locator('#setup')).toBeVisible();
+  await expect(page.locator('#letterView')).toBeHidden();
+  await expect(page.locator('#solveView')).toBeHidden();
   expect(problems, problems.join('\n')).toEqual([]);
 });
 

@@ -52,7 +52,7 @@
   // Each tower: cost to build, then each level's stats (and its upgrade cost).
   const TOWERS = {
     archer: {
-      label: 'Archer', emoji: '🏹', color: '#3ddc84', blurb: 'Quick shots at one enemy. Hits flyers.',
+      label: 'Archer', emoji: '🏹', color: '#3ddc84', blurb: 'Quick shots at one monster; can hit the flying monsters too.',
       levels: [
         { cost: 50, range: 2.6, damage: 9, rate: 1.6 },
         { cost: 60, range: 2.9, damage: 15, rate: 1.8 },
@@ -60,7 +60,7 @@
       ]
     },
     cannon: {
-      label: 'Cannon', emoji: '💣', color: '#ff9f2c', blurb: 'Big blasts that hit a crowd. Can\'t hit flyers.',
+      label: 'Cannon', emoji: '💣', color: '#ff9f2c', blurb: 'Big blasts that hit a whole group of monsters, but can\'t hit the flying monsters.',
       levels: [
         { cost: 80, range: 2.3, damage: 24, rate: 0.6, splash: 0.9 },
         { cost: 90, range: 2.5, damage: 40, rate: 0.65, splash: 1.0 },
@@ -76,7 +76,7 @@
       ]
     },
     tesla: {
-      label: 'Tesla', emoji: '⚡', color: '#c86bff', blurb: 'Lightning that jumps between enemies. Hits flyers.',
+      label: 'Tesla', emoji: '⚡', color: '#c86bff', blurb: 'Lightning jumps from monster to monster, flying monsters included.',
       levels: [
         { cost: 120, range: 2.4, damage: 20, rate: 0.9, chain: 3 },
         { cost: 120, range: 2.6, damage: 32, rate: 0.95, chain: 4 },

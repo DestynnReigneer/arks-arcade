@@ -37,7 +37,7 @@ test('placing a first word in Words with Family', async ({ page }) => {
   await expect(logo).toBeVisible();
   expect(await logo.evaluate(img => img.naturalWidth)).toBeGreaterThan(0);
 
-  await page.locator('#newLocalBtn').click();
+  await page.locator('#newBotBtn').click();
   await page.locator('#localPlayers input').first().fill('Tester');
   await page.locator('#localGo').click();
   await expect(page.locator('#game')).toBeVisible();
@@ -74,7 +74,7 @@ test('moving and switching tiles you put down in Words with Family', async ({ pa
   await page.getByRole('button', { name: 'Play', exact: true }).click();
   const close = page.locator('.tut-x');
   if (await close.isVisible().catch(() => false)) await close.click();
-  await page.locator('#newLocalBtn').click();
+  await page.locator('#newBotBtn').click();
   await page.locator('#localPlayers input').first().fill('Tester');
   await page.locator('#localGo').click();
   await expect(page.locator('#rack .cc-tile')).toHaveCount(7);
@@ -137,7 +137,7 @@ test('Words with Family keeps its tiles and buttons high on a tall phone', async
   await page.getByRole('button', { name: 'Play', exact: true }).click();
   const close = page.locator('.tut-x');
   if (await close.isVisible().catch(() => false)) await close.click();
-  await page.locator('#newLocalBtn').click();
+  await page.locator('#newBotBtn').click();
   await page.locator('#localPlayers input').first().fill('Tester');
   await page.locator('#localGo').click();
   await expect(page.locator('#game')).toBeVisible();
@@ -150,4 +150,111 @@ test('Words with Family keeps its tiles and buttons high on a tall phone', async
   expect(board.width, 'the board nearly fills the width').toBeGreaterThan(412 - 12);
   expect(board.x + board.width, 'and stays on the screen').toBeLessThanOrEqual(412);
   expect(await page.locator('#actions .cc-key small').allTextContents()).toEqual(['Pass', 'Swap', 'Recall', 'Shuffle', 'Play']);
+});
+
+// The home screen: your games on their own, then the Multiplayer-Multiple devices heading
+// over the lobbies, then the two ways to play on one device, each with its own setup.
+test('Words with Family: Multiplayer-Shared device and Against the computer set up their own players', async ({ page }) => {
+  await quietFonts(page);
+  const problems = watchProblems(page);
+  await openPage(page, '/crisscross.html');
+  await page.getByRole('button', { name: /Play as a guest/ }).click();
+  await page.getByRole('button', { name: 'Play', exact: true }).click();
+  const close = page.locator('.tut-x');
+  if (await close.isVisible().catch(() => false)) await close.click();
+
+  // A guest: the card about everyone's own device, under the heading, with List Hosted Games.
+  await expect(page.locator('#home .mode-label')).toHaveText('Multiplayer-Multiple devices');
+  await expect(page.locator('#noProfile')).toBeVisible();
+  await expect(page.locator('#createPanel')).toBeHidden();
+  await expect(page.locator('#hostedPanel')).toBeVisible();
+  await expect(page.locator('#newSharedBtn')).toHaveText('🤝 Multiplayer-Shared device');
+  await expect(page.locator('#newBotBtn')).toHaveText('🤖 Against the computer');
+  await expect(page.locator('#newTvBtn')).toBeHidden();
+  // No empty strip where this device's games would be listed.
+  await expect(page.locator('#localList')).toBeHidden();
+
+  // Multiplayer-Shared device: two people, + Add player, and no computer.
+  const rows = page.locator('#localPlayers .cc-local-row');
+  await page.locator('#newSharedBtn').click();
+  await expect(page.locator('#localTitle')).toHaveText('Who\'s playing?');
+  await expect(rows).toHaveCount(2);
+  await expect(page.locator('#localPlayers input')).toHaveCount(2);
+  await expect(page.locator('#localPlayers')).not.toContainText('The computer');
+  await expect(page.locator('#addPerson')).toBeVisible();
+  await expect(page.locator('#addBot')).toBeHidden();
+  await page.locator('#addPerson').click();
+  await page.locator('#addPerson').click();
+  await expect(rows).toHaveCount(4);
+  await expect(page.locator('#addPerson')).toBeDisabled();
+  await page.locator('#localBack').click();
+
+  // Against the computer: your name and the computer, up to three computer players.
+  await page.locator('#newBotBtn').click();
+  await expect(page.locator('#localTitle')).toHaveText('Against the computer');
+  await expect(page.locator('#localHint')).toHaveText('Play a computer on this device. Add up to three computer players.');
+  await expect(page.locator('#localPlayers input')).toHaveCount(1);
+  await expect(page.locator('#localPlayers input')).toHaveAttribute('placeholder', 'Your name');
+  await expect(page.locator('#localPlayers .cc-bot')).toHaveCount(1);
+  await expect(page.locator('#addPerson')).toBeHidden();
+  const addBot = page.locator('#addBot');
+  await expect(addBot).toHaveText('🤖 Add another computer player');
+  // The only computer player stays, so its row has no ✕ (and neither has yours).
+  await expect(page.locator('#localPlayers .cc-bot')).toHaveText('🤖 The computer');
+  await expect(rows.getByRole('button')).toHaveCount(0);
+  await addBot.click();
+  await addBot.click();
+  // Several are numbered the way the game names them.
+  await expect(page.locator('#localPlayers .cc-bot')).toHaveText(['🤖 Computer 1', '🤖 Computer 2', '🤖 Computer 3']);
+  await expect(addBot).toBeDisabled();
+  await rows.nth(3).getByRole('button').click();
+  await expect(page.locator('#localPlayers .cc-bot')).toHaveText(['🤖 Computer 1', '🤖 Computer 2']);
+  await page.locator('#localPlayers input').fill('Kim');
+  await page.locator('#localGo').click();
+  await expect(page.locator('#game')).toBeVisible();
+  await expect(page.locator('#scoreStrip')).toContainText('Computer 1');
+  await expect(page.locator('#scoreStrip')).toContainText('Computer 2');
+
+  // Back on the home screen, the game on this device is in Your games, with nothing saying no games are running,
+  // and it opens from there.
+  await openPage(page, '/crisscross.html');
+  await expect(page.locator('#minepanel')).toBeVisible();
+  const row = page.locator('#mineList li', { hasText: 'Computer 1' });
+  await expect(row).toHaveCount(1);
+  await expect(page.locator('#mineHint')).not.toContainText('No Games Running');
+  await expect(page.locator('#localList')).toBeHidden();
+  await row.locator('.cc-li-main').click();
+  await expect(page.locator('#game')).toBeVisible();
+  await expect(page.locator('#scoreStrip')).toContainText('Computer 2');
+  expect(problems, problems.join('\n')).toEqual([]);
+});
+
+// Your games: a slow answer about the games of the profile picked before is never shown under the next one.
+test('Words with Family: a late answer about an earlier profile\'s games is never listed', async ({ browser }) => {
+  test.skip(test.info().project.name !== 'phone', 'once is enough');
+  const PORT = Number(process.env.BROWSER_TEST_PORT || 3101);
+  const fake = (p, body) => fetch(`http://localhost:${PORT + 1}${p}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then(r => r.json());
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const page = await ctx.newPage();
+  await quietFonts(page);
+  // The first profile's games come back slowly, with one waiting lobby in them; the next profile has none.
+  let calls = 0;
+  await page.route('**/api/crisscross/mine', async route => {
+    calls++;
+    if (calls === 1) {
+      await new Promise(r => setTimeout(r, 3000));
+      return route.fulfill({ json: { yourTurn: 0, games: [{ id: 'old1', status: 'waiting', seats: 2, dictionary: 'kids', players: [{ you: true, name: 'Kim', score: 0 }] }] } });
+    }
+    return route.fulfill({ json: { yourTurn: 0, games: [] } });
+  });
+  expect((await fake('/test/next-once', { as: 'kim' })).ok).toBe(true);
+  await page.goto('/auth/signin?return=/crisscross.html');
+  await page.waitForURL(u => new URL(u).pathname === '/crisscross.html');
+  await expect.poll(() => calls).toBeGreaterThan(0);
+  // Another profile is picked while the first answer is still on its way.
+  await page.evaluate(() => ArcadeProfile.set({ ...ArcadeProfile.get(), id: 'someone-else', name: 'Someone' }));
+  await page.waitForTimeout(3800);
+  await expect(page.locator('#mineList li', { hasText: 'Waiting' })).toHaveCount(0);
+  await expect(page.locator('#mineHint')).toHaveText('No Games Running... join or start a game.');
+  await ctx.close();
 });
