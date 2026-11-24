@@ -272,6 +272,11 @@ async function run({ base, root }) {
   });
   ok('a guest\'s second go does not count', gAgain.data.daily.counted === false && gAgain.data.daily.you.score === gScore.data.daily.you.score);
   ok('and the daily reads as played for them', (await api('/daily?guest=Daily%20Guest')).data.alreadyPlayed === true);
+  const hidden = await api('/score', 'POST', {
+    boardId: gDaily.data.boardId, guestName: 'Daily​ Guest‮',
+    players: [{ id: 'p0', name: 'x', words: dWords }]
+  });
+  ok('an invisible character doesn\'t make it a new name', hidden.data.daily.counted === false && hidden.data.daily.you.name === 'Daily Guest');
   const noName = await api('/score', 'POST', {
     boardId: gDaily.data.boardId, players: [{ id: 'p0', name: 'Nobody', words: dWords.slice(0, 1) }]
   });

@@ -1091,7 +1091,7 @@ function listDaily(day) {
   return db.prepare(`
     SELECT d.*, p.name, p.avatar FROM rambler_daily d
     LEFT JOIN rambler_players p ON p.id = d.player_id
-    WHERE d.day = ? ORDER BY d.score DESC, d.created_at ASC
+    WHERE d.day = ? ORDER BY d.score DESC, d.created_at ASC LIMIT 50
   `).all(day).map((r, i) => ({
     rank: i + 1,
     playerId: r.player_id, name: r.name || r.player_name || 'Unknown', avatar: r.avatar || r.player_avatar || '🙂',

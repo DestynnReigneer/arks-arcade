@@ -718,7 +718,11 @@ function showDailyResult(daily) {
   const you = daily.you;
   const rank = you ? standings.findIndex(r => r.playerId === you.playerId) + 1 : 0;
 
-  if (!daily.counted) {
+  if (!S.player && !daily.you) {
+    // A guest with no name isn't on the standings; there's nothing to say about them.
+    $('dailyResultHeading').textContent = 'Today’s board';
+    $('dailyResultSub').textContent = '';
+  } else if (!daily.counted) {
     $('dailyResultHeading').textContent = 'Today’s board';
     $('dailyResultSub').textContent =
       `You had already played today, so this one was for fun. Your ${you ? you.score : 0} still stands.`;
@@ -2113,8 +2117,11 @@ const guestName = () => { try { return typeof ArcadeProfile !== 'undefined' ? Ar
 function guestWho() {
   const name = guestName();
   if (!name) return {};
-  let avatar;
-  try { avatar = (ArcadeProfile.get() || {}).avatar || undefined; } catch { /* no profile helper */ }
+  let me = {};
+  try { me = ArcadeProfile.get() || {}; } catch { /* no profile helper */ }
+  // Someone signed in isn't a guest, even if Rambler hasn't picked up their profile.
+  if (me.token || me.id) return {};
+  const avatar = me.avatar || undefined;
   return { guestName: name, guestAvatar: avatar };
 }
 

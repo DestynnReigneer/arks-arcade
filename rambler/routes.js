@@ -294,7 +294,7 @@ router.post('/score', scoreLimiter, (req, res, next) => {
       let youId = profileId;
       const guest = !profileId && dailyGuest(body.guestName, body.guestAvatar);
       if (guest) {
-        const mine = result.results[0];
+        const mine = result.results.find(r => r.playerId === players[0].id) || result.results[0];
         youId = guest.key;
         counted = db.recordDaily({
           day: entry.daily, playerId: guest.key, score: mine.score, words: mine.wordCount,
