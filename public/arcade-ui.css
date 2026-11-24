@@ -184,6 +184,9 @@ button:disabled { opacity: 0.4; cursor: default; }
   html:not(.tv) .fit-setup #localSetup:has(> #nameList + #addPlayerBtn) > #nameList { display: contents; }
   html:not(.tv) .fit-setup #localSetup:has(> #nameList + #addPlayerBtn) .name-row { grid-column: auto; }
   html:not(.tv) .fit-setup #localSetup:has(> #nameList + #addPlayerBtn) > #addPlayerBtn { grid-column: auto; width: 100%; margin: 0 0 6px; }
+  /* Spin & Solve's one Solo name sits close under its line, so Next stays above Chrome's tab row. */
+  html:not(.tv) .fit-setup #soloSetup .hint { margin-bottom: 4px; }
+  html:not(.tv) .fit-setup #soloSetup .name-row { margin-bottom: 0; }
 }
 /* A short screen (a phone with the browser's bars showing) tightens a little more. */
 @media (max-height: 700px) {

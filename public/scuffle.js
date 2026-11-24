@@ -139,7 +139,7 @@
       seg($('secondsSeg'), S.config.seconds.map(n => [n, `${n}s`]), S.seconds, v => { S.seconds = v; store('scuffle.seconds', v); paintSetup(); });
     }
     $('goBtn').textContent = S.mode === 'host' ? 'Create lobby'
-      : S.mode === 'tvphones' ? 'Show the code on the TV' : S.mode === 'daily' ? 'Play today\'s letters' : 'Let\'s play';
+      : S.mode === 'tvphones' ? 'Show the QR code on the TV' : S.mode === 'daily' ? 'Play today\'s letters' : 'Let\'s play';
     // List Hosted Games: the lobbies to pick from, and nothing to start.
     const finding = S.mode === 'join' && !$('setup').classList.contains('hidden');
     $('goBtn').classList.toggle('hidden', S.mode === 'join');

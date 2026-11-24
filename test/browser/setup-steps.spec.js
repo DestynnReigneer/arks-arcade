@@ -83,16 +83,27 @@ test('Know-It-All: Next and Back keep the choices, and the top bar\'s Back goes 
 test('Spin & Solve: Game mode, then Next and Back keep the players, the level and the rounds', async ({ browser }, info) => {
   test.skip(info.project.name !== 'phone', 'The size is set here.');
   const { ctx, page, problems } = await open(browser, '/spinsolve.html');
-  // Step 1 is Game mode. Solo is picked first and has no names to fill in.
+  // Step 1 is Game mode. Solo is picked first, with one name box holding the name the guest plays under
+  // (picked after the page opened), never "Player 1".
   await expect(page.locator('#setup .panel h2').filter({ hasText: 'Game mode' })).toBeVisible();
   await expect(pressed(page, '#modeSeg')).toHaveAttribute('data-mode', 'solo');
+  await expect(page.locator('#soloSetup .hint')).toHaveText('Single player, plays for the 🏆 board.');
   await expect(page.locator('#nameList')).toBeHidden();
+  const soloName = page.locator('#soloName input');
+  await expect(soloName).toHaveCount(1);
+  await expect(soloName).toHaveAttribute('placeholder', 'Player 1');
+  await expect(soloName).toHaveValue(/^Guest/);
+  await soloName.fill('Robin');
   await expect(page.locator('#roundSeg')).toBeHidden();
   // Multiplayer-Shared device shows two to four names, and never fewer than two.
   await page.locator('#modeSeg [data-mode="local"]').click();
+  await expect(page.locator('#localSetup .hint.no-tv')).toHaveText('Up to 4 players on a single device.');
   await expect(page.locator('#nameList')).toBeVisible();
+  await expect(soloName).toHaveCount(0);
   const names = page.locator('#nameList .name-row');
   await expect(names).toHaveCount(2);
+  // The solo name is the first player's.
+  await expect(names.first().locator('input')).toHaveValue('Robin');
   await expect(names.first().locator('button')).toBeHidden();
   await page.locator('#addPlayerBtn').click();
   await page.locator('#addPlayerBtn').click();
@@ -113,9 +124,10 @@ test('Spin & Solve: Game mode, then Next and Back keep the players, the level an
   await expect(pressed(page, '#timerSeg')).toHaveAttribute('data-secs', '0');
   await page.goBack();
   await expect(page.locator('#nameList')).toBeVisible();
-  // Back to Solo hides the names again.
+  // Back to Solo hides the names again, and keeps the first one in its box.
   await page.locator('#modeSeg [data-mode="solo"]').click();
   await expect(page.locator('#nameList')).toBeHidden();
+  await expect(soloName).toHaveValue('Kim');
   expect(problems, problems.join('\n')).toEqual([]);
   await ctx.close();
 });

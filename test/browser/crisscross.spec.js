@@ -192,7 +192,7 @@ test('Words with Family: Multiplayer-Shared device and Against the computer set 
   // Against the computer: your name and the computer, up to three computer players.
   await page.locator('#newBotBtn').click();
   await expect(page.locator('#localTitle')).toHaveText('Against the computer');
-  await expect(page.locator('#localHint')).toHaveText('You play the computer on this device. Add a second computer player if you want a busier board.');
+  await expect(page.locator('#localHint')).toHaveText('Play a computer on this device. Add up to three computer players.');
   await expect(page.locator('#localPlayers input')).toHaveCount(1);
   await expect(page.locator('#localPlayers input')).toHaveAttribute('placeholder', 'Your name');
   await expect(page.locator('#localPlayers .cc-bot')).toHaveCount(1);
@@ -213,6 +213,18 @@ test('Words with Family: Multiplayer-Shared device and Against the computer set 
   await page.locator('#localGo').click();
   await expect(page.locator('#game')).toBeVisible();
   await expect(page.locator('#scoreStrip')).toContainText('Computer 1');
+  await expect(page.locator('#scoreStrip')).toContainText('Computer 2');
+
+  // Back on the home screen, the game on this device is in Your games, with nothing saying no games are running,
+  // and it opens from there.
+  await openPage(page, '/crisscross.html');
+  await expect(page.locator('#minepanel')).toBeVisible();
+  const row = page.locator('#mineList li', { hasText: 'Computer 1' });
+  await expect(row).toHaveCount(1);
+  await expect(page.locator('#mineHint')).not.toContainText('No Games Running');
+  await expect(page.locator('#localList')).toBeHidden();
+  await row.locator('.cc-li-main').click();
+  await expect(page.locator('#game')).toBeVisible();
   await expect(page.locator('#scoreStrip')).toContainText('Computer 2');
   expect(problems, problems.join('\n')).toEqual([]);
 });

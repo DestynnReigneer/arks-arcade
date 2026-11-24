@@ -17,8 +17,10 @@
   const TV = !!(window.ArcadeTV && ArcadeTV.on);
   // [id, name, the shorter name a phone shows]
   const LEVELS = [['mini', 'Family mini · 5×5', '👪 Mini 5×5'], ['big', 'Big · 7×7', '🧠 Big 7×7']];
-  const MODES = [['daily', '📅 Daily challenge', '📅 Daily challenge'], ['free', '🎲 Free play', '🎲 Free play']];
+  const MODES = [['daily', '📅 Daily', '📅 Daily'], ['free', '🎲 Free play', '🎲 Free play']];
   const LABEL = { mini: 'Family mini', big: 'Big' };
+  // The daily's screen title names the level without "Family".
+  const DAILY_LABEL = { mini: 'Mini', big: 'Big' };
   const store = (k, v) => { try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch { /* private mode */ } };
   const recall = (k, d = null) => { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch { return d; } };
   const token = () => (typeof ArcadeProfile !== 'undefined' ? ArcadeProfile.token() : null);
@@ -388,7 +390,7 @@
     const blurb = lv === 'mini'
       ? 'A quick 5 by 5 crossword with family-friendly clues. Everyone gets the same one today, so you can race each other.'
       : 'A bigger 7 by 7 crossword with trickier clues. Everyone gets the same one today, so you can race each other.';
-    cover(`📅 Daily challenge: ${LABEL[lv]}`, `${blurb} It stays the same all day; for a different one, pick Free play. The clock starts when you tap Start, and you can pause it whenever you need to.`, 'Start', begin);
+    cover(`📅 Daily challenge: ${DAILY_LABEL[lv]}`, `${blurb} It stays the same all day; for a different one, pick Free play. The clock starts when you tap Start, and you can pause it whenever you need to.`, 'Start', begin);
   }
 
   // Free play's New board: drop the crossword you haven't touched yet and

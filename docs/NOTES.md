@@ -72,7 +72,7 @@ Started on the setup-steps branch (PR #201) and moved onto main once that merged
   a heading does nothing (Chess's tapping its heading used to unpick every mode).
 - **Rambler's Tabletop is gone**, client and server (the board mode `tabletop` is refused like any unknown mode and
   saved as solo). Pass & Play is the only choice under Multiplayer-Shared device.
-- **Spin & Solve's setup has a Game mode:** 🙂 Solo (no names list) or Multiplayer-Shared device (two to four names,
+- **Spin & Solve's setup has a Game mode:** 🙂 Solo (one name box, since the third round below) or Multiplayer-Shared device (two to four names,
   never fewer than two). Solo is picked first. The game is unchanged; Solo sends only the first name.
 - **The lobby password is gone for good:** `public/room-password.js`, `arcade/room-password.js`, the TV's made-up
   passwords, the rooms' `password`, and `locked` and `lobbyPassword` in snapshots and lobby lists. The `X-Adult-Pin`
@@ -80,7 +80,7 @@ Started on the setup-steps branch (PR #201) and moved onto main once that merged
 - **Second round:** Words with Family's How to play no longer says it used to be Criss Cross (no screen says what
   something used to be called). Tower Defense's Archer, Cannon and Tesla descriptions are the maintainer's, and a
   picked tower's card shows its description on phones too, except the smallest sideways phones (360 tall), where
-  the page would scroll 32px (`@media (max-height: 370px)` in `towers.html`). Spin & Solve's turn timer paragraph
+  the page would scroll 32px (the third round below shows it there too). Spin & Solve's turn timer paragraph
   and Rambler's first README line are the maintainer's.
 - **Words with Family's home screen:** Your games holds only your games. Under it, a Multiplayer-Multiple devices
   heading (Chess's) over Create a game lobby (its own panel, with a profile) or the card about everyone's own device
@@ -89,6 +89,36 @@ Started on the setup-steps branch (PR #201) and moved onto main once that merged
   three computer players). Both open `#newLocal` set up by `localSetup(mode)`; the TV keeps its one Play on the TV
   button (`#newTvBtn`, mode `tv`, people and computer mixed as before). Same players again picks the mode from the
   finished game's seats.
+- **Third round, the maintainer's last answers:**
+  - **Spin & Solve:** under Solo, "Single player, plays for the 🏆 board."; under Multiplayer-Shared device, "Up to 4
+    players on a single device." **Solo has a name box again** (`#soloName`, the same box as the shared names, with
+    "Player 1" as its placeholder; not on a TV, which picks who played at the end). Before this PR the names list
+    always showed and its first box was the Solo name; hiding it left a guest playing as "Player 1". The box is the
+    first name of the list, so it carries over between the modes, and the page now follows `ArcadeProfile.onChange`:
+    a guest who picks their name after the page opened (or someone who signs in) gets it in the box, unless they
+    typed over it. Before, the name was read only once, when the page loaded.
+  - **The daily buttons say just "📅 Daily"** (Rambler's card, Shuffle Scuffle's mode button, Clueless Crosswords'
+    mode button). Screen titles and How to play keep "📅 Daily challenge"; Clueless Crosswords' daily screen is
+    "📅 Daily challenge: Mini" or "📅 Daily challenge: Big" (`DAILY_LABEL`; Free play's title is unchanged).
+  - **Rambler's daily screen:** the button is "Play the daily challenge" (no clock, no "today's board"), and an empty
+    day says only "Nobody has played yet. Be first on the leaderboard." under Today in this house. The list under it
+    stays empty (`renderDailyStandings(..., { empty: false })`); the result screen after a daily still says "No
+    scores yet today." when it has nobody to list.
+  - **Dare Devil and Uh-Oh: Part Deux:** the Multiplayer-Shared device heading over the button with the same words is
+    gone; Multiplayer-Multiple devices still sits over the lobby buttons (on a phone it spans the second and third
+    columns, over them).
+  - **Words with Family's home:** every game the person has is in Your games. `paintMine()` lists the games on
+    everyone's own device (from `/mine`, with a profile) and then the games on this device (`crisscross.local`), so
+    "No Games Running..." only shows when there are none of either. Your games shows without a profile when this
+    device has games. The device panel keeps its two buttons; on the TV its games stay in that panel. Against the
+    computer's line is "Play a computer on this device. Add up to three computer players."
+  - **Tower Defense:** a picked tower's count is on its own line, "Monsters defeated: 0". The rule hiding the
+    description on the smallest sideways phones is gone (the maintainer's rule: information is never hidden on a small
+    screen). Instead the `(max-height: 370px)` block tightens the gaps and the description's lines, and at 350 tall
+    the score row is shorter too, so the longest description (the Cannon's) fits at 844x334, 740x360 and 844x390
+    with nothing to scroll. `fit.spec.js` checks the description and the count are on the screen at every size.
+  - **"Show the QR code on the TV"** in Dare Devil, Uh-Oh: Part Deux, Rambler and Shuffle Scuffle, like Know-It-All.
+  - **The suggest pop-ups** in Know-It-All, Spin & Solve and Wordless are titled "💡 Suggest a theme or topic".
 
 ## Setup in two steps on a phone: Know-It-All, Spin & Solve and Rambler (2026-11-20)
 

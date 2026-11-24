@@ -109,7 +109,7 @@
     for (const b of $('modeSeg').querySelectorAll('[data-mode]')) b.setAttribute('aria-pressed', String(b.dataset.mode === mode));
     for (const m of ['local', 'host', 'join', 'tvphones', 'tvpass']) $(`${m}Setup`).classList.toggle('hidden', m !== mode);
     $('goBtn').textContent = mode === 'host' ? 'Create lobby' : mode === 'join' ? 'Join the game'
-      : mode.startsWith('tv') ? 'Show the code on the TV' : 'Deal \'em';
+      : mode.startsWith('tv') ? 'Show the QR code on the TV' : 'Deal \'em';
     $('levelList').closest('.panel').classList.toggle('hidden', mode === 'join');
     lobby().mode(mode);
   }

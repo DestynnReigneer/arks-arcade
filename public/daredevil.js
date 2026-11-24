@@ -95,7 +95,7 @@
     const panel = mode === 'tvremote' ? 'local' : mode;
     for (const m of ['local', 'host', 'join', 'tvphones', 'tvpass']) $(`${m}Setup`).classList.toggle('hidden', m !== panel);
     $('goBtn').textContent = mode === 'host' ? 'Create lobby' : mode === 'join' ? 'Join the game'
-      : mode === 'tvphones' || mode === 'tvpass' ? 'Show the code on the TV' : 'I dare you';
+      : mode === 'tvphones' || mode === 'tvpass' ? 'Show the QR code on the TV' : 'I dare you';
     $('localHint').textContent = mode === 'tvremote'
       ? 'Take turns with the remote: the TV shows each card big, and whoever\'s turn it is presses OK to draw and says whether they did it. Add everyone\'s names (or leave them as they are).'
       : 'Put the device in the middle, or pass it around.';

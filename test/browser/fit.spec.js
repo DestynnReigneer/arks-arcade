@@ -548,6 +548,10 @@ for (const [label, viewport, , covered = 0] of SIZES) {
     await page.waitForTimeout(300);
     expect(await check('.tower-actions button')).toEqual([]);
     expect(await check('#buildRow button')).toEqual([]);
+    // The tower's description and its count on a line of its own are never left out, even on the smallest
+    // sideways phone.
+    await expect(page.locator('.tower-head .kills')).toHaveText('Monsters defeated: 0');
+    expect(await check('.tower-head small')).toEqual([]);
     if (viewport.width > viewport.height && viewport.height < 600) {
       expect(await page.evaluate(() => document.documentElement.scrollHeight - innerHeight)).toBeLessThanOrEqual(1);
     }

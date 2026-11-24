@@ -81,7 +81,24 @@
     renderNames();
   }
 
+  // Solo has one name box too (never on a TV, which picks who played at the end), so a
+  // guest plays under the name they chose instead of "Player 1". It's the first name of
+  // the list, so it carries over to Multiplayer-Shared device and back.
+  function renderSoloName() {
+    const box = $('soloName');
+    box.innerHTML = '';
+    if (S.mode !== 'solo' || TV) return;
+    const row = document.createElement('div');
+    row.className = 'name-row';
+    row.innerHTML = '<input maxlength="12" placeholder="Player 1">';
+    const input = row.querySelector('input');
+    input.value = S.names[0] || '';
+    input.addEventListener('input', () => { S.names[0] = input.value; });
+    box.appendChild(row);
+  }
+
   function renderNames() {
+    renderSoloName();
     const list = $('nameList');
     list.innerHTML = '';
     if (S.mode !== 'local') return;
@@ -1296,6 +1313,16 @@
   // ---- wiring ---------------------------------------------------------------------------
 
   $('addPlayerBtn').addEventListener('click', () => { if (S.names.length < 4) { S.names.push(''); renderNames(); } });
+  // The name was read when the page opened; a guest who picks their name (or someone
+  // who signs in) after that gets it in the first box, unless it was typed over.
+  if (typeof ArcadeProfile !== 'undefined' && !TV) {
+    let had = ArcadeProfile.name();
+    ArcadeProfile.onChange(() => {
+      const now = ArcadeProfile.name();
+      if (!S.names[0] || S.names[0] === had) { S.names[0] = now; renderNames(); }
+      had = now;
+    });
+  }
   for (const b of $('modeSeg').querySelectorAll('[data-mode]')) b.addEventListener('click', () => setMode(b.dataset.mode));
   for (const b of $('roundSeg').children) {
     b.addEventListener('click', () => {

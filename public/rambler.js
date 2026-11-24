@@ -599,7 +599,7 @@ function renderDaily() {
 
   $('dailyPlayBtn').textContent = played
     ? 'Play it again'
-    : `Play today's board · ${mmss((d.durationSec || 240) * 1000)}`;
+    : 'Play the daily challenge';
 
   // Replaying is allowed and banks nothing. Saying so is better than either
   // locking the board -- which means telling a seven-year-old no -- or letting
@@ -617,14 +617,14 @@ function renderDaily() {
     $('dailyReplayNote').textContent = `${mins} minutes, one scoring go. Make it count.`;
   }
 
-  renderDailyStandings($('dailyStandings'), standings);
+  renderDailyStandings($('dailyStandings'), standings, { empty: false });
   $('dailyBoardSub').textContent = dictionaryNote(standings);
 }
 
 // Everyone gets the same letters, but not the same word list, and pretending
 // otherwise would make the standings quietly dishonest.
 function dictionaryNote(standings) {
-  if (!standings.length) return 'Nobody has played it yet. Be the first name on it.';
+  if (!standings.length) return 'Nobody has played yet. Be first on the leaderboard.';
   const lists = new Set(standings.map(r => r.profile));
   if (lists.size > 1) {
     return 'Same sixteen letters for everyone. The unfiltered list is the wider one, ' +
@@ -633,10 +633,11 @@ function dictionaryNote(standings) {
   return `${standings.length} ${standings.length === 1 ? 'go' : 'goes'} at the same sixteen letters.`;
 }
 
-function renderDailyStandings(host, standings, { mineId = null } = {}) {
+// The daily screen says it once, under its heading (dictionaryNote), so its list stays empty.
+function renderDailyStandings(host, standings, { mineId = null, empty = true } = {}) {
   host.innerHTML = '';
   if (!standings.length) {
-    host.innerHTML = '<div class="note">No scores yet today.</div>';
+    if (empty) host.innerHTML = '<div class="note">No scores yet today.</div>';
     return;
   }
   const me = mineId || (S.player ? S.player.id : null);
@@ -1982,7 +1983,7 @@ function renderSetup() {
     ? `${profile.words.toLocaleString()} words. ${profile.blurb}.`
     : '';
 
-  $('startBtn').textContent = TV ? 'Show the code on the TV'
+  $('startBtn').textContent = TV ? 'Show the QR code on the TV'
     : S.mode === 'room' ? 'Create lobby' : S.mode === 'marathon' ? 'Start the run' : 'Slide to victory';
 }
 
