@@ -470,6 +470,16 @@
     if (r.bottom > seen - 8) window.scrollBy(0, r.bottom - seen + 8);
   }
   $('addPlayerBtn').onclick = () => { if (S.names.length < 12) { S.names.push(''); renderNames(); showStart(); } };
+  // The name was read when the page opened; a guest who picks their name (or someone
+  // who signs in) after that gets it in the first box, unless it was typed over.
+  if (typeof ArcadeProfile !== 'undefined' && !TV) {
+    let had = ArcadeProfile.name();
+    ArcadeProfile.onChange(() => {
+      const now = ArcadeProfile.name();
+      if (!S.names[0] || S.names[0] === had) { S.names[0] = now; renderNames(); }
+      had = now;
+    });
+  }
   $('goBtn').onclick = go;
   $('deckBtn').onclick = () => { Blip.tone([300, 900], 0.15, { type: 'triangle' }); send('draw'); };
   $('doneBtn').onclick = () => { Blip.tune([[660, 0.08], [990, 0.14]], { type: 'triangle' }); send('done'); };

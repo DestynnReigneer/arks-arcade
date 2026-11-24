@@ -93,6 +93,31 @@ test('Back in Trivia: a game in progress goes back to setup without asking', asy
   expect(problems, problems.join('\n')).toEqual([]);
 });
 
+// Back while a letter is being picked takes the picker away with the game.
+test('Back in Spin & Solve: the letter picker goes with the game', async ({ page }) => {
+  test.setTimeout(90000);
+  const problems = await intoGame(page, '/spinsolve.html');
+  await nextStep(page);
+  await page.locator('#goBtn').click();
+  await expect(page.locator('#game')).toBeVisible();
+  // Spin until a letter's worth something (a Bankrupt or Lose a Turn spins again).
+  for (let i = 0; i < 8 && !(await page.locator('#letterView').isVisible()); i++) {
+    await expect(page.locator('#spinBtn')).toBeEnabled({ timeout: 15000 });
+    await page.locator('#spinBtn').click();
+    await expect(page.locator('#letterView, #spinBtn:enabled').first()).toBeVisible({ timeout: 15000 });
+  }
+  await expect(page.locator('#letterView')).toBeVisible();
+  await page.goBack();
+  // A game in progress may ask first; leave it.
+  await expect(page.locator('.ab-confirm, #setup:not(.hidden)').first()).toBeVisible();
+  const leave = page.locator('.ab-confirm button', { hasText: 'Leave' });
+  if (await leave.isVisible().catch(() => false)) await leave.click();
+  await expect(page.locator('#setup')).toBeVisible();
+  await expect(page.locator('#letterView')).toBeHidden();
+  await expect(page.locator('#solveView')).toBeHidden();
+  expect(problems, problems.join('\n')).toEqual([]);
+});
+
 test('a reload in the middle of a game still leaves the menu in one Back', async ({ page }) => {
   await intoGame(page, '/snake.html');
   await page.keyboard.press('ArrowUp');

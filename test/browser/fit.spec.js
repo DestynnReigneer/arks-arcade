@@ -68,6 +68,8 @@ const GAMES = [
     setup: ['#levelList', '#lengthSeg', '#modeSeg', '#nameList .name-row:last-child', '#addPlayerBtn', '#goBtn'] },
   { name: 'Uh-Oh: Part Deux', path: '/partdeux.html', start: ['#goBtn', '#passReady'], board: null, need: ['#drawPile', '#discard', '#hand', '#drawBtn'],
     setup: ['#levelList', '#modeSeg', '#nameList .name-row:last-child', '#addPlayerBtn', '#goBtn'] },
+  { name: 'Shuffle Scuffle', path: '/scuffle.html', start: ['#goBtn'], board: null, need: ['#tiles', '#enterBtn'],
+    setup: ['#modeSeg', '#goBtn'] },
   // The 3D cabinet games draw in software in the test browser, slowly, so they get triple time.
   { name: 'Big Swing', path: '/bigswing.html', start: ['.cab-go'], board: '#stage', need: ['#stage', '.cab-pad'], slow: true },
   // Two more cabinet games: Bucket Drop's score row is the longest, and the Racer has three big buttons.
@@ -77,6 +79,11 @@ const GAMES = [
 
 // Game and size pairs that don't fit yet, with why. Fixed in order on the to-do list.
 const KNOWN = {
+  // Shuffle Scuffle joined this list for its setup screen (2026-11-24); its play screen wasn't part of the sideways
+  // layouts, so Enter (or the bottom of the page) is still below a sideways phone's screen.
+  "Shuffle Scuffle @ phone turned sideways": "the play screen isn't fitted to a sideways phone yet: the page is 547px tall on a 390px screen",
+  "Shuffle Scuffle @ small phone turned sideways": "the play screen isn't fitted to a sideways phone yet: Enter ends at 387 of 360",
+  "Shuffle Scuffle @ phone turned sideways with the browser bars showing": "the play screen isn't fitted to a sideways phone yet: Enter ends at 387 of 334",
   "Tower Defense @ phone turned sideways with the browser bars showing": "the map's 13 rows need 286px for 22px squares, and only 270 are left under the top bar, so the squares are 20px (the maintainer's call: smaller squares here, or a map that scrolls a little)",
   "Uh-Oh: Part Deux @ laptop": "skip: fits on some machines and not others; on Windows the page scrolls a little below the hand",
 };
@@ -740,3 +747,38 @@ for (const viewport of [{ width: 360, height: 640 }, { width: 390, height: 844 }
     await ctx.close();
   });
 }
+
+// Words with Family's "more below" arrow sits above Chrome's row of tabs, where it can be seen, and it shows when
+// the tab row covers the rest of the home screen.
+test("Words with Family's more-below arrow is above Chrome's tab row", async ({ browser }, info) => {
+  test.skip(info.project.name !== 'phone', 'The size is set here.');
+  const [, viewport, , covered] = SIZES.find(s => s[3]);
+  const ctx = await browser.newContext({ viewport, hasTouch: true, isMobile: true });
+  // Enough games on this device to make the home screen longer than what's left above the tab row.
+  await ctx.addInitScript(() => {
+    if (localStorage.getItem('crisscross.local')) return;
+    const games = Array.from({ length: 8 }, (_, i) => ({ id: `fake${i}`, key: 'k', names: ['Kim', 'Computer'], dictionary: 'kids', at: Date.now() }));
+    localStorage.setItem('crisscross.local', JSON.stringify(games));
+  });
+  const page = await ctx.newPage();
+  await page.addInitScript(cov => {
+    const vv = new EventTarget();
+    for (const [k, get] of Object.entries({ height: () => innerHeight - cov, width: () => innerWidth, scale: () => 1, offsetTop: () => 0, offsetLeft: () => 0, pageTop: () => scrollY, pageLeft: () => scrollX })) {
+      Object.defineProperty(vv, k, { get });
+    }
+    Object.defineProperty(window, 'visualViewport', { value: vv, configurable: true });
+  }, covered);
+  await quietFonts(page);
+  await openPage(page, '/crisscross.html');
+  const guest = page.getByRole('button', { name: /Play as a guest/ });
+  if (await guest.isVisible().catch(() => false)) {
+    await guest.click();
+    await page.getByRole('button', { name: 'Play', exact: true }).click();
+  }
+  const close = page.locator('.tut-x');
+  if (await close.isVisible().catch(() => false)) await close.click();
+  await expect(page.locator('#moreBelow')).toHaveClass(/\bon\b/);
+  const box = await page.locator('#moreBelow').boundingBox();
+  expect(box.y + box.height).toBeLessThanOrEqual(viewport.height - covered + 1);
+  await ctx.close();
+});

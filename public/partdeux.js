@@ -658,6 +658,16 @@
     if (r.bottom > seen - 8) window.scrollBy(0, r.bottom - seen + 8);
   }
   $('addPlayerBtn').onclick = () => { if (S.names.length < 8) { S.names.push(''); renderNames(); showStart(); } };
+  // The name was read when the page opened; a guest who picks their name (or someone
+  // who signs in) after that gets it in the first box, unless it was typed over.
+  if (typeof ArcadeProfile !== 'undefined' && !TV) {
+    let had = ArcadeProfile.name();
+    ArcadeProfile.onChange(() => {
+      const now = ArcadeProfile.name();
+      if (!S.names[0] || S.names[0] === had) { S.names[0] = now; renderNames(); }
+      had = now;
+    });
+  }
   $('goBtn').onclick = go;
   $('drawBtn').onclick = () => { Blip.tone(330, 0.06, { type: 'triangle' }); send({ action: 'draw' }); };
   $('drawPile').onclick = () => $('drawBtn').click();

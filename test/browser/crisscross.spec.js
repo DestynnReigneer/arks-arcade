@@ -228,3 +228,33 @@ test('Words with Family: Multiplayer-Shared device and Against the computer set 
   await expect(page.locator('#scoreStrip')).toContainText('Computer 2');
   expect(problems, problems.join('\n')).toEqual([]);
 });
+
+// Your games: a slow answer about the games of the profile picked before is never shown under the next one.
+test('Words with Family: a late answer about an earlier profile\'s games is never listed', async ({ browser }) => {
+  test.skip(test.info().project.name !== 'phone', 'once is enough');
+  const PORT = Number(process.env.BROWSER_TEST_PORT || 3101);
+  const fake = (p, body) => fetch(`http://localhost:${PORT + 1}${p}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then(r => r.json());
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const page = await ctx.newPage();
+  await quietFonts(page);
+  // The first profile's games come back slowly, with one waiting lobby in them; the next profile has none.
+  let calls = 0;
+  await page.route('**/api/crisscross/mine', async route => {
+    calls++;
+    if (calls === 1) {
+      await new Promise(r => setTimeout(r, 3000));
+      return route.fulfill({ json: { yourTurn: 0, games: [{ id: 'old1', status: 'waiting', seats: 2, dictionary: 'kids', players: [{ you: true, name: 'Kim', score: 0 }] }] } });
+    }
+    return route.fulfill({ json: { yourTurn: 0, games: [] } });
+  });
+  expect((await fake('/test/next-once', { as: 'kim' })).ok).toBe(true);
+  await page.goto('/auth/signin?return=/crisscross.html');
+  await page.waitForURL(u => new URL(u).pathname === '/crisscross.html');
+  await expect.poll(() => calls).toBeGreaterThan(0);
+  // Another profile is picked while the first answer is still on its way.
+  await page.evaluate(() => ArcadeProfile.set({ ...ArcadeProfile.get(), id: 'someone-else', name: 'Someone' }));
+  await page.waitForTimeout(3800);
+  await expect(page.locator('#mineList li', { hasText: 'Waiting' })).toHaveCount(0);
+  await expect(page.locator('#mineHint')).toHaveText('No Games Running... join or start a game.');
+  await ctx.close();
+});

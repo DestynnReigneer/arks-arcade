@@ -119,6 +119,23 @@ Started on the setup-steps branch (PR #201) and moved onto main once that merged
     with nothing to scroll. `fit.spec.js` checks the description and the count are on the screen at every size.
   - **"Show the QR code on the TV"** in Dare Devil, Uh-Oh: Part Deux, Rambler and Shuffle Scuffle, like Know-It-All.
   - **The suggest pop-ups** in Know-It-All, Spin & Solve and Wordless are titled "💡 Suggest a theme or topic".
+- **Fixes after the guardian and the play-tester (2026-11-24):**
+  - **Words with Family:** `loadMine` keeps an answer only while the profile it asked for is still the one picked,
+    and `paintMine` shows `S.mine` only for that profile, so a slow `/mine` never lists an earlier profile's games.
+    Without a sign-in, a guest's name (`ArcadeProfile.name()`) fills the first player on this device. The "more
+    below" arrow (`.cc-more`) sits at `calc(100dvh - var(--app-h, 100dvh))`, above Chrome's row of tabs, and
+    `paintMore` counts what the tab row covers as below the screen.
+  - **Shuffle Scuffle's setup** is `.fit-setup` now, with its Game mode row in four columns (each heading over its
+    two buttons, `scuffle.css`). Play today's letters went from 611-662 to 445-490 at 412x640. It's in `GAMES` in
+    `fit.spec.js` with a `setup` list; its play screen isn't fitted to a sideways phone yet, so those three sizes
+    are in `KNOWN`.
+  - **Dare Devil and Uh-Oh: Part Deux** follow `ArcadeProfile.onChange` like Spin & Solve: a guest's name picked
+    after the page opened fills the first box, unless a name was typed there.
+  - **Spin & Solve:** `backToSetup()` stops the clock and hides the letter picker and the solve box too.
+  - **Tests:** `guest-name.spec.js` (a guest names themselves on the card: Spin & Solve's Solo box, Words with
+    Family's first player, Dare Devil's and Uh-Oh's first name), a slow `/mine` with a profile switch in
+    `crisscross.spec.js`, Back with the letter picker open in `back.spec.js`, and the arrow above the tab row in
+    `fit.spec.js`.
 
 ## Setup in two steps on a phone: Know-It-All, Spin & Solve and Rambler (2026-11-20)
 

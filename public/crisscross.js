@@ -168,12 +168,17 @@
 
   async function loadMine() {
     const p = me();
+    let mine;
     try {
       const r = await call('/mine');
-      S.mine = { profile: p && p.id, games: r.games, yourTurn: r.yourTurn };
+      mine = { profile: p && p.id, games: r.games, yourTurn: r.yourTurn };
     } catch (e) {
-      S.mine = { profile: p && p.id, games: [], yourTurn: 0, error: e.message };
+      mine = { profile: p && p.id, games: [], yourTurn: 0, error: e.message };
     }
+    // An answer for a profile picked before this one doesn't replace the one for this profile.
+    const now = me();
+    if (!now || !p || now.id !== p.id) return;
+    S.mine = mine;
     paintMine();
   }
 
@@ -184,7 +189,8 @@
     if (TV) { paintLocalList($('localList')); return; }
     const p = me();
     const local = localGames();
-    const mine = p ? S.mine : null;
+    // A late answer from /mine for a profile picked before this one is never shown.
+    const mine = p && S.mine && S.mine.profile === p.id ? S.mine : null;
     const online = mine ? mine.games : [];
     $('minepanel').classList.toggle('hidden', !p && !local.length);
     $('mineTitle').textContent = mine && mine.yourTurn ? `Your turn in ${mine.yourTurn} game${mine.yourTurn === 1 ? '' : 's'}` : 'Your games';
@@ -340,7 +346,9 @@
     $('localMsg').textContent = '';
     localSetup(mode);
     const p = me();
-    S.localPlayers = [{ name: p ? p.name : '' }, mode === 'shared' ? { name: '' } : { bot: true }];
+    // Without a sign-in, a guest's name (from the Who's playing? card) fills the first seat.
+    const first = p ? p.name : !TV && typeof ArcadeProfile !== 'undefined' ? ArcadeProfile.name() : '';
+    S.localPlayers = [{ name: first }, mode === 'shared' ? { name: '' } : { bot: true }];
     paintLocalPlayers();
     paintLocalDict();
   }
@@ -1001,7 +1009,9 @@
   // The home screen's bottom edge fades while there's more of it below the screen.
   function paintMore() {
     const more = $('moreBelow');
-    const below = document.documentElement.scrollHeight - (window.scrollY + window.innerHeight);
+    // What Chrome's row of tabs covers counts as below the screen (the visual viewport is shorter then).
+    const seen = window.visualViewport ? Math.min(window.innerHeight, window.visualViewport.height) : window.innerHeight;
+    const below = document.documentElement.scrollHeight - (window.scrollY + seen);
     more.classList.toggle('on', !TV && !$('home').classList.contains('hidden') && below > 8);
   }
   window.addEventListener('scroll', paintMore, { passive: true });

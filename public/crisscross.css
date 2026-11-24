@@ -290,7 +290,7 @@ html:not(.tv) body:has(#game:not(.hidden)) .cc-board-box.zoomed .cc-board { widt
    page goes on below the screen its bottom edge fades, with an arrow, so the buttons
    further down are easy to find (no scroll bars, as everywhere in ARKS). */
 #localList:empty { display: none; }
-.cc-more { position: fixed; left: 0; right: 0; bottom: 0; height: 56px; z-index: 5; pointer-events: none;
+.cc-more { position: fixed; left: 0; right: 0; bottom: calc(100dvh - var(--app-h, 100dvh)); height: 56px; z-index: 5; pointer-events: none;
   display: flex; align-items: flex-end; justify-content: center; padding-bottom: 4px;
   background: linear-gradient(to bottom, transparent, var(--bg) 85%); color: var(--accent); font-size: 26px; line-height: 1;
   opacity: 0; transition: opacity .25s; }

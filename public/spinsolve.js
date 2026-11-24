@@ -1252,7 +1252,9 @@
     S.puzzle = null;
     S.run = null;
     ArcadeEnd.clear();
-    $('roundView').classList.add('hidden');
+    stopClock();
+    // The letter picker (consonants and vowels) and the solve box go with the game.
+    for (const id of ['roundView', 'letterView', 'solveView']) $(id).classList.add('hidden');
     $('game').classList.add('hidden');
     $('setup').classList.remove('hidden');
     steps.go(1);   // back to setup starts at the first step
