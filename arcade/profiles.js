@@ -1,11 +1,11 @@
 'use strict';
 
 // Arcade profiles: Netflix-style "who's playing?" for the whole family.
-// Anyone can ask for a profile (name + avatar); the admin approves it. A PIN
-// is optional and can be added, changed or removed later by whoever owns the
-// profile (the admin can clear a forgotten one). Picking a profile gives the
-// device a signed token, which is how scores get credited to that profile:
-// nobody can post a score as someone else without their PIN.
+// Anyone can ask for a profile (name + avatar); the admin approves it.
+// Picking a profile gives the device a signed token, which is how scores get
+// credited to that profile. Profiles used to be able to have a PIN; that was
+// taken out on 2026-11-24 (the pin_* columns and the lock columns are left in
+// the table, unused, so no data is dropped).
 //
 // Guests don't need a profile: they type a name or get "Guest 1", "Guest 2"...
 
@@ -30,28 +30,19 @@ db.db.exec(`
   );
 `);
 
-// Added after the first release: wrong PINs in a row, when a lock lifts, and
-// what the high-score boards show for this profile (its name, or initials).
+// Added after the first release: pin_fails and locked_until (no longer used,
+// from when profiles had PINs), and what the high-score boards show for this
+// profile (its name, or initials).
 for (const [col, decl] of [['pin_fails', 'INTEGER NOT NULL DEFAULT 0'], ['locked_until', 'INTEGER'],
   ['board_show', "TEXT NOT NULL DEFAULT 'name'"], ['initials', 'TEXT']]) {
   const cols = db.db.prepare('PRAGMA table_info(arcade_profiles)').all().map(c => c.name);
   if (!cols.includes(col)) db.db.exec(`ALTER TABLE arcade_profiles ADD COLUMN ${col} ${decl}`);
 }
 
-// Two locks against PIN guessing. A profile locks after 5 wrong PINs in a
-// row, whichever device they came from, and unlocks itself 15 minutes later.
-// Separately, one device is blocked after 20 wrong PINs across all profiles
-// in 10 minutes, so nobody can guess their way through everyone. Right PINs
-// never count toward either. The admin can lift both.
-const PROFILE_FAILS = 5;
-const PROFILE_LOCK_MS = 15 * 60 * 1000;
-const deviceStore = new rateLimit.MemoryStore();
-
 function fail(message, status = 400) {
   return Object.assign(new Error(message), { status });
 }
 const cleanName = raw => String(raw || '').trim().replace(/\s+/g, ' ').slice(0, 16);
-const PIN_RE = /^\d{6}$/;
 
 // A secret that signs profile tokens, made once and kept in the database.
 function secret() {
@@ -60,7 +51,9 @@ function secret() {
   return s;
 }
 const sign = (id, version) => crypto.createHmac('sha256', secret()).update(`${id}:${version}`).digest('base64url');
-// A profile token. One handed out at an ARKS ID sign-in also names that sign-in
+// A profile token. pin_version is only a token version now (from the PIN
+// days); it's kept so tokens already handed out keep working. One handed out
+// at an ARKS ID sign-in also names that sign-in
 // (signin: a short key for it, never the sign-in's id), and works only while the
 // sign-in does (the maintainer, 2026-11-15): signing out ends it everywhere it was
 // copied to, the way the adult pass ends.
@@ -70,15 +63,13 @@ const tokenFor = (r, signin) => (signin
 // arcade/arksid.js says whether a sign-in key is still going for that profile's account.
 let signinAlive = null;
 function useSignins(fn) { signinAlive = typeof fn === 'function' ? fn : null; }
-const hashPin = (pin, salt) => crypto.scryptSync(String(pin), salt, 32).toString('hex');
 
 const row = id => db.db.prepare('SELECT * FROM arcade_profiles WHERE id = ?').get(String(id || ''));
-const lockedFor = r => Math.max(0, (r.locked_until || 0) - Date.now());
 const INITIALS_RE = /^[A-Z0-9]{1,3}$/;
 const initialsOf = r => r.initials || String(r.name).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 3) || 'P';
 const pub = r => ({
-  id: r.id, name: r.name, avatar: r.avatar, hasPin: !!r.pin_hash, status: r.status, createdAt: r.created_at,
-  locked: lockedFor(r) > 0, boardShow: r.board_show === 'initials' ? 'initials' : 'name', initials: initialsOf(r)
+  id: r.id, name: r.name, avatar: r.avatar, status: r.status, createdAt: r.created_at,
+  boardShow: r.board_show === 'initials' ? 'initials' : 'name', initials: initialsOf(r)
 });
 
 // What the high-score boards show for a profile right now: its name, or the
@@ -91,8 +82,8 @@ function boardName(id) {
   return { label: r.board_show === 'initials' ? initialsOf(r) : r.name, avatar: r.avatar, initials: initialsOf(r) };
 }
 
-// The profile a token belongs to, if it's still valid (a PIN change or a
-// deleted profile makes old tokens stop working).
+// The profile a token belongs to, if it's still valid (a deleted profile
+// makes old tokens stop working).
 function verify(token) {
   const parts = String(token || '').split('.');
   if (parts.length !== 2 && parts.length !== 3) return null;
@@ -125,8 +116,8 @@ function syncRambler(r) {
 }
 
 // With ARKS ID sign-in on (arcade/arksid.js), profiles come from ARKS ID
-// accounts: nobody asks for one here, and names, PINs and the boards choice
-// are changed in ARKS ID. Avatars are still the arcade's own.
+// accounts: nobody asks for one here, and names and the boards choice are
+// changed in ARKS ID. Avatars are still the arcade's own.
 let arksMode = false;
 const OFF = 'Profiles come from ARKS ID on this arcade. Sign in with your ARKS ID instead.';
 function setArksMode(on) { arksMode = !!on; }
@@ -140,13 +131,6 @@ module.exports = function profileRoutes({ requireAdmin, notify }) {
   // Six new profiles an hour from one address. The test suites make more than
   // that, so only under NODE_ENV=test (never in production) the limit is higher.
   const askLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: process.env.NODE_ENV === 'test' ? 60 : 6, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many profile requests. Try again later.' } });
-  // The device lock: only wrong PINs (401) count, so switching profiles a lot
-  // at a party never blocks anyone.
-  const pinLimiter = rateLimit({
-    windowMs: 10 * 60 * 1000, limit: 20, standardHeaders: true, legacyHeaders: false,
-    skipSuccessfulRequests: true, store: deviceStore,
-    message: { error: 'Too many wrong PINs from this device. Wait 10 minutes, or ask the admin to unlock it.' }
-  });
 
   // Approved profiles, for the picker.
   router.get('/', (req, res) => {
@@ -163,64 +147,19 @@ module.exports = function profileRoutes({ requireAdmin, notify }) {
       if (/^guest\b/i.test(name)) throw fail('"Guest" names are for guests. Pick another name.');
       if (nameTaken(name)) throw fail('Someone already has that name.', 409);
       const avatar = Avatars.valid(body.avatar) ? body.avatar : Avatars.DEFAULT;
-      const pin = String(body.pin || '').trim();
-      if (pin && !PIN_RE.test(pin)) throw fail('A PIN is 6 digits (or leave it blank).');
       const id = crypto.randomBytes(8).toString('hex');
-      const salt = pin ? crypto.randomBytes(16).toString('hex') : null;
-      db.db.prepare('INSERT INTO arcade_profiles (id, name, avatar, pin_hash, pin_salt) VALUES (?, ?, ?, ?, ?)')
-        .run(id, name, avatar, pin ? hashPin(pin, salt) : null, salt);
+      db.db.prepare('INSERT INTO arcade_profiles (id, name, avatar) VALUES (?, ?, ?)').run(id, name, avatar);
       notify({ topic: `New profile: ${name}`, note: 'Approve it in Admin → Arcade → Profiles.', requestedBy: name }, 'arcade profile');
       res.status(201).json({ id, name, avatar, status: 'pending' });
     } catch (e) { next(e); }
   });
 
-  // Pick a profile on this device (with its PIN, if it has one).
-  router.post('/:id/use', pinLimiter, (req, res, next) => {
+  // Pick a profile on this device.
+  router.post('/:id/use', (req, res, next) => {
     try {
       if (arksMode) throw fail(OFF, 403);
       const r = row(req.params.id);
       if (!r || r.status !== 'approved') throw fail('That profile isn\'t available.', 404);
-      if (r.pin_hash) {
-        const wait = lockedFor(r);
-        if (wait) throw fail(`This profile is locked for ${Math.ceil(wait / 60000)} more minutes after too many wrong PINs. Ask the admin to unlock it, or wait.`, 423);
-        const pin = String((req.body || {}).pin || '');
-        if (!PIN_RE.test(pin) || hashPin(pin, r.pin_salt) !== r.pin_hash) {
-          const fails = (r.pin_fails || 0) + 1;
-          if (fails >= PROFILE_FAILS) {
-            db.db.prepare('UPDATE arcade_profiles SET pin_fails = 0, locked_until = ? WHERE id = ?').run(Date.now() + PROFILE_LOCK_MS, r.id);
-            throw fail('That PIN isn\'t right, and that was 5 wrong tries, so this profile is locked for 15 minutes. Ask the admin to unlock it, or wait.', 401);
-          }
-          db.db.prepare('UPDATE arcade_profiles SET pin_fails = ? WHERE id = ?').run(fails, r.id);
-          const left = PROFILE_FAILS - fails;
-          throw fail(`Incorrect PIN. ${left} ${left === 1 ? 'attempt' : 'attempts'} left before profile locks for 15 minutes.`, 401);
-        }
-        if (r.pin_fails || r.locked_until) db.db.prepare('UPDATE arcade_profiles SET pin_fails = 0, locked_until = NULL WHERE id = ?').run(r.id);
-      }
-      res.json({ profile: pub(r), token: tokenFor(r) });
-    } catch (e) { next(e); }
-  });
-
-  // Add, change or remove your own PIN. The token proves this device picked the
-  // profile; if it already has a PIN, the current one is needed too, so someone
-  // who finds the profile left open can't lock its owner out.
-  router.post('/:id/pin', pinLimiter, (req, res, next) => {
-    try {
-      if (arksMode) throw fail('PINs are set in ARKS ID on this arcade.', 403);
-      const me = verify((req.body || {}).token);
-      if (!me || me.id !== req.params.id) throw fail('Pick your profile first.', 401);
-      const before = row(me.id);
-      if (before.pin_hash) {
-        const current = String((req.body || {}).current || '');
-        if (!PIN_RE.test(current) || hashPin(current, before.pin_salt) !== before.pin_hash) {
-          throw fail('Your current PIN isn\'t right.', 401);
-        }
-      }
-      const pin = String((req.body || {}).pin || '').trim();
-      if (pin && !PIN_RE.test(pin)) throw fail('A PIN is 6 digits.');
-      const salt = pin ? crypto.randomBytes(16).toString('hex') : null;
-      db.db.prepare("UPDATE arcade_profiles SET pin_hash = ?, pin_salt = ?, pin_version = pin_version + 1, updated_at = datetime('now') WHERE id = ?")
-        .run(pin ? hashPin(pin, salt) : null, salt, me.id);
-      const r = row(me.id);
       res.json({ profile: pub(r), token: tokenFor(r) });
     } catch (e) { next(e); }
   });
@@ -314,19 +253,8 @@ module.exports = function profileRoutes({ requireAdmin, notify }) {
       res.json(pub(row(r.id)));
     } catch (e) { next(e); }
   });
-  // A forgotten PIN: take it off. Devices using the profile have to pick it again.
-  admin.post('/:id/clear-pin', (req, res) => {
-    db.db.prepare("UPDATE arcade_profiles SET pin_hash = NULL, pin_salt = NULL, pin_version = pin_version + 1, updated_at = datetime('now') WHERE id = ?").run(req.params.id);
-    res.json({ cleared: true });
-  });
-  // Lift a profile's lock (and forget its wrong tries).
-  admin.post('/:id/unlock', (req, res) => {
-    db.db.prepare('UPDATE arcade_profiles SET pin_fails = 0, locked_until = NULL WHERE id = ?').run(req.params.id);
-    res.json({ unlocked: true });
-  });
-  // Lift every device lock: profile PINs and an ARKS ID adult pass alike.
+  // Lift every device lock (an ARKS ID adult pass's wrong tries).
   admin.post('/unlock-devices', async (req, res) => {
-    await deviceStore.resetAll();
     await adultPin.resetTries();
     res.json({ unlocked: true });
   });

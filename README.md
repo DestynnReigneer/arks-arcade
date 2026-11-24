@@ -590,7 +590,7 @@ See **[docs/SETUP.md](docs/SETUP.md)** for every setting in `.env`, a step-by-st
 
 ## Profiles
 
-Like streaming-service profiles for the family. **Who's playing?** on the home page lets you pick a profile, or play as a guest (type a name, or get "Guest 1", "Guest 2"…). **New profile** asks for one with a name and an avatar (Shibas, blocky, toons, movies, music, space and animals); an admin approves it. A 6-digit PIN on a profile is optional and can be added, changed or removed later by its owner. Scores, Rambler stats and player names in every game follow the profile, and the leaderboards show each profile's avatar.
+Like streaming-service profiles for the family. **Who's playing?** on the home page lets you pick a profile, or play as a guest (type a name, or get "Guest 1", "Guest 2"…). **New profile** asks for one with a name and an avatar (Shibas, blocky, toons, movies, music, space and animals); an admin approves it. Scores, Rambler stats and player names in every game follow the profile, and the leaderboards show each profile's avatar.
 
 ## Admin panel
 
@@ -602,8 +602,8 @@ Visit `/admin.html`. With ARKS ID sign-in on, an admin signed in there goes stra
 - The error log: crashes from browsers and the server, grouped by a code like `E-3F9A2C` (players see the code when the server fails). **Copy for chat** copies everything needed to get it fixed
 
 **Arcade:**
-- Profiles: approve or turn down "New profile" requests, rename, clear a forgotten PIN, unlock a profile locked by wrong PINs, or remove a profile (their old scores stay on the boards)
-- See whether adult levels are on (they need ARKS ID), and unblock devices that tried too many wrong PINs
+- Profiles: approve or turn down "New profile" requests, rename, or remove a profile (their old scores stay on the boards)
+- See whether adult levels are on (they need ARKS ID)
 - Home page games: reorder them, hide them, or turn one off while it's being worked on (it stays on the home page, faded, under a "Pardon our dust" sign)
 - Comm Center: the feedback inbox (with screenshots, the page and device each message came from, and a Copy for chat button), announcements, high-score boards, Spin & Solve and Know-It-All packs and requests
 

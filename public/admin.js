@@ -365,7 +365,7 @@ ${theme.words.join(', ')}`;
       document.getElementById('pinErr').textContent = r.data.error || 'Incorrect PIN.';
       PinPad.clear(document.getElementById('pinInput'));
     } catch (e) { document.getElementById('pinErr').textContent = 'The arcade didn\'t answer. Try again in a moment.'; }
-  }, { profile: true });
+  });
 
   async function tryUnlock(password) {
     lockError.textContent = '';

@@ -170,7 +170,7 @@
     await loadConfig();
   }
 
-  // An adult's ARKS ID adult pass, through the PIN pad.
+  // An adult's ARKS ID adult pass, through the TV's adults' night.
   async function unlockOnTv() {
     S.pin = await ArcadeTV.adultPass();
     return !!S.pin;

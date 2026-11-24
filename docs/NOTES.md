@@ -1,11 +1,36 @@
 # Status and to-dos
 
-Last updated 2026-11-22. Update this file whenever a piece of work lands or
+Last updated 2026-11-24. Update this file whenever a piece of work lands or
 a plan changes, so the next session can pick up from here. When the
 maintainer says "I'm back", start from "Last session" below, then show the
 to-do list as checkboxes (the rule is in the maintainer's global CLAUDE.md
 and `arks-internal/conventions/sessions.md`): do the checked items in the
 order they were clicked, and keep the rest pinned here.
+
+## Profile PINs are gone (2026-11-24)
+
+The maintainer: "Yes to removing profile pins, don't need them anymore, anywhere." With ARKS ID on, profiles come
+from ARKS ID and their PINs couldn't be reached anyway; without it, the arcade's own profiles could have one. Both
+are gone now.
+
+- **The page** (`public/profile.js`): no PIN box on New profile, no Set PIN or Remove PIN in My profile (its button
+  is now "My profile: avatar & name on boards"), no 🔒 PIN on a profile's tile, and no PIN pad when picking one.
+  Tapping a profile picks it.
+- **The server** (`arcade/profiles.js`): `POST /api/profiles/:id/pin`, the admin's `clear-pin` and `unlock` are gone,
+  `/use` never asks for a PIN, and the profile lock ("Incorrect PIN. 3 attempts left before profile locks for 15
+  minutes.") and the device limit for wrong profile PINs are gone. `hasPin` and `locked` are no longer in a profile's
+  JSON. `arcade/arksid.js` no longer clears the PIN columns at sign-in.
+- **The database keeps its columns, unused:** `pin_hash`, `pin_salt`, `pin_fails` and `locked_until` stay in
+  `arcade_profiles` with whatever was in them, so no data was dropped; nothing reads or writes them. `pin_version`
+  is still read, as the profile token's version, so tokens already handed out keep working.
+- **The admin page:** the profile PIN notes, 🔑, 🔒 Locked, Unlock, Clear PIN and "Unlock all blocked devices" are
+  gone from Profiles. `POST /api/profiles/admin/unlock-devices` stays on the server (it still resets the adult pass's
+  wrong tries), with no button for now.
+- **Kept:** `ADMIN_PIN` and the admin page's recovery PIN pad, and the adult pass (`AdultPass`, `X-Adult-Pin`).
+  `public/pin-pad.js` is now only the admin's pad plus `AdultPass`; the adult pad code nobody attached anymore went
+  with it.
+- **Tests:** `test/api.test.js` checks the PIN routes are gone, a token keeps working, and a profile with an old PIN
+  left in the database is picked with nothing to type. `test/arksid.test.js` lost its PIN wording.
 
 ## Every game fits a phone turned sideways (2026-11-22)
 

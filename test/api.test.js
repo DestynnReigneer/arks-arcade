@@ -1304,9 +1304,9 @@ async function run({ base, root }) {
   ok('profile requests are listed for the admin', (await asAdmin('/profiles/admin')).data.some(p => p.name === 'Maya' && p.status === 'pending'));
   ok('approving needs the admin password', (await wl(`/profiles/admin/${asked.data.id}/approve`, 'POST', {})).status === 401);
   await asAdmin(`/profiles/admin/${asked.data.id}/approve`, 'POST', {});
-  ok('approved profiles show in the picker', (await wl('/profiles')).data.some(p => p.name === 'Maya' && p.avatar === 'shiba:2' && !p.hasPin));
+  ok('approved profiles show in the picker', (await wl('/profiles')).data.some(p => p.name === 'Maya' && p.avatar === 'shiba:2'));
   const maya = (await wl(`/profiles/${asked.data.id}/use`, 'POST', {})).data;
-  ok('a profile without a PIN can be picked straight away', !!maya.token);
+  ok('a profile can be picked straight away', !!maya.token);
   const mayaScore = await wl('/scores/dino', 'POST', { score: 321, board: 'run', profileToken: maya.token });
   ok('a score saved as a profile needs no initials', mayaScore.status === 201);
   const mayaRow = (await wl('/scores/dino?board=run&limit=100')).data.find(r => r.id === mayaScore.data.id);
@@ -1342,34 +1342,28 @@ async function run({ base, root }) {
   ok('…and once both deleted it, it\'s gone', (await wl(`/comm/mine/${mfb}`, 'POST', { token: maya.token })).status === 404);
   ok('…and shows the profile name and avatar', (await wl('/scores/dino?board=run')).data.some(r => r.profileName === 'Maya' && r.profileAvatar === 'shiba:2' && r.score === 321));
   ok('a fake token gets no credit', (await wl('/scores/dino', 'POST', { score: 50, board: 'run', profileToken: 'x.y' })).status === 400);
-  const mayaPinned = (await wl(`/profiles/${asked.data.id}/pin`, 'POST', { token: maya.token, pin: '432100' })).data;
-  ok('Maya can add her own PIN', mayaPinned.profile.hasPin && !!mayaPinned.token);
-  ok('…after which the old token stops working', (await wl('/scores/dino', 'POST', { score: 60, board: 'run', profileToken: maya.token })).status === 400);
-  ok('picking her profile now needs the PIN', (await wl(`/profiles/${asked.data.id}/use`, 'POST', {})).status === 401 &&
-    (await wl(`/profiles/${asked.data.id}/use`, 'POST', { pin: '999999' })).status === 401);
-  ok('the right PIN works', !!(await wl(`/profiles/${asked.data.id}/use`, 'POST', { pin: '432100' })).data.token);
-  const mayaWithPin = (await wl(`/profiles/${asked.data.id}/use`, 'POST', { pin: '432100' })).data.token;
-  ok('removing a PIN needs the current one', (await wl(`/profiles/${asked.data.id}/pin`, 'POST', { token: mayaWithPin, pin: '' })).status === 401);
-  ok('…and a wrong one is refused', (await wl(`/profiles/${asked.data.id}/pin`, 'POST', { token: mayaWithPin, pin: '246810', current: '999999' })).status === 401);
-  ok('changing it works with the current PIN', (await wl(`/profiles/${asked.data.id}/pin`, 'POST', { token: mayaWithPin, pin: '246810', current: '432100' })).data.profile.hasPin === true);
-  await asAdmin(`/profiles/admin/${asked.data.id}/clear-pin`, 'POST', {});
-  ok('the admin can clear a forgotten PIN', !!(await wl(`/profiles/${asked.data.id}/use`, 'POST', {})).data.token);
-
-  // Five wrong PINs in a row lock the profile; the admin can unlock it.
-  const mayaNoPin = (await wl(`/profiles/${asked.data.id}/use`, 'POST', {})).data.token;
-  await wl(`/profiles/${asked.data.id}/pin`, 'POST', { token: mayaNoPin, pin: '432100' });
-  const useMaya = pin => wl(`/profiles/${asked.data.id}/use`, 'POST', { pin });
-  const firstWrong = await useMaya('000000');
-  ok('a wrong PIN says how many tries are left', firstWrong.status === 401 && /4 attempts left/.test(firstWrong.data.error));
-  for (let i = 0; i < 3; i++) await useMaya('000000');
-  const fifth = await useMaya('000000');
-  ok('the fifth wrong PIN locks the profile', fifth.status === 401 && /locked for 15 minutes/.test(fifth.data.error));
-  ok('…so even the right PIN waits', (await useMaya('432100')).status === 423);
-  ok('the admin sees it locked', (await asAdmin('/profiles/admin')).data.some(p => p.id === asked.data.id && p.locked));
-  await asAdmin(`/profiles/admin/${asked.data.id}/unlock`, 'POST', {});
-  ok('…and can unlock it', !!(await useMaya('432100')).data.token);
-  ok('a right PIN starts the count over', /4 attempts left/.test((await useMaya('000000')).data.error));
-  await asAdmin(`/profiles/admin/${asked.data.id}/clear-pin`, 'POST', {});
+  // Profiles have no PIN anymore (2026-11-24): nothing to set, clear or unlock.
+  ok('there\'s no profile PIN to set', (await wl(`/profiles/${asked.data.id}/pin`, 'POST', { token: maya.token, pin: '432100' })).status === 404);
+  ok('…or for the admin to clear or unlock', (await asAdmin(`/profiles/admin/${asked.data.id}/clear-pin`, 'POST', {})).status === 404 &&
+    (await asAdmin(`/profiles/admin/${asked.data.id}/unlock`, 'POST', {})).status === 404);
+  ok('…and Maya\'s token keeps working', (await wl('/scores/dino', 'POST', { score: 60, board: 'run', profileToken: maya.token })).status === 201);
+  // A profile that had a PIN before it was taken out: its old PIN is left in the
+  // database, unused, and picking the profile doesn't ask for it.
+  {
+    const { DatabaseSync } = require('node:sqlite');
+    const file = path.join(root, 'data', 'test.db');
+    const raw = new DatabaseSync(file);
+    raw.prepare("INSERT INTO arcade_profiles (id, name, avatar, status, pin_hash, pin_salt, pin_fails, locked_until) VALUES ('0ldp1nf00d000001', 'Pip', 'shiba:1', 'approved', 'x', 'y', 4, ?)").run(Date.now() + 600000);
+    raw.close();
+    const pip = (await wl('/profiles')).data.find(p => p.id === '0ldp1nf00d000001');
+    ok('a profile with an old PIN shows no PIN or lock', !!pip && !('hasPin' in pip) && !('locked' in pip), JSON.stringify(pip));
+    const used = await wl('/profiles/0ldp1nf00d000001/use', 'POST', {});
+    ok('…and is picked straight away, with no PIN', !!used.data.token);
+    const adminPip = (await asAdmin('/profiles/admin')).data;
+    const leaks = s => /pin_|hasPin|"locked"|"x"|"y"/.test(JSON.stringify(s));
+    ok('…and neither the admin list nor the pick hands out anything of the old PIN', !leaks(adminPip) && !leaks(used.data));
+    await asAdmin('/profiles/admin/0ldp1nf00d000001', 'DELETE');
+  }
   ok('an approved profile becomes a Rambler player with the same id', !!(await wl(`/rambler/players/${asked.data.id}`)).data);
   const g1 = (await wl('/profiles/guest', 'POST', {})).data.name;
   const g2 = (await wl('/profiles/guest', 'POST', {})).data.name;

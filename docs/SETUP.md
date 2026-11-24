@@ -132,10 +132,7 @@ WireGuard):
   (type a name, or get "Guest 1", "Guest 2"…).
 - **New profile** lets anyone ask for one with a name and an avatar. Approve it
   in **Admin → Arcade → Profiles**.
-- A **PIN on a profile is optional**. Whoever owns the profile can add, change
-  or remove it from **⚙️ My profile**; you can clear a forgotten one in admin.
-- Scores are credited to the profile (the server checks a signed token), so
-  nobody can post a score as someone else without their PIN.
+- Scores are credited to the profile (the server checks a signed token). Without ARKS ID, anyone using the arcade can pick any approved profile, so treat profiles as name tags, not accounts.
 
 ### Signing in through ARKS ID (optional)
 
@@ -149,8 +146,8 @@ set, ARKS ID takes over everything about a person:
   in, their account is linked to the arcade profile with the same name, so
   their scores come along; with no match, a new profile is made. You can move a
   wrong link in **Admin → Arcade → Profiles**.
-- Names, avatars, PINs and "name or initials on the boards" are set in ARKS ID.
-  The arcade's own profile requests and profile PINs switch off. ARKS ID keeps a
+- Names, avatars and "name or initials on the boards" are set in ARKS ID.
+  The arcade's own profile requests switch off. ARKS ID keeps a
   copy of the arcade's avatar collection, so someone can pick a Shiba or a toon
   there, and it shows here. Someone using one of ARKS ID's plain icons gets that
   icon here in their color.

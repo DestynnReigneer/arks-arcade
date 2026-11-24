@@ -55,7 +55,7 @@ const ArcadeProfile = (() => {
     const cur = get();
     if (me.signedIn) {
       try { localStorage.removeItem('arksid.signedOut'); } catch { /* no storage */ }
-      set({ id: me.profile.id, name: me.profile.name, avatar: me.profile.avatar, hasPin: false, token: me.token,
+      set({ id: me.profile.id, name: me.profile.name, avatar: me.profile.avatar, token: me.token,
         boardShow: me.profile.boardShow, initials: me.profile.initials, arksid: true, role: me.role, adult: me.adult });
     } else {
       if (cur && (!cur.guest || (me.deviceChecked && !me.guestAllowed))) set(null);
@@ -175,7 +175,7 @@ const ArcadeProfile = (() => {
     .apf h2{margin:0 0 4px;font-size:20px;text-align:center}.apf p{margin:4px 0 12px;font-size:13px;color:#c9a8dd;text-align:center;line-height:1.45}
     .apf-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:10px;margin:10px 0}
     .apf-tile{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 6px;border-radius:14px;border:2px solid transparent;background:#2c1350;color:inherit;cursor:pointer;font:inherit;font-size:13px;font-weight:700}
-    .apf-tile:hover,.apf-tile.on{border-color:#ffc72c}.apf-tile .lock{font-size:11px;opacity:.7;font-weight:600}
+    .apf-tile:hover,.apf-tile.on{border-color:#ffc72c}
     .apf-row{display:flex;gap:8px;margin-top:10px}.apf-row>*{flex:1}
     .apf-notify{position:relative;width:100%;box-sizing:border-box;margin-top:10px;display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:10px;border:1px solid #3d2a63;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}
     .apf-notify[disabled]{cursor:default}
@@ -324,7 +324,7 @@ const ArcadeProfile = (() => {
     if (Id.on) return showArksId();
     c.innerHTML = '<h2>Who\'s playing?</h2><p>Pick your profile, or play as a guest.</p><div class="apf-grid"></div><div class="apf-msg"></div>' +
       '<div class="apf-row"><button class="apf-btn" data-guest>👤 Play as a guest</button><button class="apf-btn" data-new>➕ New profile</button></div>' +
-      (get() && get().id ? '<div class="apf-row"><button class="apf-btn" data-manage>⚙️ My profile: avatar, PIN &amp; name on boards</button></div>' +
+      (get() && get().id ? '<div class="apf-row"><button class="apf-btn" data-manage>⚙️ My profile: avatar &amp; name on boards</button></div>' +
         '<div class="apf-row"><button class="apf-btn" data-myfb>📬 My feedback</button></div>' : '') +
       closeRow();
     c.querySelector('[data-guest]').onclick = showGuest;
@@ -344,8 +344,7 @@ const ArcadeProfile = (() => {
       const n = document.createElement('span');
       n.textContent = p.name;
       b.appendChild(n);
-      if (p.hasPin) b.insertAdjacentHTML('beforeend', '<span class="lock">🔒 PIN</span>');
-      b.onclick = () => (p.hasPin ? showPin(p) : choose(p, ''));
+      b.onclick = () => choose(p).catch(e => { c.querySelector('.apf-msg').textContent = e.message; });
       grid.appendChild(b);
     }
   }
@@ -539,27 +538,14 @@ const ArcadeProfile = (() => {
     };
   }
 
-  async function choose(p, pin) {
-    const r = await api(`/${p.id}/use`, { pin });
+  async function choose(p) {
+    const r = await api(`/${p.id}/use`, {});
     const chosen = {
-      id: r.profile.id, name: r.profile.name, avatar: r.profile.avatar, hasPin: r.profile.hasPin, token: r.token,
+      id: r.profile.id, name: r.profile.name, avatar: r.profile.avatar, token: r.token,
       boardShow: r.profile.boardShow, initials: r.profile.initials
     };
     set(chosen);
     close(chosen);
-  }
-
-  function showPin(p) {
-    const c = card();
-    c.innerHTML = '<h2></h2><p>Enter your PIN.</p><input type="password" inputmode="numeric" maxlength="6" autocomplete="off"><div class="apf-msg"></div>' +
-      '<div class="apf-row"><button class="apf-btn" data-back>Back</button></div>';
-    c.querySelector('h2').textContent = `Hi, ${p.name}!`;
-    const input = c.querySelector('input');
-    PinPad.attach(input, async pin => {
-      try { await choose(p, pin); } catch (e) { c.querySelector('.apf-msg').textContent = e.message; PinPad.clear(input); }
-    }, { profile: true });
-    c.querySelector('[data-back]').onclick = showList;
-    setTimeout(() => input.focus(), 30);
   }
 
   // To ARKS ID's Create an account form, with this guest's name and avatar
@@ -640,13 +626,12 @@ const ArcadeProfile = (() => {
     c.innerHTML = '<h2>New profile</h2><p>An adult approves new profiles in the admin page. You can play as a guest until then.</p>' +
       '<label>Your name</label><input data-name maxlength="16" placeholder="e.g. Sam">' +
       '<label>Pick an avatar</label><div data-av></div>' +
-      '<label>PIN (optional, 6 digits) to keep your profile yours</label><input data-pin type="password" inputmode="numeric" maxlength="6" autocomplete="new-password" placeholder="Leave blank for no PIN">' +
       '<div class="apf-msg"></div><div class="apf-row"><button class="apf-btn" data-back>Back</button><button class="apf-btn apf-main" data-ok>Create profile</button></div>';
     avatarPicker(c.querySelector('[data-av]'), chosen);
     c.querySelector('[data-back]').onclick = showList;
     c.querySelector('[data-ok]').onclick = async () => {
       try {
-        await api('', { name: c.querySelector('[data-name]').value, avatar: chosen.value, pin: c.querySelector('[data-pin]').value.trim() });
+        await api('', { name: c.querySelector('[data-name]').value, avatar: chosen.value });
         c.innerHTML = '<h2>🙌 Sent!</h2><p>Once an adult approves it in the admin page, your profile shows up here. Play as a guest until then.</p><div class="apf-row"><button class="apf-btn apf-main" data-back>OK</button></div>';
         c.querySelector('[data-back]').onclick = showList;
       } catch (e) { c.querySelector('.apf-msg').textContent = e.message; }
@@ -663,15 +648,8 @@ const ArcadeProfile = (() => {
       '<label class="apf-pick"><input type="radio" name="apfShow" value="initials"> My initials <input data-ini maxlength="3" autocomplete="off" spellcheck="false" placeholder="ABC"></label>' +
       '<p class="apf-sub" style="text-align:left;margin:2px 0 0">You can change this any time, and your past scores switch to match.</p>' +
       '<div class="apf-row"><button class="apf-btn" data-save-board>Save</button></div>' +
-      '<label>PIN</label><p data-pin-note style="text-align:left;margin:4px 0"></p>' +
-      (me.hasPin ? '<input data-current type="password" inputmode="numeric" maxlength="6" autocomplete="current-password" placeholder="Current PIN">' : '') +
-      '<input data-pin type="password" inputmode="numeric" maxlength="6" autocomplete="new-password" placeholder="New PIN (6 digits)">' +
-      '<div class="apf-row"><button class="apf-btn" data-set-pin>Set PIN</button>' + (me.hasPin ? '<button class="apf-btn" data-clear-pin>Remove PIN</button>' : '') + '</div>' +
       '<div class="apf-msg"></div><div class="apf-row"><button class="apf-btn" data-back>Back</button><button class="apf-btn" data-out>Sign out</button></div>';
     c.querySelector('h2').textContent = me.name;
-    c.querySelector('[data-pin-note]').textContent = me.hasPin
-      ? 'Your profile PIN exists. To change it or remove it, type your current PIN.'
-      : "Your profile doesn't have a PIN yet. Add a 6-digit one so nobody else can play as you.";
     avatarPicker(c.querySelector('[data-av]'), chosen);
     const msg = t => { c.querySelector('.apf-msg').textContent = t; };
     c.querySelector('[data-myname]').textContent = me.name;
@@ -702,17 +680,6 @@ const ArcadeProfile = (() => {
         msg('Avatar saved.');
       } catch (e) { msg(e.message); }
     };
-    const pinChange = async pin => {
-      try {
-        const current = c.querySelector('[data-current]') ? c.querySelector('[data-current]').value.trim() : '';
-        const r = await api(`/${me.id}/pin`, { token: me.token, pin, current });
-        set({ ...me, hasPin: r.profile.hasPin, token: r.token });
-        showManage();
-        card().querySelector('.apf-msg').textContent = pin ? 'PIN saved.' : 'PIN removed.';
-      } catch (e) { msg(e.message); }
-    };
-    c.querySelector('[data-set-pin]').onclick = () => pinChange(c.querySelector('[data-pin]').value.trim());
-    if (c.querySelector('[data-clear-pin]')) c.querySelector('[data-clear-pin]').onclick = () => pinChange('');
     c.querySelector('[data-back]').onclick = showList;
     c.querySelector('[data-out]').onclick = () => { set(null); showList(); };
   }
