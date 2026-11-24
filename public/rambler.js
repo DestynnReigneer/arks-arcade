@@ -472,7 +472,9 @@ async function finishSingleDevice() {
         // is banked.
         profileId: (S.mode === 'solo' || S.mode === 'daily') && S.player
           ? S.player.id
-          : undefined
+          : undefined,
+        // A guest's daily goes on today's board under the name they play under.
+        ...(S.mode === 'daily' && !S.player ? guestWho() : {})
       }
     });
     showResults(results);
@@ -509,7 +511,9 @@ function ordinal(n) {
 }
 
 async function loadDaily() {
-  const q = S.player ? `?playerId=${S.player.id}&profile=${S.profile}` : `?profile=${S.profile}`;
+  const guest = S.player ? '' : guestName();
+  const q = S.player ? `?playerId=${S.player.id}&profile=${S.profile}`
+    : `?profile=${S.profile}${guest ? `&guest=${encodeURIComponent(guest)}` : ''}`;
   S.daily = await api('/daily' + q);
   return S.daily;
 }
@@ -609,10 +613,6 @@ function renderDaily() {
     $('dailyReplayNote').textContent =
       `Your ${d.yourResult.score} is already filed and it is the one that counts. ` +
       'Play it as many times as you like; nothing more is banked.';
-  } else if (!S.player) {
-    $('dailyReplayNote').textContent =
-      'You are playing as a guest, so your score will not join the standings. ' +
-      'Pick a profile first if you want it to count.';
   } else {
     $('dailyReplayNote').textContent = `${mins} minutes, one scoring go. Make it count.`;
   }
@@ -640,7 +640,7 @@ function renderDailyStandings(host, standings, { mineId = null, empty = true } =
     if (empty) host.innerHTML = '<div class="note">No scores yet today.</div>';
     return;
   }
-  const me = mineId || (S.player ? S.player.id : null);
+  const me = mineId || (S.player ? S.player.id : S.daily && S.daily.youId) || null;
   standings.forEach((r, i) => {
     const row = document.createElement('div');
     row.className = 'd-row' + (i === 0 ? ' first' : '') + (r.playerId === me ? ' mine' : '');
@@ -697,7 +697,7 @@ async function playDaily() {
     S.size = d.size;
     S.minLength = d.minLength;
     S.duration = d.durationSec || 240;
-    S.players = [{ id: 'p0', name: S.player ? S.player.name : 'You' }];
+    S.players = [{ id: 'p0', name: S.player ? S.player.name : guestName() || 'You' }];
     S.submissions = [];
     S.turnIndex = 0;
     stopDailyCountdown();
@@ -718,10 +718,10 @@ function showDailyResult(daily) {
   const you = daily.you;
   const rank = you ? standings.findIndex(r => r.playerId === you.playerId) + 1 : 0;
 
-  if (!S.player) {
+  if (!S.player && !daily.you) {
+    // A guest with no name isn't on the standings; there's nothing to say about them.
     $('dailyResultHeading').textContent = 'Today’s board';
-    $('dailyResultSub').textContent =
-      'Guests do not join the standings. Pick a profile and tomorrow’s will count.';
+    $('dailyResultSub').textContent = '';
   } else if (!daily.counted) {
     $('dailyResultHeading').textContent = 'Today’s board';
     $('dailyResultSub').textContent =
@@ -2113,6 +2113,17 @@ async function fetchHosted() {
 
 // The name a seat gets: the profile's, or a guest's own ("Guest 12" until they type another).
 const guestName = () => { try { return typeof ArcadeProfile !== 'undefined' ? ArcadeProfile.name() || '' : ''; } catch { return ''; } };
+// A guest's name and avatar, for the daily board.
+function guestWho() {
+  const name = guestName();
+  if (!name) return {};
+  let me = {};
+  try { me = ArcadeProfile.get() || {}; } catch { /* no profile helper */ }
+  // Someone signed in isn't a guest, even if Rambler hasn't picked up their profile.
+  if (me.token || me.id) return {};
+  const avatar = me.avatar || undefined;
+  return { guestName: name, guestAvatar: avatar };
+}
 
 const hostedLine = l => `${l.size === 5 ? '5x5' : '4x4'} board · ${mmss(l.durationSec * 1000)} on the clock · ${l.adult ? 'Unfiltered words' : 'Family words'}`;
 

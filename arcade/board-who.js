@@ -21,7 +21,11 @@ const Avatars = require('../public/avatars');
 
 const INITIALS_RE = /^[A-Z0-9]{1,3}$/;
 const NO_NAME = 'Sign in with ARKS ID to put your score on the board.';
-const cleanName = raw => String(raw || '').replace(/[\u0000-\u001f\u007f]/g, '').trim().replace(/\s+/g, ' ').slice(0, 16);
+// Invisible characters (zero-width spaces, direction marks) are dropped, so a name
+// can't pass for a profile's by hiding one in it.
+const cleanName = raw => String(raw || '').normalize('NFKC')
+  .replace(/[\u0000-\u001f\u007f­​-‏‪-‮⁠-⁤﻿<>]/g, '')
+  .trim().replace(/\s+/g, ' ').slice(0, 16);
 const initialsOf = name => (String(name).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 3) || 'P');
 
 // Is this the name of a profile (any but a turned-down one), ignoring case and spacing?
@@ -29,7 +33,12 @@ function profileNamed(name) {
   const db = require('../db');
   const want = name.toLowerCase().replace(/\s+/g, '');
   try {
-    return db.db.prepare("SELECT name FROM arcade_profiles WHERE status != 'rejected'").all()
+    if (db.db.prepare("SELECT name FROM arcade_profiles WHERE status != 'rejected'").all()
+      .some(r => String(r.name || '').toLowerCase().replace(/\s+/g, '') === want)) return true;
+  } catch { /* no profiles table */ }
+  // Rambler keeps its own profiles on an arcade without sign-in.
+  try {
+    return db.db.prepare('SELECT name FROM rambler_players').all()
       .some(r => String(r.name || '').toLowerCase().replace(/\s+/g, '') === want);
   } catch { return false; }
 }

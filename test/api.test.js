@@ -255,6 +255,33 @@ async function run({ base, root }) {
     replay.data.daily.you.score === dScore.data.daily.you.score,
     `${replay.data.daily.you.score} vs ${dScore.data.daily.you.score}`);
 
+  // A guest's daily counts under the name they play under, once a day per name.
+  const gDaily = await api('/daily?guest=' + encodeURIComponent('Daily Guest'));
+  ok('a guest is told their daily is unplayed', gDaily.data.alreadyPlayed === false && gDaily.data.youId === 'n:daily guest');
+  const gScore = await api('/score', 'POST', {
+    boardId: gDaily.data.boardId, guestName: 'Daily Guest',
+    players: [{ id: 'p0', name: 'Daily Guest', words: dWords.slice(0, 2) }]
+  });
+  ok('a guest\'s daily counts', gScore.data.daily.counted === true);
+  ok('and is on the standings under their name',
+    gScore.data.daily.you && gScore.data.daily.you.name === 'Daily Guest' && gScore.data.daily.standings.some(r => r.name === 'Daily Guest'));
+  ok('a guest banks no coins', !gScore.data.progress);
+  const gAgain = await api('/score', 'POST', {
+    boardId: (await api('/daily?guest=Daily%20Guest')).data.boardId, guestName: 'Daily Guest',
+    players: [{ id: 'p0', name: 'Daily Guest', words: dWords }]
+  });
+  ok('a guest\'s second go does not count', gAgain.data.daily.counted === false && gAgain.data.daily.you.score === gScore.data.daily.you.score);
+  ok('and the daily reads as played for them', (await api('/daily?guest=Daily%20Guest')).data.alreadyPlayed === true);
+  const hidden = await api('/score', 'POST', {
+    boardId: gDaily.data.boardId, guestName: 'Daily​ Guest‮',
+    players: [{ id: 'p0', name: 'x', words: dWords }]
+  });
+  ok('an invisible character doesn\'t make it a new name', hidden.data.daily.counted === false && hidden.data.daily.you.name === 'Daily Guest');
+  const noName = await api('/score', 'POST', {
+    boardId: gDaily.data.boardId, players: [{ id: 'p0', name: 'Nobody', words: dWords.slice(0, 1) }]
+  });
+  ok('a guest with no name is not on the standings', noName.data.daily.counted === false && !noName.data.daily.you);
+
   const coinsBefore = (await api('/players/' + pid)).data.coins;
   const hintBoard = await api('/board', 'POST', { size: 4 });
   const hint = await api('/hint', 'POST', { boardId: hintBoard.data.boardId, playerId: pid, found: [] });
