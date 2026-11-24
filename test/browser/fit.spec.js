@@ -698,6 +698,62 @@ for (const [label, viewport] of SIDEWAYS) {
   });
 }
 
+// The 3D cabinet games' setup screens on a phone turned sideways (a play-test found Start half off the screen): every
+// choice and Start whole on the screen, clear of the bug-report button, and nothing to scroll either way. Big Swing
+// and Bucket Drop have no setup. The 3D draws in software here, slowly, so they get triple time.
+const CAB_SETUPS = [['Launcher', '/launcher.html'], ['Train Station', '/train.html'], ['Racer', '/racer.html']];
+for (const [game, path] of CAB_SETUPS) {
+  for (const [label, viewport] of SIDEWAYS) {
+    test(`${game}'s setup fits a ${label} (${viewport.width}×${viewport.height})`, async ({ browser }, info) => {
+      test.skip(info.project.name !== 'phone', 'The sizes are set here, so one project runs them all.');
+      test.slow();
+      const { ctx, page } = await openAt(browser, path, viewport, 0);
+      await expect(page.locator('.cab-setup')).toBeVisible({ timeout: 20000 });
+      // Who's playing? can come up a moment after the page opens: play as a guest.
+      await page.waitForTimeout(800);
+      const guest = page.getByRole('button', { name: /Play as a guest/ });
+      if (await guest.isVisible().catch(() => false)) {
+        await guest.click();
+        await page.getByRole('button', { name: 'Play', exact: true }).click();
+        await page.waitForTimeout(400);
+      }
+      const segs = await page.locator('.cab-opts .cab-seg').count();
+      expect(segs).toBeGreaterThan(0);
+      const need = [...Array(segs)].map((_, i) => `.cab-opts .cab-seg:nth-child(${i + 1})`).concat('.cab-setup .cab-go');
+      const report = await setupReport(page, need, 0);
+      const tall = await page.evaluate(() => document.documentElement.scrollHeight);
+      if (tall > viewport.height + 1) report.push(`the page scrolls (${tall} tall of ${viewport.height})`);
+      await page.screenshot({ path: info.outputPath('cab-setup.png') });
+      expect(report, report.join('\n')).toEqual([]);
+      await ctx.close();
+    });
+  }
+}
+
+// Rambler's messages on a phone turned sideways: at the top while nothing covers the page (also after the
+// Who's playing? card was opened and closed), and beside that card, never on its words, while it's open.
+for (const [label, viewport] of SIDEWAYS) {
+  test(`Rambler's messages stay clear of the Who's playing? card on a ${label}`, async ({ browser }, info) => {
+    test.skip(info.project.name !== 'phone', 'The sizes are set here, so one project runs them all.');
+    const { ctx, page } = await openAt(browser, '/rambler.html', viewport, 0);
+    const toast = () => page.evaluate(() => {
+      ArcadeKit.toast('A message');
+      const t = document.querySelector('.toast').getBoundingClientRect();
+      const open = document.querySelector('.apf.open .apf-card');
+      const c = open && open.getBoundingClientRect();
+      return { top: Math.round(t.top), centered: Math.abs((t.left + t.right) / 2 - innerWidth / 2) < 2,
+        onCard: !!c && !(t.right <= c.left || t.left >= c.right || t.bottom <= c.top || t.top >= c.bottom) };
+    });
+    const closed = await toast();
+    expect(closed.centered, 'the message is centered at the top with the card closed').toBe(true);
+    await page.evaluate(() => { ArcadeProfile.open(); });   // it resolves when the card closes, so don't wait on it
+    await expect(page.locator('.apf.open')).toBeVisible();
+    const open = await toast();
+    expect(open.onCard, 'the message sits on the card').toBe(false);
+    await ctx.close();
+  });
+}
+
 // No button's words cut off on a narrow phone: Dare Devil's game lengths and Clueless Crosswords'
 // two rows of choices (the play-tester's check, 2026-11-22). Clueless's rows stay inside the width,
 // and Words with Family's two ways to play on one device can be reached by a guest.

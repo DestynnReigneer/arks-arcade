@@ -275,7 +275,7 @@ const ArcadeProfile = (() => {
   let watching = null;
 
   function close(result = null) {
-    if (root) root.style.display = 'none';
+    if (root) { root.style.display = 'none'; root.classList.remove('open'); }
     if (isOpen) {
       isOpen = false;
       letPageBack();
@@ -300,6 +300,7 @@ const ArcadeProfile = (() => {
         .observe(card(), { childList: true });
     }
     root.style.display = 'flex';
+    root.classList.add('open');   // pages can tell the card is showing (it stays in the page when closed)
     showList();
     requestAnimationFrame(focusCard);
     return new Promise(r => { resolveOpen = r; });

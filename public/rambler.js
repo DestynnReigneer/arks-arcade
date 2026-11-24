@@ -155,6 +155,12 @@ function say(el, text, kind = '') {
   el.className = `msg ${kind}`;
 }
 
+// A short message over the page (the arcade's toast, from arcade-kit.js), used where
+// the browser's own alert box used to be. It stays up long enough to read.
+function notice(text) {
+  ArcadeKit.toast(text, ArcadeKit.readMs(text));
+}
+
 // ------------------------------------------------------------------- board
 
 // Same 8-way adjacency the server uses, so a drag can be rejected locally
@@ -477,7 +483,7 @@ async function finishSingleDevice() {
     });
     showResults(results);
   } catch (e) {
-    alert(e.message);
+    notice(e.message);
     screen('setup');
   }
 }
@@ -914,7 +920,7 @@ async function saveProfile() {
 async function removeProfile() {
   if (!editingId) return;
   const p = S.profiles.find(x => x.id === editingId);
-  if (!confirm(`Delete ${p ? p.name : 'this profile'}? Their streak, coins and milestones go with it.`)) return;
+  if (!(await ArcadeBack.ask(`Delete ${p ? p.name : 'this profile'}? Their streak, coins and milestones go with it.`, { yes: 'Delete', no: 'Back' }))) return;
   try {
     await api(`/players/${editingId}`, { method: 'DELETE' });
     if (S.player && S.player.id === editingId) setProfile(null);
@@ -1009,7 +1015,7 @@ async function openProfileDetail() {
 // the grid, so it buys a direction rather than the points.
 async function classicHint() {
   if (!S.player) {
-    alert('Hints cost coins — pick a profile first.');
+    notice('Hints cost coins — pick a profile first.');
     return showProfilePicker();
   }
   try {
@@ -1022,7 +1028,7 @@ async function classicHint() {
     Sound.coin();
     Fx.banner(r.word, `hint \u2014 cost ${r.cost} coins`, { tone: 'teal', ms: 1700 });
   } catch (e) {
-    alert(e.message);
+    notice(e.message);
   }
 }
 
@@ -1231,7 +1237,7 @@ function megaWord(word) {
 }
 
 async function marathonHint() {
-  if (!S.player) return alert('Pick a profile first — hints cost coins.');
+  if (!S.player) return notice('Pick a profile first — hints cost coins.');
   try {
     const r = await api(`/marathon/${M.id}/hint`, { method: 'POST', body: { playerId: S.player.id } });
     S.player.coins = r.coins;
@@ -1239,7 +1245,7 @@ async function marathonHint() {
     Fx.banner(r.word, `hint — costs ${r.cost} coins`, { tone: 'teal', ms: 1600 });
     applyMarathon(r);
   } catch (e) {
-    alert(e.message);
+    notice(e.message);
   }
 }
 
@@ -1542,7 +1548,7 @@ function renderLobby(snap) {
 
 function pushRoomSettings(patch) {
   api(`/rooms/${S.creds.code}/settings`, { method: 'POST', body: { ...S.creds, ...patch } })
-    .catch(e => alert(e.message));
+    .catch(e => notice(e.message));
 }
 
 // ------------------------------------------------------------------ results
@@ -1670,7 +1676,7 @@ function playAgain() {
   }
   if (S.mode === 'room') {
     if (S.room && S.room.youAreHost) {
-      api(`/rooms/${S.creds.code}/next`, { method: 'POST', body: S.creds }).catch(e => alert(e.message));
+      api(`/rooms/${S.creds.code}/next`, { method: 'POST', body: S.creds }).catch(e => notice(e.message));
     }
     $('doneBtn').disabled = false;
     return;
@@ -2406,7 +2412,7 @@ function bind() {
 
   $('lobbyStartBtn').onclick = () => {
     api(`/rooms/${S.creds.code}/start`, { method: 'POST', body: S.creds })
-      .catch(e => alert(e.message));
+      .catch(e => notice(e.message));
   };
 
   $('leaveRoomBtn').onclick = () => {

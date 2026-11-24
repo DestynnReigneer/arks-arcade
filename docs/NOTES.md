@@ -7,6 +7,23 @@ to-do list as checkboxes (the rule is in the maintainer's global CLAUDE.md
 and `arks-internal/conventions/sessions.md`): do the checked items in the
 order they were clicked, and keep the rest pinned here.
 
+## Three small fixes: Rambler's messages, the cabinet setups sideways, a Wordless test (2026-11-22)
+
+- **Rambler no longer uses the browser's own boxes.** A guest's Hint ("Hints cost coins — pick a profile first.") and
+  the other messages that used `alert()` now show in the arcade's toast (`ArcadeKit.toast`, so `rambler.html` loads
+  `arcade-kit.js`, and `rambler.css` has its own copy of the toast's look). The words are the same as before. Deleting
+  a profile asks with the arcade's own card (`ArcadeBack.ask`) instead of `confirm()`, with **Delete** and **Back** as
+  its buttons; those two labels wait for the maintainer's say-so.
+- **The 3D cabinet games' setup screens fit a phone turned sideways** (the Launcher, the Train Station and the Racer;
+  Big Swing and Bucket Drop have no setup). The choices sit side by side on the left and wrap to a second row when they
+  need it, and Start sits beside them on the right, so nothing scrolls at 844x390, 740x360 or 844x334. The rules are
+  in `cab.css` under the sideways media query, and `fit.spec.js` checks every choice and Start at those three sizes.
+- **Wordless now waits while a guess turns over.** The flaky browser test ("a loss has nothing to save…") typed
+  its next guess 900 ms after the last one, but a nine-letter word takes about 2.45 seconds to turn over. It turned out
+  to be a real bug too: the guess counts as soon as Enter is pressed, so pressing Enter again while the tiles were
+  still turning sent the same guess on the next row and used up a try. Now the keys wait until the row is done
+  (`revealing` in `public/app.js`), and the test waits for the row to fill and turn over instead of a fixed time.
+
 ## Every game fits a phone turned sideways (2026-11-22)
 
 Roadmap item 6. Each game's play screen fits a phone turned sideways (844x390 and 740x360) with nothing to

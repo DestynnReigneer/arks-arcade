@@ -628,6 +628,7 @@ test('Spin & Solve: a solo game saves by itself, with High scores inside the win
 });
 
 test('Wordless: a loss has nothing to save and no SCORE heading, and Play again starts a new word', async ({ page }) => {
+  test.setTimeout(60000);
   const problems = watchProblems(page);
   await openAsGuest(page, '/wordless.html');
   const pick = page.locator('#difficultyChoices button').first();
@@ -635,12 +636,17 @@ test('Wordless: a loss has nothing to save and no SCORE heading, and Play again 
   // Six guesses that can't be the answer.
   await expect(page.locator('[id^="tile-0-"]').first()).toBeVisible();
   const tiles = await page.locator('[id^="tile-0-"]').count();
+  // Each guess turns over one tile at a time (250 ms each, so over two seconds for a long word), and the
+  // keys wait until it's done. So: type until the row shows the letters, send it, then wait for its last tile
+  // to turn over, instead of a fixed wait that a long word outlasts.
   for (let g = 0; g < 6 && !(await card(page).isVisible()); g++) {
-    await page.keyboard.type('z'.repeat(tiles));
+    const last = page.locator(`#tile-${g}-${tiles - 1}`);
+    await expect(async () => {
+      await page.keyboard.type('z'.repeat(tiles));
+      await expect(last).toHaveClass(/\bfilled\b/, { timeout: 500 });
+    }).toPass({ timeout: 10000 });
     await page.keyboard.press('Enter');
-    // The row turns over a tile at a time (a quarter second each) before the next row takes letters,
-    // so a long word needs longer than a short one.
-    await page.waitForTimeout(tiles * 250 + 500);
+    await expect(last).toHaveClass(/\b(absent|present|correct)\b/, { timeout: 10000 });
   }
   await expect(card(page)).toBeVisible({ timeout: 15000 });
   await expect(page.getByText('SCORE', { exact: true })).toHaveCount(0);
