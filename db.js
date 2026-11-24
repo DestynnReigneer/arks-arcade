@@ -264,6 +264,10 @@ db.exec("UPDATE comm_feedback SET status = 'canceled' WHERE status = 'cancelled'
 // are not the same achievement. The standings say which was which instead of
 // quietly ranking them against each other.
 ensureColumn('rambler_daily', 'profile', "TEXT NOT NULL DEFAULT 'kids'");
+// A guest's daily score is kept under their name (player_id is `n:<name>`), with the
+// name and avatar they played under, since there's no profile to look them up in.
+ensureColumn('rambler_daily', 'player_name', 'TEXT');
+ensureColumn('rambler_daily', 'player_avatar', 'TEXT');
 
 const FONT_STACKS = {
   sans: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
@@ -1075,11 +1079,11 @@ function getDailyResult(day, playerId) {
   } : null;
 }
 
-function recordDaily({ day, playerId, score, words, bestWord, profile = 'kids' }) {
+function recordDaily({ day, playerId, score, words, bestWord, profile = 'kids', name = null, avatar = null }) {
   const info = db.prepare(`
-    INSERT OR IGNORE INTO rambler_daily (day, player_id, score, words, best_word, profile)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `).run(day, playerId, score, words, bestWord || '', profile);
+    INSERT OR IGNORE INTO rambler_daily (day, player_id, score, words, best_word, profile, player_name, player_avatar)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(day, playerId, score, words, bestWord || '', profile, name, avatar);
   return info.changes > 0;
 }
 
@@ -1090,7 +1094,7 @@ function listDaily(day) {
     WHERE d.day = ? ORDER BY d.score DESC, d.created_at ASC
   `).all(day).map((r, i) => ({
     rank: i + 1,
-    playerId: r.player_id, name: r.name || 'Unknown', avatar: r.avatar || '🙂',
+    playerId: r.player_id, name: r.name || r.player_name || 'Unknown', avatar: r.avatar || r.player_avatar || '🙂',
     score: r.score, words: r.words, bestWord: r.best_word, profile: r.profile || 'kids'
   }));
 }

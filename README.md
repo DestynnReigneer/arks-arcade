@@ -42,7 +42,7 @@ Because of Marathon, boards are rectangular internally. Anything that takes a bo
 
 - **Profiles** — one per person, with an avatar, picked from a "Who's playing?" screen. Not accounts: no password, no email.
 - **Streaks** — play on consecutive days and it climbs. Rolls over at *local* midnight, which is why `TZ` matters in the compose file.
-- **Daily challenge** — one board a day, the same sixteen letters for everyone in the house, generated from the date rather than stored. Four minutes, fixed, so the standings mean something. One *scoring* go each: you can replay it as often as you like and nothing more is banked, which beats telling a seven-year-old no. Because it comes from the date, it is reproducible anywhere and survives losing the database entirely.
+- **Daily challenge** — one board a day, the same sixteen letters for everyone in the house, generated from the date rather than stored. Four minutes, fixed, so the standings mean something. One *scoring* go each: you can replay it as often as you like and nothing more is banked, which beats telling a seven-year-old no. A guest's go counts too, under the name they're playing under. Because it comes from the date, it is reproducible anywhere and survives losing the database entirely.
 
   The dictionary is the one thing that is not shared — the unfiltered list is wider, so an adult genuinely has more to find. The standings tag each row with the list it was played on rather than pretending the two are the same.
 - **Milestones** — sixteen of them, from "find your first word" to "play thirty days running". Each pays coins.

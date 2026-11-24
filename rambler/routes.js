@@ -46,6 +46,11 @@ function profileFor(req, claimed) {
   return me && me.id === id ? id : null;
 }
 
+// A guest on the daily board: their name and avatar, or null with no name.
+function dailyGuest(name, avatar) {
+  try { return name ? boardWho({ profile: null, name, avatar }) : null; } catch { return null; }
+}
+
 function fail(message, status) {
   return Object.assign(new Error(message), { status });
 }
@@ -282,13 +287,27 @@ router.post('/score', scoreLimiter, (req, res, next) => {
     // The daily's own board: who in the house is where, once this round has
     // been filed. Sent with the result so the screen can show the standing
     // without a second request and a visible flicker.
+    // A guest's daily counts too, under the name they play under (one first go per
+    // name per day, like the other games' daily boards).
     if (entry.daily) {
+      let counted = !!(result.progress && result.progress.dailyCounted);
+      let youId = profileId;
+      const guest = !profileId && dailyGuest(body.guestName, body.guestAvatar);
+      if (guest) {
+        const mine = result.results[0];
+        youId = guest.key;
+        counted = db.recordDaily({
+          day: entry.daily, playerId: guest.key, score: mine.score, words: mine.wordCount,
+          bestWord: (mine.best ? mine.best.word : '') || mine.longest || '', profile: entry.profile,
+          name: guest.name, avatar: guest.avatar
+        });
+      }
       const standings = db.listDaily(entry.daily);
       result.daily = {
         day: entry.daily,
-        counted: !!(result.progress && result.progress.dailyCounted),
+        counted,
         standings,
-        you: profileId ? standings.find(r => r.playerId === profileId) || null : null
+        you: youId ? standings.find(r => r.playerId === youId) || null : null
       };
     }
 
@@ -697,7 +716,10 @@ router.get('/daily', (req, res, next) => {
     const built = progress.dailyBoard(day, profile);
     const entry = boards.keep(boards.stash({ ...built, daily: day }));
 
-    const already = req.query.playerId ? db.getDailyResult(day, String(req.query.playerId)) : null;
+    // A profile asks by its id, a guest by the name they play under.
+    const guest = !req.query.playerId && dailyGuest(req.query.guest);
+    const youId = req.query.playerId ? String(req.query.playerId) : guest ? guest.key : null;
+    const already = youId ? db.getDailyResult(day, youId) : null;
 
     res.json({
       boardId: entry.id,
@@ -715,6 +737,7 @@ router.get('/daily', (req, res, next) => {
       // When the board turns over, so the screen can count down to it rather
       // than leaving people guessing what "tomorrow" means.
       resetsAt: nextMidnight().toISOString(),
+      youId,
       alreadyPlayed: !!already,
       yourResult: already,
       standings: db.listDaily(day)
