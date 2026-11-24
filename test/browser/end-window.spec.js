@@ -638,7 +638,9 @@ test('Wordless: a loss has nothing to save and no SCORE heading, and Play again 
   for (let g = 0; g < 6 && !(await card(page).isVisible()); g++) {
     await page.keyboard.type('z'.repeat(tiles));
     await page.keyboard.press('Enter');
-    await page.waitForTimeout(900);
+    // The row turns over a tile at a time (a quarter second each) before the next row takes letters,
+    // so a long word needs longer than a short one.
+    await page.waitForTimeout(tiles * 250 + 500);
   }
   await expect(card(page)).toBeVisible({ timeout: 15000 });
   await expect(page.getByText('SCORE', { exact: true })).toHaveCount(0);
