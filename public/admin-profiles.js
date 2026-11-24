@@ -1,8 +1,7 @@
 'use strict';
 
-// Admin for arcade profiles: approve or turn down requests, rename, clear a
-// forgotten PIN, unlock a profile or device locked by wrong PINs, or remove a
-// profile. Lives in the Arcade tab.
+// Admin for arcade profiles: approve or turn down requests, rename, or remove
+// a profile. Lives in the Arcade tab.
 
 (() => {
   const API = '/api/profiles/admin';
@@ -39,7 +38,7 @@
         row.style.cssText = 'display:flex;align-items:center;gap:10px;flex-wrap:wrap';
         const label = document.createElement('span');
         label.style.cssText = 'flex:1;min-width:120px;font-weight:700';
-        label.textContent = `${p.name}${p.hasPin ? ' 🔑' : ''}${p.locked ? ' · 🔒 Locked' : ''}${p.status === 'pending' ? ' · waiting for approval' : ''}`;
+        label.textContent = `${p.name}${p.status === 'pending' ? ' · waiting for approval' : ''}`;
         const actions = document.createElement('span');
         actions.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap';
         if (p.status === 'pending') {
@@ -49,20 +48,11 @@
           );
         } else {
           actions.append(
-            ...(p.locked ? [btn('🔓 Unlock', async () => {
-              await api(`/${p.id}/unlock`, { method: 'POST', body: {} });
-              load();
-            })] : []),
             btn('✏️ Rename', async () => {
               const name = prompt('New name', p.name);
               if (!name) return;
               try { await api(`/${p.id}`, { method: 'PATCH', body: { name } }); load(); } catch (e) { alert(e.message); }
             }),
-            ...(p.hasPin ? [btn('🔓 Clear PIN', async () => {
-              if (!confirm(`Remove ${p.name}'s PIN? They can set a new one from their profile.`)) return;
-              await api(`/${p.id}/clear-pin`, { method: 'POST', body: {} });
-              load();
-            })] : []),
             btn('🗑 Remove', async () => {
               if (!confirm(`Remove ${p.name}'s profile? Their old scores stay on the boards.`)) return;
               await api(`/${p.id}`, { method: 'DELETE' });
@@ -98,17 +88,6 @@
       }
     } catch (e) { box.textContent = e.message; }
   }
-
-  // With ARKS ID sign-in on, nobody has a PIN here, so the PIN notes and the unlock button stay out of the way.
-  fetch('/api/arksid/me', { cache: 'no-store' }).then(r => (r.ok ? r.json() : null)).then(me => {
-    if (me && me.on) for (const el of document.querySelectorAll('.pins-only')) el.hidden = true;
-  }).catch(() => {});
-  $('unlockDevicesBtn').onclick = async () => {
-    try {
-      await api('/unlock-devices', { method: 'POST', body: {} });
-      $('unlockDevicesMsg').textContent = 'Done. Every device can try PINs again.';
-    } catch (e) { $('unlockDevicesMsg').textContent = e.message; }
-  };
 
   document.addEventListener('admin-tab', e => { if (e.detail === 'tabArcade') load(); });
   const content = $('adminContent');

@@ -84,11 +84,11 @@ async function run({ base, root, fake, admin: ADMIN }) {
   me = await milo.me();
   ok('…as the old profile with the same name, scores and all', me.signedIn && me.profile.id === 'abcdefabcdef0001');
   ok('…wearing the character picked in ARKS ID', me.profile.avatar === 'toon:2', me.profile.avatar);
-  ok('…its old PIN is off, and the boards show the initials chosen in ARKS ID', !me.profile.hasPin && me.profile.boardShow === 'initials' && me.profile.initials === 'MIL');
+  ok('…and the boards show the initials chosen in ARKS ID', me.profile.boardShow === 'initials' && me.profile.initials === 'MIL');
   ok('…and the token works like any profile token', /^abcdefabcdef0001\./.test(me.token));
   ok('a role is reported, and a kid is not an adult', me.role === 'kid' && me.adult === false);
   ok('nobody asks for an arcade profile anymore', (await milo.call('/api/profiles', { method: 'POST', body: { name: 'Sneaky' } })).status === 403);
-  ok('or picks one with a PIN', (await milo.call('/api/profiles/abcdefabcdef0001/use', { method: 'POST', body: { pin: '123456' } })).status === 403);
+  ok('or picks one here', (await milo.call('/api/profiles/abcdefabcdef0001/use', { method: 'POST', body: {} })).status === 403);
   ok('the boards choice is made in ARKS ID', (await milo.call('/api/profiles/abcdefabcdef0001', { method: 'PATCH', body: { token: me.token, boardShow: 'name' } })).status === 403);
   ok('the avatar is picked in ARKS ID too', (await milo.call('/api/profiles/abcdefabcdef0001', { method: 'PATCH', body: { token: me.token, avatar: 'emoji:🐙' } })).status === 403);
   // Silent sign-in (v8): nobody signed in to ARKS ID, so straight back, still signed out.

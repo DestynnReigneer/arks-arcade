@@ -2,7 +2,7 @@
 
 // Optional: signing in through ARKS ID, a family sign-in service the arcade
 // can share with other apps. Off unless ARKS_ID_URL and ARKS_ID_SECRET are set
-// in .env; without them the arcade keeps its own profiles and PINs, and adult levels are off
+// in .env; without them the arcade keeps its own profiles, and adult levels are off
 // exactly as before (see docs/SETUP.md).
 //
 // With it on, ARKS ID owns everything about a person:
@@ -12,7 +12,7 @@
 //     time, and the admin can move a link), and the device gets that profile's
 //     token, so every game credits scores exactly as before.
 //   - Name, role and "name or initials on the boards" come from the account.
-//     The arcade's own profile requests and profile PINs switch off.
+//     The arcade's own profile requests switch off.
 //   - Adult levels follow the role: a signed-in adult or admin gets a short-
 //     lived adult pass, the only thing that unlocks adult levels. Kids, teens
 //     and guests can't unlock them.
@@ -273,12 +273,11 @@ function createArksId({ client, now = Date.now, profiles }) {
         p = db.db.prepare('SELECT * FROM arcade_profiles WHERE id = ?').get(id);
       }
     }
-    // The name, the avatar and the board choice belong to ARKS ID now. The
-    // profile's own PIN and locks are off. A photo or team picture wins over
+    // The name, the avatar and the board choice belong to ARKS ID now. A photo or team picture wins over
     // the icon, which stays inside the avatar as what to show if it can't load.
     const avatar = image ? photoAvatar(p.id, image, user.avatar) : user.avatar || p.avatar;
-    db.db.prepare(`UPDATE arcade_profiles SET name = ?, avatar = ?, board_show = ?, initials = ?, pin_hash = NULL, pin_salt = NULL,
-      pin_fails = 0, locked_until = NULL, updated_at = datetime('now') WHERE id = ?`)
+    db.db.prepare(`UPDATE arcade_profiles SET name = ?, avatar = ?, board_show = ?, initials = ?,
+      updated_at = datetime('now') WHERE id = ?`)
       .run(user.name, avatar, user.initials ? 'initials' : 'name', user.initials, p.id);
     p = db.db.prepare('SELECT * FROM arcade_profiles WHERE id = ?').get(p.id);
     profiles.syncRambler(p);
